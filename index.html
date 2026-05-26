@@ -112,73 +112,6 @@
     0%,100%{transform:translateX(-12px) rotate(-4deg);}
     50%{transform:translateX(12px) rotate(4deg);}
   }
-  @keyframes dance-robot{
-    0%,15%{transform:translateX(-7px) rotate(-3deg);}
-    25%,45%{transform:translateX(-7px) rotate(-3deg);}
-    55%,75%{transform:translateX(7px) rotate(3deg);}
-    85%,100%{transform:translateX(-7px) rotate(-3deg);}
-  }
-  @keyframes robot-hand-l{
-    0%,15%{transform:translate(0,0);}
-    25%,45%{transform:translate(0,-26px);}
-    55%,75%{transform:translate(0,0);}
-    85%,95%{transform:translate(14px,-16px);}
-    100%{transform:translate(0,0);}
-  }
-  @keyframes robot-hand-r{
-    0%,15%{transform:translate(0,0);}
-    25%,45%{transform:translate(-14px,-16px);}
-    55%,75%{transform:translate(0,0);}
-    85%,95%{transform:translate(0,-26px);}
-    100%{transform:translate(0,0);}
-  }
-  @keyframes robot-head{
-    0%,20%{transform:rotate(-14deg);}
-    30%,45%{transform:rotate(-14deg);}
-    55%,75%{transform:rotate(14deg);}
-    85%,100%{transform:rotate(-14deg);}
-  }
-  @keyframes robot-grin{
-    0%,40%{transform:scaleX(1);}
-    50%,65%{transform:scaleX(1.18) scaleY(1.1);}
-    75%,100%{transform:scaleX(1);}
-  }
-  @keyframes dance-twerk{
-    0%,100%{transform:translateY(-2px) translateX(-3px);}
-    50%{transform:translateY(12px) translateX(3px);}
-  }
-  @keyframes twerk-belly{
-    0%,100%{transform:translateY(-3px) scaleY(1.08) scaleX(0.94);}
-    50%{transform:translateY(10px) scaleY(0.82) scaleX(1.18);}
-  }
-  @keyframes twerk-hand-l{
-    0%,100%{transform:translate(-2px,3px) rotate(-12deg);}
-    50%{transform:translate(-8px,-6px) rotate(-45deg);}
-  }
-  @keyframes twerk-hand-r{
-    0%,100%{transform:translate(2px,3px) rotate(12deg);}
-    50%{transform:translate(8px,-6px) rotate(45deg);}
-  }
-  @keyframes twerk-head{
-    0%,100%{transform:translateY(-3px) rotate(-3deg);}
-    50%{transform:translateY(5px) rotate(3deg);}
-  }
-  @keyframes twerk-leg-l{
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-3px) translateX(-2px);}
-  }
-  @keyframes twerk-leg-r{
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-3px) translateX(2px);}
-  }
-  @keyframes tongue-wag{
-    0%,100%{transform:translateX(-2px) rotate(-18deg) scaleY(1);}
-    50%{transform:translateX(2px) rotate(18deg) scaleY(1.2);}
-  }
-  @keyframes brow-pump{
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-2.5px);}
-  }
   @keyframes person-grow{
     0%{transform:scale(0.4);opacity:0;}
     100%{transform:scale(1);opacity:1;}
@@ -662,7 +595,6 @@ function App(){
   const[celebrating,setCelebrating]=useState(false);
   const[winEmoji,setWinEmoji]=useState('🥳');
   const[danceSpeed,setDanceSpeed]=useState('slow');
-  const[danceStyle,setDanceStyle]=useState('robot');
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
     try{localStorage.setItem('ww_dark',darkMode?'1':'0');}catch{}
@@ -706,10 +638,7 @@ function App(){
   const triggerWin=(p,skipAnim)=>{
     winSound(p);
     setWinner(p);
-    const onlineLoss=gameMode==='online'&&p!==onlineRole;
-    if(skipAnim||onlineLoss){setScreen('end');return;}
-    const styles=['robot','twerk'];
-    setDanceStyle(styles[Math.floor(Math.random()*styles.length)]);
+    if(skipAnim){setScreen('end');return;}
     setDanceSpeed(Math.random()<0.5?'fast':'slow');
     setTimeout(()=>playSound('laugh'),350);
     setCelebrating(true);
@@ -1316,7 +1245,7 @@ function App(){
         <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
           zIndex:500,pointerEvents:'none',background:'rgba(0,0,0,0.15)'}}>
           <div style={{animation:'person-grow 0.3s ease-out both'}}>
-            <WinnerPerson color={PC[winner]} dark={PD[winner]} speed={danceSpeed} dance={danceStyle}/>
+            <WinnerPerson color={PC[winner]} dark={PD[winner]} speed={danceSpeed}/>
           </div>
         </div>
       )}
@@ -1367,65 +1296,37 @@ function App(){
   );
 }
 
-const DANCES={
-  robot:{body:'dance-robot',handL:'robot-hand-l',handR:'robot-hand-r',head:'robot-head',belly:null,legL:null,legR:null,slow:1.7,fast:1.1,ease:'cubic-bezier(0.65,0,0.35,1)'},
-  twerk:{body:'dance-twerk',handL:'twerk-hand-l',handR:'twerk-hand-r',head:'twerk-head',belly:'twerk-belly',legL:'twerk-leg-l',legR:'twerk-leg-r',slow:0.5,fast:0.32,ease:'ease-in-out'}
-};
-
-function WinnerPerson({color,dark,speed,dance}){
-  const cfg=DANCES[dance]||DANCES.robot;
-  const dur=speed==='fast'?cfg.fast:cfg.slow;
-  const ease=cfg.ease;
-  const anim=name=>name?`${name} ${dur}s ${ease} infinite`:'none';
-  const browDur=dance==='robot'?(dur*0.55):(dur*1.2);
-  const browAnim=`brow-pump ${browDur}s ease-in-out infinite`;
-
-  const face=<g>
-    {/* Augenbrauen — gebogen, pumpen hoch/runter */}
-    <g style={{transformOrigin:'45px 16px',animation:browAnim}}>
-      <path d="M 33 17 Q 37 13.5 41 17" stroke="white" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
-      <path d="M 49 17 Q 53 13.5 57 17" stroke="white" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
-    </g>
-    {/* Ekliges Augenkneifen — zusammengekniffene Augen mit Spitze nach oben */}
-    <path d="M 35 23.5 Q 39 19.5 43 23.5" stroke="white" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
-    <path d="M 47 23.5 Q 51 19.5 55 23.5" stroke="white" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
-    {/* Großes Grinsen mit sauberen Zähnen */}
-    <g style={{transformOrigin:'45px 30px',animation:anim('robot-grin')}}>
-      <path d="M 32 28 L 58 28 Q 45 41 32 28 Z" fill="white" strokeLinejoin="round"/>
-      <line x1="38" y1="28" x2="38" y2="32.5" stroke={dark} strokeWidth="0.6"/>
-      <line x1="41.5" y1="28" x2="41.5" y2="35" stroke={dark} strokeWidth="0.6"/>
-      <line x1="45" y1="28" x2="45" y2="36" stroke={dark} strokeWidth="0.6"/>
-      <line x1="48.5" y1="28" x2="48.5" y2="35" stroke={dark} strokeWidth="0.6"/>
-      <line x1="52" y1="28" x2="52" y2="32.5" stroke={dark} strokeWidth="0.6"/>
-    </g>
-  </g>;
-
-  return <div style={{animation:`${cfg.body} ${dur}s ${ease} infinite`,transformOrigin:'center bottom'}}>
-    <svg width="220" height="260" viewBox="0 0 90 100" style={{overflow:'visible',display:'block'}}>
+function WinnerPerson({color,dark,speed}){
+  const dur=speed==='fast'?0.28:0.7;
+  const swayDur=speed==='fast'?0.55:1.1;
+  const limbAnim=t=>`${t} ${dur}s ease-in-out infinite`;
+  return <div style={{animation:`hip-sway ${swayDur}s ease-in-out infinite`,transformOrigin:'center bottom'}}>
+    <svg width="200" height="240" viewBox="0 0 84 100" style={{overflow:'visible',display:'block'}}>
       {/* Linkes Bein */}
-      <g style={{transformOrigin:'40px 85px',animation:anim(cfg.legL)}}>
-        <circle cx="40" cy="85" r="7" fill={dark}/>
+      <g style={{transformOrigin:'42px 58px',animation:limbAnim('leg-l')}}>
+        <rect x="36" y="58" width="6" height="24" fill={color} rx="3"/>
+        <circle cx="37" cy="86" r="5.5" fill={color} stroke={dark} strokeWidth="1.5"/>
       </g>
       {/* Rechtes Bein */}
-      <g style={{transformOrigin:'50px 85px',animation:anim(cfg.legR)}}>
-        <circle cx="50" cy="85" r="7" fill={dark}/>
+      <g style={{transformOrigin:'42px 58px',animation:limbAnim('leg-r')}}>
+        <rect x="42" y="58" width="6" height="24" fill={color} rx="3"/>
+        <circle cx="47" cy="86" r="5.5" fill={color} stroke={dark} strokeWidth="1.5"/>
       </g>
       {/* Bauch */}
-      <g style={{transformOrigin:'45px 55px',animation:anim(cfg.belly)}}>
-        <circle cx="45" cy="55" r="16" fill={dark}/>
+      <circle cx="42" cy="48" r="14" fill={color} stroke={dark} strokeWidth="2"/>
+      {/* Linker Arm */}
+      <g style={{transformOrigin:'30px 40px',animation:limbAnim('arm-l')}}>
+        <rect x="11" y="38" width="19" height="5" fill={color} rx="2.5"/>
+        <circle cx="12" cy="40.5" r="5" fill={color} stroke={dark} strokeWidth="1.5"/>
       </g>
-      {/* Linke Hand — näher am Körper */}
-      <g style={{transformOrigin:'30px 56px',animation:anim(cfg.handL)}}>
-        <circle cx="30" cy="56" r="6.5" fill={dark}/>
+      {/* Rechter Arm */}
+      <g style={{transformOrigin:'54px 40px',animation:limbAnim('arm-r')}}>
+        <rect x="54" y="38" width="19" height="5" fill={color} rx="2.5"/>
+        <circle cx="72" cy="40.5" r="5" fill={color} stroke={dark} strokeWidth="1.5"/>
       </g>
-      {/* Rechte Hand — näher am Körper */}
-      <g style={{transformOrigin:'60px 56px',animation:anim(cfg.handR)}}>
-        <circle cx="60" cy="56" r="6.5" fill={dark}/>
-      </g>
-      {/* Kopf */}
-      <g style={{transformOrigin:'45px 24px',animation:anim(cfg.head)}}>
-        <circle cx="45" cy="24" r="13" fill={dark}/>
-        {face}
+      {/* Kopf — ohne Gesicht */}
+      <g style={{transformOrigin:'42px 22px',animation:limbAnim('head-bob')}}>
+        <circle cx="42" cy="20" r="12" fill={color} stroke={dark} strokeWidth="2"/>
       </g>
     </svg>
   </div>;
