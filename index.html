@@ -478,6 +478,19 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
   for(const m of initMoves)if(m.r===0)return{type:'move',pos:m};
   const recent=recentAi||[];
 
+  // Endspiel-Sprint: bei kurzem Pfad und klarem Vorsprung direkt zum Ziel laufen,
+  // statt unnötig Mauern zu suchen oder im Minimax-Rauschen zu trödeln.
+  const aiPathInit=bfsPath(aiPos,walls);
+  const humPathInit=bfsPath(humanPos,walls);
+  if(aiPathInit&&aiPathInit.length>1){
+    const aiDI=aiPathInit.length-1;
+    const humDI=humPathInit?humPathInit.length-1:999;
+    if(aiDI<=3&&humDI>aiDI+1){
+      const next=aiPathInit[1];
+      if(next.r!==humanPos.r||next.c!==humanPos.c)return{type:'move',pos:next};
+    }
+  }
+
   // Statische Evaluation: positiver Score = gut für AI
   const evalState=(ap,hp,w,ab,hb)=>{
     const apath=bfsPath(ap,w),hpath=bfsPath(hp,w);
@@ -486,9 +499,11 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
     if(ap.r===0)return 50000;
     if(hp.r===0)return-50000;
     const aiD=apath.length-1,humD=hpath.length-1;
-    // Hauptfaktor: relative Distanz × hohes Gewicht
-    // Sekundär: Mauern-Reserve, leichter Fortschritts-Bonus
-    return(humD-aiD)*30+(ab-hb)*4-aiD*0.6;
+    // Hauptfaktor: relative Distanz
+    // Eigener Progress STARK belohnt (verhindert Trödeln/Hin-und-Her)
+    // Gegner-Distanz leichter Bonus
+    // Mauern-Reserve sekundär
+    return(humD-aiD)*25 - aiD*3.5 + humD*0.8 + (ab-hb)*3;
   };
 
   // Aktionen für aktuellen Spieler generieren, sortiert für Alpha-Beta-Effizienz
@@ -571,9 +586,14 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
     let s=a.type==='move'
       ?search(a.pos,humanPos,walls,aiBarr,humBarr,2,false,-Infinity,Infinity)
       :search(aiPos,humanPos,a.walls,aiBarr-1,humBarr,2,false,-Infinity,Infinity);
-    // Sanfter Cycling-Tiebreaker: nur wenn proposed Zug = vorletzte AI Position
+    // Starke Cycling-Strafe: verhindert Hin-und-Her zwischen besuchten Feldern
     if(a.type==='move'&&recent.length>=2){
-      if(recent[1].r===a.pos.r&&recent[1].c===a.pos.c)s-=8;
+      for(let i=1;i<Math.min(recent.length,5);i++){
+        if(recent[i].r===a.pos.r&&recent[i].c===a.pos.c){
+          s-=(6-i)*12; // -60 / -48 / -36 / -24 für i=1..4
+          break;
+        }
+      }
     }
     if(s>bestScore){bestScore=s;bestAction=a;}
   }
@@ -890,12 +910,17 @@ function App(){
     const cb=ref.on('value',snap=>{
       const v=snap.val();if(!v)return;
       let gs;try{gs=JSON.parse(v);}catch{return;}
-      if(gs.lastUpdated<=lastOnlineTs.current)return;
-      lastOnlineTs.current=gs.lastUpdated;
+      // Robuste Filterung: Updates aus alter Runde oder mit weniger moves ignorieren.
+      // Clock-Skew-sicher (kein Date.now()-Vergleich mehr).
+      const newGN=gs.gameNum||1;
+      const oldGN=S.current.gameNum||0;
+      const newMoveCount=(gs.moves||[]).length;
+      const oldMoveCount=S.current.moveHist.length;
+      if(newGN<oldGN)return;
+      if(newGN===oldGN&&newMoveCount<oldMoveCount)return;
+      lastOnlineTs.current=gs.lastUpdated||Date.now();
 
       // Neue Runde erkannt → Spiel mit neuer Rolle starten
-      const oldGN=S.current.gameNum||0;
-      const newGN=gs.gameNum||1;
       if(newGN>oldGN&&oldGN>0){
         const myNewRole=gs.swapRoles?(S.current.onlineRole==='A'?'B':'A'):S.current.onlineRole;
         setOnlineRole(myNewRole);
