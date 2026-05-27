@@ -227,7 +227,7 @@ const SESSION=Math.random().toString(36).slice(2,10);
 // ── i18n ───────────────────────────────────────────────────
 const LANGS={en:'English',de:'Deutsch',tr:'Türkçe',fr:'Français'};
 const I18N={
-  en:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Loading...',twoPlayer:'👥 2 Players Local',vsAI:'🤖 vs AI',online:'🌐 Play Online',
+  en:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Loading...',twoPlayer:'👥 2 Players Local',vsAI:'🖥️ vs Computer',online:'🌐 Play Online',
     chooseDifficulty:'Choose difficulty',easy:'Easy',normal:'Normal',hard:'Hard',
     easyDesc:'Casual game',normalDesc:'Balanced challenge',hardDesc:'For experienced players',
     playOnline:'Play Online',publicLobby:'+ Public Lobby',privateLobby:'🔒 Private Lobby',joinWithCode:'JOIN WITH CODE',join:'Join',
@@ -241,7 +241,7 @@ const I18N={
     goalLabel:'▲ GOAL ▲',startLabel:'▼ START ▼',invalidPos:'Invalid position!',opponentTurn:"Opponent's turn...",
     wallsLeft:'walls left',tapContinue:'Tap to continue',red:'Red',blue:'Blue',
     options:'Options',language:'Language',close:'Close',theme:'Theme',light:'Light',dark:'Dark'},
-  de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🤖 Gegen KI',online:'🌐 Online spielen',
+  de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🖥️ Gegen Computer',online:'🌐 Online spielen',
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
     playOnline:'Online spielen',publicLobby:'+ Öffentliche Lobby',privateLobby:'🔒 Private Lobby',joinWithCode:'MIT CODE BEITRETEN',join:'Beitreten',
@@ -255,7 +255,7 @@ const I18N={
     goalLabel:'▲ ZIEL ▲',startLabel:'▼ START ▼',invalidPos:'Ungültige Position!',opponentTurn:'Gegner ist dran...',
     wallsLeft:'Mauern übrig',tapContinue:'Tippen um fortzufahren',red:'Rot',blue:'Blau',
     options:'Optionen',language:'Sprache',close:'Schließen',theme:'Design',light:'Hell',dark:'Dunkel'},
-  tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🤖 Yapay Zekaya Karşı',online:'🌐 Çevrimiçi Oyna',
+  tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🖥️ Bilgisayara Karşı',online:'🌐 Çevrimiçi Oyna',
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
     playOnline:'Çevrimiçi Oyna',publicLobby:'+ Genel Lobi',privateLobby:'🔒 Özel Lobi',joinWithCode:'KODLA KATIL',join:'Katıl',
@@ -269,7 +269,7 @@ const I18N={
     goalLabel:'▲ HEDEF ▲',startLabel:'▼ BAŞLANGIÇ ▼',invalidPos:'Geçersiz konum!',opponentTurn:'Rakibin sırası...',
     wallsLeft:'duvar kaldı',tapContinue:'Devam etmek için dokun',red:'Kırmızı',blue:'Mavi',
     options:'Seçenekler',language:'Dil',close:'Kapat',theme:'Tema',light:'Açık',dark:'Koyu'},
-  fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🤖 Contre l'IA",online:'🌐 Jouer en ligne',
+  fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🖥️ Contre l'ordinateur",online:'🌐 Jouer en ligne',
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
     playOnline:'Jouer en ligne',publicLobby:'+ Salon public',privateLobby:'🔒 Salon privé',joinWithCode:'REJOINDRE AVEC CODE',join:'Rejoindre',
@@ -403,9 +403,13 @@ function aiEasy(aiPos,humanPos,walls,barrLeft){
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
   if(aiD===1)return{type:'move',pos:aiPath[1]};
 
-  // Easy: Setzt Mauern wenn Gegner führt oder nah am Ziel — wählt aber suboptimal
-  if(barrLeft>0&&(humD<=aiD+1||humD<=3)){
-    const cands=wallCandidates(humanPos,walls,4);
+  // Easy: Setzt jetzt deutlich häufiger Mauern, aber wählt suboptimal
+  // Mauer-Bedingungen gelockert: Gegner führt oder ist im vorderen Drittel
+  const shouldConsiderWall=barrLeft>0&&(humD<=aiD+3||humD<=6);
+  // Zufällige Chance, manchmal Mauer auch ohne starken Grund
+  const proactive=barrLeft>0&&humD<=aiD+5&&Math.random()<0.45;
+  if(shouldConsiderWall||proactive){
+    const cands=wallCandidates(humanPos,walls,5);
     // Zufällige Reihenfolge → suboptimale Wahl
     for(let i=cands.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
@@ -416,8 +420,8 @@ function aiEasy(aiPos,humanPos,walls,barrLeft){
       if(!next)continue;
       const nh=bfsPath(humanPos,next),na=bfsPath(aiPos,next);
       if(!nh||!na)continue;
-      // Wenn Gegner sich um ≥2 verlangsamt UND AI nicht zu sehr leidet
-      if((nh.length-1)-humD>=2&&(na.length-1)-aiD<=1){
+      // Gelockert: Gegner muss um ≥1 verlangsamt werden, AI darf max ≤2 leiden
+      if((nh.length-1)-humD>=1&&(na.length-1)-aiD<=2){
         return{type:'barricade',walls:next};
       }
     }
@@ -453,84 +457,122 @@ function aiNormal(aiPos,humanPos,walls,barrLeft){
 }
 
 function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
-  // Sofortiger Sieg?
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
+  // Sofortiger Sieg hat absolute Priorität
   for(const m of initMoves)if(m.r===0)return{type:'move',pos:m};
-
-  // Anti-Cycling: Strafe für kürzlich besuchte Positionen
   const recent=recentAi||[];
-  const cyclePen=pos=>{
-    for(let i=0;i<recent.length;i++){
-      const p=recent[i];
-      if(p.r===pos.r&&p.c===pos.c){
-        return Math.max(0,35-i*7);
-      }
-    }
-    return 0;
-  };
 
+  // Statische Evaluation: positiver Score = gut für AI
   const evalState=(ap,hp,w,ab,hb)=>{
     const apath=bfsPath(ap,w),hpath=bfsPath(hp,w);
-    if(!apath)return-10000;
-    if(!hpath)return 10000;
-    if(ap.r===0)return 9000;
-    if(hp.r===0)return-9000;
+    if(!apath)return-99999;
+    if(!hpath)return 99999;
+    if(ap.r===0)return 50000;
+    if(hp.r===0)return-50000;
     const aiD=apath.length-1,humD=hpath.length-1;
-    // Differential mit starkem Gewicht + Mauern-Reserve + Pfad-Effizienz
-    // Negative aiD penalty → AI MUSS Fortschritt machen
-    return(humD-aiD)*14+(ab-hb)*2.5-aiD*1.2;
+    // Hauptfaktor: relative Distanz × hohes Gewicht
+    // Sekundär: Mauern-Reserve, leichter Fortschritts-Bonus
+    return(humD-aiD)*30+(ab-hb)*4-aiD*0.6;
   };
 
-  // Bester Gegner-Response (worst case für AI)
-  const opponentBest=(newAp,newHp,newW,newAb,newHb)=>{
-    if(newAp.r===0)return 9000;
-    const opMoves=getMovesFrom(newHp,newAp,newW);
-    for(const m of opMoves)if(m.r===0)return-9000;
-    let worst=Infinity;
-    for(const m of opMoves){
-      const sc=evalState(newAp,m,newW,newAb,newHb);
-      if(sc<worst)worst=sc;
+  // Aktionen für aktuellen Spieler generieren, sortiert für Alpha-Beta-Effizienz
+  const genActions=(ap,hp,w,ab,hb,forAi,maxWalls)=>{
+    const me=forAi?ap:hp;
+    const opp=forAi?hp:ap;
+    const myBarr=forAi?ab:hb;
+    const acts=[];
+    const myPath=bfsPath(me,w);
+    const moves=getMovesFrom(me,opp,w);
+    for(const m of moves){
+      let pri=0;
+      if(myPath&&myPath.length>1&&myPath[1].r===m.r&&myPath[1].c===m.c)pri=30;
+      if(m.r<me.r)pri+=8;
+      acts.push({type:'move',pos:m,_p:pri});
     }
-    if(newHb>0){
-      const cands=wallCandidates(newAp,newW,5);
+    if(myBarr>0){
+      const cands=wallCandidates(opp,w,6);
+      const oldOppPath=bfsPath(opp,w);
+      const oldOppD=oldOppPath?oldOppPath.length-1:0;
+      const scored=[];
       for(const k of cands){
-        const next=tryWall(k,newW,newAp,newHp);
+        const next=tryWall(k,w,ap,hp);
         if(!next)continue;
-        const sc=evalState(newAp,newHp,next,newAb,newHb-1);
-        if(sc<worst)worst=sc;
+        const np=bfsPath(opp,next);
+        if(!np)continue;
+        const myNew=bfsPath(me,next);
+        if(!myNew)continue;
+        // Score: wieviel verlangsamt es Gegner abzüglich Eigenkosten
+        const gain=((np.length-1)-oldOppD)-((myNew.length-1)-(myPath?myPath.length-1:0));
+        if(gain<=0)continue; // Nur Mauern die wirklich helfen
+        scored.push({next,gain});
+      }
+      scored.sort((a,b)=>b.gain-a.gain);
+      const lim=Math.min(maxWalls,scored.length);
+      for(let i=0;i<lim;i++){
+        acts.push({type:'barricade',walls:scored[i].next,_p:scored[i].gain*8});
       }
     }
-    return worst;
+    acts.sort((a,b)=>b._p-a._p);
+    return acts;
   };
 
-  let bestScore=-Infinity,bestAction=null;
-
-  // AI moves bewerten
-  for(const m of initMoves){
-    const cyc=cyclePen(m);
-    const sc=opponentBest(m,humanPos,walls,aiBarr,humBarr)-cyc;
-    if(sc>bestScore){bestScore=sc;bestAction={type:'move',pos:m};}
-  }
-
-  // AI walls bewerten (mehr Kandidaten für gründlichere Suche)
-  if(aiBarr>0){
-    const cands=wallCandidates(humanPos,walls,7);
-    for(const k of cands){
-      const next=tryWall(k,walls,aiPos,humanPos);
-      if(!next)continue;
-      const sc=opponentBest(aiPos,humanPos,next,aiBarr-1,humBarr);
-      if(sc>bestScore){bestScore=sc;bestAction={type:'barricade',walls:next};}
+  // Minimax mit Alpha-Beta
+  const search=(ap,hp,w,ab,hb,depth,maximizing,alpha,beta)=>{
+    if(ap.r===0)return 50000-depth;
+    if(hp.r===0)return-50000+depth;
+    if(depth===0)return evalState(ap,hp,w,ab,hb);
+    const maxW=depth>=2?6:4;
+    const acts=genActions(ap,hp,w,ab,hb,maximizing,maxW);
+    if(acts.length===0)return evalState(ap,hp,w,ab,hb);
+    if(maximizing){
+      let best=-Infinity;
+      for(const a of acts){
+        const s=a.type==='move'
+          ?search(a.pos,hp,w,ab,hb,depth-1,false,alpha,beta)
+          :search(ap,hp,a.walls,ab-1,hb,depth-1,false,alpha,beta);
+        if(s>best)best=s;
+        if(best>alpha)alpha=best;
+        if(beta<=alpha)break;
+      }
+      return best;
     }
+    let best=Infinity;
+    for(const a of acts){
+      const s=a.type==='move'
+        ?search(ap,a.pos,w,ab,hb,depth-1,true,alpha,beta)
+        :search(ap,hp,a.walls,ab,hb-1,depth-1,true,alpha,beta);
+      if(s<best)best=s;
+      if(best<beta)beta=best;
+      if(beta<=alpha)break;
+    }
+    return best;
+  };
+
+  // Wurzel: 3 Halbzüge tief suchen (AI → Opp → AI → eval)
+  let bestScore=-Infinity,bestAction=null;
+  const myActs=genActions(aiPos,humanPos,walls,aiBarr,humBarr,true,10);
+  for(const a of myActs){
+    let s=a.type==='move'
+      ?search(a.pos,humanPos,walls,aiBarr,humBarr,2,false,-Infinity,Infinity)
+      :search(aiPos,humanPos,a.walls,aiBarr-1,humBarr,2,false,-Infinity,Infinity);
+    // Sanfter Cycling-Tiebreaker: nur wenn proposed Zug = vorletzte AI Position
+    if(a.type==='move'&&recent.length>=2){
+      if(recent[1].r===a.pos.r&&recent[1].c===a.pos.c)s-=8;
+    }
+    if(s>bestScore){bestScore=s;bestAction=a;}
   }
 
-  // Fallback: Wenn nichts gefunden, geh einfach vorwärts
+  // Fallback: vorwärts gehen wenn nichts gefunden
   if(!bestAction){
     const aiPath=bfsPath(aiPos,walls);
-    const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);
-    if(m)return{type:'move',pos:m};
+    if(aiPath&&aiPath.length>1)return{type:'move',pos:aiPath[1]};
+    const fm=getMovesFrom(aiPos,humanPos,walls);
+    if(fm.length)return{type:'move',pos:fm[0]};
+    return null;
   }
 
-  return bestAction;
+  if(bestAction.type==='move')return{type:'move',pos:bestAction.pos};
+  return{type:'barricade',walls:bestAction.walls};
 }
 
 // ── Replay ─────────────────────────────────────────────────
@@ -774,7 +816,7 @@ function App(){
   useEffect(()=>{
     if(gameMode!=='pvc'||turn!=='B'||winner||screen!=='game')return;
     setAiThinking(true);
-    const delay=aiDifficulty==='hard'?900:aiDifficulty==='easy'?500:700;
+    const delay=aiDifficulty==='hard'?1100:aiDifficulty==='easy'?500:700;
     const t=setTimeout(()=>{
       const{pA:a,pB:b,walls:w,barrLeft:bl,moveHist:mh}=S.current;
       // Letzte 5 AI-Positionen (inkl. aktuelle) für Anti-Cycling
