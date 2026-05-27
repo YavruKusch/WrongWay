@@ -183,6 +183,106 @@
     0%{transform:scale(0.4);opacity:0;}
     100%{transform:scale(1);opacity:1;}
   }
+  @keyframes emote-pop{
+    0%{transform:scale(0) translateY(20px);opacity:0;}
+    60%{transform:scale(1.15) translateY(-4px);opacity:1;}
+    100%{transform:scale(1) translateY(0);opacity:1;}
+  }
+  @keyframes emote-vanish{
+    0%{transform:scale(1);opacity:1;}
+    100%{transform:scale(0.5) translateY(-10px);opacity:0;}
+  }
+  @keyframes laugh-body{
+    0%,100%{transform:translateY(0) rotate(-4deg);}
+    50%{transform:translateY(-6px) rotate(4deg);}
+  }
+  @keyframes laugh-hand-l{
+    0%,100%{transform:translate(-2px,2px) rotate(-15deg);}
+    50%{transform:translate(-6px,-8px) rotate(-50deg);}
+  }
+  @keyframes laugh-hand-r{
+    0%,100%{transform:translate(2px,2px) rotate(15deg);}
+    50%{transform:translate(6px,-8px) rotate(50deg);}
+  }
+  @keyframes laugh-head{
+    0%,100%{transform:rotate(-6deg);}
+    50%{transform:rotate(6deg);}
+  }
+  @keyframes cry-body{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(2px);}
+  }
+  @keyframes cry-head{
+    0%,100%{transform:rotate(-3deg) translateY(0);}
+    50%{transform:rotate(3deg) translateY(1.5px);}
+  }
+  @keyframes cry-hand-l{
+    0%,100%{transform:translate(8px,-18px) rotate(-60deg);}
+    50%{transform:translate(7px,-16px) rotate(-55deg);}
+  }
+  @keyframes cry-hand-r{
+    0%,100%{transform:translate(-8px,-18px) rotate(60deg);}
+    50%{transform:translate(-7px,-16px) rotate(55deg);}
+  }
+  @keyframes tear-drop{
+    0%{transform:translateY(0) scale(0.3);opacity:0;}
+    10%{opacity:1;}
+    100%{transform:translateY(30px) scale(1);opacity:0;}
+  }
+  @keyframes angry-body{
+    0%,100%{transform:translateX(0) rotate(0deg);}
+    20%{transform:translateX(-3px) rotate(-3deg);}
+    40%{transform:translateX(3px) rotate(3deg);}
+    60%{transform:translateX(-3px) rotate(-2deg);}
+    80%{transform:translateX(3px) rotate(2deg);}
+  }
+  @keyframes angry-hand-l{
+    0%,100%{transform:translate(0,0) rotate(-20deg);}
+    50%{transform:translate(-3px,-4px) rotate(-35deg);}
+  }
+  @keyframes angry-hand-r{
+    0%,100%{transform:translate(0,0) rotate(20deg);}
+    50%{transform:translate(3px,-4px) rotate(35deg);}
+  }
+  @keyframes angry-head{
+    0%,100%{transform:rotate(-2deg) translateY(0);}
+    50%{transform:rotate(2deg) translateY(-1px);}
+  }
+  @keyframes steam-puff{
+    0%{transform:translate(0,0) scale(0.4);opacity:0;}
+    30%{opacity:0.85;}
+    100%{transform:translate(var(--sx),-22px) scale(1.4);opacity:0;}
+  }
+  @keyframes confused-body{
+    0%,100%{transform:rotate(-3deg);}
+    50%{transform:rotate(3deg);}
+  }
+  @keyframes confused-head{
+    0%,100%{transform:rotate(-12deg) translateX(-1px);}
+    50%{transform:rotate(12deg) translateX(1px);}
+  }
+  @keyframes confused-hand-l{
+    0%,100%{transform:translate(-2px,-10px) rotate(-50deg);}
+    50%{transform:translate(-1px,-12px) rotate(-55deg);}
+  }
+  @keyframes confused-hand-r{
+    0%,100%{transform:translate(2px,-10px) rotate(50deg);}
+    50%{transform:translate(1px,-12px) rotate(55deg);}
+  }
+  @keyframes q-mark-float{
+    0%{transform:translateY(0) scale(0);opacity:0;}
+    20%{transform:translateY(-5px) scale(1.1);opacity:1;}
+    80%{transform:translateY(-12px) scale(1);opacity:1;}
+    100%{transform:translateY(-20px) scale(0.8);opacity:0;}
+  }
+  @keyframes bubble-pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08);}
+  }
+  @keyframes picker-pop{
+    0%{transform:scale(0) translateY(20px);opacity:0;}
+    100%{transform:scale(1) translateY(0);opacity:1;}
+  }
 </style>
 </head>
 <body>
@@ -765,6 +865,137 @@ async function playSound(type){
           ns.start(t-0.035);
         }
       }
+    }else if(type==='cry'){
+      // Schluchzen: 5 absteigende "huhu" Vokal-Bursts mit Sniff am Ende
+      const sobs=5;
+      const baseP=240;
+      for(let i=0;i<sobs;i++){
+        const t=now+i*0.32;
+        const pitch=baseP-i*8+(Math.random()-0.5)*6;
+        // "Hu" - kurzer Burst mit langem Tail
+        const burstDur=0.22;
+        const o=ctx.createOscillator();o.type='sawtooth';
+        // Pitch wobble (Whimpering)
+        o.frequency.setValueAtTime(pitch*1.15,t);
+        o.frequency.exponentialRampToValueAtTime(pitch*0.7,t+burstDur*0.9);
+        const o2=ctx.createOscillator();o2.type='triangle';
+        o2.frequency.setValueAtTime(pitch*2.1,t);
+        o2.frequency.exponentialRampToValueAtTime(pitch*1.3,t+burstDur*0.9);
+        // Formant "u" Vokal ~400 Hz
+        const bp=ctx.createBiquadFilter();bp.type='bandpass';
+        bp.frequency.value=430;bp.Q.value=4.5;
+        const lp=ctx.createBiquadFilter();lp.type='lowpass';
+        lp.frequency.value=1500;
+        const g=ctx.createGain();
+        g.gain.setValueAtTime(0,t);
+        g.gain.linearRampToValueAtTime(0.13,t+0.03);
+        g.gain.setValueAtTime(0.11,t+burstDur*0.5);
+        g.gain.exponentialRampToValueAtTime(0.001,t+burstDur);
+        o.connect(bp);o2.connect(bp);bp.connect(lp);lp.connect(g);g.connect(ctx.destination);
+        o.start(t);o2.start(t);
+        o.stop(t+burstDur+0.05);o2.stop(t+burstDur+0.05);
+        // Sniff (Schniefen) zwischen den Sobs
+        if(i<sobs-1){
+          const sniffDur=0.09;
+          const sBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*sniffDur),ctx.sampleRate);
+          const sd=sBuf.getChannelData(0);
+          for(let j=0;j<sd.length;j++)sd[j]=(Math.random()*2-1)*(j/sd.length);
+          const ns=ctx.createBufferSource();ns.buffer=sBuf;
+          const nbp=ctx.createBiquadFilter();nbp.type='bandpass';
+          nbp.frequency.value=2200;nbp.Q.value=2;
+          const ng=ctx.createGain();
+          ng.gain.setValueAtTime(0.04,t+burstDur+0.05);
+          ng.gain.exponentialRampToValueAtTime(0.001,t+burstDur+0.05+sniffDur);
+          ns.connect(nbp);nbp.connect(ng);ng.connect(ctx.destination);
+          ns.start(t+burstDur+0.05);
+        }
+      }
+    }else if(type==='angry'){
+      // Wütendes Grunzen/Knurren: tiefer Growl mit Rauheit
+      const dur=0.6;
+      const o1=ctx.createOscillator();o1.type='sawtooth';
+      o1.frequency.setValueAtTime(95,now);
+      o1.frequency.linearRampToValueAtTime(75,now+dur*0.4);
+      o1.frequency.linearRampToValueAtTime(110,now+dur*0.6);
+      o1.frequency.exponentialRampToValueAtTime(60,now+dur);
+      // Rauheits-Modulation für Knurren
+      const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=22;
+      const lfoG=ctx.createGain();lfoG.gain.value=18;
+      lfo.connect(lfoG);lfoG.connect(o1.frequency);
+      // Untere Sub-Frequenz
+      const o2=ctx.createOscillator();o2.type='square';
+      o2.frequency.setValueAtTime(48,now);
+      o2.frequency.exponentialRampToValueAtTime(30,now+dur);
+      // Filter
+      const lp=ctx.createBiquadFilter();lp.type='lowpass';
+      lp.frequency.setValueAtTime(800,now);
+      lp.frequency.exponentialRampToValueAtTime(400,now+dur);
+      lp.Q.value=4;
+      const g=ctx.createGain();
+      g.gain.setValueAtTime(0,now);
+      g.gain.linearRampToValueAtTime(0.22,now+0.05);
+      g.gain.setValueAtTime(0.2,now+dur*0.7);
+      g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+      const g2=ctx.createGain();g2.gain.value=0.18;
+      o1.connect(lp);o2.connect(g2);g2.connect(lp);lp.connect(g);g.connect(ctx.destination);
+      o1.start(now);o2.start(now);lfo.start(now);
+      o1.stop(now+dur+0.05);o2.stop(now+dur+0.05);lfo.stop(now+dur+0.05);
+      // Zusätzliches Schnaufen am Ende
+      const huffT=now+dur+0.05;
+      const huffDur=0.18;
+      const hBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*huffDur),ctx.sampleRate);
+      const hd=hBuf.getChannelData(0);
+      for(let i=0;i<hd.length;i++)hd[i]=(Math.random()*2-1);
+      const hns=ctx.createBufferSource();hns.buffer=hBuf;
+      const hbp=ctx.createBiquadFilter();hbp.type='bandpass';
+      hbp.frequency.value=600;hbp.Q.value=1.2;
+      const hg=ctx.createGain();
+      hg.gain.setValueAtTime(0.12,huffT);
+      hg.gain.exponentialRampToValueAtTime(0.001,huffT+huffDur);
+      hns.connect(hbp);hbp.connect(hg);hg.connect(ctx.destination);
+      hns.start(huffT);
+    }else if(type==='confused'){
+      // Verwirrtes "Hä?" - kurzer Vokal mit aufsteigender Frage-Melodie
+      const dur=0.55;
+      const o1=ctx.createOscillator();o1.type='sawtooth';
+      // "h-ä" Anfang mittel, dann hoch (Frage-Intonation)
+      o1.frequency.setValueAtTime(180,now);
+      o1.frequency.setValueAtTime(195,now+0.08);
+      o1.frequency.linearRampToValueAtTime(195,now+0.28);
+      o1.frequency.linearRampToValueAtTime(310,now+dur);
+      const o2=ctx.createOscillator();o2.type='triangle';
+      o2.frequency.setValueAtTime(360,now);
+      o2.frequency.setValueAtTime(390,now+0.08);
+      o2.frequency.linearRampToValueAtTime(390,now+0.28);
+      o2.frequency.linearRampToValueAtTime(620,now+dur);
+      // "ä" Vokal Formant ~700 Hz
+      const bp=ctx.createBiquadFilter();bp.type='bandpass';
+      bp.frequency.value=720;bp.Q.value=3.5;
+      const lp=ctx.createBiquadFilter();lp.type='lowpass';
+      lp.frequency.value=2500;
+      const g=ctx.createGain();
+      // "h" Aspiration am Anfang
+      g.gain.setValueAtTime(0,now);
+      g.gain.linearRampToValueAtTime(0.05,now+0.04);
+      g.gain.linearRampToValueAtTime(0.16,now+0.1);
+      g.gain.setValueAtTime(0.16,now+dur*0.7);
+      g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+      o1.connect(bp);o2.connect(bp);bp.connect(lp);lp.connect(g);g.connect(ctx.destination);
+      o1.start(now);o2.start(now);
+      o1.stop(now+dur+0.05);o2.stop(now+dur+0.05);
+      // "h" Atemgeräusch am Anfang
+      const hDur=0.08;
+      const hBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*hDur),ctx.sampleRate);
+      const hd=hBuf.getChannelData(0);
+      for(let i=0;i<hd.length;i++)hd[i]=(Math.random()*2-1);
+      const hns=ctx.createBufferSource();hns.buffer=hBuf;
+      const hbp=ctx.createBiquadFilter();hbp.type='bandpass';
+      hbp.frequency.value=2000;hbp.Q.value=1.5;
+      const hg=ctx.createGain();
+      hg.gain.setValueAtTime(0.04,now);
+      hg.gain.exponentialRampToValueAtTime(0.001,now+hDur);
+      hns.connect(hbp);hbp.connect(hg);hg.connect(ctx.destination);
+      hns.start(now);
     }
   }catch{}
 }
@@ -817,6 +1048,11 @@ function App(){
   const[gameNum,setGameNum]=useState(0);
   const[oppCountdown,setOppCountdown]=useState(null);
   const oppLastSeenRef=useRef(0);
+  // Emote-State: {A:{type,id}|null, B:{type,id}|null} — id ist Timestamp für Animation-Restart
+  const[emotes,setEmotes]=useState({A:null,B:null});
+  const[emotePicker,setEmotePicker]=useState(false);
+  const[emoteCooldown,setEmoteCooldown]=useState(false);
+  const emoteTimerRef=useRef(null);
 
   const gridRef=useRef(null);
   const snapPosRef=useRef(null);
@@ -845,6 +1081,36 @@ function App(){
     setCelebrating(true);
     setTimeout(()=>{setCelebrating(false);setScreen('end');},2200);
   };
+  const EMOTE_DUR=2600;
+  const playEmoteSound=type=>{
+    if(type==='laugh')playSound('laugh');
+    else if(type==='cry')playSound('cry');
+    else if(type==='angry')playSound('angry');
+    else if(type==='confused')playSound('confused');
+  };
+  const showEmote=(player,type)=>{
+    playEmoteSound(type);
+    const id=Date.now()+Math.random();
+    setEmotes(e=>({...e,[player]:{type,id}}));
+    setTimeout(()=>{
+      setEmotes(e=>(e[player]&&e[player].id===id)?{...e,[player]:null}:e);
+    },EMOTE_DUR);
+  };
+  const triggerEmote=type=>{
+    if(emoteCooldown||winner||screen!=='game')return;
+    const me=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
+    if(!me)return;
+    setEmoteCooldown(true);
+    setEmotePicker(false);
+    showEmote(me,type);
+    // Online: an Gegner senden
+    if(gameMode==='online'&&lobbyId){
+      window.db.ref(`barricade_emote_${lobbyId}/${me}`).set(JSON.stringify({type,ts:Date.now()}));
+    }
+    if(emoteTimerRef.current)clearTimeout(emoteTimerRef.current);
+    emoteTimerRef.current=setTimeout(()=>setEmoteCooldown(false),EMOTE_DUR);
+  };
+
   const myTurn=gameMode==='online'?turn===onlineRole:true;
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const color=PC[turn];
@@ -984,6 +1250,24 @@ function App(){
     return()=>ref.off('value',cb);
   },[gameMode,lobbyId,screen]);
 
+  // ── Online Emote-Listener (Gegner-Emotes empfangen) ──
+  useEffect(()=>{
+    if(gameMode!=='online'||!lobbyId||screen!=='game')return;
+    const oppRole=onlineRole==='A'?'B':'A';
+    const ref=window.db.ref(`barricade_emote_${lobbyId}/${oppRole}`);
+    const initTs=Date.now();
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();
+      if(!v)return;
+      let data;try{data=JSON.parse(v);}catch{return;}
+      if(!data||!data.type||!data.ts)return;
+      // Ignoriere alte Emotes (vor Listener-Start)
+      if(data.ts<initTs-1000)return;
+      showEmote(oppRole,data.type);
+    });
+    return()=>ref.off('value',cb);
+  },[gameMode,lobbyId,screen,onlineRole]);
+
   // ── Heartbeat: Anwesenheit prüfen, 15s Timeout = automatischer Verlust ──
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
@@ -1105,6 +1389,18 @@ function App(){
     const iv=setInterval(hb,3000);
     return()=>clearInterval(iv);
   },[screen,onlineRole,lobbyId]);
+
+  // ── Cleanup: Lobby aus der Liste entfernen wenn Host ins Spiel startet ──
+  useEffect(()=>{
+    if(gameMode!=='online'||onlineRole!=='A'||screen!=='game'||!lobbyId)return;
+    const cleanup=async()=>{
+      const list=await stoGet('barricade_lobby_list')||[];
+      if(list.some(l=>l.id===lobbyId)){
+        await stoSet('barricade_lobby_list',list.filter(l=>l.id!==lobbyId));
+      }
+    };
+    cleanup();
+  },[gameMode,onlineRole,screen,lobbyId]);
 
   // ── Create lobby ──
   const createLobby=async(isPrivate)=>{
@@ -1840,6 +2136,77 @@ function App(){
           ))}
         </div>
       )}
+
+      {/* Emote-Anzeigen (beide Spieler) - links unten überm Sprachblase-Button */}
+      {['A','B'].map(p=>{
+        const em=emotes[p];
+        if(!em)return null;
+        return(
+          <div key={`emote-${p}-${em.id}`} style={{
+            position:'fixed',left:p==='A'?14:84,bottom:74,
+            zIndex:450,pointerEvents:'none',
+            animation:'emote-pop 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+            <EmoteChar color={PC[p]} dark={PD[p]} type={em.type}/>
+          </div>
+        );
+      })}
+
+      {/* Emote-Picker (Clash Royale Style 2x2) */}
+      {emotePicker&&!winner&&(
+        <div onClick={()=>setEmotePicker(false)} style={{
+          position:'fixed',inset:0,zIndex:480}}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            position:'fixed',left:14,bottom:74,
+            background:darkMode?'rgba(22,30,51,0.96)':'rgba(255,255,255,0.97)',
+            borderRadius:16,padding:8,
+            display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,
+            border:`1.5px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.06)'}`,
+            boxShadow:'0 8px 28px rgba(0,0,0,0.25)',
+            animation:'picker-pop 0.22s cubic-bezier(0.34,1.56,0.64,1) both',
+            transformOrigin:'bottom left'}}>
+            {[
+              {k:'laugh',emoji:'😂'},
+              {k:'cry',emoji:'😭'},
+              {k:'angry',emoji:'😠'},
+              {k:'confused',emoji:'❓'}
+            ].map(e=>(
+              <button key={e.k} onClick={()=>triggerEmote(e.k)}
+                disabled={emoteCooldown}
+                style={{
+                  width:48,height:48,fontSize:26,
+                  background:darkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)',
+                  border:'none',borderRadius:10,
+                  cursor:emoteCooldown?'not-allowed':'pointer',
+                  opacity:emoteCooldown?0.4:1,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  transition:'transform 0.12s',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {e.emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sprachblase-Button unten links */}
+      {!winner&&screen==='game'&&(
+        <button onClick={()=>!emoteCooldown&&setEmotePicker(p=>!p)}
+          disabled={emoteCooldown}
+          style={{
+            position:'fixed',left:14,bottom:16,zIndex:200,
+            width:48,height:48,borderRadius:'50%',
+            background:darkMode?'rgba(30,41,68,0.75)':'rgba(255,255,255,0.78)',
+            backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+            border:`1px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.85)'}`,
+            boxShadow:'0 4px 14px rgba(0,0,0,0.12)',
+            cursor:emoteCooldown?'not-allowed':'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontSize:22,opacity:emoteCooldown?0.45:1,
+            animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite',
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>
+          💬
+        </button>
+      )}
     </div>
   );
 }
@@ -1848,6 +2215,116 @@ const DANCES={
   robot:{body:'dance-robot',handL:'robot-hand-l',handR:'robot-hand-r',head:'robot-head',belly:null,legL:null,legR:null,slow:1.7,fast:1.1,ease:'cubic-bezier(0.65,0,0.35,1)'},
   twerk:{body:'dance-twerk',handL:'twerk-hand-l',handR:'twerk-hand-r',head:'twerk-head',belly:'twerk-belly',legL:'twerk-leg-l',legR:'twerk-leg-r',slow:0.5,fast:0.32,ease:'ease-in-out'}
 };
+
+function EmoteChar({color,dark,type}){
+  // Kleiner Charakter mit emote-spezifischem Gesicht + Body-Animation
+  // SVG-Größe ~60×72 px - klein genug um unten links zu passen
+  const size={w:62,h:74};
+
+  // Animations-Config je Emote
+  const cfg=(()=>{
+    if(type==='laugh')return{body:'laugh-body 0.4s ease-in-out infinite',head:'laugh-head 0.4s ease-in-out infinite',handL:'laugh-hand-l 0.4s ease-in-out infinite',handR:'laugh-hand-r 0.4s ease-in-out infinite'};
+    if(type==='cry')return{body:'cry-body 1.2s ease-in-out infinite',head:'cry-head 1.2s ease-in-out infinite',handL:'cry-hand-l 1.2s ease-in-out infinite',handR:'cry-hand-r 1.2s ease-in-out infinite'};
+    if(type==='angry')return{body:'angry-body 0.35s ease-in-out infinite',head:'angry-head 0.35s ease-in-out infinite',handL:'angry-hand-l 0.35s ease-in-out infinite',handR:'angry-hand-r 0.35s ease-in-out infinite'};
+    return{body:'confused-body 0.9s ease-in-out infinite',head:'confused-head 0.9s ease-in-out infinite',handL:'confused-hand-l 0.9s ease-in-out infinite',handR:'confused-hand-r 0.9s ease-in-out infinite'};
+  })();
+
+  // Gesicht pro Emote
+  const face=(()=>{
+    if(type==='laugh')return(
+      <g>
+        {/* Lachende zusammengekniffene Augen (^ ^) */}
+        <path d="M 20 22 Q 24 17 28 22" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <path d="M 34 22 Q 38 17 42 22" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        {/* Großer offener lachender Mund */}
+        <path d="M 20 28 Q 31 38 42 28 Q 31 36 20 28 Z" fill="white"/>
+        <ellipse cx="31" cy="33" rx="4" ry="2" fill="#ef4444" opacity="0.6"/>
+      </g>
+    );
+    if(type==='cry')return(
+      <g>
+        {/* Traurige Augen (zusammengekniffen, nach unten) */}
+        <path d="M 20 24 Q 24 20 28 24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <path d="M 34 24 Q 38 20 42 24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        {/* Augenbrauen runter */}
+        <path d="M 19 17 L 28 19" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+        <path d="M 43 17 L 34 19" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+        {/* Trauriger Mund nach unten */}
+        <path d="M 24 32 Q 31 28 38 32" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        {/* Tränen */}
+        <circle cx="22" cy="27" r="2" fill="#7dd3fc" style={{animation:'tear-drop 0.9s ease-in 0s infinite'}}/>
+        <circle cx="40" cy="27" r="2" fill="#7dd3fc" style={{animation:'tear-drop 0.9s ease-in 0.45s infinite'}}/>
+      </g>
+    );
+    if(type==='angry')return(
+      <g>
+        {/* Wütende Augenbrauen schräg runter */}
+        <path d="M 17 16 L 27 21" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+        <path d="M 45 16 L 35 21" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+        {/* Böse Augen */}
+        <circle cx="24" cy="24" r="2" fill="white"/>
+        <circle cx="38" cy="24" r="2" fill="white"/>
+        {/* Knurrender Mund mit Zähnen */}
+        <path d="M 22 32 L 40 32 L 40 34 L 22 34 Z" fill="white"/>
+        <line x1="26" y1="32" x2="26" y2="34" stroke={dark} strokeWidth="0.8"/>
+        <line x1="31" y1="32" x2="31" y2="34" stroke={dark} strokeWidth="0.8"/>
+        <line x1="36" y1="32" x2="36" y2="34" stroke={dark} strokeWidth="0.8"/>
+        {/* Dampf-Puffs */}
+        <circle cx="14" cy="14" r="3" fill="white" opacity="0.7" style={{['--sx']:'-8px',animation:'steam-puff 0.8s ease-out 0s infinite'}}/>
+        <circle cx="48" cy="14" r="3" fill="white" opacity="0.7" style={{['--sx']:'8px',animation:'steam-puff 0.8s ease-out 0.4s infinite'}}/>
+      </g>
+    );
+    // confused
+    return(
+      <g>
+        {/* Hochgezogene Augenbraue (eine hoch, eine normal) */}
+        <path d="M 18 14 Q 23 11 28 14" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        <path d="M 34 17 L 42 17" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        {/* Augen - eins normal eins zusammengekniffen */}
+        <circle cx="23" cy="22" r="2.2" fill="white"/>
+        <path d="M 34 22 Q 38 19 42 22" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        {/* Schiefer Mund */}
+        <path d="M 22 32 Q 28 30 34 32" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        {/* Fragezeichen über Kopf */}
+        <text x="50" y="6" fill="#fbbf24" fontSize="14" fontWeight="900"
+          style={{animation:'q-mark-float 1.4s ease-out 0s infinite',transformOrigin:'50px 6px'}}>?</text>
+        <text x="42" y="2" fill="#fbbf24" fontSize="10" fontWeight="900"
+          style={{animation:'q-mark-float 1.4s ease-out 0.5s infinite',transformOrigin:'42px 2px'}}>?</text>
+      </g>
+    );
+  })();
+
+  return(
+    <div style={{
+      width:size.w,height:size.h,
+      filter:'drop-shadow(0 4px 10px rgba(0,0,0,0.25))'}}>
+      <div style={{
+        animation:cfg.body,
+        transformOrigin:'center bottom',width:'100%',height:'100%'}}>
+        <svg width={size.w} height={size.h} viewBox="0 0 62 74" style={{overflow:'visible',display:'block'}}>
+          {/* Beine */}
+          <circle cx="26" cy="64" r="5" fill={dark}/>
+          <circle cx="36" cy="64" r="5" fill={dark}/>
+          {/* Körper */}
+          <circle cx="31" cy="46" r="13" fill={color} stroke={dark} strokeWidth="1.5"/>
+          {/* Linke Hand */}
+          <g style={{transformOrigin:'19px 46px',animation:cfg.handL}}>
+            <circle cx="19" cy="46" r="5" fill={dark}/>
+          </g>
+          {/* Rechte Hand */}
+          <g style={{transformOrigin:'43px 46px',animation:cfg.handR}}>
+            <circle cx="43" cy="46" r="5" fill={dark}/>
+          </g>
+          {/* Kopf */}
+          <g style={{transformOrigin:'31px 22px',animation:cfg.head}}>
+            <circle cx="31" cy="22" r="13" fill={color} stroke={dark} strokeWidth="1.5"/>
+            {face}
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 function WinnerPerson({color,dark,speed,dance}){
   const cfg=DANCES[dance]||DANCES.robot;
