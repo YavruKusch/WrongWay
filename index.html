@@ -185,7 +185,7 @@
   }
   @keyframes emote-pop{
     0%{transform:scale(0) translateY(20px);opacity:0;}
-    60%{transform:scale(1.15) translateY(-4px);opacity:1;}
+    60%{transform:scale(1.2) translateY(-6px);opacity:1;}
     100%{transform:scale(1) translateY(0);opacity:1;}
   }
   @keyframes emote-vanish{
@@ -193,91 +193,130 @@
     100%{transform:scale(0.5) translateY(-10px);opacity:0;}
   }
   @keyframes laugh-body{
-    0%,100%{transform:translateY(0) rotate(-4deg);}
-    50%{transform:translateY(-6px) rotate(4deg);}
+    0%,100%{transform:translateY(0) rotate(-12deg) scale(1);}
+    25%{transform:translateY(-12px) rotate(8deg) scale(1.05);}
+    50%{transform:translateY(-2px) rotate(12deg) scale(1.08);}
+    75%{transform:translateY(-10px) rotate(-8deg) scale(1.04);}
   }
   @keyframes laugh-hand-l{
-    0%,100%{transform:translate(-2px,2px) rotate(-15deg);}
-    50%{transform:translate(-6px,-8px) rotate(-50deg);}
+    0%,100%{transform:translate(-4px,4px) rotate(-25deg);}
+    50%{transform:translate(-12px,-18px) rotate(-90deg);}
   }
   @keyframes laugh-hand-r{
-    0%,100%{transform:translate(2px,2px) rotate(15deg);}
-    50%{transform:translate(6px,-8px) rotate(50deg);}
+    0%,100%{transform:translate(4px,4px) rotate(25deg);}
+    50%{transform:translate(12px,-18px) rotate(90deg);}
   }
   @keyframes laugh-head{
-    0%,100%{transform:rotate(-6deg);}
-    50%{transform:rotate(6deg);}
+    0%,100%{transform:rotate(-15deg) translateY(0);}
+    50%{transform:rotate(15deg) translateY(-3px);}
+  }
+  @keyframes laugh-tear{
+    0%{transform:translateY(0) scale(0.3);opacity:0;}
+    20%{opacity:1;transform:translateY(2px) scale(1);}
+    100%{transform:translateY(22px) scale(1.2);opacity:0;}
   }
   @keyframes cry-body{
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(2px);}
+    0%,100%{transform:translateY(0) scale(1);}
+    25%{transform:translateY(4px) scale(0.96);}
+    50%{transform:translateY(0) scale(1.02);}
+    75%{transform:translateY(3px) scale(0.97);}
   }
   @keyframes cry-head{
-    0%,100%{transform:rotate(-3deg) translateY(0);}
-    50%{transform:rotate(3deg) translateY(1.5px);}
+    0%,100%{transform:rotate(-8deg) translateY(0);}
+    25%{transform:rotate(-2deg) translateY(3px);}
+    50%{transform:rotate(8deg) translateY(0);}
+    75%{transform:rotate(2deg) translateY(3px);}
   }
   @keyframes cry-hand-l{
-    0%,100%{transform:translate(8px,-18px) rotate(-60deg);}
-    50%{transform:translate(7px,-16px) rotate(-55deg);}
+    0%,100%{transform:translate(10px,-22px) rotate(-75deg);}
+    50%{transform:translate(8px,-19px) rotate(-65deg);}
   }
   @keyframes cry-hand-r{
-    0%,100%{transform:translate(-8px,-18px) rotate(60deg);}
-    50%{transform:translate(-7px,-16px) rotate(55deg);}
+    0%,100%{transform:translate(-10px,-22px) rotate(75deg);}
+    50%{transform:translate(-8px,-19px) rotate(65deg);}
   }
   @keyframes tear-drop{
     0%{transform:translateY(0) scale(0.3);opacity:0;}
-    10%{opacity:1;}
-    100%{transform:translateY(30px) scale(1);opacity:0;}
+    15%{opacity:1;transform:translateY(2px) scale(1);}
+    100%{transform:translateY(38px) scale(1.4);opacity:0;}
+  }
+  @keyframes tear-spurt{
+    0%{transform:translate(0,0) scale(0);opacity:0;}
+    15%{opacity:1;transform:translate(var(--tx,0),4px) scale(1);}
+    100%{transform:translate(calc(var(--tx,0) * 2.5),28px) scale(1.5);opacity:0;}
+  }
+  @keyframes mouth-wail{
+    0%,100%{transform:scaleY(0.7) scaleX(1);}
+    50%{transform:scaleY(1.3) scaleX(1.15);}
   }
   @keyframes angry-body{
-    0%,100%{transform:translateX(0) rotate(0deg);}
-    20%{transform:translateX(-3px) rotate(-3deg);}
-    40%{transform:translateX(3px) rotate(3deg);}
-    60%{transform:translateX(-3px) rotate(-2deg);}
-    80%{transform:translateX(3px) rotate(2deg);}
+    0%,100%{transform:translate(0,0) rotate(0deg);}
+    10%{transform:translate(-5px,-2px) rotate(-6deg);}
+    20%{transform:translate(5px,0) rotate(6deg);}
+    30%{transform:translate(-5px,-2px) rotate(-5deg);}
+    40%{transform:translate(5px,0) rotate(5deg);}
+    50%{transform:translate(-4px,-3px) rotate(-4deg);}
+    60%{transform:translate(4px,0) rotate(4deg);}
+    70%{transform:translate(-3px,-1px) rotate(-3deg);}
+    80%{transform:translate(3px,0) rotate(3deg);}
+    90%{transform:translate(-2px,0) rotate(-2deg);}
   }
   @keyframes angry-hand-l{
-    0%,100%{transform:translate(0,0) rotate(-20deg);}
-    50%{transform:translate(-3px,-4px) rotate(-35deg);}
+    0%,100%{transform:translate(-2px,2px) rotate(-30deg);}
+    50%{transform:translate(-8px,-12px) rotate(-65deg);}
   }
   @keyframes angry-hand-r{
-    0%,100%{transform:translate(0,0) rotate(20deg);}
-    50%{transform:translate(3px,-4px) rotate(35deg);}
+    0%,100%{transform:translate(2px,2px) rotate(30deg);}
+    50%{transform:translate(8px,-12px) rotate(65deg);}
   }
   @keyframes angry-head{
-    0%,100%{transform:rotate(-2deg) translateY(0);}
-    50%{transform:rotate(2deg) translateY(-1px);}
+    0%,100%{transform:rotate(-5deg) translateY(0) scale(1);}
+    50%{transform:rotate(5deg) translateY(-3px) scale(1.08);}
   }
   @keyframes steam-puff{
-    0%{transform:translate(0,0) scale(0.4);opacity:0;}
-    30%{opacity:0.85;}
-    100%{transform:translate(var(--sx),-22px) scale(1.4);opacity:0;}
+    0%{transform:translate(0,0) scale(0.3);opacity:0;}
+    20%{opacity:0.95;}
+    100%{transform:translate(var(--sx),-32px) scale(2);opacity:0;}
+  }
+  @keyframes vein-throb{
+    0%,100%{transform:scale(1);opacity:0.85;}
+    50%{transform:scale(1.4);opacity:1;}
+  }
+  @keyframes face-flush{
+    0%,100%{opacity:0.55;}
+    50%{opacity:0.95;}
   }
   @keyframes confused-body{
-    0%,100%{transform:rotate(-3deg);}
-    50%{transform:rotate(3deg);}
+    0%,100%{transform:rotate(-6deg) translateY(0);}
+    50%{transform:rotate(6deg) translateY(-2px);}
   }
   @keyframes confused-head{
-    0%,100%{transform:rotate(-12deg) translateX(-1px);}
-    50%{transform:rotate(12deg) translateX(1px);}
+    0%,100%{transform:rotate(-22deg) translateX(-2px);}
+    50%{transform:rotate(22deg) translateX(2px);}
   }
   @keyframes confused-hand-l{
-    0%,100%{transform:translate(-2px,-10px) rotate(-50deg);}
-    50%{transform:translate(-1px,-12px) rotate(-55deg);}
+    0%,100%{transform:translate(-3px,-12px) rotate(-65deg);}
+    50%{transform:translate(-1px,-16px) rotate(-80deg);}
   }
   @keyframes confused-hand-r{
-    0%,100%{transform:translate(2px,-10px) rotate(50deg);}
-    50%{transform:translate(1px,-12px) rotate(55deg);}
+    0%,100%{transform:translate(3px,-12px) rotate(65deg);}
+    50%{transform:translate(1px,-16px) rotate(80deg);}
   }
   @keyframes q-mark-float{
-    0%{transform:translateY(0) scale(0);opacity:0;}
-    20%{transform:translateY(-5px) scale(1.1);opacity:1;}
-    80%{transform:translateY(-12px) scale(1);opacity:1;}
-    100%{transform:translateY(-20px) scale(0.8);opacity:0;}
+    0%{transform:translateY(0) scale(0) rotate(-30deg);opacity:0;}
+    20%{transform:translateY(-4px) scale(1.4) rotate(15deg);opacity:1;}
+    50%{transform:translateY(-14px) scale(1.1) rotate(-10deg);opacity:1;}
+    80%{transform:translateY(-22px) scale(1) rotate(8deg);opacity:1;}
+    100%{transform:translateY(-32px) scale(0.7) rotate(0deg);opacity:0;}
+  }
+  @keyframes sweat-drop{
+    0%{transform:translate(0,0) scale(0);opacity:0;}
+    20%{transform:translate(0,2px) scale(1);opacity:1;}
+    100%{transform:translate(var(--sw,4px),18px) scale(1.2);opacity:0;}
   }
   @keyframes bubble-pulse{
     0%,100%{transform:scale(1);}
-    50%{transform:scale(1.08);}
+    50%{transform:scale(1.1);}
   }
   @keyframes picker-pop{
     0%{transform:scale(0) translateY(20px);opacity:0;}
@@ -2137,13 +2176,18 @@ function App(){
         </div>
       )}
 
-      {/* Emote-Anzeigen (beide Spieler) - links unten überm Sprachblase-Button */}
+      {/* Emote-Anzeigen (beide Spieler) - eigener links unten, Gegner rechts unten */}
       {['A','B'].map(p=>{
         const em=emotes[p];
         if(!em)return null;
+        const myRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':null);
+        const isMine=myRole?p===myRole:false;
+        const posStyle=isMine
+          ?{left:14,bottom:74}
+          :myRole?{right:14,bottom:74}:{left:p==='A'?14:96,bottom:74};
         return(
           <div key={`emote-${p}-${em.id}`} style={{
-            position:'fixed',left:p==='A'?14:84,bottom:74,
+            position:'fixed',...posStyle,
             zIndex:450,pointerEvents:'none',
             animation:'emote-pop 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
             <EmoteChar color={PC[p]} dark={PD[p]} type={em.type}/>
@@ -2151,39 +2195,44 @@ function App(){
         );
       })}
 
-      {/* Emote-Picker (Clash Royale Style 2x2) */}
+      {/* Emote-Picker (Clash Royale Style 2x2 mit Charakter-Köpfen) */}
       {emotePicker&&!winner&&(
         <div onClick={()=>setEmotePicker(false)} style={{
           position:'fixed',inset:0,zIndex:480}}>
           <div onClick={e=>e.stopPropagation()} style={{
             position:'fixed',left:14,bottom:74,
             background:darkMode?'rgba(22,30,51,0.96)':'rgba(255,255,255,0.97)',
-            borderRadius:16,padding:8,
-            display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,
+            borderRadius:18,padding:10,
+            display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,
             border:`1.5px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.06)'}`,
             boxShadow:'0 8px 28px rgba(0,0,0,0.25)',
             animation:'picker-pop 0.22s cubic-bezier(0.34,1.56,0.64,1) both',
             transformOrigin:'bottom left'}}>
             {[
-              {k:'laugh',emoji:'😂'},
-              {k:'cry',emoji:'😭'},
-              {k:'angry',emoji:'😠'},
-              {k:'confused',emoji:'❓'}
-            ].map(e=>(
-              <button key={e.k} onClick={()=>triggerEmote(e.k)}
-                disabled={emoteCooldown}
-                style={{
-                  width:48,height:48,fontSize:26,
-                  background:darkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)',
-                  border:'none',borderRadius:10,
-                  cursor:emoteCooldown?'not-allowed':'pointer',
-                  opacity:emoteCooldown?0.4:1,
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  transition:'transform 0.12s',
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                {e.emoji}
-              </button>
-            ))}
+              {k:'laugh'},
+              {k:'cry'},
+              {k:'angry'},
+              {k:'confused'}
+            ].map(e=>{
+              const myRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
+              const c=PC[myRole]||PC.A;
+              const d=PD[myRole]||PD.A;
+              return(
+                <button key={e.k} onClick={()=>triggerEmote(e.k)}
+                  disabled={emoteCooldown}
+                  style={{
+                    width:58,height:58,padding:0,
+                    background:darkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)',
+                    border:'none',borderRadius:12,
+                    cursor:emoteCooldown?'not-allowed':'pointer',
+                    opacity:emoteCooldown?0.4:1,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    transition:'transform 0.12s',
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  <EmoteHead color={c} dark={d} type={e.k} size={48}/>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2216,109 +2265,165 @@ const DANCES={
   twerk:{body:'dance-twerk',handL:'twerk-hand-l',handR:'twerk-hand-r',head:'twerk-head',belly:'twerk-belly',legL:'twerk-leg-l',legR:'twerk-leg-r',slow:0.5,fast:0.32,ease:'ease-in-out'}
 };
 
+// Gesichts-Content für ein bestimmtes Emote — wird in Kopf eingebettet
+function EmoteFace({type,dark,animate}){
+  if(type==='laugh')return(
+    <g>
+      {/* Lachende zusammengekniffene Augen ^^ — dicker, expressiver */}
+      <path d="M 18 22 Q 24 14 30 22" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+      <path d="M 34 22 Q 40 14 46 22" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+      {/* Wangen-Röte (rot vor Lachen) */}
+      <ellipse cx="16" cy="28" rx="3.5" ry="2.5" fill="#fbb6ce" opacity="0.7"/>
+      <ellipse cx="48" cy="28" rx="3.5" ry="2.5" fill="#fbb6ce" opacity="0.7"/>
+      {/* Riesiger offener lachender Mund */}
+      <path d="M 16 28 Q 32 44 48 28 Q 32 42 16 28 Z" fill="white" stroke={dark} strokeWidth="1"/>
+      {/* Zunge */}
+      <ellipse cx="32" cy="36" rx="6" ry="3" fill="#f87171"/>
+      <path d="M 32 33 L 32 38" stroke="#dc2626" strokeWidth="0.8" opacity="0.6"/>
+      {/* Lach-Tränen aus den Augen */}
+      {animate&&<>
+        <circle cx="14" cy="24" r="1.8" fill="#7dd3fc" style={{animation:'laugh-tear 0.9s ease-in 0s infinite'}}/>
+        <circle cx="50" cy="24" r="1.8" fill="#7dd3fc" style={{animation:'laugh-tear 0.9s ease-in 0.4s infinite'}}/>
+      </>}
+    </g>
+  );
+  if(type==='cry')return(
+    <g>
+      {/* Augenbrauen stark runter - traurig zusammengezogen */}
+      <path d="M 14 14 Q 20 11 28 18" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M 50 14 Q 44 11 36 18" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      {/* Zusammengekniffene Augen die viele Tränen produzieren */}
+      <path d="M 16 24 Q 22 19 28 24" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M 36 24 Q 42 19 48 24" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      {/* Tränen-Wasserfälle */}
+      {animate&&<>
+        <ellipse cx="20" cy="27" rx="2.5" ry="3" fill="#7dd3fc" style={{['--tx']:'-2px',animation:'tear-spurt 0.7s ease-in 0s infinite'}}/>
+        <ellipse cx="44" cy="27" rx="2.5" ry="3" fill="#7dd3fc" style={{['--tx']:'2px',animation:'tear-spurt 0.7s ease-in 0.15s infinite'}}/>
+        <ellipse cx="18" cy="27" rx="2" ry="2.5" fill="#7dd3fc" style={{['--tx']:'-3px',animation:'tear-spurt 0.7s ease-in 0.35s infinite'}}/>
+        <ellipse cx="46" cy="27" rx="2" ry="2.5" fill="#7dd3fc" style={{['--tx']:'3px',animation:'tear-spurt 0.7s ease-in 0.5s infinite'}}/>
+      </>}
+      {/* Heulender weit offener Mund */}
+      <g style={animate?{transformOrigin:'32px 36px',animation:'mouth-wail 0.6s ease-in-out infinite'}:{}}>
+        <ellipse cx="32" cy="36" rx="9" ry="6" fill={dark} stroke="white" strokeWidth="1.5"/>
+        <ellipse cx="32" cy="37" rx="5" ry="3" fill="#1e1b1b"/>
+      </g>
+    </g>
+  );
+  if(type==='angry')return(
+    <g>
+      {/* Wütende Augenbrauen V-förmig stark runter */}
+      <path d="M 12 12 L 28 22" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+      <path d="M 52 12 L 36 22" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+      {/* Rote Gesicht-Röte (Wut-Flush) */}
+      {animate&&<ellipse cx="32" cy="26" rx="20" ry="8" fill="#fca5a5" opacity="0.55"
+        style={{animation:'face-flush 0.6s ease-in-out infinite'}}/>}
+      {/* Funkelnde böse Augen mit kleinem Pupillen-Glow */}
+      <circle cx="22" cy="24" r="3" fill="white"/>
+      <circle cx="22" cy="24" r="1.5" fill={dark}/>
+      <circle cx="42" cy="24" r="3" fill="white"/>
+      <circle cx="42" cy="24" r="1.5" fill={dark}/>
+      {/* Knurrender Mund mit Reißzähnen */}
+      <path d="M 18 32 L 46 32 L 44 36 L 20 36 Z" fill="white" stroke={dark} strokeWidth="1"/>
+      <polygon points="22,32 24,38 26,32" fill="white"/>
+      <polygon points="38,32 40,38 42,32" fill="white"/>
+      <line x1="28" y1="32" x2="28" y2="36" stroke={dark} strokeWidth="0.6"/>
+      <line x1="32" y1="32" x2="32" y2="36" stroke={dark} strokeWidth="0.6"/>
+      <line x1="36" y1="32" x2="36" y2="36" stroke={dark} strokeWidth="0.6"/>
+      {/* Zorn-Ader pulsierend */}
+      {animate&&<g style={{transformOrigin:'48px 10px',animation:'vein-throb 0.5s ease-in-out infinite'}}>
+        <path d="M 48 8 L 50 12 L 47 13 L 49 17" stroke="#dc2626" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        <path d="M 50 12 L 53 10" stroke="#dc2626" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      </g>}
+      {/* Dampf-Puffs aus den Ohren */}
+      {animate&&<>
+        <circle cx="6" cy="18" r="3.5" fill="white" opacity="0.85" style={{['--sx']:'-14px',animation:'steam-puff 0.7s ease-out 0s infinite'}}/>
+        <circle cx="6" cy="18" r="2.8" fill="white" opacity="0.75" style={{['--sx']:'-12px',animation:'steam-puff 0.7s ease-out 0.25s infinite'}}/>
+        <circle cx="58" cy="18" r="3.5" fill="white" opacity="0.85" style={{['--sx']:'14px',animation:'steam-puff 0.7s ease-out 0.1s infinite'}}/>
+        <circle cx="58" cy="18" r="2.8" fill="white" opacity="0.75" style={{['--sx']:'12px',animation:'steam-puff 0.7s ease-out 0.35s infinite'}}/>
+      </>}
+    </g>
+  );
+  // confused
+  return(
+    <g>
+      {/* Eine Augenbraue hoch (links), eine schräg runter (rechts) - klassisch verwirrt */}
+      <path d="M 14 11 Q 22 6 30 14" stroke="white" strokeWidth="2.4" fill="none" strokeLinecap="round"/>
+      <path d="M 36 18 L 50 16" stroke="white" strokeWidth="2.4" fill="none" strokeLinecap="round"/>
+      {/* Augen: links weit offen (großes Pupille), rechts zusammengekniffen */}
+      <circle cx="22" cy="22" r="4" fill="white"/>
+      <circle cx="22" cy="22" r="2" fill={dark}/>
+      <path d="M 36 24 Q 42 19 48 24" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      {/* Schiefer kleiner Mund + leicht offen */}
+      <path d="M 22 33 Q 28 30 36 34" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <ellipse cx="29" cy="33" rx="2" ry="1" fill={dark}/>
+      {/* Schweißtropfen am Kopf */}
+      {animate&&<ellipse cx="50" cy="14" rx="2" ry="3" fill="#7dd3fc"
+        style={{['--sw']:'4px',animation:'sweat-drop 1.2s ease-in 0.3s infinite'}}/>}
+      {/* Fragezeichen über Kopf — 3 Stück */}
+      {animate&&<>
+        <text x="48" y="10" fill="#fbbf24" fontSize="16" fontWeight="900" stroke={dark} strokeWidth="0.8"
+          style={{animation:'q-mark-float 1.5s ease-out 0s infinite',transformOrigin:'48px 10px'}}>?</text>
+        <text x="40" y="4" fill="#fde047" fontSize="11" fontWeight="900" stroke={dark} strokeWidth="0.6"
+          style={{animation:'q-mark-float 1.5s ease-out 0.5s infinite',transformOrigin:'40px 4px'}}>?</text>
+        <text x="56" y="6" fill="#fbbf24" fontSize="9" fontWeight="900" stroke={dark} strokeWidth="0.5"
+          style={{animation:'q-mark-float 1.5s ease-out 0.9s infinite',transformOrigin:'56px 6px'}}>?</text>
+      </>}
+    </g>
+  );
+}
+
+// Kleiner statischer Kopf für den Picker — nur Kopf in Spielerfarbe mit Gesicht
+function EmoteHead({color,dark,type,size=44}){
+  return(
+    <svg width={size} height={size} viewBox="0 0 64 50" style={{overflow:'visible',display:'block'}}>
+      {/* Kopf-Kreis */}
+      <circle cx="32" cy="24" r="18" fill={color} stroke={dark} strokeWidth="2"/>
+      <g transform="translate(0,2)">
+        <EmoteFace type={type} dark={dark} animate={false}/>
+      </g>
+    </svg>
+  );
+}
+
 function EmoteChar({color,dark,type}){
   // Kleiner Charakter mit emote-spezifischem Gesicht + Body-Animation
-  // SVG-Größe ~60×72 px - klein genug um unten links zu passen
-  const size={w:62,h:74};
+  const size={w:72,h:90};
 
-  // Animations-Config je Emote
+  // Animations-Config je Emote — alle deutlich schneller/dramatischer
   const cfg=(()=>{
-    if(type==='laugh')return{body:'laugh-body 0.4s ease-in-out infinite',head:'laugh-head 0.4s ease-in-out infinite',handL:'laugh-hand-l 0.4s ease-in-out infinite',handR:'laugh-hand-r 0.4s ease-in-out infinite'};
-    if(type==='cry')return{body:'cry-body 1.2s ease-in-out infinite',head:'cry-head 1.2s ease-in-out infinite',handL:'cry-hand-l 1.2s ease-in-out infinite',handR:'cry-hand-r 1.2s ease-in-out infinite'};
-    if(type==='angry')return{body:'angry-body 0.35s ease-in-out infinite',head:'angry-head 0.35s ease-in-out infinite',handL:'angry-hand-l 0.35s ease-in-out infinite',handR:'angry-hand-r 0.35s ease-in-out infinite'};
+    if(type==='laugh')return{body:'laugh-body 0.45s ease-in-out infinite',head:'laugh-head 0.45s ease-in-out infinite',handL:'laugh-hand-l 0.45s ease-in-out infinite',handR:'laugh-hand-r 0.45s ease-in-out infinite'};
+    if(type==='cry')return{body:'cry-body 0.6s ease-in-out infinite',head:'cry-head 0.6s ease-in-out infinite',handL:'cry-hand-l 0.6s ease-in-out infinite',handR:'cry-hand-r 0.6s ease-in-out infinite'};
+    if(type==='angry')return{body:'angry-body 0.4s ease-in-out infinite',head:'angry-head 0.3s ease-in-out infinite',handL:'angry-hand-l 0.3s ease-in-out infinite',handR:'angry-hand-r 0.3s ease-in-out infinite'};
     return{body:'confused-body 0.9s ease-in-out infinite',head:'confused-head 0.9s ease-in-out infinite',handL:'confused-hand-l 0.9s ease-in-out infinite',handR:'confused-hand-r 0.9s ease-in-out infinite'};
-  })();
-
-  // Gesicht pro Emote
-  const face=(()=>{
-    if(type==='laugh')return(
-      <g>
-        {/* Lachende zusammengekniffene Augen (^ ^) */}
-        <path d="M 20 22 Q 24 17 28 22" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <path d="M 34 22 Q 38 17 42 22" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        {/* Großer offener lachender Mund */}
-        <path d="M 20 28 Q 31 38 42 28 Q 31 36 20 28 Z" fill="white"/>
-        <ellipse cx="31" cy="33" rx="4" ry="2" fill="#ef4444" opacity="0.6"/>
-      </g>
-    );
-    if(type==='cry')return(
-      <g>
-        {/* Traurige Augen (zusammengekniffen, nach unten) */}
-        <path d="M 20 24 Q 24 20 28 24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <path d="M 34 24 Q 38 20 42 24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        {/* Augenbrauen runter */}
-        <path d="M 19 17 L 28 19" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-        <path d="M 43 17 L 34 19" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-        {/* Trauriger Mund nach unten */}
-        <path d="M 24 32 Q 31 28 38 32" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        {/* Tränen */}
-        <circle cx="22" cy="27" r="2" fill="#7dd3fc" style={{animation:'tear-drop 0.9s ease-in 0s infinite'}}/>
-        <circle cx="40" cy="27" r="2" fill="#7dd3fc" style={{animation:'tear-drop 0.9s ease-in 0.45s infinite'}}/>
-      </g>
-    );
-    if(type==='angry')return(
-      <g>
-        {/* Wütende Augenbrauen schräg runter */}
-        <path d="M 17 16 L 27 21" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-        <path d="M 45 16 L 35 21" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-        {/* Böse Augen */}
-        <circle cx="24" cy="24" r="2" fill="white"/>
-        <circle cx="38" cy="24" r="2" fill="white"/>
-        {/* Knurrender Mund mit Zähnen */}
-        <path d="M 22 32 L 40 32 L 40 34 L 22 34 Z" fill="white"/>
-        <line x1="26" y1="32" x2="26" y2="34" stroke={dark} strokeWidth="0.8"/>
-        <line x1="31" y1="32" x2="31" y2="34" stroke={dark} strokeWidth="0.8"/>
-        <line x1="36" y1="32" x2="36" y2="34" stroke={dark} strokeWidth="0.8"/>
-        {/* Dampf-Puffs */}
-        <circle cx="14" cy="14" r="3" fill="white" opacity="0.7" style={{['--sx']:'-8px',animation:'steam-puff 0.8s ease-out 0s infinite'}}/>
-        <circle cx="48" cy="14" r="3" fill="white" opacity="0.7" style={{['--sx']:'8px',animation:'steam-puff 0.8s ease-out 0.4s infinite'}}/>
-      </g>
-    );
-    // confused
-    return(
-      <g>
-        {/* Hochgezogene Augenbraue (eine hoch, eine normal) */}
-        <path d="M 18 14 Q 23 11 28 14" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        <path d="M 34 17 L 42 17" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        {/* Augen - eins normal eins zusammengekniffen */}
-        <circle cx="23" cy="22" r="2.2" fill="white"/>
-        <path d="M 34 22 Q 38 19 42 22" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        {/* Schiefer Mund */}
-        <path d="M 22 32 Q 28 30 34 32" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        {/* Fragezeichen über Kopf */}
-        <text x="50" y="6" fill="#fbbf24" fontSize="14" fontWeight="900"
-          style={{animation:'q-mark-float 1.4s ease-out 0s infinite',transformOrigin:'50px 6px'}}>?</text>
-        <text x="42" y="2" fill="#fbbf24" fontSize="10" fontWeight="900"
-          style={{animation:'q-mark-float 1.4s ease-out 0.5s infinite',transformOrigin:'42px 2px'}}>?</text>
-      </g>
-    );
   })();
 
   return(
     <div style={{
       width:size.w,height:size.h,
-      filter:'drop-shadow(0 4px 10px rgba(0,0,0,0.25))'}}>
+      filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'}}>
       <div style={{
         animation:cfg.body,
         transformOrigin:'center bottom',width:'100%',height:'100%'}}>
-        <svg width={size.w} height={size.h} viewBox="0 0 62 74" style={{overflow:'visible',display:'block'}}>
+        <svg width={size.w} height={size.h} viewBox="0 0 72 90" style={{overflow:'visible',display:'block'}}>
           {/* Beine */}
-          <circle cx="26" cy="64" r="5" fill={dark}/>
-          <circle cx="36" cy="64" r="5" fill={dark}/>
-          {/* Körper */}
-          <circle cx="31" cy="46" r="13" fill={color} stroke={dark} strokeWidth="1.5"/>
+          <circle cx="30" cy="78" r="6" fill={dark}/>
+          <circle cx="42" cy="78" r="6" fill={dark}/>
+          {/* Körper (rund) */}
+          <circle cx="36" cy="56" r="15" fill={color} stroke={dark} strokeWidth="1.8"/>
           {/* Linke Hand */}
-          <g style={{transformOrigin:'19px 46px',animation:cfg.handL}}>
-            <circle cx="19" cy="46" r="5" fill={dark}/>
+          <g style={{transformOrigin:'22px 56px',animation:cfg.handL}}>
+            <circle cx="22" cy="56" r="6" fill={dark}/>
           </g>
           {/* Rechte Hand */}
-          <g style={{transformOrigin:'43px 46px',animation:cfg.handR}}>
-            <circle cx="43" cy="46" r="5" fill={dark}/>
+          <g style={{transformOrigin:'50px 56px',animation:cfg.handR}}>
+            <circle cx="50" cy="56" r="6" fill={dark}/>
           </g>
-          {/* Kopf */}
-          <g style={{transformOrigin:'31px 22px',animation:cfg.head}}>
-            <circle cx="31" cy="22" r="13" fill={color} stroke={dark} strokeWidth="1.5"/>
-            {face}
+          {/* Kopf mit Gesicht */}
+          <g style={{transformOrigin:'36px 28px',animation:cfg.head}}>
+            <g transform="translate(4,6)">
+              <circle cx="32" cy="22" r="16" fill={color} stroke={dark} strokeWidth="1.8"/>
+              <EmoteFace type={type} dark={dark} animate={true}/>
+            </g>
           </g>
         </svg>
       </div>
