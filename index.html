@@ -622,25 +622,60 @@ async function playSound(type){
         o2.start(t);o2.stop(t+dur+0.05);
       });
     }else if(type==='laugh'){
-      // Albernes Lachen: 6-8 kurze "ha"-Vokal-Bursts mit zufälligen Tonhöhen
-      const haCount=6+Math.floor(Math.random()*3);
+      // Realistisches Lachen: Vokal-Bursts mit Formant-Filter und Atem-Geräuschen
+      const haCount=10+Math.floor(Math.random()*4);
+      const basePitch=170+Math.random()*55;
       for(let i=0;i<haCount;i++){
-        const t=now+i*0.14;
-        const pitch=240+Math.random()*180;
-        const o=ctx.createOscillator();o.type='sawtooth';
-        o.frequency.setValueAtTime(pitch*1.15,t);
-        o.frequency.exponentialRampToValueAtTime(pitch*0.78,t+0.1);
+        const t=now+i*0.13;
+        // Tonhöhen-Verlauf: erst ansteigend, dann lang fallend, letzten zwei tiefer
+        let pitch;
+        if(i<2){pitch=basePitch+i*28;}
+        else if(i<haCount-2){pitch=basePitch+56-(i-2)*5;}
+        else{pitch=basePitch+56-(haCount-4)*5-(i-(haCount-2))*16;}
+        pitch+=(Math.random()-0.5)*12;
+        const burstDur=0.1+Math.random()*0.03;
+
+        // Hauptton (Stimmbänder) - Sawtooth fällt leicht ab
+        const o1=ctx.createOscillator();o1.type='sawtooth';
+        o1.frequency.setValueAtTime(pitch,t);
+        o1.frequency.exponentialRampToValueAtTime(pitch*0.82,t+burstDur);
+        // Oberton für reichere Stimme
         const o2=ctx.createOscillator();o2.type='triangle';
-        o2.frequency.setValueAtTime(pitch*1.15,t);
-        o2.frequency.exponentialRampToValueAtTime(pitch*0.78,t+0.1);
-        const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1100;
+        o2.frequency.setValueAtTime(pitch*2.01,t);
+        o2.frequency.exponentialRampToValueAtTime(pitch*1.65,t+burstDur);
+
+        // Bandpass-Formant für "a" Vokal (~750 Hz)
+        const bp=ctx.createBiquadFilter();bp.type='bandpass';
+        bp.frequency.value=750;bp.Q.value=3.5;
+        // Lowpass für Wärme
+        const lp=ctx.createBiquadFilter();lp.type='lowpass';
+        lp.frequency.value=2400;
+
         const g=ctx.createGain();
         g.gain.setValueAtTime(0,t);
-        g.gain.linearRampToValueAtTime(0.13,t+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
-        o.connect(lp);o2.connect(lp);lp.connect(g);g.connect(ctx.destination);
-        o.start(t);o.stop(t+0.13);
-        o2.start(t);o2.stop(t+0.13);
+        g.gain.linearRampToValueAtTime(0.16+Math.random()*0.03,t+0.012);
+        g.gain.setValueAtTime(0.13,t+burstDur*0.4);
+        g.gain.exponentialRampToValueAtTime(0.001,t+burstDur);
+
+        o1.connect(bp);o2.connect(bp);bp.connect(lp);lp.connect(g);g.connect(ctx.destination);
+        o1.start(t);o2.start(t);
+        o1.stop(t+burstDur+0.03);o2.stop(t+burstDur+0.03);
+
+        // Atem-Geräusch zwischen den Bursts
+        if(i>0&&i%2===1){
+          const breathDur=0.07;
+          const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*breathDur),ctx.sampleRate);
+          const d=buf.getChannelData(0);
+          for(let j=0;j<d.length;j++)d[j]=(Math.random()*2-1);
+          const ns=ctx.createBufferSource();ns.buffer=buf;
+          const nsBp=ctx.createBiquadFilter();nsBp.type='bandpass';
+          nsBp.frequency.value=1800;nsBp.Q.value=1.5;
+          const nsG=ctx.createGain();
+          nsG.gain.setValueAtTime(0.028,t-0.035);
+          nsG.gain.exponentialRampToValueAtTime(0.001,t-0.035+breathDur);
+          ns.connect(nsBp);nsBp.connect(nsG);nsG.connect(ctx.destination);
+          ns.start(t-0.035);
+        }
       }
     }
   }catch{}
@@ -706,8 +741,7 @@ function App(){
   const triggerWin=(p,skipAnim)=>{
     winSound(p);
     setWinner(p);
-    const onlineLoss=gameMode==='online'&&p!==onlineRole;
-    if(skipAnim||onlineLoss){setScreen('end');return;}
+    if(skipAnim){setScreen('end');return;}
     const styles=['robot','twerk'];
     setDanceStyle(styles[Math.floor(Math.random()*styles.length)]);
     setDanceSpeed(Math.random()<0.5?'fast':'slow');
