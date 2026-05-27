@@ -586,12 +586,22 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
     let s=a.type==='move'
       ?search(a.pos,humanPos,walls,aiBarr,humBarr,2,false,-Infinity,Infinity)
       :search(aiPos,humanPos,a.walls,aiBarr-1,humBarr,2,false,-Infinity,Infinity);
-    // Starke Cycling-Strafe: verhindert Hin-und-Her zwischen besuchten Feldern
-    if(a.type==='move'&&recent.length>=2){
-      for(let i=1;i<Math.min(recent.length,5);i++){
-        if(recent[i].r===a.pos.r&&recent[i].c===a.pos.c){
-          s-=(6-i)*12; // -60 / -48 / -36 / -24 für i=1..4
-          break;
+    if(a.type==='move'){
+      // Starker Bias auf den BFS-Hauptpfad: verhindert Wechsel zwischen gleich­langen
+      // Pfaden, wodurch die AI sonst zickzack laufen würde.
+      if(aiPathInit&&aiPathInit.length>1&&aiPathInit[1].r===a.pos.r&&aiPathInit[1].c===a.pos.c){
+        s+=20;
+      }
+      // Zusätzlicher Bonus für tatsächliche Annäherung Richtung Ziel (kleinere row)
+      if(a.pos.r<aiPos.r)s+=6;
+      else if(a.pos.r>aiPos.r)s-=4;
+      // Starke Cycling-Strafe: verhindert Hin-und-Her zwischen besuchten Feldern
+      if(recent.length>=2){
+        for(let i=1;i<Math.min(recent.length,5);i++){
+          if(recent[i].r===a.pos.r&&recent[i].c===a.pos.c){
+            s-=(6-i)*12; // -60 / -48 / -36 / -24 für i=1..4
+            break;
+          }
         }
       }
     }
@@ -1052,7 +1062,17 @@ function App(){
     const poll=async()=>{
       const list=await stoGet('barricade_lobby_list');
       const now=Date.now();
-      setLobbyList((list||[]).filter(l=>now-l.ts<90000));
+      const all=list||[];
+      const fresh=all.filter(l=>now-l.ts<15000);
+      const stale=all.filter(l=>now-l.ts>=15000);
+      setLobbyList(fresh);
+      // Stale-Einträge aus Firebase entfernen, damit andere Clients sie auch nicht mehr sehen
+      if(stale.length>0){
+        await stoSet('barricade_lobby_list',fresh);
+        for(const l of stale){
+          await stoDel(`barricade_lobby_${l.id}`);
+        }
+      }
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
         if(lobby&&lobby.guestId){
@@ -1066,6 +1086,25 @@ function App(){
     const iv=setInterval(poll,1500);poll();
     return()=>clearInterval(iv);
   },[screen,lobbyId,onlineRole]);
+
+  // ── Host-Heartbeat: hält die Lobby in der Liste am Leben solange der Host wartet ──
+  useEffect(()=>{
+    if(screen!=='waiting'||onlineRole!=='A'||!lobbyId)return;
+    const hb=async()=>{
+      const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
+      if(!lobby)return;
+      await stoSet(`barricade_lobby_${lobbyId}`,{...lobby,ts:Date.now()});
+      // Nur öffentliche Lobbys stehen in der Liste
+      if(!lobby.isPrivate){
+        const list=await stoGet('barricade_lobby_list')||[];
+        const updated=list.map(l=>l.id===lobbyId?{...l,ts:Date.now()}:l);
+        await stoSet('barricade_lobby_list',updated);
+      }
+    };
+    hb();
+    const iv=setInterval(hb,3000);
+    return()=>clearInterval(iv);
+  },[screen,onlineRole,lobbyId]);
 
   // ── Create lobby ──
   const createLobby=async(isPrivate)=>{
