@@ -242,6 +242,7 @@ const I18N={
     wallsLeft:'walls left',tapContinue:'Tap to continue',red:'Red',blue:'Blue',
     options:'Options',language:'Language',close:'Close',theme:'Theme',light:'Light',dark:'Dark',
     rematchWaiting:'Waiting for opponent...',rematchAsked:'Opponent wants a rematch',rematchDeclined:'Opponent declined',randomFirst:'Random start',
+    reconnecting:'Opponent reconnecting',reconnectFail:'Opponent left',
     noLobbies:'No open lobbies',noLobbiesHint:'Create one or wait for players',createLobby:'Create lobby',joinExisting:'Join game',live:'LIVE',lobbyCount:'open',
     lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby'},
   de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🖥️ Gegen Computer',online:'🌐 Online spielen',
@@ -259,6 +260,7 @@ const I18N={
     wallsLeft:'Mauern übrig',tapContinue:'Tippen um fortzufahren',red:'Rot',blue:'Blau',
     options:'Optionen',language:'Sprache',close:'Schließen',theme:'Design',light:'Hell',dark:'Dunkel',
     rematchWaiting:'Warte auf Gegner...',rematchAsked:'Gegner will Revanche',rematchDeclined:'Gegner hat abgelehnt',randomFirst:'Zufälliger Start',
+    reconnecting:'Gegner verbindet sich neu',reconnectFail:'Gegner hat das Spiel verlassen',
     noLobbies:'Keine offenen Lobbys',noLobbiesHint:'Erstelle eine oder warte auf Spieler',createLobby:'Lobby erstellen',joinExisting:'Spiel beitreten',live:'LIVE',lobbyCount:'offen',
     lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen'},
   tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🖥️ Bilgisayara Karşı',online:'🌐 Çevrimiçi Oyna',
@@ -276,6 +278,7 @@ const I18N={
     wallsLeft:'duvar kaldı',tapContinue:'Devam etmek için dokun',red:'Kırmızı',blue:'Mavi',
     options:'Seçenekler',language:'Dil',close:'Kapat',theme:'Tema',light:'Açık',dark:'Koyu',
     rematchWaiting:'Rakip bekleniyor...',rematchAsked:'Rakip rövanş istiyor',rematchDeclined:'Rakip reddetti',randomFirst:'Rastgele başlangıç',
+    reconnecting:'Rakip yeniden bağlanıyor',reconnectFail:'Rakip oyundan ayrıldı',
     noLobbies:'Açık lobi yok',noLobbiesHint:'Bir tane oluştur veya oyuncu bekle',createLobby:'Lobi oluştur',joinExisting:'Oyuna katıl',live:'CANLI',lobbyCount:'açık',
     lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur'},
   fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🖥️ Contre l'ordinateur",online:'🌐 Jouer en ligne',
@@ -293,6 +296,7 @@ const I18N={
     wallsLeft:'murs restants',tapContinue:'Touche pour continuer',red:'Rouge',blue:'Bleu',
     options:'Options',language:'Langue',close:'Fermer',theme:'Thème',light:'Clair',dark:'Sombre',
     rematchWaiting:"En attente de l'adversaire...",rematchAsked:'Adversaire veut une revanche',rematchDeclined:'Adversaire a refusé',randomFirst:'Départ aléatoire',
+    reconnecting:'Adversaire se reconnecte',reconnectFail:"L'adversaire a quitté",
     noLobbies:'Aucun salon ouvert',noLobbiesHint:'Créez-en un ou attendez',createLobby:'Créer un salon',joinExisting:'Rejoindre',live:'LIVE',lobbyCount:'ouvert',
     lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon'}
 };
@@ -781,6 +785,8 @@ function App(){
   const[rematchB,setRematchB]=useState(false);
   const[rematchDeclined,setRematchDeclined]=useState(null);
   const[gameNum,setGameNum]=useState(0);
+  const[oppCountdown,setOppCountdown]=useState(null);
+  const oppLastSeenRef=useRef(0);
 
   const gridRef=useRef(null);
   const snapPosRef=useRef(null);
@@ -942,6 +948,52 @@ function App(){
     });
     return()=>ref.off('value',cb);
   },[gameMode,lobbyId,screen]);
+
+  // ── Heartbeat: Anwesenheit prüfen, 15s Timeout = automatischer Verlust ──
+  useEffect(()=>{
+    if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
+    const myRef=window.db.ref(`barricade_hb_${lobbyId}/${onlineRole}`);
+    const send=()=>myRef.set(Date.now());
+    send();
+    // OnDisconnect: setzt 0 wenn Verbindung weg → Gegner sieht sofort dass wir weg sind
+    myRef.onDisconnect().set(0);
+    const iv=setInterval(send,2000);
+    return()=>{clearInterval(iv);myRef.onDisconnect().cancel();};
+  },[gameMode,lobbyId,screen,winner,onlineRole]);
+
+  useEffect(()=>{
+    if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
+    const oppRole=onlineRole==='A'?'B':'A';
+    oppLastSeenRef.current=Date.now();
+    const ref=window.db.ref(`barricade_hb_${lobbyId}/${oppRole}`);
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();
+      if(v&&v>0)oppLastSeenRef.current=v;
+    });
+    return()=>ref.off('value',cb);
+  },[gameMode,lobbyId,screen,winner,onlineRole]);
+
+  useEffect(()=>{
+    if(gameMode!=='online'||screen!=='game'||winner){setOppCountdown(null);return;}
+    const iv=setInterval(()=>{
+      const last=oppLastSeenRef.current;
+      if(!last)return;
+      const elapsed=Date.now()-last;
+      if(elapsed>15000){
+        const winP=onlineRole;
+        const s=S.current;
+        if(s.winner)return;
+        doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist});
+        setOppCountdown(null);
+        triggerWin(winP,true);
+      }else if(elapsed>5000){
+        setOppCountdown(Math.ceil((15000-elapsed)/1000));
+      }else{
+        setOppCountdown(null);
+      }
+    },500);
+    return()=>clearInterval(iv);
+  },[gameMode,screen,winner,onlineRole]);
 
   // ── Rematch actions ──
   const requestRematch=()=>{
@@ -1290,17 +1342,16 @@ function App(){
           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginBottom:6,paddingLeft:2}}>
             {t('joinWithCode')}
           </div>
-          <div style={{display:'flex',gap:8}}>
-            <input value={codeInput} onChange={e=>setCodeInput(e.target.value.toUpperCase())} placeholder="XXXX"
-              maxLength={4}
-              style={{flex:1,padding:'11px 12px',borderRadius:10,border:'1.5px solid var(--border)',
-                fontSize:16,fontWeight:800,letterSpacing:4,textAlign:'center',outline:'none',
-                fontFamily:'system-ui,-apple-system,sans-serif',background:'var(--card)',color:'var(--text)'}}/>
-            <button onClick={joinByCode} style={{padding:'11px 18px',background:'#3b82f6',color:'white',
-              border:'none',borderRadius:10,fontWeight:700,cursor:'pointer',fontSize:13,
-              boxShadow:'0 2px 8px rgba(59,130,246,0.25)',
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('join')}</button>
-          </div>
+          <input value={codeInput} onChange={e=>setCodeInput(e.target.value.toUpperCase())} placeholder="XXXX"
+            maxLength={4}
+            style={{width:'100%',padding:'12px 12px',borderRadius:10,border:'1.5px solid var(--border)',
+              fontSize:18,fontWeight:800,letterSpacing:6,textAlign:'center',outline:'none',
+              fontFamily:'system-ui,-apple-system,sans-serif',background:'var(--card)',color:'var(--text)',
+              marginBottom:6,display:'block',boxSizing:'border-box'}}/>
+          <button onClick={joinByCode} style={{width:'100%',padding:'11px 14px',background:'#3b82f6',color:'white',
+            border:'none',borderRadius:10,fontWeight:700,cursor:'pointer',fontSize:13,
+            boxShadow:'0 2px 8px rgba(59,130,246,0.25)',
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('join')}</button>
         </div>
 
         {flash&&<div style={{color:'#ef4444',fontSize:12,fontWeight:500,marginBottom:10,width:'100%',textAlign:'center'}}>{flash}</div>}
@@ -1663,10 +1714,13 @@ function App(){
 
       <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2}}>{t('startLabel')}</div>
 
-      {isOnlineWait&&(
-        <div style={{position:'fixed',bottom:80,left:0,right:0,display:'flex',justifyContent:'center',zIndex:50}}>
-          <div style={{background:'rgba(15,23,42,0.75)',color:'white',padding:'8px 20px',borderRadius:20,fontSize:12,fontWeight:600,backdropFilter:'blur(8px)'}}>
-            {t('opponentTurn')}
+      {(isOnlineWait||oppCountdown!==null)&&(
+        <div style={{position:'fixed',bottom:80,left:0,right:0,display:'flex',justifyContent:'center',zIndex:50,pointerEvents:'none'}}>
+          <div style={{background:oppCountdown!==null?'rgba(239,68,68,0.92)':'rgba(15,23,42,0.75)',color:'white',padding:'8px 20px',borderRadius:20,fontSize:12,fontWeight:600,backdropFilter:'blur(8px)',display:'flex',alignItems:'center',gap:8}}>
+            {oppCountdown!==null?(<>
+              <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'white',animation:'piece-pulse 1s ease-in-out infinite'}}/>
+              {t('reconnecting')} · {oppCountdown}s
+            </>):t('opponentTurn')}
           </div>
         </div>
       )}
