@@ -26,7 +26,7 @@
     --shadow-card:0 4px 24px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.3);
     --shadow-soft:0 2px 8px rgba(0,0,0,0.3);
   }
-  html,body{width:100%;overflow-x:hidden;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior:none;transition:background 0.25s;}
+  html,body{width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;transition:background 0.25s;}
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;}
   input,button{-webkit-appearance:none;font-family:inherit;}
@@ -1384,8 +1384,26 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
+
+  // Audio-Context nach Tab-Wechsel/Hintergrund wieder aufwecken
+  useEffect(()=>{
+    const resume=()=>{try{const c=getCtx();if(c&&c.state==='suspended')c.resume();}catch(e){}};
+    const onVis=()=>{if(document.visibilityState==='visible')resume();};
+    document.addEventListener('visibilitychange',onVis);
+    document.addEventListener('pointerdown',resume,{passive:true});
+    document.addEventListener('touchstart',resume,{passive:true});
+    document.addEventListener('click',resume);
+    window.addEventListener('focus',resume);
+    return()=>{
+      document.removeEventListener('visibilitychange',onVis);
+      document.removeEventListener('pointerdown',resume);
+      document.removeEventListener('touchstart',resume);
+      document.removeEventListener('click',resume);
+      window.removeEventListener('focus',resume);
+    };
+  },[]);
 
   const pname=p=>p==='A'?t('red'):t('blue');
   const isOwnLoss=w=>{
@@ -1453,7 +1471,7 @@ function App(){
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
     setChaosItem(null);
-    chaosSpawnRef.current=15+Math.floor(Math.random()*6); // 15–20
+    chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
@@ -1532,7 +1550,7 @@ function App(){
             setTurn(newTurn);
             if(gameMode==='online'){
               const s=S.current;
-              doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:newTurn,winner:null,moves:s.moveHist});
+              doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:newTurn,winner:null,moves:s.moveHist,chaosItem:s.chaosItem});
             }
             return getTurnTime(gameTimeMode);
           }
@@ -1582,7 +1600,7 @@ function App(){
           if(chaosItem&&chaosItem.r===d.pos.r&&chaosItem.c===d.pos.c){
             setBarrLeft(p=>({...p,B:p.B+2}));
             setChaosItem(null);
-            chaosSpawnRef.current=mh.length+1+15+Math.floor(Math.random()*6);
+            chaosSpawnRef.current=mh.length+1+18+Math.floor(Math.random()*8);
             playSound('wall');
           }
           const nm=[...mh,{type:'move',p:'B',r:d.pos.r,c:d.pos.c}];setMoveHist(nm);
@@ -1672,7 +1690,14 @@ function App(){
       }
       setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
       setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(newMoves);
-      setChaosItem(gs.chaosItem||null);
+      // Chaos: Pickup durch Gegner erkennen → Host spawnRef aktualisieren
+      const prevCI=S.current.chaosItem;
+      const nextCI=gs.chaosItem||null;
+      setChaosItem(nextCI);
+      if(prevCI&&!nextCI&&S.current.onlineRole==='A'){
+        // Guest hat Item eingesammelt → neuen Spawn-Timer setzen
+        chaosSpawnRef.current=newMoves.length+18+Math.floor(Math.random()*8);
+      }
       if(gs.winner&&!S.current.winner){triggerWin(gs.winner);}
     });
     return()=>ref.off('value',cb);
@@ -1705,7 +1730,10 @@ function App(){
     // OnDisconnect: setzt 0 wenn Verbindung weg → Gegner sieht sofort dass wir weg sind
     myRef.onDisconnect().set(0);
     const iv=setInterval(send,2000);
-    return()=>{clearInterval(iv);myRef.onDisconnect().cancel();};
+    // Beim Zurückkehren in den Tab sofort Lebenszeichen senden
+    const onVis=()=>{if(document.visibilityState==='visible')send();};
+    document.addEventListener('visibilitychange',onVis);
+    return()=>{clearInterval(iv);myRef.onDisconnect().cancel();document.removeEventListener('visibilitychange',onVis);};
   },[gameMode,lobbyId,screen,winner,onlineRole]);
 
   useEffect(()=>{
@@ -1722,15 +1750,25 @@ function App(){
 
   useEffect(()=>{
     if(gameMode!=='online'||screen!=='game'||winner){setOppCountdown(null);return;}
+    let lastTick=Date.now();
     const iv=setInterval(()=>{
+      const nowT=Date.now();
+      const gap=nowT-lastTick;
+      lastTick=nowT;
+      // Eigener Tab war im Hintergrund (Timer pausiert) → Grace statt Fehlurteil
+      if(gap>3000){
+        oppLastSeenRef.current=nowT;
+        setOppCountdown(null);
+        return;
+      }
       const last=oppLastSeenRef.current;
       if(!last)return;
-      const elapsed=Date.now()-last;
+      const elapsed=nowT-last;
       if(elapsed>15000){
         const winP=onlineRole;
         const s=S.current;
         if(s.winner)return;
-        doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist});
+        doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem});
         setOppCountdown(null);
         triggerWin(winP,true);
       }else if(elapsed>5000){
@@ -1739,7 +1777,16 @@ function App(){
         setOppCountdown(null);
       }
     },500);
-    return()=>clearInterval(iv);
+    // Beim Zurückkehren in den Tab: Gegner-Timer zurücksetzen (Grace)
+    const onVis=()=>{
+      if(document.visibilityState==='visible'){
+        oppLastSeenRef.current=Date.now();
+        lastTick=Date.now();
+        setOppCountdown(null);
+      }
+    };
+    document.addEventListener('visibilitychange',onVis);
+    return()=>{clearInterval(iv);document.removeEventListener('visibilitychange',onVis);};
   },[gameMode,screen,winner,onlineRole]);
 
   // ── Rematch actions ──
@@ -1753,7 +1800,7 @@ function App(){
       rematchA:isA?true:s.rematchA,
       rematchB:isA?s.rematchB:true,
       rematchDeclined:null,
-      gameNum:s.gameNum
+      gameNum:s.gameNum,chaosItem:s.chaosItem
     });
   };
   const declineRematch=()=>{
@@ -1764,7 +1811,7 @@ function App(){
       turn:s.turn,winner:s.winner,moves:s.moveHist,
       rematchA:false,rematchB:false,
       rematchDeclined:s.onlineRole,
-      gameNum:s.gameNum
+      gameNum:s.gameNum,chaosItem:s.chaosItem
     });
   };
 
@@ -1964,7 +2011,7 @@ function App(){
       setChaosItem(null);
       nextChaos=null;
       // Nächster Spawn in 20–25 Zügen
-      chaosSpawnRef.current=S.current.moveHist.length+1+15+Math.floor(Math.random()*6);
+      chaosSpawnRef.current=S.current.moveHist.length+1+18+Math.floor(Math.random()*8);
       playSound('wall');
     }
     const nm=[...S.current.moveHist,{type:'move',p:turn,r,c}];
@@ -1992,7 +2039,7 @@ function App(){
     const winP=loser==='A'?'B':'A';
     if(gameMode==='online'){
       const s=S.current;
-      doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist});
+      doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem});
     }
     triggerWin(winP,true);
   };
@@ -2028,7 +2075,7 @@ function App(){
               const newBl={...bl,[t]:bl[t]-1};setBarrLeft(newBl);
               const nm=[...mh,{type:'wall',p:t,k:key}];setMoveHist(nm);
               const newTurn=t==='A'?'B':'A';setTurn(newTurn);setFlash('');
-              doSync({pA:a,pB:b,walls:next,barrLeft:newBl,turn:newTurn,winner:null,moves:nm});
+              doSync({pA:a,pB:b,walls:next,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:S.current.chaosItem});
               setTimeout(()=>window.scrollTo(0,savedScroll.current),0);
             }else setFlash(t('invalidPos'));
           }
@@ -2809,7 +2856,7 @@ function App(){
       <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{t('goalLabel')}</div>
 
       {/* Grid */}
-      <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
+      <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'pan-y',...sGrid}}>
         {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>{
           const isA=pA.r===r&&pA.c===c,isB=pB.r===r&&pB.c===c;
           const vDot=validDot(r,c);
