@@ -50,6 +50,20 @@
     60%{transform:scaleY(1.1);opacity:1;}
     100%{transform:scaleY(1);opacity:1;}
   }
+  @keyframes golden-drop-h{
+    0%{transform:scaleX(0);opacity:0;}
+    55%{transform:scaleX(1.15);opacity:1;}
+    100%{transform:scaleX(1);opacity:1;}
+  }
+  @keyframes golden-drop-v{
+    0%{transform:scaleY(0);opacity:0;}
+    55%{transform:scaleY(1.15);opacity:1;}
+    100%{transform:scaleY(1);opacity:1;}
+  }
+  @keyframes golden-glow{
+    0%,100%{box-shadow:0 0 6px 2px rgba(251,191,36,0.75),0 2px 6px rgba(0,0,0,0.2);}
+    50%{box-shadow:0 0 22px 6px rgba(251,191,36,1),0 0 40px 10px rgba(253,224,71,0.4);}
+  }
   @keyframes piece-pulse{
     0%,100%{transform:scale(0.9);opacity:0.5;}
     50%{transform:scale(1.55);opacity:0;}
@@ -1381,6 +1395,7 @@ function App(){
   const chaosSpawnRef=useRef(15);
   const[dropMode,setDropMode]=useState(false); // false|'rare'|'often'|'veryoften'
   const dropNextRef=useRef(99999);
+  const[goldenWalls,setGoldenWalls]=useState(new Set());
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
@@ -1423,7 +1438,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
 
   // Audio-Context nach Tab-Wechsel/Hintergrund wieder aufwecken
@@ -1512,6 +1527,7 @@ function App(){
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     dropNextRef.current=dropMode?dropInterval(dropMode):99999;
+    setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
@@ -1535,6 +1551,7 @@ function App(){
       rematchDeclined:gs.rematchDeclined===undefined?rD:gs.rematchDeclined,
       gameNum:gs.gameNum===undefined?(gN||1):gs.gameNum,
       chaosItem:gs.chaosItem===undefined?chaosItem:gs.chaosItem,
+      goldenWalls:gs.goldenWalls!==undefined?gs.goldenWalls:[...goldenWalls],
       lastUpdated:Date.now()
     });
   };
@@ -1582,10 +1599,12 @@ function App(){
     if(key){
       const next=new Set([...walls,key]);
       setWalls(next);
+      setGoldenWalls(prev=>{const g=new Set([...prev]);g.add(key);return g;});
       playSound('wall');
       dropNextRef.current=moveHist.length+dropInterval(dropMode);
       if(gameMode==='online'){
-        doSync({pA:S.current.pA,pB:S.current.pB,walls:next,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem});
+        const gw=new Set([...S.current.goldenWalls]);gw.add(key);
+        doSync({pA:S.current.pA,pB:S.current.pB,walls:next,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,goldenWalls:[...gw]});
       }
     }else{
       dropNextRef.current=moveHist.length+3; // kein fairer Drop möglich → bald erneut
@@ -1699,6 +1718,7 @@ function App(){
         setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
         setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(gs.moves||[]);
         setChaosItem(gs.chaosItem||null);
+        setGoldenWalls(new Set(gs.goldenWalls||[]));
         setWinner(null);setCelebrating(false);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
@@ -1749,6 +1769,7 @@ function App(){
       }
       setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
       setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(newMoves);
+      setGoldenWalls(new Set(gs.goldenWalls||[]));
       // Chaos: Pickup durch Gegner erkennen → Host spawnRef aktualisieren
       const prevCI=S.current.chaosItem;
       const nextCI=gs.chaosItem||null;
@@ -2969,7 +2990,7 @@ function App(){
             </div>
           );
         }))}
-        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate/>)}
+        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate golden={goldenWalls.has(k)}/>)}
         {previewKey&&<Wall wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
         {chaosItem&&(
           <div style={{position:'absolute',left:chaosItem.c*CELL,top:chaosItem.r*CELL,
@@ -3498,14 +3519,20 @@ function Piece({color,dark}){
     boxShadow:`0 3px 12px ${color}70,inset 0 1px 0 rgba(255,255,255,0.35)`,
     position:'relative',pointerEvents:'none'}}/>;
 }
-function Wall({wkey,color,opacity,animate}){
+function Wall({wkey,color,opacity,animate,golden}){
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
-  return <div style={{position:'absolute',...p,background:color,borderRadius:WW/2,
-    zIndex:10,pointerEvents:'none',opacity,
-    boxShadow:opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
-    transformOrigin:isH?'center center':'center center',
-    animation:animate?`${isH?'wall-enter-h':'wall-enter-v'} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
+  const goldenBg='linear-gradient(135deg,#92400e 0%,#f59e0b 30%,#fde68a 50%,#f59e0b 70%,#92400e 100%)';
+  const enterAnim=isH?'wall-enter-h':'wall-enter-v';
+  const goldenAnim=isH
+    ?'golden-drop-h 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite'
+    :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
+  return <div style={{position:'absolute',...p,
+    background:golden?goldenBg:color,
+    borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity,
+    boxShadow:golden?'none':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
+    transformOrigin:'center center',
+    animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
 }
 function GBtn({onClick,children,dark,blue,outline}){
   return <button onClick={onClick} style={{padding:'13px 16px',
