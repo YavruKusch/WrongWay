@@ -496,30 +496,65 @@ function wallPos(key){
 }
 
 // ── Chaos: faire Drop-Position ─────────────────────────────
+function bfsDistMap(from,walls){
+  const dist=new Map();
+  const q=[from];
+  dist.set(ck(from.r,from.c),0);
+  while(q.length){
+    const cur=q.shift();
+    const d=dist.get(ck(cur.r,cur.c));
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cur.r+dr,nc=cur.c+dc;
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
+      const k=ck(nr,nc);
+      if(dist.has(k))continue;
+      if(edgeBlocked(cur.r,cur.c,nr,nc,walls))continue;
+      dist.set(k,d+1);
+      q.push({r:nr,c:nc});
+    }
+  }
+  return dist;
+}
 function pickChaosPos(pA,pB,walls){
   const pa=bfsPath(pA,walls),pb=bfsPath(pB,walls);
-  const lenA=pa?pa.length:999,lenB=pb?pb.length:999;
+  if(!pa||!pb)return null;
+  const lenA=pa.length-1,lenB=pb.length-1;
   const minR=Math.floor(ROWS/3); // nicht im letzten Drittel (oben am Ziel)
-  const maxR=Math.max(pA.r,pB.r); // nicht hinter dem hintersten Spieler
+  const maxR=Math.max(pA.r,pB.r); // nicht hinter hintestem Spieler
   if(maxR<minR)return null;
-  let idR,idC;
-  if(Math.abs(lenA-lenB)<=1){
-    // Gleichstand: mittig zwischen Spielern
-    idR=Math.round((pA.r+pB.r)/2);
-    idC=Math.round((pA.c+pB.c)/2);
-  }else{
-    // Ungleichgewicht: beim Schwächeren, aber auf seinem Vorwärtsweg
-    const weak=lenA>lenB?pA:pB;
-    idR=Math.max(0,weak.r-2);
-    idC=weak.c;
+  const inZone=p=>{
+    if(p.r<minR||p.r>maxR)return false;
+    if(p.r===pA.r&&p.c===pA.c)return false;
+    if(p.r===pB.r&&p.c===pB.c)return false;
+    return true;
+  };
+
+  // Ungleichgewicht > 1: Item DIREKT auf BFS-Pfad des Schwächeren platzieren
+  // → garantiert erreichbar, kein Detour vom Ziel, nicht hinter Mauern
+  if(Math.abs(lenA-lenB)>1){
+    const weakPath=lenA>lenB?pa:pb;
+    // Bevorzugt 2–4 Schritte voraus auf seinem Pfad
+    for(let k=2;k<=Math.min(4,weakPath.length-1);k++){
+      if(inZone(weakPath[k]))return{r:weakPath[k].r,c:weakPath[k].c};
+    }
+    // Fallback: erster Pfad-Schritt der in Zone passt
+    for(let k=1;k<weakPath.length;k++){
+      if(inZone(weakPath[k]))return{r:weakPath[k].r,c:weakPath[k].c};
+    }
   }
-  let best=null,bd=Infinity;
+
+  // Gleichstand: Position die für beide BFS-erreichbar und ähnlich nah ist
+  const dmA=bfsDistMap(pA,walls);
+  const dmB=bfsDistMap(pB,walls);
+  let best=null,bestScore=Infinity;
   for(let r=minR;r<=maxR;r++){
     for(let c=0;c<COLS;c++){
-      if(r===pA.r&&c===pA.c)continue;
-      if(r===pB.r&&c===pB.c)continue;
-      const d=Math.abs(r-idR)+Math.abs(c-idC);
-      if(d<bd){bd=d;best={r,c};}
+      if(!inZone({r,c}))continue;
+      const dA=dmA.get(ck(r,c)),dB=dmB.get(ck(r,c));
+      if(dA===undefined||dB===undefined)continue; // unerreichbar (hinter Mauer)
+      // Kleine Summe + kleine Differenz = fair & nicht zu weit
+      const score=dA+dB+Math.abs(dA-dB)*3;
+      if(score<bestScore){bestScore=score;best={r,c};}
     }
   }
   return best;
@@ -1418,7 +1453,7 @@ function App(){
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
     setChaosItem(null);
-    chaosSpawnRef.current=20+Math.floor(Math.random()*6); // 20–25
+    chaosSpawnRef.current=15+Math.floor(Math.random()*6); // 15–20
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
@@ -1547,7 +1582,7 @@ function App(){
           if(chaosItem&&chaosItem.r===d.pos.r&&chaosItem.c===d.pos.c){
             setBarrLeft(p=>({...p,B:p.B+2}));
             setChaosItem(null);
-            chaosSpawnRef.current=mh.length+1+20+Math.floor(Math.random()*6);
+            chaosSpawnRef.current=mh.length+1+15+Math.floor(Math.random()*6);
             playSound('wall');
           }
           const nm=[...mh,{type:'move',p:'B',r:d.pos.r,c:d.pos.c}];setMoveHist(nm);
@@ -1929,7 +1964,7 @@ function App(){
       setChaosItem(null);
       nextChaos=null;
       // Nächster Spawn in 20–25 Zügen
-      chaosSpawnRef.current=S.current.moveHist.length+1+20+Math.floor(Math.random()*6);
+      chaosSpawnRef.current=S.current.moveHist.length+1+15+Math.floor(Math.random()*6);
       playSound('wall');
     }
     const nm=[...S.current.moveHist,{type:'move',p:turn,r,c}];
