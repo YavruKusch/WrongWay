@@ -465,6 +465,18 @@ function bfsPath(pos,walls){
         if(!vis.has(k)&&!edgeBlocked(cur.r,cur.c,nr,nc,walls)){vis.set(k,ck(cur.r,cur.c));q.push({r:nr,c:nc});}}}}
   return null;
 }
+function bfsTo(from,target,walls){
+  if(from.r===target.r&&from.c===target.c)return[{r:from.r,c:from.c}];
+  const vis=new Map(),q=[from];vis.set(ck(from.r,from.c),null);
+  while(q.length){const cur=q.shift();
+    if(cur.r===target.r&&cur.c===target.c){const path=[];let k=ck(cur.r,cur.c);
+      while(k!==null){const[r,c]=k.split(',').map(Number);path.unshift({r,c});k=vis.get(k);}return path;}
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cur.r+dr,nc=cur.c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){const k=ck(nr,nc);
+        if(!vis.has(k)&&!edgeBlocked(cur.r,cur.c,nr,nc,walls)){vis.set(k,ck(cur.r,cur.c));q.push({r:nr,c:nc});}}}}
+  return null;
+}
 function tryWall(key,walls,pA,pB){
   if(walls.has(key))return null;
   const[type,rs,cs]=key.split('-');const r=+rs,c=+cs;
@@ -551,11 +563,32 @@ function wallCandidates(targetPos,walls,depth){
   return[...result];
 }
 
-function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi){
+function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr){
+  if(!chaosItem||!aiPath)return null;
+  // Item direkt erreichbar?
+  const moves=getMovesFrom(aiPos,humanPos,walls);
+  const direct=moves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);
+  if(direct)return direct; // sofort einsacken
+  // Detour-Berechnung: AI → Item → Ziel vs AI → Ziel
+  const toItem=bfsTo(aiPos,chaosItem,walls);
+  if(!toItem||toItem.length<2)return null;
+  const fromItem=bfsPath(chaosItem,walls);
+  if(!fromItem)return null;
+  const itemDist=toItem.length-1;
+  const detour=(itemDist+(fromItem.length-1))-(aiPath.length-1);
+  // 2 Barrikaden ≈ 4-6 Zugäquivalente; je weniger Barrikaden, desto attraktiver
+  const maxDetour=aiBarr<=2?6:aiBarr<=4?4:aiBarr<=7?2:1;
+  if(detour>maxDetour)return null;
+  const next=toItem[1];
+  if(next.r===humanPos.r&&next.c===humanPos.c)return null;
+  return next;
+}
+
+function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi,chaosItem){
   difficulty=difficulty||'normal';
-  if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi);
-  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr);
-  return aiNormal(aiPos,humanPos,walls,aiBarr);
+  if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem);
+  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem);
+  return aiNormal(aiPos,humanPos,walls,aiBarr,chaosItem);
 }
 
 function moveTowardGoal(aiPos,humanPos,walls,aiPath){
@@ -574,12 +607,18 @@ function moveTowardGoal(aiPos,humanPos,walls,aiPath){
   return null;
 }
 
-function aiEasy(aiPos,humanPos,walls,barrLeft){
+function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem){
   const aiPath=bfsPath(aiPos,walls);
   const humPath=bfsPath(humanPos,walls);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
   if(aiD===1)return{type:'move',pos:aiPath[1]};
+
+  // Easy: nimmt das Item nur wenn quasi gratis (Detour-Toleranz in shouldPickupItem niedrig)
+  if(chaosItem){
+    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft);
+    if(pick)return{type:'move',pos:pick};
+  }
 
   // Easy: Setzt jetzt deutlich häufiger Mauern, aber wählt suboptimal
   // Mauer-Bedingungen gelockert: Gegner führt oder ist im vorderen Drittel
@@ -610,11 +649,16 @@ function aiEasy(aiPos,humanPos,walls,barrLeft){
   return fallback.length?{type:'move',pos:fallback[0]}:null;
 }
 
-function aiNormal(aiPos,humanPos,walls,barrLeft){
+function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem){
   const aiPath=bfsPath(aiPos,walls),humPath=bfsPath(humanPos,walls);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
   if(aiD===1)return{type:'move',pos:aiPath[1]};
+  // Item einsammeln wenn lohnenswert
+  if(chaosItem){
+    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft);
+    if(pick)return{type:'move',pos:pick};
+  }
   let bestWall=null,bestRel=humD-aiD;
   if(barrLeft>0){
     for(let r=0;r<ROWS-1;r++)for(let c=0;c<COLS-1;c++)for(const t of['H','V']){
@@ -634,10 +678,15 @@ function aiNormal(aiPos,humanPos,walls,barrLeft){
   return null;
 }
 
-function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
+function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
   // Sofortiger Sieg hat absolute Priorität
   for(const m of initMoves)if(m.r===0)return{type:'move',pos:m};
+  // Item-Pickup wenn direkt erreichbar (sehr lohnenswert) — vor Minimax
+  if(chaosItem){
+    const direct=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);
+    if(direct)return{type:'move',pos:direct};
+  }
   const recent=recentAi||[];
 
   // Endspiel-Sprint: bei kurzem Pfad und klarem Vorsprung direkt zum Ziel laufen,
@@ -757,6 +806,13 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi){
       // Zusätzlicher Bonus für tatsächliche Annäherung Richtung Ziel (kleinere row)
       if(a.pos.r<aiPos.r)s+=6;
       else if(a.pos.r>aiPos.r)s-=4;
+      // Bonus für Annäherung ans Chaos-Item (proportional zum Wert von +2 Barrikaden)
+      if(chaosItem){
+        const oldD=Math.abs(aiPos.r-chaosItem.r)+Math.abs(aiPos.c-chaosItem.c);
+        const newD=Math.abs(a.pos.r-chaosItem.r)+Math.abs(a.pos.c-chaosItem.c);
+        if(newD<oldD&&newD<=4)s+=(5-newD)*4; // näher heran lohnt, je näher desto mehr
+        if(newD===0)s+=30; // direkt drauf (auch wenn schon oben abgefangen)
+      }
       // Starke Cycling-Strafe: verhindert Hin-und-Her zwischen besuchten Feldern
       if(recent.length>=2){
         for(let i=1;i<Math.min(recent.length,5);i++){
@@ -1362,7 +1418,7 @@ function App(){
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
     setChaosItem(null);
-    chaosSpawnRef.current=15+Math.floor(Math.random()*6); // 15–20
+    chaosSpawnRef.current=20+Math.floor(Math.random()*6); // 20–25
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
@@ -1385,6 +1441,7 @@ function App(){
       rematchB:gs.rematchB===undefined?rB:gs.rematchB,
       rematchDeclined:gs.rematchDeclined===undefined?rD:gs.rematchDeclined,
       gameNum:gs.gameNum===undefined?(gN||1):gs.gameNum,
+      chaosItem:gs.chaosItem===undefined?chaosItem:gs.chaosItem,
       lastUpdated:Date.now()
     });
   };
@@ -1411,9 +1468,17 @@ function App(){
   useEffect(()=>{
     if(!chaosMode||winner||screen!=='game'||chaosItem)return;
     if(moveHist.length<chaosSpawnRef.current)return;
+    // Online: nur der Host spawnt, syncs via doSync; Guest übernimmt aus gs.chaosItem
+    if(gameMode==='online'&&onlineRole!=='A')return;
     const pos=pickChaosPos(pA,pB,walls);
-    if(pos){setChaosItem(pos);playSound('wall');}
-  },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls]);
+    if(pos){
+      setChaosItem(pos);
+      playSound('wall');
+      if(gameMode==='online'){
+        doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:pos});
+      }
+    }
+  },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
 
   useEffect(()=>{
     if(screen!=='game')return;
@@ -1474,7 +1539,7 @@ function App(){
         const m=mh[i];
         if(m.type==='move'&&m.p==='B')recentAi.push({r:m.r,c:m.c});
       }
-      const d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi);
+      const d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem);
       if(d){
         if(d.type==='move'){
           playSound('move');setPB(d.pos);
@@ -1482,6 +1547,7 @@ function App(){
           if(chaosItem&&chaosItem.r===d.pos.r&&chaosItem.c===d.pos.c){
             setBarrLeft(p=>({...p,B:p.B+2}));
             setChaosItem(null);
+            chaosSpawnRef.current=mh.length+1+20+Math.floor(Math.random()*6);
             playSound('wall');
           }
           const nm=[...mh,{type:'move',p:'B',r:d.pos.r,c:d.pos.c}];setMoveHist(nm);
@@ -1520,6 +1586,7 @@ function App(){
         setOnlineRole(myNewRole);
         setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
         setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(gs.moves||[]);
+        setChaosItem(gs.chaosItem||null);
         setWinner(null);setCelebrating(false);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
@@ -1552,6 +1619,7 @@ function App(){
           barrLeft:{A:gameBarr,B:gameBarr},turn:startTurn,winner:null,moves:[],
           rematchA:false,rematchB:false,rematchDeclined:null,
           gameNum:newGN+1,swapRoles:swap,
+          chaosItem:null,
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
@@ -1569,6 +1637,7 @@ function App(){
       }
       setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
       setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(newMoves);
+      setChaosItem(gs.chaosItem||null);
       if(gs.winner&&!S.current.winner){triggerWin(gs.winner);}
     });
     return()=>ref.off('value',cb);
@@ -1684,7 +1753,7 @@ function App(){
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
         if(lobby&&lobby.guestId){
-          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,lastUpdated:Date.now()};
+          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
           initGame('online','A',lobbyId);
@@ -1768,10 +1837,11 @@ function App(){
     setFlash('');
     const id=randId(6);
     const code=isPrivate?randId(4):null;
-    const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,guestId:null,ts:Date.now()});
+    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr};
+    const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,guestId:null,ts:Date.now(),...cfg});
     if(!ok){setFlash(t('firebaseError')+(window.lastFbError||'?')+t('checkRules'));return;}
     if(isPrivate)await stoSet(`barricade_code_${code}`,{id});
-    else{const list=await stoGet('barricade_lobby_list')||[];await stoSet('barricade_lobby_list',[...list.filter(l=>l.hostId!==SESSION),{id,hostId:SESSION,ts:Date.now()}]);}
+    else{const list=await stoGet('barricade_lobby_list')||[];await stoSet('barricade_lobby_list',[...list.filter(l=>l.hostId!==SESSION),{id,hostId:SESSION,ts:Date.now(),...cfg}]);}
     setLobbyId(id);setOnlineRole('A');
     setPrivateCode(isPrivate?code:null);
     setScreen('waiting');
@@ -1789,6 +1859,10 @@ function App(){
   const joinLobby=async(id)=>{
     const lobby=await stoGet(`barricade_lobby_${id}`);
     if(!lobby||lobby.guestId){setFlash(t('lobbyFull'));return;}
+    // Host-Settings übernehmen
+    if(lobby.tm!==undefined)setGameTimeMode(lobby.tm);
+    if(lobby.ch!==undefined)setChaosMode(!!lobby.ch);
+    if(lobby.br!==undefined)setGameBarr(lobby.br);
     await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,ts:Date.now()});
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<40;i++){
@@ -1848,22 +1922,26 @@ function App(){
     if(isA)setPA(np);else setPB(np);
     // Chaos-Item einsammeln
     let newBl=barrLeft;
+    let nextChaos=chaosItem;
     if(chaosItem&&chaosItem.r===r&&chaosItem.c===c){
       newBl={...barrLeft,[turn]:barrLeft[turn]+2};
       setBarrLeft(newBl);
       setChaosItem(null);
+      nextChaos=null;
+      // Nächster Spawn in 20–25 Zügen
+      chaosSpawnRef.current=S.current.moveHist.length+1+20+Math.floor(Math.random()*6);
       playSound('wall');
     }
     const nm=[...S.current.moveHist,{type:'move',p:turn,r,c}];
     setMoveHist(nm);
     const newTurn=turn==='A'?'B':'A';
     if(r===0){
-      doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm});
+      doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm,chaosItem:nextChaos});
       triggerWin(turn);
       return;
     }
     setTurn(newTurn);setFlash('');
-    doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:null,moves:nm});
+    doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:nextChaos});
   };
 
   const validDot=(r,c)=>{
@@ -2082,6 +2160,30 @@ function App(){
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('mode')}</div>
           </div>
 
+          {/* Aktive Auswahl */}
+          {(gameTimeMode!=='none'||chaosMode)&&(
+            <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap',justifyContent:'center'}}>
+              {gameTimeMode.indexOf('classic-')===0&&(
+                <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
+                  background:'rgba(59,130,246,0.12)',color:'#3b82f6',display:'flex',alignItems:'center',gap:5}}>
+                  <span>⌛</span><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
+                </div>
+              )}
+              {gameTimeMode.indexOf('blitz-')===0&&(
+                <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
+                  background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:5}}>
+                  <span>⚡</span><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
+                </div>
+              )}
+              {chaosMode&&(
+                <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
+                  background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:5}}>
+                  <span>🌀</span><span>{t('modeChaos')}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Classic */}
           <SectionHeader label={'⚔️ ' + t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6}}>
@@ -2285,30 +2387,62 @@ function App(){
               {lobbyList.map(l=>{
                 const age=Math.floor((Date.now()-l.ts)/1000);
                 const ageLabel=age<60?`${age}s`:`${Math.floor(age/60)}m`;
+                const tm=l.tm||'none';
+                const isClassic=tm.indexOf('classic-')===0;
+                const isBlitz=tm.indexOf('blitz-')===0;
                 return(
                   <div key={l.id} onClick={()=>joinLobby(l.id)}
-                    style={{padding:'12px 14px',background:'var(--bg)',borderRadius:9,
+                    style={{padding:'10px 12px',background:'var(--bg)',borderRadius:9,
                       border:'1px solid var(--border-soft)',cursor:'pointer',
-                      display:'flex',alignItems:'center',justifyContent:'space-between',
                       transition:'all 0.15s'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{width:32,height:32,borderRadius:8,background:'linear-gradient(135deg,#ef4444,#3b82f6)',
-                        display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,
-                        boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>⚔️</div>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:0.5}}>
-                          {t('lobby')} {l.id.slice(0,4).toUpperCase()}
-                        </div>
-                        <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:1}}>
-                          {ageLabel} · 1/2
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:l.tm||l.ch?6:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg,#ef4444,#3b82f6)',
+                          display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,
+                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>⚔️</div>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:0.5}}>
+                            {t('lobby')} {l.id.slice(0,4).toUpperCase()}
+                          </div>
+                          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:1}}>
+                            {ageLabel} · 1/2
+                          </div>
                         </div>
                       </div>
+                      <div style={{padding:'5px 12px',background:'#3b82f6',color:'white',
+                        borderRadius:14,fontSize:11,fontWeight:700,
+                        boxShadow:'0 2px 6px rgba(59,130,246,0.3)'}}>
+                        {t('join')}
+                      </div>
                     </div>
-                    <div style={{padding:'5px 12px',background:'#3b82f6',color:'white',
-                      borderRadius:14,fontSize:11,fontWeight:700,
-                      boxShadow:'0 2px 6px rgba(59,130,246,0.3)'}}>
-                      {t('join')}
-                    </div>
+                    {(isClassic||isBlitz||l.ch||l.br)&&(
+                      <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
+                        {isClassic&&(
+                          <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
+                            background:'rgba(59,130,246,0.12)',color:'#3b82f6'}}>
+                            ⌛ {tm==='classic-3'?'3':tm==='classic-5'?'5':'8'}{t('minLabel')}
+                          </div>
+                        )}
+                        {isBlitz&&(
+                          <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
+                            background:'rgba(245,158,11,0.15)',color:'#d97706'}}>
+                            ⚡ {tm==='blitz-5'?'5':tm==='blitz-8'?'8':'10'}{t('secLabel')}
+                          </div>
+                        )}
+                        {l.ch&&(
+                          <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
+                            background:'rgba(139,92,246,0.15)',color:'#8b5cf6'}}>
+                            🌀 {t('modeChaos')}
+                          </div>
+                        )}
+                        {l.br&&(
+                          <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
+                            background:'var(--card)',color:'var(--muted)',border:'1px solid var(--border-soft)'}}>
+                            🧱 {l.br}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -2574,6 +2708,31 @@ function App(){
           </button>
         )}
       </div>
+
+      {/* Mode badges */}
+      {(gameTimeMode!=='none'||chaosMode)&&(
+        <div style={{display:'flex',gap:6,marginBottom:8,width:'100%',maxWidth:360,flexWrap:'wrap'}}>
+          {gameTimeMode.indexOf('classic-')===0&&(
+            <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
+              background:'rgba(59,130,246,0.12)',color:'#3b82f6',display:'flex',alignItems:'center',gap:4}}>
+              <span>⌛</span><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
+            </div>
+          )}
+          {gameTimeMode.indexOf('blitz-')===0&&(
+            <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
+              background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:4}}>
+              <span>⚡</span><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
+            </div>
+          )}
+          {chaosMode&&(
+            <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
+              background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:4}}>
+              <span>🌀</span><span>{t('modeChaos')}</span>
+              {chaosItem&&<span style={{width:5,height:5,borderRadius:'50%',background:'#8b5cf6',animation:'piece-pulse 1.4s ease-in-out infinite'}}/>}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Score cards */}
       <div style={{display:'flex',gap:8,marginBottom:10,width:'100%',maxWidth:360}}>
