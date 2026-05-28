@@ -1217,7 +1217,8 @@ function App(){
 
   // Lobby/Spiel-Konfiguration
   const[gameBarr,setGameBarr]=useState(10);
-  const[gameTimeMode,setGameTimeMode]=useState('none'); // 'none' | 'classic-5/10/15' | 'blitz-5/8/10'
+  const[gameTimeMode,setGameTimeMode]=useState('none'); // 'none' | 'classic-3/5/8' | 'blitz-5/8/10'
+  const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
 
   const[flash,setFlash]=useState('');
@@ -1326,6 +1327,9 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
+    // Timer initialisieren falls Classic-Mode aktiv
+    const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
+    setTimeLeft({A:classicSecs,B:classicSecs});
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
     setRematchA(false);setRematchB(false);setRematchDeclined(null);
@@ -1347,6 +1351,28 @@ function App(){
       lastUpdated:Date.now()
     });
   };
+
+  // ── Classic-Timer-Tick ──
+  useEffect(()=>{
+    if(screen!=='game')return;
+    if(winner)return;
+    if(!gameTimeMode||gameTimeMode.indexOf('classic-')!==0)return;
+    const iv=setInterval(()=>{
+      setTimeLeft(tl=>{
+        const cur=tl[turn];
+        if(cur<=0)return tl;
+        const next=cur-1;
+        if(next<=0){
+          // Zeit abgelaufen — Gegner gewinnt
+          const other=turn==='A'?'B':'A';
+          setWinner(other);
+          return{...tl,[turn]:0};
+        }
+        return{...tl,[turn]:next};
+      });
+    },1000);
+    return()=>clearInterval(iv);
+  },[screen,winner,turn,gameTimeMode]);
 
   // ── AI ──
   useEffect(()=>{
@@ -1818,9 +1844,9 @@ function App(){
   if(screen==='menu'){
     // Aktuellen Modus formatieren
     const modeLabel=gameTimeMode==='none'?t('noTimer')
+      :gameTimeMode==='classic-3'?'3 '+t('minLabel')
       :gameTimeMode==='classic-5'?'5 '+t('minLabel')
-      :gameTimeMode==='classic-10'?'10 '+t('minLabel')
-      :gameTimeMode==='classic-15'?'15 '+t('minLabel')
+      :gameTimeMode==='classic-8'?'8 '+t('minLabel')
       :gameTimeMode==='blitz-5'?'5'+t('secLabel')+' '+t('perTurn')
       :gameTimeMode==='blitz-8'?'8'+t('secLabel')+' '+t('perTurn')
       :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' '+t('perTurn')
@@ -1953,9 +1979,9 @@ function App(){
           <SectionHeader label={'⚔️ ' + t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6}}>
             <TimeBtn val="none" label={t('noTimer')}/>
-            <TimeBtn val="classic-5" label={'5 '+t('minLabel')} disabled/>
-            <TimeBtn val="classic-10" label={'10 '+t('minLabel')} disabled/>
-            <TimeBtn val="classic-15" label={'15 '+t('minLabel')} disabled/>
+            <TimeBtn val="classic-3" label={'3 '+t('minLabel')}/>
+            <TimeBtn val="classic-5" label={'5 '+t('minLabel')}/>
+            <TimeBtn val="classic-8" label={'8 '+t('minLabel')}/>
           </div>
 
           {/* Blitz */}
@@ -2448,7 +2474,14 @@ function App(){
                 <div style={{fontSize:10,fontWeight:700,color:active?'rgba(255,255,255,0.75)':'var(--subtle)'}}>{pname(p)}</div>
                 <div style={{fontSize:12,fontWeight:700,color:active?'white':'var(--text)'}}>{barrLeft[p]} {t('walls')}</div>
               </div>
-              {active&&!winner&&(
+              {gameTimeMode&&gameTimeMode.indexOf('classic-')===0&&(
+                <div style={{marginLeft:'auto',fontSize:13,fontWeight:800,letterSpacing:0.5,
+                  fontVariantNumeric:'tabular-nums',
+                  color:active?'white':(timeLeft[p]<=30?'#ef4444':'var(--text)')}}>
+                  {Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}
+                </div>
+              )}
+              {active&&!winner&&!(gameTimeMode&&gameTimeMode.indexOf('classic-')===0)&&(
                 <div style={{marginLeft:'auto',fontSize:9,letterSpacing:0.5,
                   color:'rgba(255,255,255,0.75)',fontWeight:600}}>
                   {isOnlineWait&&p===turn?t('statusWait'):aiThinking&&p==='B'?t('statusThink'):t('statusTurn')}
