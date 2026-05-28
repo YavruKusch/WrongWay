@@ -26,7 +26,7 @@
     --shadow-card:0 4px 24px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.3);
     --shadow-soft:0 2px 8px rgba(0,0,0,0.3);
   }
-  html,body{width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;transition:background 0.25s;}
+  html,body{width:100%;overflow-x:hidden;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;transition:background 0.25s;}
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;}
   input,button{-webkit-appearance:none;font-family:inherit;}
@@ -376,7 +376,7 @@ const I18N={
     rematchWaiting:'Waiting for opponent...',rematchAsked:'Opponent wants a rematch',rematchDeclined:'Opponent declined',randomFirst:'Random start',
     reconnecting:'Opponent reconnecting',reconnectFail:'Opponent left',
     noLobbies:'No open lobbies',noLobbiesHint:'Create one or wait for players',createLobby:'Create lobby',joinExisting:'Join game',live:'LIVE',lobbyCount:'open',
-    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Play with friend',vsBot:'🤖 Play vs Bots',localPlay:'📱 Local (same device)',createPublicLobby:'➕ Create lobby / Lobby list',shareWhatsApp:'📱 Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes'},
+    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',randomDrop:'Random Walls',randomDropDesc:'Fair auto-walls drop in',dropRare:'Rare',dropOften:'Often',dropVeryOften:'V. often',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Play with friend',vsBot:'🤖 Play vs Bots',localPlay:'📱 Local (same device)',createPublicLobby:'➕ Create lobby / Lobby list',shareWhatsApp:'📱 Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes'},
   de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🖥️ Gegen Computer',online:'🌐 Online spielen',
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
@@ -394,7 +394,7 @@ const I18N={
     rematchWaiting:'Warte auf Gegner...',rematchAsked:'Gegner will Revanche',rematchDeclined:'Gegner hat abgelehnt',randomFirst:'Zufälliger Start',
     reconnecting:'Gegner verbindet sich neu',reconnectFail:'Gegner hat das Spiel verlassen',
     noLobbies:'Keine offenen Lobbys',noLobbiesHint:'Erstelle eine oder warte auf Spieler',createLobby:'Lobby erstellen',joinExisting:'Spiel beitreten',live:'LIVE',lobbyCount:'offen',
-    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'👥 Mit Freund spielen',vsBot:'🤖 Gegen Bots',localPlay:'📱 Lokal (gleiches Gerät)',createPublicLobby:'➕ Lobby erstellen / Lobby-Liste',shareWhatsApp:'📱 Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi'},
+    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',randomDrop:'Zufalls-Wände',randomDropDesc:'Faire Auto-Wände fallen',dropRare:'Selten',dropOften:'Oft',dropVeryOften:'Sehr oft',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'👥 Mit Freund spielen',vsBot:'🤖 Gegen Bots',localPlay:'📱 Lokal (gleiches Gerät)',createPublicLobby:'➕ Lobby erstellen / Lobby-Liste',shareWhatsApp:'📱 Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi'},
   tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🖥️ Bilgisayara Karşı',online:'🌐 Çevrimiçi Oyna',
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
@@ -412,7 +412,7 @@ const I18N={
     rematchWaiting:'Rakip bekleniyor...',rematchAsked:'Rakip rövanş istiyor',rematchDeclined:'Rakip reddetti',randomFirst:'Rastgele başlangıç',
     reconnecting:'Rakip yeniden bağlanıyor',reconnectFail:'Rakip oyundan ayrıldı',
     noLobbies:'Açık lobi yok',noLobbiesHint:'Bir tane oluştur veya oyuncu bekle',createLobby:'Lobi oluştur',joinExisting:'Oyuna katıl',live:'CANLI',lobbyCount:'açık',
-    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'👥 Arkadaşla oyna',vsBot:'🤖 Botlara karşı',localPlay:'📱 Yerel (aynı cihaz)',createPublicLobby:'➕ Lobi oluştur / Lobi listesi',shareWhatsApp:'📱 WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları'},
+    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',randomDrop:'Rastgele Duvar',randomDropDesc:'Adil oto-duvarlar düşer',dropRare:'Nadiren',dropOften:'Sık',dropVeryOften:'Çok sık',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'👥 Arkadaşla oyna',vsBot:'🤖 Botlara karşı',localPlay:'📱 Yerel (aynı cihaz)',createPublicLobby:'➕ Lobi oluştur / Lobi listesi',shareWhatsApp:'📱 WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları'},
   fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🖥️ Contre l'ordinateur",online:'🌐 Jouer en ligne',
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
@@ -430,7 +430,7 @@ const I18N={
     rematchWaiting:"En attente de l'adversaire...",rematchAsked:'Adversaire veut une revanche',rematchDeclined:'Adversaire a refusé',randomFirst:'Départ aléatoire',
     reconnecting:'Adversaire se reconnecte',reconnectFail:"L'adversaire a quitté",
     noLobbies:'Aucun salon ouvert',noLobbiesHint:'Créez-en un ou attendez',createLobby:'Créer un salon',joinExisting:'Rejoindre',live:'LIVE',lobbyCount:'ouvert',
-    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Jouer avec un ami',vsBot:'🤖 Contre les bots',localPlay:'📱 Local (même appareil)',createPublicLobby:'➕ Créer un salon / Liste des salons',shareWhatsApp:'📱 Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu'}
+    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',randomDrop:'Murs aléatoires',randomDropDesc:'Murs auto équitables',dropRare:'Rare',dropOften:'Souvent',dropVeryOften:'Très svt',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Jouer avec un ami',vsBot:'🤖 Contre les bots',localPlay:'📱 Local (même appareil)',createPublicLobby:'➕ Créer un salon / Liste des salons',shareWhatsApp:'📱 Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu'}
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
 function getInitialDark(){try{return localStorage.getItem('ww_dark')==='1';}catch{return false;}}
@@ -560,7 +560,43 @@ function pickChaosPos(pA,pB,walls){
   return best;
 }
 
-// ── AI ─────────────────────────────────────────────────────
+// ── Random-Drop: Intervall je Häufigkeit ───────────────────
+function dropInterval(mode){
+  if(mode==='rare')return 30+Math.floor(Math.random()*11);     // 30–40
+  if(mode==='often')return 20+Math.floor(Math.random()*6);     // 20–25
+  if(mode==='veryoften')return 10+Math.floor(Math.random()*6); // 10–15
+  return 99999;
+}
+// ── Random-Drop: faire Wand wählen ─────────────────────────
+// Behindert eher den Führenden, niemals den Hinterherlaufenden stärker;
+// tryWall garantiert, dass beide immer einen Weg zum Ziel behalten.
+function pickFairDropWall(pA,pB,walls){
+  const pa=bfsPath(pA,walls),pb=bfsPath(pB,walls);
+  if(!pa||!pb)return null;
+  const lenA=pa.length-1,lenB=pb.length-1;
+  const leaderIsA=lenA<=lenB;                 // kleinere Distanz = näher am Ziel = Vorteil
+  const leaderPos=leaderIsA?pA:pB;
+  const trailerPos=leaderIsA?pB:pA;
+  const lenLeader=leaderIsA?lenA:lenB;
+  const lenTrailer=leaderIsA?lenB:lenA;
+  const cands=wallCandidates(leaderPos,walls,6);
+  const scored=[];
+  for(const key of cands){
+    const next=tryWall(key,walls,pA,pB);      // null wenn ungültig / sperrt jemanden ein
+    if(!next)continue;
+    const npL=bfsPath(leaderPos,next),npT=bfsPath(trailerPos,next);
+    if(!npL||!npT)continue;
+    const dLeader=(npL.length-1)-lenLeader;
+    const dTrailer=(npT.length-1)-lenTrailer;
+    if(dTrailer>dLeader)continue;             // Fairness: Schwächeren nie stärker behindern
+    const score=dLeader-2.5*Math.max(0,dTrailer)+Math.random()*1.5;
+    scored.push({key,score});
+  }
+  if(!scored.length)return null;
+  scored.sort((a,b)=>b.score-a.score);
+  const top=scored.slice(0,Math.min(5,scored.length)); // Top-5 → Zufall = unvorhersehbar
+  return top[Math.floor(Math.random()*top.length)].key;
+}
 function getMovesFrom(pos,opp,walls){
   const moves=[];
   for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
@@ -1342,6 +1378,8 @@ function App(){
   const[chaosMode,setChaosMode]=useState(false);
   const[chaosItem,setChaosItem]=useState(null);
   const chaosSpawnRef=useRef(15);
+  const[dropMode,setDropMode]=useState(false); // false|'rare'|'often'|'veryoften'
+  const dropNextRef=useRef(99999);
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
@@ -1472,6 +1510,7 @@ function App(){
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
+    dropNextRef.current=dropMode?dropInterval(dropMode):99999;
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
@@ -1532,6 +1571,25 @@ function App(){
       }
     }
   },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
+
+  // ── Random-Wand-Drop ──
+  useEffect(()=>{
+    if(!dropMode||winner||screen!=='game')return;
+    if(moveHist.length<dropNextRef.current)return;
+    if(gameMode==='online'&&onlineRole!=='A')return; // nur Host dropt, syncs via walls
+    const key=pickFairDropWall(pA,pB,walls);
+    if(key){
+      const next=new Set([...walls,key]);
+      setWalls(next);
+      playSound('wall');
+      dropNextRef.current=moveHist.length+dropInterval(dropMode);
+      if(gameMode==='online'){
+        doSync({pA:S.current.pA,pB:S.current.pB,walls:next,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem});
+      }
+    }else{
+      dropNextRef.current=moveHist.length+3; // kein fairer Drop möglich → bald erneut
+    }
+  },[moveHist.length,dropMode,winner,screen,pA,pB,walls,gameMode,onlineRole]);
 
   useEffect(()=>{
     if(screen!=='game')return;
@@ -1919,7 +1977,7 @@ function App(){
     setFlash('');
     const id=randId(6);
     const code=isPrivate?randId(4):null;
-    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr};
+    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode};
     const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,guestId:null,ts:Date.now(),...cfg});
     if(!ok){setFlash(t('firebaseError')+(window.lastFbError||'?')+t('checkRules'));return;}
     if(isPrivate)await stoSet(`barricade_code_${code}`,{id});
@@ -1945,6 +2003,7 @@ function App(){
     if(lobby.tm!==undefined)setGameTimeMode(lobby.tm);
     if(lobby.ch!==undefined)setChaosMode(!!lobby.ch);
     if(lobby.br!==undefined)setGameBarr(lobby.br);
+    if(lobby.dp!==undefined)setDropMode(lobby.dp);
     await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,ts:Date.now()});
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<40;i++){
@@ -2093,7 +2152,8 @@ function App(){
   },[dragging]);
 
   const startDrag=(e,orient)=>{
-    if(!canDrag)return;e.preventDefault();
+    if(!canDrag)return;
+    if(!e.touches)e.preventDefault(); // nur Maus: kein Text-Select
     savedScroll.current=window.scrollY;
     const x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;
     setDragging({orient});setGhostPos({x,y});setPreviewKey(null);setSnapPos(null);setFlash('');
@@ -2229,6 +2289,20 @@ function App(){
         </button>
       );
     };
+    const DropBtn=({val,label})=>{
+      const sel=dropMode===val;
+      return(
+        <button onClick={()=>setDropMode(d=>d===val?false:val)} style={{
+          flex:1,padding:'7px 2px',borderRadius:8,
+          background:sel?'#ec4899':'var(--bg)',
+          color:sel?'white':'var(--text)',
+          border:`1.5px solid ${sel?'#ec4899':'var(--border)'}`,
+          cursor:'pointer',fontSize:10,fontWeight:800,letterSpacing:0.2,
+          fontFamily:'system-ui,-apple-system,sans-serif'}}>
+          {label}
+        </button>
+      );
+    };
     const SectionHeader=({label})=>(
       <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:14,marginBottom:8,paddingLeft:2}}>
         {label}
@@ -2243,7 +2317,7 @@ function App(){
           </div>
 
           {/* Aktive Auswahl */}
-          {(gameTimeMode!=='none'||chaosMode)&&(
+          {(gameTimeMode!=='none'||chaosMode||dropMode)&&(
             <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap',justifyContent:'center'}}>
               {gameTimeMode.indexOf('classic-')===0&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
@@ -2261,6 +2335,12 @@ function App(){
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:5}}>
                   <span>🌀</span><span>{t('modeChaos')}</span>
+                </div>
+              )}
+              {dropMode&&(
+                <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
+                  background:'rgba(236,72,153,0.15)',color:'#ec4899',display:'flex',alignItems:'center',gap:5}}>
+                  <span>💥</span><span>{t('randomDrop')}</span>
                 </div>
               )}
             </div>
@@ -2285,46 +2365,53 @@ function App(){
 
           {/* Chaos */}
           <SectionHeader label={'🌀 ' + t('modeChaos').toUpperCase()}/>
-          <button onClick={()=>setChaosMode(c=>!c)} style={{
-            width:'100%',padding:'14px',
-            background:chaosMode?'#8b5cf6':'var(--card)',
-            color:chaosMode?'white':'var(--text)',
-            border:`1.5px solid ${chaosMode?'#8b5cf6':'var(--border)'}`,
-            borderRadius:11,cursor:'pointer',textAlign:'center',
-            fontSize:13,fontWeight:800,letterSpacing:0.3,
-            fontFamily:'system-ui,-apple-system,sans-serif',
-            boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
-            transition:'all 0.2s'}}>
-            <div style={{fontSize:20,marginBottom:4}}>{chaosMode?'✓':'🧱'}</div>
-            <div>{t('chaosBarrDrop')}</div>
-            <div style={{fontSize:10,fontWeight:600,opacity:0.75,marginTop:3}}>
-              {t('chaosBarrDropDesc')}
+          <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
+            <button onClick={()=>setChaosMode(c=>!c)} style={{
+              flex:1,padding:'11px 7px',
+              background:chaosMode?'#8b5cf6':'var(--card)',
+              color:chaosMode?'white':'var(--text)',
+              border:`1.5px solid ${chaosMode?'#8b5cf6':'var(--border)'}`,
+              borderRadius:11,cursor:'pointer',textAlign:'center',
+              fontSize:12,fontWeight:800,letterSpacing:0.2,
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
+              transition:'all 0.2s'}}>
+              <div style={{fontSize:18,marginBottom:3}}>{chaosMode?'✓':'🧱'}</div>
+              <div>{t('chaosBarrDrop')}</div>
+              <div style={{fontSize:9,fontWeight:600,opacity:0.75,marginTop:3,lineHeight:1.25}}>
+                {t('chaosBarrDropDesc')}
+              </div>
+            </button>
+            <div style={{flex:1,padding:'11px 7px',display:'flex',flexDirection:'column',
+              background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
+              border:`1.5px solid ${dropMode?'#ec4899':'var(--border)'}`,
+              borderRadius:11,textAlign:'center',transition:'all 0.2s'}}>
+              <div style={{fontSize:18,marginBottom:3}}>{dropMode?'✓':'💥'}</div>
+              <div style={{fontSize:12,fontWeight:800,color:dropMode?'#ec4899':'var(--text)'}}>{t('randomDrop')}</div>
+              <div style={{fontSize:9,fontWeight:600,color:'var(--subtle)',marginTop:3,marginBottom:7,lineHeight:1.25}}>{t('randomDropDesc')}</div>
+              <div style={{display:'flex',gap:4,marginTop:'auto'}}>
+                <DropBtn val="rare" label={t('dropRare')}/>
+                <DropBtn val="often" label={t('dropOften')}/>
+                <DropBtn val="veryoften" label={t('dropVeryOften')}/>
+              </div>
             </div>
-          </button>
+          </div>
 
           {/* Barricades */}
           <SectionHeader label={'🧱 ' + t('barricadesLabel')}/>
-          <div style={{padding:'14px',background:'var(--card)',border:'1.5px solid var(--border)',
-            borderRadius:11}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-              <button onClick={()=>setGameBarr(b=>Math.max(8,b-1))}
-                style={{width:34,height:34,borderRadius:8,
-                  background:'var(--bg)',border:'1.5px solid var(--border)',
-                  cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>−</button>
-              <div style={{textAlign:'center'}}>
-                <div style={{fontSize:26,fontWeight:900,color:'var(--text)',lineHeight:1}}>{gameBarr}</div>
-                <div style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:1,marginTop:2}}>8 – 15</div>
-              </div>
-              <button onClick={()=>setGameBarr(b=>Math.min(15,b+1))}
-                style={{width:34,height:34,borderRadius:8,
-                  background:'var(--bg)',border:'1.5px solid var(--border)',
-                  cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>+</button>
-            </div>
-            <input type="range" min="8" max="15" step="1" value={gameBarr}
-              onChange={e=>setGameBarr(parseInt(e.target.value,10))}
-              style={{width:'100%',accentColor:'#8b5cf6'}}/>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:14,
+            padding:'8px 14px',background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:11}}>
+            <button onClick={()=>setGameBarr(b=>Math.max(8,b-1))}
+              style={{width:32,height:32,borderRadius:8,
+                background:'var(--bg)',border:'1.5px solid var(--border)',
+                cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
+                fontFamily:'system-ui,-apple-system,sans-serif'}}>−</button>
+            <div style={{fontSize:24,fontWeight:900,color:'var(--text)',minWidth:28,textAlign:'center'}}>{gameBarr}</div>
+            <button onClick={()=>setGameBarr(b=>Math.min(15,b+1))}
+              style={{width:32,height:32,borderRadius:8,
+                background:'var(--bg)',border:'1.5px solid var(--border)',
+                cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
+                fontFamily:'system-ui,-apple-system,sans-serif'}}>+</button>
           </div>
 
           <button onClick={()=>setScreen('menu')} style={{...sBack,width:'100%',textAlign:'center',marginTop:18}}>{t('back')}</button>
@@ -2761,7 +2848,7 @@ function App(){
   // ── GAME ─────────────────────────────────────────────────
   const isOnlineWait=gameMode==='online'&&!myTurn&&!winner;
   return (
-    <div style={{...sCont,paddingBottom:100}}>
+    <div style={{...sCont,paddingBottom:'calc(100px + env(safe-area-inset-bottom, 0px))'}}>
 
       {/* Ghost */}
       {dragging&&(
@@ -2792,7 +2879,7 @@ function App(){
       </div>
 
       {/* Mode badges */}
-      {(gameTimeMode!=='none'||chaosMode)&&(
+      {(gameTimeMode!=='none'||chaosMode||dropMode)&&(
         <div style={{display:'flex',gap:6,marginBottom:8,width:'100%',maxWidth:360,flexWrap:'wrap'}}>
           {gameTimeMode.indexOf('classic-')===0&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
@@ -2811,6 +2898,12 @@ function App(){
               background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:4}}>
               <span>🌀</span><span>{t('modeChaos')}</span>
               {chaosItem&&<span style={{width:5,height:5,borderRadius:'50%',background:'#8b5cf6',animation:'piece-pulse 1.4s ease-in-out infinite'}}/>}
+            </div>
+          )}
+          {dropMode&&(
+            <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
+              background:'rgba(236,72,153,0.15)',color:'#ec4899',display:'flex',alignItems:'center',gap:4}}>
+              <span>💥</span><span>{t('randomDrop')}</span>
             </div>
           )}
         </div>
@@ -2856,7 +2949,7 @@ function App(){
       <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{t('goalLabel')}</div>
 
       {/* Grid */}
-      <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'pan-y',...sGrid}}>
+      <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'auto',...sGrid}}>
         {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>{
           const isA=pA.r===r&&pA.c===c,isB=pB.r===r&&pB.c===c;
           const vDot=validDot(r,c);
@@ -2951,7 +3044,7 @@ function App(){
 
       {/* Floating barricade chips */}
       {!winner&&myTurn&&!isOnlineWait&&(
-        <div style={{position:'fixed',bottom:16,left:0,right:0,zIndex:200,
+        <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
           display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
           <div style={{position:'absolute',bottom:'100%',marginBottom:5,
             fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
@@ -3429,7 +3522,8 @@ const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',c
 const sPage={minHeight:'100vh',minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'center',padding:'24px',fontFamily:'system-ui,-apple-system,sans-serif'};
 const sCont={minHeight:'100vh',minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',
-  alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none'};
+  alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
+  touchAction:'pan-y',WebkitOverflowScrolling:'touch'};
 const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
   boxShadow:'var(--shadow-card)',border:'1.5px solid var(--border)'};
 const sBack={background:'none',border:'none',cursor:'pointer',fontSize:13,color:'var(--subtle)',
