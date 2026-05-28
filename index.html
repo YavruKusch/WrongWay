@@ -1333,6 +1333,7 @@ function App(){
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
     setRematchA(false);setRematchB(false);setRematchDeclined(null);
+    setChatMsgs([]);setChatInput('');
     if(mode!=='online')setGameNum(0);
     setScreen('game');
   };
@@ -1431,6 +1432,11 @@ function App(){
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
         setGiveUpArmed(false);setFlash('');
+        // Timer zurücksetzen
+        const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
+        setTimeLeft({A:classicSecs,B:classicSecs});
+        // Chat leeren
+        setChatMsgs([]);setChatInput('');
         setScreen('game');
         return;
       }
@@ -1457,6 +1463,7 @@ function App(){
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
+        stoSet(`barricade_chat_${lobbyId}`,[]);
         lastOnlineTs.current=ngs.lastUpdated;
         return;
       }
