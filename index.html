@@ -1219,6 +1219,7 @@ function App(){
   const[gameBarr,setGameBarr]=useState(10);
   const[gameTimeMode,setGameTimeMode]=useState('none'); // 'none' | 'classic-3/5/8' | 'blitz-5/8/10'
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
+  const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
 
   const[flash,setFlash]=useState('');
@@ -1354,26 +1355,68 @@ function App(){
   };
 
   // ── Classic-Timer-Tick ──
+  // Helpers
+  const getTurnTime=mode=>{
+    if(!mode)return 0;
+    if(mode.indexOf('classic-')===0)return 60;
+    if(mode==='blitz-5')return 5;
+    if(mode==='blitz-8')return 8;
+    if(mode==='blitz-10')return 10;
+    return 0;
+  };
+  const isTimerMode=mode=>mode&&(mode.indexOf('classic-')===0||mode.indexOf('blitz-')===0);
+
+  // Reset Zug-Zeit bei jedem Turn-Wechsel (oder Spielstart)
+  useEffect(()=>{
+    if(!isTimerMode(gameTimeMode))return;
+    setTurnTimeLeft(getTurnTime(gameTimeMode));
+  },[turn,gameNum,gameTimeMode]);
+
   useEffect(()=>{
     if(screen!=='game')return;
     if(winner)return;
-    if(!gameTimeMode||gameTimeMode.indexOf('classic-')!==0)return;
+    if(!isTimerMode(gameTimeMode))return;
+    const isBlitz=gameTimeMode.indexOf('blitz-')===0;
     const iv=setInterval(()=>{
-      setTimeLeft(tl=>{
-        const cur=tl[turn];
-        if(cur<=0)return tl;
-        const next=cur-1;
-        if(next<=0){
-          // Zeit abgelaufen — Gegner gewinnt
+      // Zug-Zeit runterzählen
+      setTurnTimeLeft(tt=>{
+        if(tt<=0)return 0;
+        const nt=tt-1;
+        if(nt<=0){
+          if(isBlitz){
+            // Blitz: aktueller Spieler wird übersprungen, anderer ist dran
+            const newTurn=turn==='A'?'B':'A';
+            setTurn(newTurn);
+            if(gameMode==='online'){
+              const s=S.current;
+              doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:newTurn,winner:null,moves:s.moveHist});
+            }
+            return getTurnTime(gameTimeMode);
+          }
+          // Classic: aktueller Spieler verliert
           const other=turn==='A'?'B':'A';
           setWinner(other);
-          return{...tl,[turn]:0};
+          return 0;
         }
-        return{...tl,[turn]:next};
+        return nt;
       });
+      // Gesamt-Zeit nur für Classic runterzählen
+      if(!isBlitz){
+        setTimeLeft(tl=>{
+          const cur=tl[turn];
+          if(cur<=0)return tl;
+          const next=cur-1;
+          if(next<=0){
+            const other=turn==='A'?'B':'A';
+            setWinner(other);
+            return{...tl,[turn]:0};
+          }
+          return{...tl,[turn]:next};
+        });
+      }
     },1000);
     return()=>clearInterval(iv);
-  },[screen,winner,turn,gameTimeMode]);
+  },[screen,winner,turn,gameTimeMode,gameMode]);
 
   // ── AI ──
   useEffect(()=>{
@@ -1994,9 +2037,9 @@ function App(){
           {/* Blitz */}
           <SectionHeader label={'⚡ ' + t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
           <div style={{display:'flex',gap:6}}>
-            <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled/>
-            <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled/>
-            <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled/>
+            <TimeBtn val="blitz-5" label={'5 '+t('secLabel')}/>
+            <TimeBtn val="blitz-8" label={'8 '+t('secLabel')}/>
+            <TimeBtn val="blitz-10" label={'10 '+t('secLabel')}/>
           </div>
 
           {/* Chaos */}
@@ -2542,6 +2585,16 @@ function App(){
       </div>
 
       <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2}}>{t('startLabel')}</div>
+
+      {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
+        <div style={{position:'fixed',bottom:130,left:0,right:0,display:'flex',justifyContent:'center',zIndex:51,pointerEvents:'none'}}>
+          <div style={{background:'rgba(239,68,68,0.95)',color:'white',padding:'10px 22px',borderRadius:22,fontSize:13,fontWeight:800,letterSpacing:0.5,backdropFilter:'blur(8px)',display:'flex',alignItems:'center',gap:10,boxShadow:'0 4px 16px rgba(239,68,68,0.4)'}}>
+            <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'white',animation:'piece-pulse 1s ease-in-out infinite'}}/>
+            <span style={{fontSize:16}}>⏱</span>
+            <span style={{fontVariantNumeric:'tabular-nums'}}>{turnTimeLeft}s</span>
+          </div>
+        </div>
+      )}
 
       {(isOnlineWait||oppCountdown!==null)&&(
         <div style={{position:'fixed',bottom:80,left:0,right:0,display:'flex',justifyContent:'center',zIndex:50,pointerEvents:'none'}}>
