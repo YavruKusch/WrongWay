@@ -351,7 +351,8 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
 
-const COLS=9,ROWS=13,CELL=40,WW=8,BARR=10;
+const COLS=9,ROWS=13,WW=8,BARR=10;
+const CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
 const INIT_A={r:ROWS-1,c:2},INIT_B={r:ROWS-1,c:6};
 const PC={A:'#ef4444',B:'#3b82f6'},PD={A:'#7f1d1d',B:'#1e3a5f'};
 const SESSION=Math.random().toString(36).slice(2,10);
