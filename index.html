@@ -64,6 +64,14 @@
     0%,100%{box-shadow:0 0 3px 1px rgba(251,191,36,0.5),0 2px 6px rgba(0,0,0,0.2);}
     50%{box-shadow:0 0 7px 2px rgba(251,191,36,0.75),0 2px 6px rgba(0,0,0,0.2);}
   }
+  @keyframes slide-in-right{
+    0%{transform:translateX(100%);opacity:0.4;}
+    100%{transform:translateX(0);opacity:1;}
+  }
+  @keyframes slide-in-left{
+    0%{transform:translateX(-100%);opacity:0.4;}
+    100%{transform:translateX(0);opacity:1;}
+  }
   @keyframes hammer-float{
     0%,100%{transform:translateY(0) rotate(-8deg);}
     50%{transform:translateY(-5px) rotate(8deg);}
@@ -415,7 +423,7 @@ const I18N={
     rematchWaiting:'Waiting for opponent...',rematchAsked:'Opponent wants a rematch',rematchDeclined:'Opponent declined',randomFirst:'Random start',
     reconnecting:'Opponent reconnecting',reconnectFail:'Opponent left',
     noLobbies:'No open lobbies',noLobbiesHint:'Create one or wait for players',createLobby:'Create lobby',joinExisting:'Join game',live:'LIVE',lobbyCount:'open',
-    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',randomDrop:'Random Walls',randomDropDesc:'Fair auto-walls drop in',dropRare:'Rare',dropOften:'Often',dropVeryOften:'V. often',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Play with friend',vsBot:'🤖 Play vs Bots',localPlay:'📱 Local (same device)',createPublicLobby:'➕ Create lobby / Lobby list',shareWhatsApp:'📱 Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes',hammerMode:'Hammer',hammerDesc:'Collect a hammer to smash one wall',hammerHint:'Drag onto a wall'},
+    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',randomDrop:'Random Walls',randomDropDesc:'Fair auto-walls drop in',dropRare:'Rare',dropOften:'Often',dropVeryOften:'V. often',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Play with friend',vsBot:'🤖 Play vs Bots',localPlay:'📱 Local (same device)',createPublicLobby:'➕ Create lobby / Lobby list',shareWhatsApp:'📱 Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes',hammerMode:'Hammer',hammerDesc:'Collect a hammer to smash one wall',hammerHint:'Drag onto a wall',hammerOnce:'1× start',hammerTwice:'2× per round'},
   de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🖥️ Gegen Computer',online:'🌐 Online spielen',
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
@@ -433,7 +441,7 @@ const I18N={
     rematchWaiting:'Warte auf Gegner...',rematchAsked:'Gegner will Revanche',rematchDeclined:'Gegner hat abgelehnt',randomFirst:'Zufälliger Start',
     reconnecting:'Gegner verbindet sich neu',reconnectFail:'Gegner hat das Spiel verlassen',
     noLobbies:'Keine offenen Lobbys',noLobbiesHint:'Erstelle eine oder warte auf Spieler',createLobby:'Lobby erstellen',joinExisting:'Spiel beitreten',live:'LIVE',lobbyCount:'offen',
-    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',randomDrop:'Zufalls-Wände',randomDropDesc:'Faire Auto-Wände fallen',dropRare:'Selten',dropOften:'Oft',dropVeryOften:'Sehr oft',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'👥 Mit Freund spielen',vsBot:'🤖 Gegen Bots',localPlay:'📱 Lokal (gleiches Gerät)',createPublicLobby:'➕ Lobby erstellen / Lobby-Liste',shareWhatsApp:'📱 Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi',hammerMode:'Hammer',hammerDesc:'Sammle einen Hammer und zerschlage eine Mauer',hammerHint:'Auf eine Mauer ziehen'},
+    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',randomDrop:'Zufalls-Wände',randomDropDesc:'Faire Auto-Wände fallen',dropRare:'Selten',dropOften:'Oft',dropVeryOften:'Sehr oft',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'👥 Mit Freund spielen',vsBot:'🤖 Gegen Bots',localPlay:'📱 Lokal (gleiches Gerät)',createPublicLobby:'➕ Lobby erstellen / Lobby-Liste',shareWhatsApp:'📱 Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi',hammerMode:'Hammer',hammerDesc:'Sammle einen Hammer und zerschlage eine Mauer',hammerHint:'Auf eine Mauer ziehen',hammerOnce:'1× Start',hammerTwice:'2× pro Runde'},
   tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🖥️ Bilgisayara Karşı',online:'🌐 Çevrimiçi Oyna',
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
@@ -451,7 +459,7 @@ const I18N={
     rematchWaiting:'Rakip bekleniyor...',rematchAsked:'Rakip rövanş istiyor',rematchDeclined:'Rakip reddetti',randomFirst:'Rastgele başlangıç',
     reconnecting:'Rakip yeniden bağlanıyor',reconnectFail:'Rakip oyundan ayrıldı',
     noLobbies:'Açık lobi yok',noLobbiesHint:'Bir tane oluştur veya oyuncu bekle',createLobby:'Lobi oluştur',joinExisting:'Oyuna katıl',live:'CANLI',lobbyCount:'açık',
-    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',randomDrop:'Rastgele Duvar',randomDropDesc:'Adil oto-duvarlar düşer',dropRare:'Nadiren',dropOften:'Sık',dropVeryOften:'Çok sık',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'👥 Arkadaşla oyna',vsBot:'🤖 Botlara karşı',localPlay:'📱 Yerel (aynı cihaz)',createPublicLobby:'➕ Lobi oluştur / Lobi listesi',shareWhatsApp:'📱 WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları',hammerMode:'Çekiç',hammerDesc:'Bir çekiç topla ve bir duvarı kır',hammerHint:'Bir duvara sürükle'},
+    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',randomDrop:'Rastgele Duvar',randomDropDesc:'Adil oto-duvarlar düşer',dropRare:'Nadiren',dropOften:'Sık',dropVeryOften:'Çok sık',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'👥 Arkadaşla oyna',vsBot:'🤖 Botlara karşı',localPlay:'📱 Yerel (aynı cihaz)',createPublicLobby:'➕ Lobi oluştur / Lobi listesi',shareWhatsApp:'📱 WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları',hammerMode:'Çekiç',hammerDesc:'Bir çekiç topla ve bir duvarı kır',hammerHint:'Bir duvara sürükle',hammerOnce:'1× başta',hammerTwice:'2× turda'},
   fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🖥️ Contre l'ordinateur",online:'🌐 Jouer en ligne',
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
@@ -469,7 +477,7 @@ const I18N={
     rematchWaiting:"En attente de l'adversaire...",rematchAsked:'Adversaire veut une revanche',rematchDeclined:'Adversaire a refusé',randomFirst:'Départ aléatoire',
     reconnecting:'Adversaire se reconnecte',reconnectFail:"L'adversaire a quitté",
     noLobbies:'Aucun salon ouvert',noLobbiesHint:'Créez-en un ou attendez',createLobby:'Créer un salon',joinExisting:'Rejoindre',live:'LIVE',lobbyCount:'ouvert',
-    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',randomDrop:'Murs aléatoires',randomDropDesc:'Murs auto équitables',dropRare:'Rare',dropOften:'Souvent',dropVeryOften:'Très svt',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Jouer avec un ami',vsBot:'🤖 Contre les bots',localPlay:'📱 Local (même appareil)',createPublicLobby:'➕ Créer un salon / Liste des salons',shareWhatsApp:'📱 Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu',hammerMode:'Marteau',hammerDesc:'Ramasse un marteau pour briser un mur',hammerHint:'Glisser sur un mur'}
+    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',randomDrop:'Murs aléatoires',randomDropDesc:'Murs auto équitables',dropRare:'Rare',dropOften:'Souvent',dropVeryOften:'Très svt',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Jouer avec un ami',vsBot:'🤖 Contre les bots',localPlay:'📱 Local (même appareil)',createPublicLobby:'➕ Créer un salon / Liste des salons',shareWhatsApp:'📱 Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu',hammerMode:'Marteau',hammerDesc:'Ramasse un marteau pour briser un mur',hammerHint:'Glisser sur un mur',hammerOnce:'1× départ',hammerTwice:'2× par manche'}
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
 function getInitialDark(){try{return localStorage.getItem('ww_dark')==='1';}catch{return false;}}
@@ -532,6 +540,40 @@ function snapWall(x,y,orient){
 function makeHammers(){
   const r=Math.floor(ROWS/2);
   return[{r,c:1,id:'hm0'},{r,c:Math.floor(COLS/2),id:'hm1'},{r,c:COLS-2,id:'hm2'}];
+}
+function isSteelWall(key){
+  // Horizontale Mauer direkt vor dem Ziel (zwischen Reihe 0 und 1) ist unzerstörbar
+  const parts=key.split('-');
+  return parts[0]==='H'&&parts[1]==='0';
+}
+function makeHammersWave2(pA,pB,walls){
+  const pathA=bfsPath(pA,walls),pathB=bfsPath(pB,walls);
+  if(!pathA||!pathB)return[];
+  const dA=pathA.length-1,dB=pathB.length-1;
+  const behind=dA>=dB?pA:pB;   // längerer Pfad = im Nachteil
+  const ahead=dA>=dB?pB:pA;
+  const dm=bfsDistMap(behind,walls);
+  const cands=[];
+  for(let r=1;r<ROWS-1;r++){
+    for(let c=0;c<COLS;c++){
+      if(r===behind.r&&c===behind.c)continue;
+      if(r===ahead.r&&c===ahead.c)continue;
+      const dBehind=dm.get(ck(r,c));
+      if(dBehind===undefined||dBehind>5)continue;     // erreichbar & nah am Nachteil-Spieler
+      const dAhead=Math.abs(r-ahead.r)+Math.abs(c-ahead.c);
+      const score=dBehind*2-dAhead*0.4;               // nah am Nachteil, weg vom Vorteil
+      cands.push({r,c,score});
+    }
+  }
+  cands.sort((a,b)=>a.score-b.score);
+  const picked=[];
+  for(const cand of cands){
+    if(picked.every(p=>Math.abs(p.r-cand.r)+Math.abs(p.c-cand.c)>=2)){
+      picked.push(cand);
+      if(picked.length>=3)break;
+    }
+  }
+  return picked.map((p,i)=>({r:p.r,c:p.c,id:'hw2-'+i}));
 }
 function aiHammerBreak(aiPos,walls){
   const base=bfsPath(aiPos,walls);
@@ -1009,11 +1051,18 @@ async function stoDel(k){
 
 // ── Sound ───────────────────────────────────────────────────
 let _ctx=null;
-function getCtx(){try{if(!_ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;_ctx=new C();}return _ctx;}catch{return null;}}
+function getCtx(){try{if(_ctx&&_ctx.state==='closed')_ctx=null;if(!_ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;_ctx=new C();}return _ctx;}catch{return null;}}
 async function playSound(type){
   try{
-    const ctx=getCtx();if(!ctx)return;
-    if(ctx.state==='suspended')await ctx.resume();
+    let ctx=getCtx();if(!ctx)return;
+    if(ctx.state!=='running'){
+      try{await ctx.resume();}catch(e){}
+      if(ctx.state!=='running'&&(ctx.state==='interrupted'||ctx.state==='closed')){
+        try{ctx.close();}catch(e){}
+        _ctx=null;ctx=getCtx();if(!ctx)return;
+        try{await ctx.resume();}catch(e){}
+      }
+    }
     const now=ctx.currentTime;
     if(type==='move'){
       // Mechanischer Tasten-Klick: kurzer Noise-Tick + leiser tiefer Thump
@@ -1038,6 +1087,11 @@ async function playSound(type){
       const filt=ctx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=320;
       const g=ctx.createGain();src.connect(filt);filt.connect(g);g.connect(ctx.destination);
       g.gain.setValueAtTime(1,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.18);src.start();
+    }else if(type==='click'){
+      const o=ctx.createOscillator();o.type='sine';
+      o.frequency.setValueAtTime(660,now);o.frequency.exponentialRampToValueAtTime(880,now+0.05);
+      const g=ctx.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.exponentialRampToValueAtTime(0.16,now+0.012);g.gain.exponentialRampToValueAtTime(0.001,now+0.09);
+      o.connect(g);g.connect(ctx.destination);o.start(now);o.stop(now+0.1);
     }else if(type==='pickup'){
       [880,1175,1568].forEach((f,i)=>{
         const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=f;
@@ -1414,6 +1468,7 @@ async function playSound(type){
 // ── App ─────────────────────────────────────────────────────
 function App(){
   const[screen,setScreen]=useState('menu');
+  const[navDir,setNavDir]=useState('fwd'); // Richtung für Seitenwechsel-Animation
   const[gameMode,setGameMode]=useState(null);
   const[onlineRole,setOnlineRole]=useState(null);
   const[lobbyId,setLobbyId]=useState(null);
@@ -1468,6 +1523,8 @@ function App(){
   const chaosSpawnRef=useRef(15);
   const[dropMode,setDropMode]=useState(false); // false|'rare'|'often'|'veryoften'
   const[hammerMode,setHammerMode]=useState(false);
+  const[hammerDrops,setHammerDrops]=useState(1); // 1 = nur Start, 2 = zusätzlich bei Zug 65
+  const hammerWave2Ref=useRef(false);
   const[hammers,setHammers]=useState([]); // [{r,c,id}]
   const[hammerHeld,setHammerHeld]=useState({A:false,B:false});
   const[hammerDrag,setHammerDrag]=useState(false);
@@ -1525,7 +1582,7 @@ function App(){
 
   // Audio-Context nach Tab-Wechsel/Hintergrund wieder aufwecken
   useEffect(()=>{
-    const resume=()=>{try{const c=getCtx();if(c&&c.state==='suspended')c.resume();}catch(e){}};
+    const resume=()=>{try{const c=getCtx();if(c&&(c.state==='suspended'||c.state==='interrupted'))c.resume();}catch(e){}};
     const onVis=()=>{if(document.visibilityState==='visible')resume();};
     document.addEventListener('visibilitychange',onVis);
     document.addEventListener('pointerdown',resume,{passive:true});
@@ -1593,6 +1650,19 @@ function App(){
   const myTurn=gameMode==='online'?turn===onlineRole:true;
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
+  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online'};
+  const navTo=(target)=>{setNavDir('fwd');playSound('click');setScreen(target);};
+  const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');playSound('click');setScreen(tgt);};
+  const pageAnim=navDir==='back'?'slide-in-left 0.26s cubic-bezier(0.33,1,0.68,1) both':'slide-in-right 0.26s cubic-bezier(0.33,1,0.68,1) both';
+  useEffect(()=>{
+    if(!backMap[screen])return;
+    let sx=0,sy=0,active=false;
+    const ts=e=>{const tt=e.touches[0];if(tt.clientX<40){active=true;sx=tt.clientX;sy=tt.clientY;}};
+    const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55)goBack();};
+    document.addEventListener('touchstart',ts,{passive:true});
+    document.addEventListener('touchend',te,{passive:true});
+    return()=>{document.removeEventListener('touchstart',ts);document.removeEventListener('touchend',te);};
+  },[screen]);
   const collectItem=(it)=>{
     setCollecting(cs=>[...cs,it]);
     setTimeout(()=>setCollecting(cs=>cs.filter(x=>x.id!==it.id)),650);
@@ -1600,8 +1670,10 @@ function App(){
   const color=PC[turn];
 
   // ── Init game ──
-  const initGame=(mode,role='A',lid=null,isRematch=false)=>{
+  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride)=>{
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
+    const tm=tmOverride!==undefined?tmOverride:gameTimeMode;
+    if(tmOverride!==undefined)setGameTimeMode(tmOverride);
     setPA({...INIT_A});setPB({...INIT_B});setWalls(new Set());
     let starter;
     const prevMoves=S.current.moveHist;
@@ -1616,10 +1688,11 @@ function App(){
     setHammerHeld({A:false,B:false});
     setHammers(hammerMode?makeHammers():[]);
     setBreakingWall(null);setHammerDrag(false);setHammerTarget(null);setCollecting([]);
+    hammerWave2Ref.current=false;
     dropNextRef.current=dropMode?dropInterval(dropMode):99999;
     setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
-    const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
+    const classicSecs=tm==='classic-3'?180:tm==='classic-5'?300:tm==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
@@ -1681,6 +1754,24 @@ function App(){
       }
     }
   },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
+
+  // ── Hammer 2. Welle (bei Gesamtzug 65, fair beim Nachteil-Spieler) ──
+  useEffect(()=>{
+    if(!hammerMode||hammerDrops!==2||winner||screen!=='game')return;
+    if(hammerWave2Ref.current)return;
+    if(moveHist.length<65)return;
+    if(gameMode==='online'&&onlineRole!=='A')return; // nur Host spawnt
+    const wave=makeHammersWave2(pA,pB,walls);
+    if(wave.length){
+      hammerWave2Ref.current=true;
+      const merged=[...S.current.hammers,...wave];
+      setHammers(merged);
+      playSound('pickup');
+      if(gameMode==='online'){
+        doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,hammers:merged,hammerHeld:S.current.hammerHeld});
+      }
+    }
+  },[moveHist.length,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
 
   // ── Random-Wand-Drop ──
   useEffect(()=>{
@@ -2136,7 +2227,7 @@ function App(){
     setFlash('');
     const id=randId(6);
     const code=isPrivate?randId(4):null;
-    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode};
+    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops};
     const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,guestId:null,ts:Date.now(),...cfg});
     if(!ok){setFlash(t('firebaseError')+(window.lastFbError||'?')+t('checkRules'));return;}
     if(isPrivate)await stoSet(`barricade_code_${code}`,{id});
@@ -2164,12 +2255,13 @@ function App(){
     if(lobby.br!==undefined)setGameBarr(lobby.br);
     if(lobby.dp!==undefined)setDropMode(lobby.dp);
     if(lobby.hm!==undefined)setHammerMode(!!lobby.hm);
+    if(lobby.hd!==undefined)setHammerDrops(lobby.hd);
     await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,ts:Date.now()});
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<40;i++){
       await new Promise(r=>setTimeout(r,500));
       const gs=await stoGet(`barricade_game_${id}`);
-      if(gs){lastOnlineTs.current=gs.lastUpdated;initGame('online','B',id);return;}
+      if(gs){lastOnlineTs.current=gs.lastUpdated;initGame('online','B',id,false,lobby.tm);return;}
     }
     setFlash(t('hostNotResponding'));setScreen('online');
   };
@@ -2335,6 +2427,7 @@ function App(){
       const rx=x-rect.left,ry=y-OFFSET-rect.top;
       let best=null,bestD=Infinity;
       for(const k of S.current.walls){
+        if(isSteelWall(k))continue;
         const wp=wallPos(k);
         const cx=wp.left+wp.width/2,cy=wp.top+wp.height/2;
         const inside=rx>=wp.left-7&&rx<=wp.left+wp.width+7&&ry>=wp.top-7&&ry<=wp.top+wp.height+7;
@@ -2405,7 +2498,7 @@ function App(){
       :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' '+t('perTurn')
       :t('noTimer');
     return(
-    <div style={sPage}>
+    <div style={{...sPage,animation:navDir==='back'?'slide-in-left 0.26s cubic-bezier(0.33,1,0.68,1) both':'none'}}>
       <button onClick={()=>setShowOptions(true)} style={{
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
@@ -2418,7 +2511,7 @@ function App(){
       </div>
 
       {/* Modus-Konfigurations-Button */}
-      <button onClick={()=>setScreen('modeConfig')} style={{
+      <button onClick={()=>{playSound('click');setNavDir('fwd');setScreen('modeConfig');}} style={{
         width:260,padding:'10px 14px',marginBottom:14,
         background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:14,
         cursor:'pointer',display:'flex',alignItems:'center',gap:10,
@@ -2437,9 +2530,9 @@ function App(){
       </button>
 
       <div style={{display:'flex',flexDirection:'column',gap:10,width:260}}>
-        <GBtn onClick={()=>{setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue>{t('createPublicLobby')}</GBtn>
-        <GBtn onClick={()=>setScreen('friendPlay')} dark>{t('friendPlay')}</GBtn>
-        <GBtn onClick={()=>setScreen('difficulty')} dark>{t('vsBot')}</GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue>{t('createPublicLobby')}</GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark>{t('friendPlay')}</GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark>{t('vsBot')}</GBtn>
         <GBtn onClick={()=>initGame('pvp')} dark>{t('localPlay')}</GBtn>
       </div>
       {showOptions&&(
@@ -2535,7 +2628,8 @@ function App(){
       </div>
     );
     return(
-      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)'}}>
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim}}>
+        <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <div style={{textAlign:'center',marginBottom:14}}>
             <div style={{fontSize:30,marginBottom:4}}>🎮</div>
@@ -2548,31 +2642,31 @@ function App(){
               {gameTimeMode.indexOf('classic-')===0&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(59,130,246,0.12)',color:'#3b82f6',display:'flex',alignItems:'center',gap:5}}>
-                  <span>⌛</span><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
+                  <ModeGlyph kind="clock" size={12} color="#3b82f6"/><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
                 </div>
               )}
               {gameTimeMode.indexOf('blitz-')===0&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:5}}>
-                  <span>⚡</span><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
+                  <ModeGlyph kind="bolt" size={12} color="#d97706"/><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
                 </div>
               )}
               {chaosMode&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:5}}>
-                  <span>🌀</span><span>{t('modeChaos')}</span>
+                  <ModeGlyph kind="swirl" size={12} color="#8b5cf6"/><span>{t('modeChaos')}</span>
                 </div>
               )}
               {dropMode&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(236,72,153,0.15)',color:'#ec4899',display:'flex',alignItems:'center',gap:5}}>
-                  <span>💥</span><span>{t('randomDrop')}</span>
+                  <ModeGlyph kind="burst" size={12} color="#ec4899"/><span>{t('randomDrop')}</span>
                 </div>
               )}
               {hammerMode&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:5}}>
-                  <span>🔨</span><span>{t('hammerMode')}</span>
+                  <ModeGlyph kind="hammer" size={13}/><span>{t('hammerMode')}</span>
                 </div>
               )}
             </div>
@@ -2645,6 +2739,19 @@ function App(){
                 <div style={{fontSize:9,fontWeight:600,opacity:0.8,marginTop:2,lineHeight:1.25}}>{t('hammerDesc')}</div>
               </span>
             </button>
+            {hammerMode&&(
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                {[{v:1,l:t('hammerOnce')},{v:2,l:t('hammerTwice')}].map(o=>{
+                  const sel=hammerDrops===o.v;
+                  return <button key={o.v} onClick={()=>{playSound('click');setHammerDrops(o.v);}} style={{
+                    flex:1,padding:'8px 4px',borderRadius:9,
+                    background:sel?'#f59e0b':'var(--card)',color:sel?'white':'var(--text)',
+                    border:`1.5px solid ${sel?'#f59e0b':'var(--border)'}`,
+                    cursor:'pointer',fontSize:11,fontWeight:800,letterSpacing:0.2,
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>{o.l}</button>;
+                })}
+              </div>
+            )}
           </div>
 
           {/* Barricades */}
@@ -2672,7 +2779,8 @@ function App(){
 
   // ── DIFFICULTY ──────────────────────────────────────────
   if(screen==='difficulty') return (
-    <div style={sPage}>
+    <div style={{...sPage,animation:pageAnim}}>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24}}>{t('chooseDifficulty')}</div>
       <div style={{display:'flex',flexDirection:'column',gap:10,width:280}}>
         {[
@@ -2699,7 +2807,8 @@ function App(){
 
   // ── FRIEND PLAY ─────────────────────────────────────────
   if(screen==='friendPlay') return (
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)'}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim}}>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column'}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:30,marginBottom:4}}>👥</div>
@@ -2746,7 +2855,8 @@ function App(){
 
   // ── ONLINE ──────────────────────────────────────────────
   if(screen==='online') return (
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)'}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim}}>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center'}}>
 
         {/* Header */}
@@ -3029,7 +3139,7 @@ function App(){
               {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
             </div>
           )))}
-          {[...rs.walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1}/>)}
+          {[...rs.walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} steel={isSteelWall(k)}/>)}
           {['A','B'].map(p=>{const pos=p==='A'?rs.pA:rs.pB;const sz=30,off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
               transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none'}}>
@@ -3060,7 +3170,7 @@ function App(){
     return (
       <div style={sPage}>
         {winner&&!isOwnLoss(winner)&&<Confetti color={PC[winner]}/>}
-        <div style={{fontSize:40,marginBottom:8,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{winner&&isOwnLoss(winner)?'😔':'🏆'}</div>
+        <div style={{marginBottom:8,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{winner&&isOwnLoss(winner)?<SadIcon size={48}/>:<TrophyIcon size={48}/>}</div>
         <div style={{fontSize:24,fontWeight:900,color:winner?PC[winner]:'var(--muted)',marginBottom:4,letterSpacing:-0.5}}>
           {winner?`${pname(winner)} ${t('wins')}`:t('givenUp')}
         </div>
@@ -3143,32 +3253,32 @@ function App(){
           {gameTimeMode.indexOf('classic-')===0&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
               background:'rgba(59,130,246,0.12)',color:'#3b82f6',display:'flex',alignItems:'center',gap:4}}>
-              <span>⌛</span><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
+              <ModeGlyph kind="clock" size={11} color="#3b82f6"/><span>{gameTimeMode==='classic-3'?'3':gameTimeMode==='classic-5'?'5':'8'} {t('minLabel')}</span>
             </div>
           )}
           {gameTimeMode.indexOf('blitz-')===0&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
               background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:4}}>
-              <span>⚡</span><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
+              <ModeGlyph kind="bolt" size={11} color="#d97706"/><span>{gameTimeMode==='blitz-5'?'5':gameTimeMode==='blitz-8'?'8':'10'} {t('secLabel')}</span>
             </div>
           )}
           {chaosMode&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
               background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:4}}>
-              <span>🌀</span><span>{t('modeChaos')}</span>
+              <ModeGlyph kind="swirl" size={11} color="#8b5cf6"/><span>{t('modeChaos')}</span>
               {chaosItem&&<span style={{width:5,height:5,borderRadius:'50%',background:'#8b5cf6',animation:'piece-pulse 1.4s ease-in-out infinite'}}/>}
             </div>
           )}
           {dropMode&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
               background:'rgba(236,72,153,0.15)',color:'#ec4899',display:'flex',alignItems:'center',gap:4}}>
-              <span>💥</span><span>{t('randomDrop')}</span>
+              <ModeGlyph kind="burst" size={11} color="#ec4899"/><span>{t('randomDrop')}</span>
             </div>
           )}
           {hammerMode&&(
             <div style={{padding:'3px 9px',borderRadius:10,fontSize:10,fontWeight:800,letterSpacing:0.4,
               background:'rgba(245,158,11,0.15)',color:'#d97706',display:'flex',alignItems:'center',gap:4}}>
-              <span>🔨</span><span>{t('hammerMode')}</span>
+              <ModeGlyph kind="hammer" size={12}/><span>{t('hammerMode')}</span>
             </div>
           )}
         </div>
@@ -3233,7 +3343,7 @@ function App(){
             </div>
           );
         }))}
-        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate golden={goldenWalls.has(k)}/>)}
+        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate golden={goldenWalls.has(k)} steel={isSteelWall(k)}/>)}
         {previewKey&&<Wall wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
         {breakingWall&&<BreakingWall wkey={breakingWall} dark={darkMode}/>}
         {hammerDrag&&hammerTarget&&<Wall wkey={hammerTarget} color={'#f59e0b'} opacity={0.9}/>}
@@ -3241,11 +3351,9 @@ function App(){
           <div style={{position:'absolute',left:chaosItem.c*CELL,top:chaosItem.r*CELL,
             width:CELL,height:CELL,display:'flex',alignItems:'center',justifyContent:'center',
             pointerEvents:'none',zIndex:15}}>
-            <div style={{width:28,height:28,borderRadius:8,
-              background:'linear-gradient(135deg,#a78bfa,#7c3aed)',
-              boxShadow:'0 0 14px rgba(139,92,246,0.7),0 2px 6px rgba(0,0,0,0.2)',
-              display:'flex',alignItems:'center',justifyContent:'center',
-              fontSize:15,animation:'wall-enter 0.4s ease-out'}}>🧱</div>
+            <div style={{animation:'hammer-float 2.6s ease-in-out infinite'}}>
+              <div style={{animation:'hammer-shine 2s ease-in-out infinite'}}><CrateIcon size={Math.round(CELL*0.72)}/></div>
+            </div>
           </div>
         )}
         {hammers.map(h=>(
@@ -3283,7 +3391,7 @@ function App(){
       {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:64,zIndex:51,pointerEvents:'none'}}>
           <div style={{background:'rgba(239,68,68,0.45)',color:'white',padding:'4px 10px',borderRadius:12,fontSize:11,fontWeight:800,letterSpacing:0.5,backdropFilter:'blur(6px)',display:'flex',alignItems:'center',gap:5}}>
-            <span style={{fontSize:10}}>⏱</span>
+            <ModeGlyph kind="clock" size={11} color="#ffffff"/>
             <span style={{fontVariantNumeric:'tabular-nums'}}>{turnTimeLeft}s</span>
           </div>
         </div>
@@ -3316,7 +3424,7 @@ function App(){
           {!isOwnLoss(winner)&&<Confetti color={PC[winner]}/>}
           <div style={{background:'var(--card)',borderRadius:22,padding:'32px 44px',textAlign:'center',
             boxShadow:'0 24px 64px rgba(0,0,0,0.25)',zIndex:9999,position:'relative'}}>
-            <div style={{fontSize:40,marginBottom:10,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{isOwnLoss(winner)?'😔':'🏆'}</div>
+            <div style={{marginBottom:10,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{isOwnLoss(winner)?<SadIcon size={48}/>:<TrophyIcon size={48}/>}</div>
             <div style={{fontSize:22,fontWeight:900,color:PC[winner],letterSpacing:-0.5}}>{pname(winner)} {t('wins')}</div>
             <div style={{fontSize:11,color:'var(--subtle)',marginTop:10,fontWeight:500}}>{t('tapContinue')}</div>
           </div>
@@ -3353,7 +3461,7 @@ function App(){
       )}
 
       {/* Hammer-Slot unten rechts (wenn man einen Hammer hält) */}
-      {!winner&&!isOnlineWait&&hammerMode&&meRole===turn&&hammerHeld[meRole]&&!hammerDrag&&(
+      {!winner&&!isOnlineWait&&hammerMode&&meRole===turn&&hammerHeld[meRole]&&(
         <div onMouseDown={startHammerDrag} onTouchStart={startHammerDrag}
           style={{position:'fixed',right:'calc(16px + env(safe-area-inset-right, 0px))',
             bottom:'calc(78px + env(safe-area-inset-bottom, 0px))',zIndex:210,
@@ -3361,9 +3469,9 @@ function App(){
             display:'flex',alignItems:'center',justifyContent:'center',
             background:darkMode?'rgba(30,41,68,0.82)':'rgba(255,255,255,0.88)',
             backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-            border:'1.5px solid #f59e0b',
+            border:'1.5px solid #f59e0b',opacity:hammerDrag?0.4:1,
             boxShadow:'0 4px 16px rgba(245,158,11,0.4)',
-            animation:'hammer-shine 1.8s ease-in-out infinite'}}>
+            animation:hammerDrag?'none':'hammer-shine 1.8s ease-in-out infinite'}}>
           <HammerIcon size={34}/>
           <div style={{position:'absolute',bottom:-16,left:-10,right:-10,textAlign:'center',
             fontSize:8,fontWeight:700,color:'var(--muted)',letterSpacing:0.2,whiteSpace:'nowrap'}}>{t('hammerHint')}</div>
@@ -3436,7 +3544,7 @@ function App(){
         <div style={{width:'100%',maxWidth:360,marginTop:24,marginBottom:80}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,paddingLeft:2,paddingRight:2}}>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <span style={{fontSize:13}}>💬</span>
+              <BubbleIcon size={14} color="#8b5cf6"/>
               <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5}}>{t('lobbyChat')}</span>
             </div>
             {chatMsgs.length>0&&(
@@ -3527,7 +3635,7 @@ function App(){
             fontSize:22,opacity:emoteCooldown?0.45:1,
             animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite',
             fontFamily:'system-ui,-apple-system,sans-serif'}}>
-          💬
+          <BubbleIcon size={24} color={darkMode?'#c4b5fd':'#8b5cf6'}/>
         </button>
       )}
     </div>
@@ -3796,18 +3904,71 @@ function Piece({color,dark}){
     boxShadow:`0 3px 12px ${color}70,inset 0 1px 0 rgba(255,255,255,0.35)`,
     position:'relative',pointerEvents:'none'}}/>;
 }
-function Wall({wkey,color,opacity,animate,golden}){
+function ModeGlyph({kind,size,color}){
+  const s=size||12;const c=color||'currentColor';
+  if(kind==='clock')return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" style={{display:'block'}}><circle cx="12" cy="12" r="9" stroke={c} strokeWidth="2.2"/><path d="M12 7 V12 L15.5 14" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  if(kind==='bolt')return <svg width={s} height={s} viewBox="0 0 24 24" fill={c} style={{display:'block'}}><path d="M13 2 L4 14 H10.5 L9 22 L20 9 H13 Z"/></svg>;
+  if(kind==='swirl')return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" style={{display:'block'}}><path d="M4 8 Q12 3.5 20 8"/><path d="M4 12 Q12 7.5 20 12"/><path d="M4 16 Q12 11.5 20 16"/></svg>;
+  if(kind==='burst')return <svg width={s} height={s} viewBox="0 0 24 24" fill={c} style={{display:'block'}}><path d="M12 1 L14 8 L21 6 L16 11 L23 14 L15 14 L17 22 L12 16 L7 22 L9 14 L1 14 L8 11 L3 6 L10 8 Z"/></svg>;
+  if(kind==='hammer')return <HammerIcon size={s}/>;
+  return null;
+}
+function CrateIcon({size}){
+  const s=size||26;
+  return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}>
+    <defs><linearGradient id="crateG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stopColor="#c4b5fd"/><stop offset="0.5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#6d28d9"/>
+    </linearGradient></defs>
+    <rect x="4" y="6" width="24" height="20" rx="3.5" fill="url(#crateG)" stroke="#4c1d95" strokeWidth="1.4"/>
+    <path d="M4 13 H28 M4 19.5 H28 M12 6 V13 M20 13 V19.5 M12 19.5 V26" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
+    <rect x="5.2" y="7.2" width="21.6" height="17.6" rx="2.6" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.8"/>
+    <circle cx="8" cy="10" r="1" fill="#ede9fe"/><circle cx="24" cy="10" r="1" fill="#ede9fe"/>
+    <circle cx="8" cy="22.5" r="1" fill="#ede9fe"/><circle cx="24" cy="22.5" r="1" fill="#ede9fe"/>
+  </svg>;
+}
+function TrophyIcon({size}){
+  const s=size||40;
+  return <svg width={s} height={s} viewBox="0 0 48 48" style={{display:'block'}}>
+    <defs><linearGradient id="trG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fde68a"/><stop offset="0.5" stopColor="#f59e0b"/><stop offset="1" stopColor="#b45309"/></linearGradient></defs>
+    <path d="M16 6 H32 V17 a8 8 0 0 1 -16 0 Z" fill="url(#trG)" stroke="#92400e" strokeWidth="1.3"/>
+    <path d="M16 9 H8.5 V12.5 a6 6 0 0 0 8 5.6" fill="none" stroke="#b45309" strokeWidth="2.4" strokeLinecap="round"/>
+    <path d="M32 9 H39.5 V12.5 a6 6 0 0 1 -8 5.6" fill="none" stroke="#b45309" strokeWidth="2.4" strokeLinecap="round"/>
+    <rect x="21" y="25" width="6" height="7" fill="#b45309"/>
+    <rect x="14.5" y="32" width="19" height="5" rx="1.6" fill="url(#trG)" stroke="#92400e" strokeWidth="1"/>
+    <path d="M19 11 l1.6 1.3 l-0.6 2 l1.8 -1.2 l1.8 1.2 l-0.6 -2 l1.6 -1.3 h-2 l-0.8 -1.9 l-0.8 1.9 z" fill="#fffbeb" opacity="0.85"/>
+  </svg>;
+}
+function SadIcon({size}){
+  const s=size||40;
+  return <svg width={s} height={s} viewBox="0 0 48 48" style={{display:'block'}}>
+    <circle cx="24" cy="24" r="20" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1.6"/>
+    <circle cx="17" cy="21" r="2.4" fill="#475569"/><circle cx="31" cy="21" r="2.4" fill="#475569"/>
+    <path d="M16 33 Q24 26 32 33" stroke="#475569" strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+    <path d="M13 27 q2 4 0 7.5" stroke="#7dd3fc" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+  </svg>;
+}
+function BubbleIcon({size,color}){
+  const s=size||22;const c=color||'#8b5cf6';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" style={{display:'block'}}>
+    <path d="M4 5 h16 a2.2 2.2 0 0 1 2.2 2.2 v7.6 a2.2 2.2 0 0 1 -2.2 2.2 H10 l-4.5 4 v-4 H4 a2.2 2.2 0 0 1 -2.2 -2.2 V7.2 a2.2 2.2 0 0 1 2.2 -2.2 Z" fill={c}/>
+    <circle cx="8.5" cy="11" r="1.5" fill="#fff"/><circle cx="12" cy="11" r="1.5" fill="#fff"/><circle cx="15.5" cy="11" r="1.5" fill="#fff"/>
+  </svg>;
+}
+function Wall({wkey,color,opacity,animate,golden,steel}){
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
   const goldenBg='linear-gradient(135deg,#92400e 0%,#f59e0b 30%,#fde68a 50%,#f59e0b 70%,#92400e 100%)';
+  const steelBg=isH
+    ?'linear-gradient(180deg,#cbd5e1 0%,#94a3b8 35%,#475569 60%,#334155 100%)'
+    :'linear-gradient(90deg,#cbd5e1 0%,#94a3b8 35%,#475569 60%,#334155 100%)';
   const enterAnim=isH?'wall-enter-h':'wall-enter-v';
   const goldenAnim=isH
     ?'golden-drop-h 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite'
     :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
   return <div style={{position:'absolute',...p,
-    background:golden?goldenBg:color,
+    background:golden?goldenBg:steel?steelBg:color,
     borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity,
-    boxShadow:golden?'none':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
+    boxShadow:golden?'none':steel?'inset 0 0 0 1px rgba(255,255,255,0.35),0 2px 6px rgba(0,0,0,0.3)':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
     transformOrigin:'center center',
     animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
 }
@@ -3850,7 +4011,7 @@ function BreakingWall({wkey,dark}){
   </div>;
 }
 function GBtn({onClick,children,dark,blue,outline}){
-  return <button onClick={onClick} style={{padding:'13px 16px',
+  return <button onClick={e=>{playSound('click');if(onClick)onClick(e);}} style={{padding:'13px 16px',
     background:dark?'#1e293b':blue?'#3b82f6':outline?'var(--card)':'var(--border)',
     color:dark||blue?'white':'var(--text)',
     border:`1.5px solid ${outline?'var(--border)':dark?'#1e293b':blue?'#3b82f6':'transparent'}`,
@@ -3871,6 +4032,11 @@ const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
   boxShadow:'var(--shadow-card)',border:'1.5px solid var(--border)'};
 const sBack={background:'none',border:'none',cursor:'pointer',fontSize:13,color:'var(--subtle)',
   fontWeight:600,padding:'8px 0',fontFamily:'system-ui,-apple-system,sans-serif',marginTop:8};
+const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 0px))',top:'calc(env(safe-area-inset-top) + 14px)',zIndex:300,
+  width:40,height:40,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',
+  background:'var(--card)',border:'1.5px solid var(--border)',color:'var(--text)',
+  fontSize:24,fontWeight:800,lineHeight:1,cursor:'pointer',paddingBottom:3,
+  boxShadow:'var(--shadow-soft)',fontFamily:'system-ui,-apple-system,sans-serif'};
 
 // ── Mount ─────────────────────────────────────────────────
 const loader=document.getElementById('loader');
