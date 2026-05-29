@@ -2014,6 +2014,13 @@ function App(){
                 collectItem(hit);
                 let rem=hms.filter(h=>h.id!==hit.id);
                 if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
+                // Wenn beide je einen Wave-1-Hammer haben → restliche Wave-1 entfernen
+                const bothUsedW1AI=nextUsedAI.A.w1&&nextUsedAI.B.w1;
+                if(bothUsedW1AI){
+                  const leftover=rem.filter(h=>h.id.indexOf('hw2-')===-1);
+                  leftover.forEach(collectItem);
+                  rem=rem.filter(h=>h.id.indexOf('hw2-')===0);
+                }
                 nextHammers=rem;setHammers(rem);
               }
             }
@@ -2469,6 +2476,13 @@ function App(){
           collectItem(hit);
           let rem=hammers.filter(h=>h.id!==hit.id);
           if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
+          // Wenn beide je einen Wave-1-Hammer gesammelt haben → restliche Wave-1 entfernen
+          const bothUsedW1=nextUsed.A.w1&&nextUsed.B.w1;
+          if(bothUsedW1){
+            const leftover=rem.filter(h=>h.id.indexOf('hw2-')===-1);
+            leftover.forEach(collectItem);
+            rem=rem.filter(h=>h.id.indexOf('hw2-')===0);
+          }
           nextHammers=rem;setHammers(rem);
         }
       }
