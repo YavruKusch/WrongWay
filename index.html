@@ -604,30 +604,37 @@ function makeHammersWave2(pA,pB,walls){
   const pathA=bfsPath(pA,walls),pathB=bfsPath(pB,walls);
   if(!pathA||!pathB)return[];
   const dA=pathA.length-1,dB=pathB.length-1;
-  const behind=dA>=dB?pA:pB;   // längerer Pfad = im Nachteil
+  const behind=dA>=dB?pA:pB;
   const ahead=dA>=dB?pB:pA;
-  const dm=bfsDistMap(behind,walls);
-  const cands=[];
-  for(let r=1;r<ROWS-1;r++){
-    for(let c=0;c<COLS;c++){
-      if(r===behind.r&&c===behind.c)continue;
-      if(r===ahead.r&&c===ahead.c)continue;
-      const dBehind=dm.get(ck(r,c));
-      if(dBehind===undefined||dBehind>5)continue;     // erreichbar & nah am Nachteil-Spieler
-      const dAhead=Math.abs(r-ahead.r)+Math.abs(c-ahead.c);
-      const score=dBehind*2-dAhead*0.4;               // nah am Nachteil, weg vom Vorteil
-      cands.push({r,c,score});
-    }
-  }
-  cands.sort((a,b)=>a.score-b.score);
-  const picked=[];
-  for(const cand of cands){
-    if(picked.every(p=>Math.abs(p.r-cand.r)+Math.abs(p.c-cand.c)>=2)){
-      picked.push(cand);
-      if(picked.length>=3)break;
-    }
-  }
-  return picked.map((p,i)=>({r:p.r,c:p.c,id:'hw2-'+i}));
+  const dmBehind=bfsDistMap(behind,walls);
+  const dmAhead=bfsDistMap(ahead,walls);
+  // Hammer 1: nah am Benachteiligten (2-4 Schritte)
+  const cands1=[];
+  for(let r=1;r<ROWS-1;r++){for(let c=0;c<COLS;c++){
+    if(r===behind.r&&c===behind.c)continue;
+    if(r===ahead.r&&c===ahead.c)continue;
+    const d=dmBehind.get(ck(r,c));
+    if(d===undefined||d<2||d>4)continue;
+    cands1.push({r,c,score:d});
+  }}
+  cands1.sort((a,b)=>a.score-b.score);
+  const h1=cands1.length?cands1[0]:null;
+  // Hammer 2: mittlere Distanz vom Vorteil-Spieler (5-9 Schritte)
+  const cands2=[];
+  for(let r=1;r<ROWS-1;r++){for(let c=0;c<COLS;c++){
+    if(r===behind.r&&c===behind.c)continue;
+    if(r===ahead.r&&c===ahead.c)continue;
+    if(h1&&Math.abs(r-h1.r)+Math.abs(c-h1.c)<3)continue;
+    const d=dmAhead.get(ck(r,c));
+    if(d===undefined||d<5||d>9)continue;
+    cands2.push({r,c,score:d});
+  }}
+  cands2.sort((a,b)=>a.score-b.score);
+  const h2=cands2.length?cands2[0]:null;
+  const result=[];
+  if(h1)result.push({r:h1.r,c:h1.c,id:'hw2-0'});
+  if(h2)result.push({r:h2.r,c:h2.c,id:'hw2-1'});
+  return result;
 }
 function aiHammerBreak(aiPos,walls){
   const base=bfsPath(aiPos,walls);
@@ -1764,6 +1771,7 @@ function App(){
     setHammers(hammerMode?makeHammers():[]);
     setBreakingWall(null);setHammerDrag(false);setHammerTarget(null);setCollecting([]);
     hammerWave2Ref.current=false;
+    hammerWave1ClearedRef.current=null;
     dropNextRef.current=dropMode?dropInterval(dropMode):99999;
     setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
@@ -1831,17 +1839,22 @@ function App(){
     }
   },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
 
-  // ── Hammer 2. Welle (erst wenn alle Wave-1-Hammer eingesammelt sind) ──
+  // ── Hammer 2. Welle: Countdown startet wenn alle Wave-1 weg, spawnt nach 50 Zügen ──
+  const hammerWave1ClearedRef=useRef(null); // moveHist.length zu dem Zeitpunkt
   useEffect(()=>{
     if(!hammerMode||hammerDrops!==2||winner||screen!=='game')return;
     if(hammerWave2Ref.current)return;
-    // Solange noch Wave-1-Hammer auf dem Feld → noch nicht spawnen
     const wave1Remaining=hammers.some(h=>h.id.indexOf('hw2-')===-1);
-    if(wave1Remaining)return;
-    // Wave 1 muss mindestens einmal aufgehoben worden sein (nicht direkt am Spielstart)
     const anyUsed=hammerUsed.A.w1||hammerUsed.B.w1;
-    if(!anyUsed)return;
-    if(gameMode==='online'&&onlineRole!=='A')return; // nur Host spawnt
+    if(wave1Remaining||!anyUsed){hammerWave1ClearedRef.current=null;return;}
+    // Wave 1 komplett eingesammelt → Countdown-Startpunkt merken
+    if(hammerWave1ClearedRef.current===null){
+      hammerWave1ClearedRef.current=moveHist.length;
+      return;
+    }
+    // Warte 50 Züge seit Wave-1-Abschluss
+    if(moveHist.length-hammerWave1ClearedRef.current<50)return;
+    if(gameMode==='online'&&onlineRole!=='A')return;
     const wave=makeHammersWave2(pA,pB,walls);
     if(wave.length){
       hammerWave2Ref.current=true;
@@ -1852,7 +1865,7 @@ function App(){
         doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,hammers:merged,hammerHeld:S.current.hammerHeld});
       }
     }
-  },[hammers,hammerUsed,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
+  },[hammers,hammerUsed,moveHist.length,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
 
   // ── Random-Wand-Drop ──
   useEffect(()=>{
