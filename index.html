@@ -67,11 +67,11 @@
     50%{box-shadow:0 0 7px 2px rgba(251,191,36,0.75),0 2px 6px rgba(0,0,0,0.2);}
   }
   @keyframes slide-in-right{
-    0%{transform:translateX(100%);opacity:0.4;}
+    0%{transform:translateX(40px);opacity:0;}
     100%{transform:translateX(0);opacity:1;}
   }
   @keyframes slide-in-left{
-    0%{transform:translateX(-100%);opacity:0.4;}
+    0%{transform:translateX(-40px);opacity:0;}
     100%{transform:translateX(0);opacity:1;}
   }
   @keyframes hammer-float{
@@ -1724,7 +1724,7 @@ function App(){
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
-  const pageAnim=navDir==='back'?'slide-in-left 0.26s cubic-bezier(0.33,1,0.68,1) both':'slide-in-right 0.26s cubic-bezier(0.33,1,0.68,1) both';
+  const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) both':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) both';
   useEffect(()=>{
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
@@ -2603,7 +2603,7 @@ function App(){
       :t('noTimer');
     return(
     <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,
-      animation:navDir==='back'?'slide-in-left 0.26s cubic-bezier(0.33,1,0.68,1) both':'none'}}>
+      animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) both':'none'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={()=>setShowOptions(true)} style={{
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
@@ -2741,8 +2741,9 @@ function App(){
       </div>
     );
     return(
-      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim}}>
-        <button onClick={goBack} style={backChevron}>‹</button>
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <div style={{textAlign:'center',marginBottom:14}}>
             <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="#8b5cf6"/></div>
@@ -2891,10 +2892,11 @@ function App(){
 
   // ── DIFFICULTY ──────────────────────────────────────────
   if(screen==='difficulty') return (
-    <div style={{...sPage,animation:pageAnim}}>
-      <button onClick={goBack} style={backChevron}>‹</button>
-      <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24}}>{t('chooseDifficulty')}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:10,width:280}}>
+    <div style={{...sPage,animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24,position:'relative',zIndex:1}}>{t('chooseDifficulty')}</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10,width:280,position:'relative',zIndex:1}}>
         {[
           {k:'easy',color:'#16a34a'},
           {k:'normal',color:'#eab308'},
@@ -2918,9 +2920,10 @@ function App(){
 
   // ── FRIEND PLAY ─────────────────────────────────────────
   if(screen==='friendPlay') return (
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim}}>
-      <button onClick={goBack} style={backChevron}>‹</button>
-      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column'}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><PeopleIcon size={30} color="#8b5cf6"/></div>
           <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('friendPlay')}</div>
@@ -2964,9 +2967,10 @@ function App(){
 
   // ── ONLINE ──────────────────────────────────────────────
   if(screen==='online') return (
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim}}>
-      <button onClick={goBack} style={backChevron}>‹</button>
-      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center'}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:20}}>
@@ -3138,8 +3142,9 @@ function App(){
       );
     };
     return(
-      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)'}}>
-        <div style={{width:'100%',maxWidth:340}}>
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{marginBottom:6,display:'flex',justifyContent:'center'}}><GearIcon size={24} color="var(--text)"/></div>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('lobbySettings')}</div>
@@ -3174,8 +3179,9 @@ function App(){
     const shareUrl=baseUrl+'?join='+(privateCode||'');
     const waMsg=encodeURIComponent('Spiel mit mir Wrong Way! Code: '+(privateCode||'')+' · '+shareUrl);
     return(
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 30px)'}}>
-      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center'}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 30px)',background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
         <div style={{fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:18,textAlign:'center'}}>
           {onlineRole==='A'?(privateCode?t('waitingPrivate'):t('waitingOpponent')):t('connecting')}
         </div>
