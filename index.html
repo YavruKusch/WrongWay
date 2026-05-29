@@ -1691,7 +1691,7 @@ function App(){
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
     const ts=e=>{const tt=e.touches[0];if(tt.clientX<40){active=true;sx=tt.clientX;sy=tt.clientY;}};
-    const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55){if(navigator.vibrate)navigator.vibrate(12);goBack();}};
+    const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55){triggerHaptic();goBack();}};
     document.addEventListener('touchstart',ts,{passive:true});
     document.addEventListener('touchend',te,{passive:true});
     return()=>{document.removeEventListener('touchstart',ts);document.removeEventListener('touchend',te);};
@@ -4225,8 +4225,20 @@ const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 
 // ── Mount ─────────────────────────────────────────────────
 const loader=document.getElementById('loader');
 if(loader)loader.style.display='none';
+function triggerHaptic(){
+  if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;
+    if(!C)return;
+    const ctx=new C();
+    const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.01),ctx.sampleRate);
+    const src=ctx.createBufferSource();
+    src.buffer=buf;src.connect(ctx.destination);src.start(0);
+    src.onended=function(){try{ctx.close();}catch(_){}};
+  }catch(_){}
+}
 document.addEventListener('pointerdown',e=>{
-  try{const b=e.target&&e.target.closest?e.target.closest('button'):null;if(b&&!b.disabled&&navigator.vibrate)navigator.vibrate(12);}catch(_){}
+  try{const b=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;if(b&&!b.disabled)triggerHaptic();}catch(_){}
 },true);
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
