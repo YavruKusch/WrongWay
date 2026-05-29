@@ -593,6 +593,8 @@ function makeHammers(){
   const r=Math.floor(ROWS/2);
   return[{r,c:1,id:'hm0'},{r,c:Math.floor(COLS/2),id:'hm1'},{r,c:COLS-2,id:'hm2'}];
 }
+function waveOf(id){return id&&id.indexOf('hw2-')===0?'w2':'w1';}
+function freshHammerUsed(){return{A:{w1:false,w2:false},B:{w1:false,w2:false}};}
 function isSteelWall(key){
   // Horizontale Mauer direkt vor dem Ziel (zwischen Reihe 0 und 1) ist unzerstörbar
   const parts=key.split('-');
@@ -1597,6 +1599,7 @@ function App(){
   const hammerWave2Ref=useRef(false);
   const[hammers,setHammers]=useState([]); // [{r,c,id}]
   const[hammerHeld,setHammerHeld]=useState({A:false,B:false});
+  const[hammerUsed,setHammerUsed]=useState(freshHammerUsed());
   const[hammerDrag,setHammerDrag]=useState(false);
   const[hammerTarget,setHammerTarget]=useState(null); // Wand-Key unter dem Finger
   const[breakingWall,setBreakingWall]=useState(null);
@@ -1647,7 +1650,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerMode,gaveUp};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -1757,6 +1760,7 @@ function App(){
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     setHammerHeld({A:false,B:false});
+    setHammerUsed(freshHammerUsed());
     setHammers(hammerMode?makeHammers():[]);
     setBreakingWall(null);setHammerDrag(false);setHammerTarget(null);setCollecting([]);
     hammerWave2Ref.current=false;
@@ -1788,6 +1792,7 @@ function App(){
       goldenWalls:gs.goldenWalls!==undefined?gs.goldenWalls:[...goldenWalls],
       hammers:gs.hammers===undefined?hammers:gs.hammers,
       hammerHeld:gs.hammerHeld===undefined?hammerHeld:gs.hammerHeld,
+      hammerUsed:gs.hammerUsed===undefined?hammerUsed:gs.hammerUsed,
       lastUpdated:Date.now()
     });
   };
@@ -1981,12 +1986,18 @@ function App(){
           if(st.hammerMode&&!nextHeld.B&&hms&&hms.length){
             const hit=hms.find(h=>h.r===d.pos.r&&h.c===d.pos.c);
             if(hit){
-              playSound('pickup');
-              nextHeld={...nextHeld,B:true};
-              collectItem(hit);
-              let rem=hms.filter(h=>h.id!==hit.id);
-              if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
-              nextHammers=rem;setHammers(rem);
+              const wv=waveOf(hit.id);
+              const hu=st.hammerUsed||freshHammerUsed();
+              if(!hu.B[wv]){
+                playSound('pickup');
+                nextHeld={...nextHeld,B:true};
+                const nextUsedAI={...hu,B:{...hu.B,[wv]:true}};
+                setHammerUsed(nextUsedAI);
+                collectItem(hit);
+                let rem=hms.filter(h=>h.id!==hit.id);
+                if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
+                nextHammers=rem;setHammers(rem);
+              }
             }
           }
           moves.push({type:'move',p:'B',r:d.pos.r,c:d.pos.c});
@@ -2040,6 +2051,7 @@ function App(){
         setGoldenWalls(new Set(gs.goldenWalls||[]));
         setHammers(gs.hammers||[]);
         setHammerHeld(gs.hammerHeld||{A:false,B:false});
+        setHammerUsed(gs.hammerUsed||freshHammerUsed());
         setWinner(null);setCelebrating(false);setGaveUp(null);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
@@ -2096,7 +2108,7 @@ function App(){
       setGoldenWalls(new Set(gs.goldenWalls||[]));
       setHammers(gs.hammers||[]);
       setHammerHeld(gs.hammerHeld||{A:false,B:false});
-      // Chaos: Pickup durch Gegner erkennen → Host spawnRef aktualisieren
+      setHammerUsed(gs.hammerUsed||freshHammerUsed());
       const prevCI=S.current.chaosItem;
       const nextCI=gs.chaosItem||null;
       setChaosItem(nextCI);
@@ -2424,30 +2436,35 @@ function App(){
       chaosSpawnRef.current=S.current.moveHist.length+1+18+Math.floor(Math.random()*8);
       playSound('wall');
     }
-    // Hammer-Item aufsammeln (nur wenn man noch keinen hat)
-    let nextHammers=hammers,nextHeld=hammerHeld;
+    // Hammer-Item aufsammeln (nur wenn man noch keinen hat UND Wave-Limit nicht erreicht)
+    let nextHammers=hammers,nextHeld=hammerHeld,nextUsed=hammerUsed;
     if(hammerMode&&!hammerHeld[turn]){
       const hit=hammers.find(h=>h.r===r&&h.c===c);
       if(hit){
-        playSound('pickup');
-        nextHeld={...hammerHeld,[turn]:true};
-        setHammerHeld(nextHeld);
-        collectItem(hit);
-        let rem=hammers.filter(h=>h.id!==hit.id);
-        if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
-        nextHammers=rem;setHammers(rem);
+        const wv=waveOf(hit.id);
+        if(!hammerUsed[turn][wv]){
+          playSound('pickup');
+          nextHeld={...hammerHeld,[turn]:true};
+          nextUsed={...hammerUsed,[turn]:{...hammerUsed[turn],[wv]:true}};
+          setHammerHeld(nextHeld);
+          setHammerUsed(nextUsed);
+          collectItem(hit);
+          let rem=hammers.filter(h=>h.id!==hit.id);
+          if(nextHeld.A&&nextHeld.B){rem.forEach(collectItem);rem=[];}
+          nextHammers=rem;setHammers(rem);
+        }
       }
     }
     const nm=[...S.current.moveHist,{type:'move',p:turn,r,c}];
     setMoveHist(nm);
     const newTurn=turn==='A'?'B':'A';
     if(r===0){
-      doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld});
+      doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld,hammerUsed:nextUsed});
       triggerWin(turn);
       return;
     }
     setTurn(newTurn);setFlash('');
-    doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld});
+    doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld,hammerUsed:nextUsed});
   };
 
   const validDot=(r,c)=>{
@@ -2743,7 +2760,7 @@ function App(){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+        <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <div style={{textAlign:'center',marginBottom:14}}>
             <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="#8b5cf6"/></div>
@@ -2894,7 +2911,7 @@ function App(){
   if(screen==='difficulty') return (
     <div style={{...sPage,animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24,position:'relative',zIndex:1}}>{t('chooseDifficulty')}</div>
       <div style={{display:'flex',flexDirection:'column',gap:10,width:280,position:'relative',zIndex:1}}>
         {[
@@ -2922,7 +2939,7 @@ function App(){
   if(screen==='friendPlay') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><PeopleIcon size={30} color="#8b5cf6"/></div>
@@ -2969,7 +2986,7 @@ function App(){
   if(screen==='online') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={goBack} style={{...backChevron,position:'relative',zIndex:1}}>‹</button>
+      <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
         {/* Header */}
