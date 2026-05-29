@@ -1900,14 +1900,26 @@ function App(){
           playSound('break');
         }
       }
-      // Zug bestimmen: erst Hammer holen wenn lohnend, sonst normale KI
+      // Zug bestimmen: smarte Hammer-Logik
       let d=null;
       if(st.hammerMode&&!heldB&&hms&&hms.length){
         const nh=nearestHammer(b,w,hms);
         const ownPath=bfsPath(b,w);
+        const humPath=bfsPath(a,w);
         const ownD=ownPath?ownPath.length-1:99;
-        if(nh&&nh.path&&nh.path.length>1&&(nh.path.length-1)<=Math.max(4,ownD)+3){
+        const humD=humPath?humPath.length-1:99;
+        const hammerDist=nh&&nh.path?nh.path.length-1:99;
+        // Hammer nur holen wenn:
+        // - Gegner NICHT kurz vor dem Ziel (humD>2)
+        // - Umweg ist klein (max 3 Schritte)
+        // - Kein klarer Vorsprung vorhanden (sonst lieber sprinten)
+        // - Kein direkter Schritt Richtung Ziel verfügbar
+        const enemyDangerous=humD<=3;
+        const detourOk=hammerDist<=4;
+        const aiClearlyAhead=ownD<=humD-3;
+        if(nh&&nh.path&&nh.path.length>1&&!enemyDangerous&&detourOk&&!aiClearlyAhead){
           const step=nh.path[1];
+          // Nur zum Hammer wenn nächster Schritt nicht schlechter als Zielrichtung
           if(!(step.r===a.r&&step.c===a.c))d={type:'move',pos:step};
         }
       }
