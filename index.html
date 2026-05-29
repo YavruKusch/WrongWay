@@ -30,6 +30,8 @@
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;}
   input,button{-webkit-appearance:none;font-family:inherit;}
+  button{transition:transform 0.07s ease;}
+  button:active{transform:scale(0.95);}
   input{font-size:16px !important;}
   #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999;flex-direction:column;gap:16px;font-family:system-ui,-apple-system,sans-serif;}
   #loader .dot{font-size:40px;}
@@ -366,7 +368,7 @@
 <body>
 
 <div id="loader">
-  <div class="dot">🧱</div>
+  <div class="dot"><svg width="46" height="46" viewBox="0 0 48 48"><rect x="2" y="4" width="44" height="40" rx="7" fill="#7f1d1d"/><rect x="4" y="6" width="18" height="10" rx="2.4" fill="#fb7185"/><rect x="24" y="6" width="20" height="10" rx="2.4" fill="#be123c"/><rect x="4" y="18" width="9" height="10" rx="2.4" fill="#be123c"/><rect x="15" y="18" width="18" height="10" rx="2.4" fill="#fb7185"/><rect x="35" y="18" width="9" height="10" rx="2.4" fill="#be123c"/><rect x="4" y="30" width="20" height="10" rx="2.4" fill="#fb7185"/><rect x="26" y="30" width="18" height="10" rx="2.4" fill="#be123c"/></svg></div>
   <div class="txt">Loading...</div>
 </div>
 
@@ -406,16 +408,16 @@ const SESSION=Math.random().toString(36).slice(2,10);
 // ── i18n ───────────────────────────────────────────────────
 const LANGS={en:'English',de:'Deutsch',tr:'Türkçe',fr:'Français'};
 const I18N={
-  en:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Loading...',twoPlayer:'👥 2 Players Local',vsAI:'🖥️ vs Computer',online:'🌐 Play Online',
+  en:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Loading...',twoPlayer:'2 Players Local',vsAI:'vs Computer',online:'Play Online',
     chooseDifficulty:'Choose difficulty',easy:'Easy',normal:'Normal',hard:'Hard',
     easyDesc:'Casual game',normalDesc:'Balanced challenge',hardDesc:'For experienced players',
-    playOnline:'Play Online',publicLobby:'+ Public Lobby',privateLobby:'🔒 Private Lobby',joinWithCode:'JOIN WITH CODE',join:'Join',
+    playOnline:'Play Online',publicLobby:'+ Public Lobby',privateLobby:'Private Lobby',joinWithCode:'JOIN WITH CODE',join:'Join',
     lobbyFull:'Lobby full or not found!',codeNotFound:'Code not found!',hostNotResponding:'Host not responding.',
     firebaseError:'Firebase error: ',checkRules:' — Check database rules!',openLobbies:'OPEN LOBBIES',lobby:'Lobby',joinSuffix:'Join →',back:'← Back',
     waitingOpponent:'Waiting for opponent...',connecting:'Connecting...',shareCode:'Share the code with your opponent',
     waitingStart:'Waiting for game to start...',cancel:'Cancel',codePrefix:'Code: ',
     replay:'Replay',step:'Step',wallPlaced:'Wall placed',
-    wins:'wins!',givenUp:'Given up',rematch:'↺ Rematch',replayBtn:'▶ Replay',menu:'🏠 Menu',
+    wins:'wins!',givenUp:'Given up',lostGiveUp:'gave up',rematch:'Rematch',replayBtn:'Replay',menu:'Menu',
     giveUp:'Give up',sure:'Sure?',walls:'Walls',statusWait:'WAITING',statusThink:'THINKING',statusTurn:'TURN',
     goalLabel:'▲ GOAL ▲',startLabel:'▼ START ▼',invalidPos:'Invalid position!',opponentTurn:"Opponent's turn...",
     wallsLeft:'walls left',tapContinue:'Tap to continue',red:'Red',blue:'Blue',
@@ -423,17 +425,17 @@ const I18N={
     rematchWaiting:'Waiting for opponent...',rematchAsked:'Opponent wants a rematch',rematchDeclined:'Opponent declined',randomFirst:'Random start',
     reconnecting:'Opponent reconnecting',reconnectFail:'Opponent left',
     noLobbies:'No open lobbies',noLobbiesHint:'Create one or wait for players',createLobby:'Create lobby',joinExisting:'Join game',live:'LIVE',lobbyCount:'open',
-    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',randomDrop:'Random Walls',randomDropDesc:'Fair auto-walls drop in',dropRare:'Rare',dropOften:'Often',dropVeryOften:'V. often',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Play with friend',vsBot:'🤖 Play vs Bots',localPlay:'📱 Local (same device)',createPublicLobby:'➕ Create lobby / Lobby list',shareWhatsApp:'📱 Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes',hammerMode:'Hammer',hammerDesc:'Collect a hammer to smash one wall',hammerHint:'Drag onto a wall',hammerOnce:'1× start',hammerTwice:'2× per round'},
-  de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'👥 2 Spieler lokal',vsAI:'🖥️ Gegen Computer',online:'🌐 Online spielen',
+    lobbySettings:'Lobby settings',visibility:'Visibility',public:'Public',publicDesc:'Visible in lobby list',private:'Private',privateDesc:'Join via 4-letter code',gameMode:'Game mode',classic:'Classic',classicDesc:'Standard rules',comingSoon:'Coming soon',ranked:'Ranked',rankedDesc:'Climb the ladder',createNow:'Create lobby',lobbyChat:'LOBBY CHAT',chatPlaceholder:'Type a message...',send:'Send',noChat:'No messages yet',chatHint:'Say hi to other players',you:'You',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barricade Drop',chaosBarrDropDesc:'+2 barricades when collected',randomDrop:'Random Walls',randomDropDesc:'Fair auto-walls drop in',dropRare:'Rare',dropOften:'Often',dropVeryOften:'V. often',noTimer:'No time',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'Play with friend',vsBot:'Play vs Bots',localPlay:'Local (same device)',createPublicLobby:'Create lobby / Lobby list',shareWhatsApp:'Send via WhatsApp',qrCode:'QR-Code',scanQR:'Scan to join',copyCode:'Copy code',copied:'Copied!',orJoinCode:'Or join with code',waitingPrivate:'Waiting for friend',modeLabel:'MODE',perTurn:'per turn',totalTime:'total',gameModes:'Game modes',hammerMode:'Hammer',hammerDesc:'Collect a hammer to smash one wall',hammerHint:'Drag onto a wall',hammerOnce:'1× start',hammerTwice:'2× per round'},
+  de:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Lädt...',twoPlayer:'2 Spieler lokal',vsAI:'Gegen Computer',online:'Online spielen',
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
-    playOnline:'Online spielen',publicLobby:'+ Öffentliche Lobby',privateLobby:'🔒 Private Lobby',joinWithCode:'MIT CODE BEITRETEN',join:'Beitreten',
+    playOnline:'Online spielen',publicLobby:'+ Öffentliche Lobby',privateLobby:'Private Lobby',joinWithCode:'MIT CODE BEITRETEN',join:'Beitreten',
     lobbyFull:'Lobby voll oder nicht gefunden!',codeNotFound:'Code nicht gefunden!',hostNotResponding:'Host antwortet nicht.',
     firebaseError:'Firebase-Fehler: ',checkRules:' — Datenbank-Regeln prüfen!',openLobbies:'OFFENE LOBBYS',lobby:'Lobby',joinSuffix:'Beitreten →',back:'← Zurück',
     waitingOpponent:'Warte auf Gegner...',connecting:'Verbinde...',shareCode:'Teile den Code mit deinem Gegner',
     waitingStart:'Warte auf Spielstart...',cancel:'Abbrechen',codePrefix:'Code: ',
     replay:'Replay',step:'Schritt',wallPlaced:'Mauer gesetzt',
-    wins:'gewinnt!',givenUp:'Aufgegeben',rematch:'↺ Revanche',replayBtn:'▶ Replay',menu:'🏠 Menü',
+    wins:'gewinnt!',givenUp:'Aufgegeben',lostGiveUp:'hat aufgegeben',rematch:'Revanche',replayBtn:'Replay',menu:'Menü',
     giveUp:'Aufgeben',sure:'Sicher?',walls:'Mauern',statusWait:'WARTET',statusThink:'DENKT',statusTurn:'DRAN',
     goalLabel:'▲ ZIEL ▲',startLabel:'▼ START ▼',invalidPos:'Ungültige Position!',opponentTurn:'Gegner ist dran...',
     wallsLeft:'Mauern übrig',tapContinue:'Tippen um fortzufahren',red:'Rot',blue:'Blau',
@@ -441,17 +443,17 @@ const I18N={
     rematchWaiting:'Warte auf Gegner...',rematchAsked:'Gegner will Revanche',rematchDeclined:'Gegner hat abgelehnt',randomFirst:'Zufälliger Start',
     reconnecting:'Gegner verbindet sich neu',reconnectFail:'Gegner hat das Spiel verlassen',
     noLobbies:'Keine offenen Lobbys',noLobbiesHint:'Erstelle eine oder warte auf Spieler',createLobby:'Lobby erstellen',joinExisting:'Spiel beitreten',live:'LIVE',lobbyCount:'offen',
-    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',randomDrop:'Zufalls-Wände',randomDropDesc:'Faire Auto-Wände fallen',dropRare:'Selten',dropOften:'Oft',dropVeryOften:'Sehr oft',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'👥 Mit Freund spielen',vsBot:'🤖 Gegen Bots',localPlay:'📱 Lokal (gleiches Gerät)',createPublicLobby:'➕ Lobby erstellen / Lobby-Liste',shareWhatsApp:'📱 Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi',hammerMode:'Hammer',hammerDesc:'Sammle einen Hammer und zerschlage eine Mauer',hammerHint:'Auf eine Mauer ziehen',hammerOnce:'1× Start',hammerTwice:'2× pro Runde'},
-  tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'👥 2 Oyuncu Yerel',vsAI:'🖥️ Bilgisayara Karşı',online:'🌐 Çevrimiçi Oyna',
+    lobbySettings:'Lobby-Einstellungen',visibility:'Sichtbarkeit',public:'Öffentlich',publicDesc:'Sichtbar in der Lobby-Liste',private:'Privat',privateDesc:'Beitritt per 4-stelligem Code',gameMode:'Spielmodus',classic:'Klassisch',classicDesc:'Standard-Regeln',comingSoon:'Bald verfügbar',ranked:'Rangliste',rankedDesc:'Klettere auf der Leiter',createNow:'Lobby erstellen',lobbyChat:'LOBBY-CHAT',chatPlaceholder:'Nachricht schreiben...',send:'Senden',noChat:'Noch keine Nachrichten',chatHint:'Sag Hallo zu anderen Spielern',you:'Du',mode:'Modus',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Barrikaden-Drop',chaosBarrDropDesc:'+2 Barrikaden beim Einsammeln',randomDrop:'Zufalls-Wände',randomDropDesc:'Faire Auto-Wände fallen',dropRare:'Selten',dropOften:'Oft',dropVeryOften:'Sehr oft',noTimer:'Ohne Zeit',minLabel:'min',secLabel:'s',barricadesLabel:'BARRIKADEN',friendPlay:'Mit Freund spielen',vsBot:'Gegen Bots',localPlay:'Lokal (gleiches Gerät)',createPublicLobby:'Lobby erstellen / Lobby-Liste',shareWhatsApp:'Per WhatsApp senden',qrCode:'QR-Code',scanQR:'Scanne zum Beitreten',copyCode:'Code kopieren',copied:'Kopiert!',orJoinCode:'Oder mit Code beitreten',waitingPrivate:'Warte auf Freund',modeLabel:'MODUS',perTurn:'pro Zug',totalTime:'gesamt',gameModes:'Spielmodi',hammerMode:'Hammer',hammerDesc:'Sammle einen Hammer und zerschlage eine Mauer',hammerHint:'Auf eine Mauer ziehen',hammerOnce:'1× Start',hammerTwice:'2× pro Runde'},
+  tr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Yükleniyor...',twoPlayer:'2 Oyuncu Yerel',vsAI:'Bilgisayara Karşı',online:'Çevrimiçi Oyna',
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
-    playOnline:'Çevrimiçi Oyna',publicLobby:'+ Genel Lobi',privateLobby:'🔒 Özel Lobi',joinWithCode:'KODLA KATIL',join:'Katıl',
+    playOnline:'Çevrimiçi Oyna',publicLobby:'+ Genel Lobi',privateLobby:'Özel Lobi',joinWithCode:'KODLA KATIL',join:'Katıl',
     lobbyFull:'Lobi dolu veya bulunamadı!',codeNotFound:'Kod bulunamadı!',hostNotResponding:'Sunucu yanıt vermiyor.',
     firebaseError:'Firebase hatası: ',checkRules:' — Veritabanı kurallarını kontrol et!',openLobbies:'AÇIK LOBİLER',lobby:'Lobi',joinSuffix:'Katıl →',back:'← Geri',
     waitingOpponent:'Rakip bekleniyor...',connecting:'Bağlanıyor...',shareCode:'Kodu rakibinle paylaş',
     waitingStart:'Oyun başlatılıyor...',cancel:'İptal',codePrefix:'Kod: ',
     replay:'Tekrar',step:'Adım',wallPlaced:'Duvar yerleştirildi',
-    wins:'kazandı!',givenUp:'Pes etti',rematch:'↺ Rövanş',replayBtn:'▶ Tekrar',menu:'🏠 Menü',
+    wins:'kazandı!',givenUp:'Pes etti',lostGiveUp:'pes etti',rematch:'Rövanş',replayBtn:'Tekrar',menu:'Menü',
     giveUp:'Pes et',sure:'Emin misin?',walls:'Duvar',statusWait:'BEKLİYOR',statusThink:'DÜŞÜNÜYOR',statusTurn:'SIRA',
     goalLabel:'▲ HEDEF ▲',startLabel:'▼ BAŞLANGIÇ ▼',invalidPos:'Geçersiz konum!',opponentTurn:'Rakibin sırası...',
     wallsLeft:'duvar kaldı',tapContinue:'Devam etmek için dokun',red:'Kırmızı',blue:'Mavi',
@@ -459,17 +461,17 @@ const I18N={
     rematchWaiting:'Rakip bekleniyor...',rematchAsked:'Rakip rövanş istiyor',rematchDeclined:'Rakip reddetti',randomFirst:'Rastgele başlangıç',
     reconnecting:'Rakip yeniden bağlanıyor',reconnectFail:'Rakip oyundan ayrıldı',
     noLobbies:'Açık lobi yok',noLobbiesHint:'Bir tane oluştur veya oyuncu bekle',createLobby:'Lobi oluştur',joinExisting:'Oyuna katıl',live:'CANLI',lobbyCount:'açık',
-    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',randomDrop:'Rastgele Duvar',randomDropDesc:'Adil oto-duvarlar düşer',dropRare:'Nadiren',dropOften:'Sık',dropVeryOften:'Çok sık',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'👥 Arkadaşla oyna',vsBot:'🤖 Botlara karşı',localPlay:'📱 Yerel (aynı cihaz)',createPublicLobby:'➕ Lobi oluştur / Lobi listesi',shareWhatsApp:'📱 WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları',hammerMode:'Çekiç',hammerDesc:'Bir çekiç topla ve bir duvarı kır',hammerHint:'Bir duvara sürükle',hammerOnce:'1× başta',hammerTwice:'2× turda'},
-  fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'👥 2 Joueurs Local',vsAI:"🖥️ Contre l'ordinateur",online:'🌐 Jouer en ligne',
+    lobbySettings:'Lobi ayarları',visibility:'Görünürlük',public:'Genel',publicDesc:'Lobi listesinde görünür',private:'Özel',privateDesc:'4 harfli kodla katıl',gameMode:'Oyun modu',classic:'Klasik',classicDesc:'Standart kurallar',comingSoon:'Yakında',ranked:'Sıralı',rankedDesc:'Sıralamada yüksel',createNow:'Lobi oluştur',lobbyChat:'LOBİ SOHBETİ',chatPlaceholder:'Mesaj yaz...',send:'Gönder',noChat:'Henüz mesaj yok',chatHint:'Diğer oyunculara merhaba de',you:'Sen',mode:'Mod',modeBlitz:'Blitz',modeChaos:'Kaos',chaosBarrDrop:'Barikat Düşürme',chaosBarrDropDesc:'Toplandığında +2 barikat',randomDrop:'Rastgele Duvar',randomDropDesc:'Adil oto-duvarlar düşer',dropRare:'Nadiren',dropOften:'Sık',dropVeryOften:'Çok sık',noTimer:'Süresiz',minLabel:'dk',secLabel:'sn',barricadesLabel:'BARİKATLAR',friendPlay:'Arkadaşla oyna',vsBot:'Botlara karşı',localPlay:'Yerel (aynı cihaz)',createPublicLobby:'Lobi oluştur / Lobi listesi',shareWhatsApp:'WhatsApp ile gönder',qrCode:'QR Kodu',scanQR:'Katılmak için tara',copyCode:'Kodu kopyala',copied:'Kopyalandı!',orJoinCode:'Veya kodla katıl',waitingPrivate:'Arkadaş bekleniyor',modeLabel:'MOD',perTurn:'tur başına',totalTime:'toplam',gameModes:'Oyun modları',hammerMode:'Çekiç',hammerDesc:'Bir çekiç topla ve bir duvarı kır',hammerHint:'Bir duvara sürükle',hammerOnce:'1× başta',hammerTwice:'2× turda'},
+  fr:{title:'Wrong Way',subtitle:"Don't be mad",loading:'Chargement...',twoPlayer:'2 Joueurs Local',vsAI:"Contre l'ordinateur",online:'Jouer en ligne',
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
-    playOnline:'Jouer en ligne',publicLobby:'+ Salon public',privateLobby:'🔒 Salon privé',joinWithCode:'REJOINDRE AVEC CODE',join:'Rejoindre',
+    playOnline:'Jouer en ligne',publicLobby:'+ Salon public',privateLobby:'Salon privé',joinWithCode:'REJOINDRE AVEC CODE',join:'Rejoindre',
     lobbyFull:'Salon plein ou introuvable!',codeNotFound:'Code introuvable!',hostNotResponding:"L'hôte ne répond pas.",
     firebaseError:'Erreur Firebase: ',checkRules:' — Vérifie les règles de la base!',openLobbies:'SALONS OUVERTS',lobby:'Salon',joinSuffix:'Rejoindre →',back:'← Retour',
     waitingOpponent:"En attente d'un adversaire...",connecting:'Connexion...',shareCode:'Partage le code avec ton adversaire',
     waitingStart:'En attente du début...',cancel:'Annuler',codePrefix:'Code: ',
     replay:'Replay',step:'Pas',wallPlaced:'Mur placé',
-    wins:'gagne!',givenUp:'Abandonné',rematch:'↺ Revanche',replayBtn:'▶ Replay',menu:'🏠 Menu',
+    wins:'gagne!',givenUp:'Abandonné',lostGiveUp:'a abandonné',rematch:'Revanche',replayBtn:'Replay',menu:'Menu',
     giveUp:'Abandonner',sure:'Sûr?',walls:'Murs',statusWait:'ATTENTE',statusThink:'RÉFLEXION',statusTurn:'TOUR',
     goalLabel:'▲ BUT ▲',startLabel:'▼ DÉPART ▼',invalidPos:'Position invalide!',opponentTurn:"Tour de l'adversaire...",
     wallsLeft:'murs restants',tapContinue:'Touche pour continuer',red:'Rouge',blue:'Bleu',
@@ -477,7 +479,7 @@ const I18N={
     rematchWaiting:"En attente de l'adversaire...",rematchAsked:'Adversaire veut une revanche',rematchDeclined:'Adversaire a refusé',randomFirst:'Départ aléatoire',
     reconnecting:'Adversaire se reconnecte',reconnectFail:"L'adversaire a quitté",
     noLobbies:'Aucun salon ouvert',noLobbiesHint:'Créez-en un ou attendez',createLobby:'Créer un salon',joinExisting:'Rejoindre',live:'LIVE',lobbyCount:'ouvert',
-    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',randomDrop:'Murs aléatoires',randomDropDesc:'Murs auto équitables',dropRare:'Rare',dropOften:'Souvent',dropVeryOften:'Très svt',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'👥 Jouer avec un ami',vsBot:'🤖 Contre les bots',localPlay:'📱 Local (même appareil)',createPublicLobby:'➕ Créer un salon / Liste des salons',shareWhatsApp:'📱 Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu',hammerMode:'Marteau',hammerDesc:'Ramasse un marteau pour briser un mur',hammerHint:'Glisser sur un mur',hammerOnce:'1× départ',hammerTwice:'2× par manche'}
+    lobbySettings:'Paramètres du salon',visibility:'Visibilité',public:'Public',publicDesc:'Visible dans la liste',private:'Privé',privateDesc:'Rejoindre avec code 4 lettres',gameMode:'Mode de jeu',classic:'Classique',classicDesc:'Règles standard',comingSoon:'Bientôt',ranked:'Classé',rankedDesc:"Grimpez l'échelle",createNow:'Créer le salon',lobbyChat:'CHAT DU SALON',chatPlaceholder:'Écrire un message...',send:'Envoyer',noChat:'Aucun message',chatHint:'Salue les autres joueurs',you:'Toi',mode:'Mode',modeBlitz:'Blitz',modeChaos:'Chaos',chaosBarrDrop:'Drop de barricade',chaosBarrDropDesc:'+2 barricades à ramasser',randomDrop:'Murs aléatoires',randomDropDesc:'Murs auto équitables',dropRare:'Rare',dropOften:'Souvent',dropVeryOften:'Très svt',noTimer:'Sans temps',minLabel:'min',secLabel:'s',barricadesLabel:'BARRICADES',friendPlay:'Jouer avec un ami',vsBot:'Contre les bots',localPlay:'Local (même appareil)',createPublicLobby:'Créer un salon / Liste des salons',shareWhatsApp:'Envoyer sur WhatsApp',qrCode:'Code QR',scanQR:'Scanner pour rejoindre',copyCode:'Copier le code',copied:'Copié!',orJoinCode:'Ou rejoindre avec code',waitingPrivate:"Attente d'un ami",modeLabel:'MODE',perTurn:'par tour',totalTime:'total',gameModes:'Modes de jeu',hammerMode:'Marteau',hammerDesc:'Ramasse un marteau pour briser un mur',hammerHint:'Glisser sur un mur',hammerOnce:'1× départ',hammerTwice:'2× par manche'}
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
 function getInitialDark(){try{return localStorage.getItem('ww_dark')==='1';}catch{return false;}}
@@ -525,15 +527,12 @@ function bfsTo(from,target,walls){
   return null;
 }
 let _hamCtx=null; // {hammers, seekers:[{r,c}]} – gesetzt vor tryWall, danach null
-function buildHamCtx(hammers,hammerHeld,pA,pB,walls){
+function buildHamCtx(hammers,hammerHeld,pA,pB){
   if(!hammers||!hammers.length)return null;
   const seekers=[];
   if(hammerHeld&&!hammerHeld.A)seekers.push(pA);
   if(hammerHeld&&!hammerHeld.B)seekers.push(pB);
-  if(!seekers.length)return null;
-  // Welche Hämmer sind JETZT (vor neuer Mauer) erreichbar?
-  const reachable=hammers.filter(h=>seekers.some(s=>!!bfsTo(s,h,walls)));
-  return{hammers,seekers,reachable};
+  return seekers.length?{hammers,seekers}:null;
 }
 function tryWall(key,walls,pA,pB){
   if(walls.has(key))return null;
@@ -542,14 +541,9 @@ function tryWall(key,walls,pA,pB){
   else{if(walls.has(`V-${r-1}-${c}`)||walls.has(`V-${r+1}-${c}`))return null;if(walls.has(`H-${r}-${c}`))return null;}
   const next=new Set([...walls,key]);
   if(!hasPath(pA,next)||!hasPath(pB,next))return null;
-  if(_hamCtx&&_hamCtx.reachable&&_hamCtx.reachable.length>0){
-    // Wie viele der aktuell erreichbaren sind nach der neuen Mauer noch erreichbar?
-    const afterReachable=_hamCtx.reachable.filter(h=>
-      _hamCtx.seekers.some(s=>!!bfsTo(s,h,next))
-    ).length;
-    // Gesamtzahl eingesperrter Hämmer nach der Mauer = total - afterReachable
-    const totalEnclosedAfter=_hamCtx.hammers.length-afterReachable;
-    if(totalEnclosedAfter>1||afterReachable===0)return null;
+  if(_hamCtx&&_hamCtx.seekers.length&&_hamCtx.hammers.length){
+    const ok=_hamCtx.hammers.every(h=>_hamCtx.seekers.some(s=>!!bfsTo(s,h,next)));
+    if(!ok)return null;
   }
   return next;
 }
@@ -1108,10 +1102,23 @@ async function playSound(type){
       const g=ctx.createGain();src.connect(filt);filt.connect(g);g.connect(ctx.destination);
       g.gain.setValueAtTime(1,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.18);src.start();
     }else if(type==='click'){
-      const o=ctx.createOscillator();o.type='sine';
-      o.frequency.setValueAtTime(660,now);o.frequency.exponentialRampToValueAtTime(880,now+0.05);
-      const g=ctx.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.exponentialRampToValueAtTime(0.16,now+0.012);g.gain.exponentialRampToValueAtTime(0.001,now+0.09);
-      o.connect(g);g.connect(ctx.destination);o.start(now);o.stop(now+0.1);
+      // Heller, snappy UI-Klick (Clash-Royale-Stil)
+      const j=1+(Math.random()*2-1)*0.05;
+      const o=ctx.createOscillator();o.type='triangle';
+      o.frequency.setValueAtTime(720*j,now);o.frequency.exponentialRampToValueAtTime(1180*j,now+0.05);
+      const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4400;
+      const og=ctx.createGain();og.gain.setValueAtTime(0.0001,now);og.gain.exponentialRampToValueAtTime(0.3,now+0.008);og.gain.exponentialRampToValueAtTime(0.001,now+0.11);
+      o.connect(lp);lp.connect(og);og.connect(ctx.destination);o.start(now);o.stop(now+0.13);
+      const o2=ctx.createOscillator();o2.type='sine';
+      o2.frequency.setValueAtTime(1500*j,now);o2.frequency.exponentialRampToValueAtTime(2100*j,now+0.06);
+      const o2g=ctx.createGain();o2g.gain.setValueAtTime(0.0001,now);o2g.gain.exponentialRampToValueAtTime(0.12,now+0.006);o2g.gain.exponentialRampToValueAtTime(0.001,now+0.08);
+      o2.connect(o2g);o2g.connect(ctx.destination);o2.start(now);o2.stop(now+0.1);
+      const nb=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.01),ctx.sampleRate);
+      const ndd=nb.getChannelData(0);for(let i=0;i<ndd.length;i++)ndd[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*0.002));
+      const ns=ctx.createBufferSource();ns.buffer=nb;
+      const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=3000;
+      const ng=ctx.createGain();ng.gain.setValueAtTime(0.14,now);ng.gain.exponentialRampToValueAtTime(0.001,now+0.02);
+      ns.connect(hp);hp.connect(ng);ng.connect(ctx.destination);ns.start(now);
     }else if(type==='pickup'){
       [880,1175,1568].forEach((f,i)=>{
         const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=f;
@@ -1500,7 +1507,7 @@ function App(){
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
-  const[winEmoji,setWinEmoji]=useState('🥳');
+  const[winEmoji,setWinEmoji]=useState('');
   const[danceSpeed,setDanceSpeed]=useState('slow');
   const[danceStyle,setDanceStyle]=useState('robot');
   const[lobbyCfgPrivate,setLobbyCfgPrivate]=useState(false);
@@ -1560,6 +1567,7 @@ function App(){
   const[flash,setFlash]=useState('');
   const[aiThinking,setAiThinking]=useState(false);
   const[giveUpArmed,setGiveUpArmed]=useState(false);
+  const[gaveUp,setGaveUp]=useState(null);
   const[dragging,setDragging]=useState(null);
   const[ghostPos,setGhostPos]=useState({x:0,y:0});
   const[previewKey,setPreviewKey]=useState(null);
@@ -1596,7 +1604,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerMode};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerMode,gaveUp};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -1671,14 +1679,14 @@ function App(){
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online'};
-  const navTo=(target)=>{setNavDir('fwd');playSound('click');setScreen(target);};
-  const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');playSound('click');setScreen(tgt);};
+  const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
+  const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
   const pageAnim=navDir==='back'?'slide-in-left 0.26s cubic-bezier(0.33,1,0.68,1) both':'slide-in-right 0.26s cubic-bezier(0.33,1,0.68,1) both';
   useEffect(()=>{
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
     const ts=e=>{const tt=e.touches[0];if(tt.clientX<40){active=true;sx=tt.clientX;sy=tt.clientY;}};
-    const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55)goBack();};
+    const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55){if(navigator.vibrate)navigator.vibrate(12);goBack();}};
     document.addEventListener('touchstart',ts,{passive:true});
     document.addEventListener('touchend',te,{passive:true});
     return()=>{document.removeEventListener('touchstart',ts);document.removeEventListener('touchend',te);};
@@ -1702,7 +1710,7 @@ function App(){
     }else{
       starter=Math.random()<0.5?'A':'B';
     }
-    setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setMoveHist([]);
+    setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     setHammerHeld({A:false,B:false});
@@ -1899,7 +1907,7 @@ function App(){
         }
       }
       if(!d){
-        _hamCtx=st.hammerMode?buildHamCtx(hms,hh,a,b,w):null;
+        _hamCtx=st.hammerMode?buildHamCtx(hms,hh,a,b):null;
         d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem);
         _hamCtx=null;
       }
@@ -1958,6 +1966,15 @@ function App(){
       if(newGN===oldGN&&newMoveCount<oldMoveCount)return;
       lastOnlineTs.current=gs.lastUpdated||Date.now();
 
+      // Timer-Modus aus Spielzustand uebernehmen (beide Spieler sehen dieselbe Minutenanzahl)
+      if(gs.tm!==undefined&&gs.tm!==S.current.gameTimeMode){
+        setGameTimeMode(gs.tm);
+        if(typeof gs.tm==='string'&&gs.tm.indexOf('classic-')===0){
+          const cs=gs.tm==='classic-3'?180:gs.tm==='classic-5'?300:480;
+          setTimeLeft(tl=>(tl.A>0||tl.B>0)?tl:{A:cs,B:cs});
+        }
+      }
+
       // Neue Runde erkannt → Spiel mit neuer Rolle starten
       if(newGN>oldGN&&oldGN>0){
         const myNewRole=gs.swapRoles?(S.current.onlineRole==='A'?'B':'A'):S.current.onlineRole;
@@ -1968,12 +1985,13 @@ function App(){
         setGoldenWalls(new Set(gs.goldenWalls||[]));
         setHammers(gs.hammers||[]);
         setHammerHeld(gs.hammerHeld||{A:false,B:false});
-        setWinner(null);setCelebrating(false);
+        setWinner(null);setCelebrating(false);setGaveUp(null);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
         setGiveUpArmed(false);setFlash('');
         // Timer zurücksetzen
-        const classicSecs=gameTimeMode==='classic-3'?180:gameTimeMode==='classic-5'?300:gameTimeMode==='classic-8'?480:0;
+        const rtm=gs.tm||gameTimeMode;
+        const classicSecs=rtm==='classic-3'?180:rtm==='classic-5'?300:rtm==='classic-8'?480:0;
         setTimeLeft({A:classicSecs,B:classicSecs});
         // Chat leeren
         setChatMsgs([]);setChatInput('');
@@ -2002,6 +2020,7 @@ function App(){
           gameNum:newGN+1,swapRoles:swap,
           chaosItem:null,
           hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},
+          tm:S.current.gameTimeMode,
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
@@ -2030,6 +2049,7 @@ function App(){
         // Guest hat Item eingesammelt → neuen Spawn-Timer setzen
         chaosSpawnRef.current=newMoves.length+18+Math.floor(Math.random()*8);
       }
+      if(gs.gaveUp&&!S.current.gaveUp)setGaveUp(gs.gaveUp);
       if(gs.winner&&!S.current.winner){triggerWin(gs.winner);}
     });
     return()=>ref.off('value',cb);
@@ -2167,7 +2187,7 @@ function App(){
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
         if(lobby&&lobby.guestId){
-          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},lastUpdated:Date.now()};
+          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
           initGame('online','A',lobbyId);
@@ -2384,13 +2404,14 @@ function App(){
   const handleGiveUp=()=>{
     if(!giveUpArmed){setGiveUpArmed(true);setTimeout(()=>setGiveUpArmed(false),3000);return;}
     setGiveUpArmed(false);
-    const loser=gameMode==='online'?onlineRole:turn;
+    const loser=gameMode==='online'?onlineRole:gameMode==='pvc'?'A':turn;
     const winP=loser==='A'?'B':'A';
+    setGaveUp(loser);
     if(gameMode==='online'){
       const s=S.current;
-      doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem});
+      doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem,gaveUp:loser});
     }
-    triggerWin(winP,true);
+    triggerWin(winP);
   };
 
   // ── Drag ──
@@ -2417,7 +2438,7 @@ function App(){
           const key=snapWall(rel.x,rel.y,dragging.orient);
           const{walls:w,pA:a,pB:b,barrLeft:bl,turn:t,moveHist:mh}=S.current;
           if(bl[t]>0){
-            _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b,w):null;
+            _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b):null;
             const next=tryWall(key,w,a,b);
             _hamCtx=null;
             if(next){
@@ -2506,7 +2527,7 @@ function App(){
 
   const previewValid=useMemo(()=>{
     if(!previewKey)return false;
-    _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,S.current.pA,S.current.pB,S.current.walls):null;
+    _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,S.current.pA,S.current.pB):null;
     const v=!!tryWall(previewKey,S.current.walls,S.current.pA,S.current.pB);
     _hamCtx=null;return v;
   },[previewKey]);
@@ -2531,15 +2552,15 @@ function App(){
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
         cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'var(--shadow-soft)',zIndex:100}}>⚙️</button>
+        boxShadow:'var(--shadow-soft)',zIndex:100}}><GearIcon size={18}/></button>
       <div style={{textAlign:'center',marginBottom:26}}>
-        <div style={{fontSize:42,marginBottom:8}}>🧱</div>
+        <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}><BrickWallIcon size={52}/></div>
         <div style={{fontSize:28,fontWeight:900,letterSpacing:-1.5,color:'var(--text)',lineHeight:1}}>{t('title')}</div>
         <div style={{fontSize:12,fontWeight:600,letterSpacing:0.5,color:'var(--subtle)',marginTop:6,fontStyle:'italic'}}>{t('subtitle')}</div>
       </div>
 
       {/* Modus-Konfigurations-Button */}
-      <button onClick={()=>{playSound('click');setNavDir('fwd');setScreen('modeConfig');}} style={{
+      <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} style={{
         width:260,padding:'10px 14px',marginBottom:14,
         background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:14,
         cursor:'pointer',display:'flex',alignItems:'center',gap:10,
@@ -2547,21 +2568,21 @@ function App(){
         fontFamily:'system-ui,-apple-system,sans-serif'}}>
         <div style={{width:36,height:36,borderRadius:10,
           background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',
-          display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🎮</div>
+          display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><MazeIcon size={20}/></div>
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
           <div style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:1.2}}>{t('modeLabel')}</div>
           <div style={{fontSize:12,fontWeight:800,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {modeLabel} · {gameBarr} 🧱
+            {modeLabel} · {gameBarr} <BrickMini size={11}/>
           </div>
         </div>
         <span style={{fontSize:14,color:'var(--subtle)'}}>›</span>
       </button>
 
       <div style={{display:'flex',flexDirection:'column',gap:10,width:260}}>
-        <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue>{t('createPublicLobby')}</GBtn>
-        <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark>{t('friendPlay')}</GBtn>
-        <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark>{t('vsBot')}</GBtn>
-        <GBtn onClick={()=>initGame('pvp')} dark>{t('localPlay')}</GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><GlobeIcon size={16}/>{t('createPublicLobby')}</span></GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PeopleIcon size={16}/>{t('friendPlay')}</span></GBtn>
+        <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><BotIcon size={16}/>{t('vsBot')}</span></GBtn>
+        <GBtn onClick={()=>initGame('pvp')} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={16}/>{t('localPlay')}</span></GBtn>
       </div>
       {showOptions&&(
         <div onClick={()=>setShowOptions(false)} style={{position:'fixed',inset:0,
@@ -2579,7 +2600,7 @@ function App(){
               {t('theme').toUpperCase()}
             </div>
             <div style={{display:'flex',gap:6,marginBottom:18}}>
-              {[{k:false,label:t('light'),emoji:'☀️'},{k:true,label:t('dark'),emoji:'🌙'}].map(o=>(
+              {[{k:false,label:t('light'),icon:'sun'},{k:true,label:t('dark'),icon:'moon'}].map(o=>(
                 <button key={o.label} onClick={()=>setDarkMode(o.k)} style={{
                   flex:1,padding:'11px 8px',borderRadius:10,fontSize:13,fontWeight:600,
                   cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,
@@ -2587,7 +2608,7 @@ function App(){
                   color:darkMode===o.k?'var(--bg)':'var(--text)',
                   border:`1.5px solid ${darkMode===o.k?'var(--text)':'var(--border)'}`,
                   fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  <span>{o.emoji}</span>{o.label}
+                  <span style={{display:'flex'}}>{o.icon==='sun'?<SunIcon size={15}/>:<MoonIcon size={15}/>}</span>{o.label}
                 </button>
               ))}
             </div>
@@ -2650,9 +2671,9 @@ function App(){
         </button>
       );
     };
-    const SectionHeader=({label})=>(
-      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:14,marginBottom:8,paddingLeft:2}}>
-        {label}
+    const SectionHeader=({label,icon})=>(
+      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:14,marginBottom:8,paddingLeft:2,display:'flex',alignItems:'center',gap:5}}>
+        {icon}{label}
       </div>
     );
     return(
@@ -2660,7 +2681,7 @@ function App(){
         <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <div style={{textAlign:'center',marginBottom:14}}>
-            <div style={{fontSize:30,marginBottom:4}}>🎮</div>
+            <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="#8b5cf6"/></div>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('mode')}</div>
           </div>
 
@@ -2701,7 +2722,7 @@ function App(){
           )}
 
           {/* Classic */}
-          <SectionHeader label={'⚔️ ' + t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
+          <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6}}>
             <TimeBtn val="none" label={t('noTimer')}/>
             <TimeBtn val="classic-3" label={'3 '+t('minLabel')}/>
@@ -2710,7 +2731,7 @@ function App(){
           </div>
 
           {/* Blitz */}
-          <SectionHeader label={'⚡ ' + t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
+          <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
           <div style={{display:'flex',gap:6}}>
             <TimeBtn val="blitz-5" label={'5 '+t('secLabel')}/>
             <TimeBtn val="blitz-8" label={'8 '+t('secLabel')}/>
@@ -2718,7 +2739,7 @@ function App(){
           </div>
 
           {/* Chaos */}
-          <SectionHeader label={'🌀 ' + t('modeChaos').toUpperCase()}/>
+          <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
           <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
             <button onClick={()=>setChaosMode(c=>!c)} style={{
               flex:1,padding:'11px 7px',
@@ -2730,7 +2751,7 @@ function App(){
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
               transition:'all 0.2s'}}>
-              <div style={{fontSize:18,marginBottom:3}}>{chaosMode?'✓':'🧱'}</div>
+              <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{chaosMode?<CheckIcon size={18} color="currentColor"/>:<CrateIcon size={20}/>}</div>
               <div>{t('chaosBarrDrop')}</div>
               <div style={{fontSize:9,fontWeight:600,opacity:0.75,marginTop:3,lineHeight:1.25}}>
                 {t('chaosBarrDropDesc')}
@@ -2740,7 +2761,7 @@ function App(){
               background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
               border:`1.5px solid ${dropMode?'#ec4899':'var(--border)'}`,
               borderRadius:11,textAlign:'center',transition:'all 0.2s'}}>
-              <div style={{fontSize:18,marginBottom:3}}>{dropMode?'✓':'💥'}</div>
+              <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{dropMode?<CheckIcon size={18} color="#ec4899"/>:<ModeGlyph kind="burst" size={18} color="#ec4899"/>}</div>
               <div style={{fontSize:12,fontWeight:800,color:dropMode?'#ec4899':'var(--text)'}}>{t('randomDrop')}</div>
               <div style={{fontSize:9,fontWeight:600,color:'var(--subtle)',marginTop:3,marginBottom:7,lineHeight:1.25}}>{t('randomDropDesc')}</div>
               <div style={{display:'flex',gap:4,marginTop:'auto'}}>
@@ -2761,7 +2782,7 @@ function App(){
               display:'flex',alignItems:'center',gap:10,
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:hammerMode?'0 4px 14px rgba(245,158,11,0.35)':'none',transition:'all 0.2s'}}>
-              <span style={{fontSize:22}}>{hammerMode?'✓':'🔨'}</span>
+              <span style={{display:'flex',width:24,justifyContent:'center'}}>{hammerMode?<CheckIcon size={20} color="currentColor"/>:<HammerIcon size={22}/>}</span>
               <span>
                 <div style={{fontSize:13,fontWeight:800}}>{t('hammerMode')}</div>
                 <div style={{fontSize:9,fontWeight:600,opacity:0.8,marginTop:2,lineHeight:1.25}}>{t('hammerDesc')}</div>
@@ -2771,7 +2792,7 @@ function App(){
               <div style={{display:'flex',gap:6,marginTop:6}}>
                 {[{v:1,l:t('hammerOnce')},{v:2,l:t('hammerTwice')}].map(o=>{
                   const sel=hammerDrops===o.v;
-                  return <button key={o.v} onClick={()=>{playSound('click');setHammerDrops(o.v);}} style={{
+                  return <button key={o.v} onClick={()=>setHammerDrops(o.v)} style={{
                     flex:1,padding:'8px 4px',borderRadius:9,
                     background:sel?'#f59e0b':'var(--card)',color:sel?'white':'var(--text)',
                     border:`1.5px solid ${sel?'#f59e0b':'var(--border)'}`,
@@ -2783,7 +2804,7 @@ function App(){
           </div>
 
           {/* Barricades */}
-          <SectionHeader label={'🧱 ' + t('barricadesLabel')}/>
+          <SectionHeader icon={<BrickMini size={11}/>} label={t('barricadesLabel')}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:14,
             padding:'8px 14px',background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:11}}>
             <button onClick={()=>setGameBarr(b=>Math.max(8,b-1))}
@@ -2799,7 +2820,6 @@ function App(){
                 fontFamily:'system-ui,-apple-system,sans-serif'}}>+</button>
           </div>
 
-          <button onClick={()=>setScreen('menu')} style={{...sBack,width:'100%',textAlign:'center',marginTop:18}}>{t('back')}</button>
         </div>
       </div>
     );
@@ -2812,9 +2832,9 @@ function App(){
       <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24}}>{t('chooseDifficulty')}</div>
       <div style={{display:'flex',flexDirection:'column',gap:10,width:280}}>
         {[
-          {k:'easy',emoji:'🟢',color:'#16a34a'},
-          {k:'normal',emoji:'🟡',color:'#3b82f6'},
-          {k:'hard',emoji:'🔴',color:'#ef4444'}
+          {k:'easy',color:'#16a34a'},
+          {k:'normal',color:'#eab308'},
+          {k:'hard',color:'#ef4444'}
         ].map(d=>(
           <button key={d.k} onClick={()=>{setAiDifficulty(d.k);initGame('pvc');}} style={{
             padding:'14px 16px',background:'var(--card)',border:`1.5px solid ${d.color}30`,
@@ -2822,14 +2842,13 @@ function App(){
             boxShadow:'var(--shadow-soft)',
             fontFamily:'system-ui,-apple-system,sans-serif'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:2}}>
-              <span style={{fontSize:16}}>{d.emoji}</span>
+              <span style={{display:'flex'}}><DotIcon size={16} color={d.color}/></span>
               <span style={{fontSize:15,fontWeight:800,color:d.color}}>{t(d.k)}</span>
             </div>
             <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500,marginLeft:26}}>{t(d.k+'Desc')}</div>
           </button>
         ))}
       </div>
-      <button onClick={()=>setScreen('menu')} style={sBack}>{t('back')}</button>
     </div>
   );
 
@@ -2839,7 +2858,7 @@ function App(){
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column'}}>
         <div style={{textAlign:'center',marginBottom:20}}>
-          <div style={{fontSize:30,marginBottom:4}}>👥</div>
+          <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><PeopleIcon size={30} color="#8b5cf6"/></div>
           <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('friendPlay')}</div>
         </div>
 
@@ -2851,7 +2870,7 @@ function App(){
           display:'flex',alignItems:'center',gap:10,
           boxShadow:'0 4px 14px rgba(139,92,246,0.35)',
           fontFamily:'system-ui,-apple-system,sans-serif'}}>
-          <span style={{fontSize:22}}>🔒</span>
+          <span style={{display:'flex'}}><LockIcon size={22} color="#fff"/></span>
           <div style={{flex:1,textAlign:'left'}}>
             <div style={{fontWeight:800,fontSize:14}}>{t('privateLobby')}</div>
             <div style={{fontSize:10,fontWeight:500,opacity:0.85,marginTop:2}}>{t('shareCode')}</div>
@@ -2875,8 +2894,6 @@ function App(){
           fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('join')}</button>
 
         {flash&&<div style={{color:'#ef4444',fontSize:12,fontWeight:500,marginTop:10,width:'100%',textAlign:'center'}}>{flash}</div>}
-
-        <button onClick={()=>{setFlash('');setScreen('menu');}} style={{...sBack,width:'100%',textAlign:'center',marginTop:18}}>{t('back')}</button>
       </div>
     </div>
   );
@@ -2889,7 +2906,7 @@ function App(){
 
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:20}}>
-          <div style={{fontSize:24,marginBottom:6}}>🌐</div>
+          <div style={{marginBottom:6,display:'flex',justifyContent:'center'}}><GlobeIcon size={26} color="#3b82f6"/></div>
           <div style={{fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('playOnline')}</div>
         </div>
 
@@ -2901,11 +2918,11 @@ function App(){
             display:'flex',alignItems:'center',justifyContent:'center',gap:8,
             boxShadow:'0 2px 8px rgba(30,41,59,0.18)',
             fontFamily:'system-ui,-apple-system,sans-serif'}}>
-            <span style={{fontSize:18}}>➕</span>
+            <span style={{display:'flex'}}><PlusIcon size={18} color="#fff"/></span>
             <span>{t('createLobby')}</span>
           </button>
           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:6,textAlign:'center'}}>
-            {t('mode')}: {gameTimeMode==='none'?t('noTimer'):gameTimeMode} · {gameBarr} 🧱
+            {t('mode')}: {gameTimeMode==='none'?t('noTimer'):gameTimeMode} · {gameBarr} <BrickMini size={10}/>
           </div>
         </div>
 
@@ -2935,7 +2952,7 @@ function App(){
           boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
           {lobbyList.length===0?(
             <div style={{padding:'34px 20px',textAlign:'center'}}>
-              <div style={{fontSize:28,marginBottom:8,opacity:0.4}}>🎮</div>
+              <div style={{marginBottom:8,opacity:0.4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="var(--muted)"/></div>
               <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:4}}>{t('noLobbies')}</div>
               <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500}}>{t('noLobbiesHint')}</div>
             </div>
@@ -2956,7 +2973,7 @@ function App(){
                       <div style={{display:'flex',alignItems:'center',gap:10}}>
                         <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg,#ef4444,#3b82f6)',
                           display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,
-                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>⚔️</div>
+                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}><SwordsIcon size={16} color="#fff"/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:0.5}}>
                             {t('lobby')} {l.id.slice(0,4).toUpperCase()}
@@ -2977,25 +2994,25 @@ function App(){
                         {isClassic&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'rgba(59,130,246,0.12)',color:'#3b82f6'}}>
-                            ⌛ {tm==='classic-3'?'3':tm==='classic-5'?'5':'8'}{t('minLabel')}
+                            <ModeGlyph kind="clock" size={10} color="#3b82f6"/> {tm==='classic-3'?'3':tm==='classic-5'?'5':'8'}{t('minLabel')}
                           </div>
                         )}
                         {isBlitz&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'rgba(245,158,11,0.15)',color:'#d97706'}}>
-                            ⚡ {tm==='blitz-5'?'5':tm==='blitz-8'?'8':'10'}{t('secLabel')}
+                            <ModeGlyph kind="bolt" size={10} color="#d97706"/> {tm==='blitz-5'?'5':tm==='blitz-8'?'8':'10'}{t('secLabel')}
                           </div>
                         )}
                         {l.ch&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'rgba(139,92,246,0.15)',color:'#8b5cf6'}}>
-                            🌀 {t('modeChaos')}
+                            <ModeGlyph kind="swirl" size={10} color="#8b5cf6"/> {t('modeChaos')}
                           </div>
                         )}
                         {l.br&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'var(--card)',color:'var(--muted)',border:'1px solid var(--border-soft)'}}>
-                            🧱 {l.br}
+                            <BrickMini size={9}/> {l.br}
                           </div>
                         )}
                       </div>
@@ -3006,15 +3023,13 @@ function App(){
             </div>
           )}
         </div>
-
-        <button onClick={()=>setScreen('menu')} style={{...sBack,marginTop:16}}>{t('back')}</button>
       </div>
     </div>
   );
 
   // ── LOBBY CONFIG ────────────────────────────────────────
   if(screen==='lobbyConfig'){
-    const VisRow=({k,emoji,desc})=>{
+    const VisRow=({k,icon,desc})=>{
       const sel=lobbyCfgPrivate===(k==='private');
       return(
         <button onClick={()=>setLobbyCfgPrivate(k==='private')} style={{
@@ -3025,7 +3040,7 @@ function App(){
           borderRadius:11,cursor:'pointer',textAlign:'left',
           display:'flex',alignItems:'center',gap:10,
           fontFamily:'system-ui,-apple-system,sans-serif'}}>
-          <span style={{fontSize:20}}>{emoji}</span>
+          <span style={{display:'flex'}}>{icon}</span>
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:800,marginBottom:1}}>{t(k)}</div>
             <div style={{fontSize:10,fontWeight:500,opacity:0.7}}>{desc}</div>
@@ -3034,7 +3049,7 @@ function App(){
         </button>
       );
     };
-    const ModeRow=({k,emoji,desc,disabled})=>{
+    const ModeRow=({k,icon,desc,disabled})=>{
       const sel=lobbyCfgMode===k;
       return(
         <button onClick={()=>!disabled&&setLobbyCfgMode(k)} disabled={disabled} style={{
@@ -3045,7 +3060,7 @@ function App(){
           borderRadius:11,cursor:disabled?'not-allowed':'pointer',textAlign:'left',
           display:'flex',alignItems:'center',gap:10,opacity:disabled?0.5:1,
           fontFamily:'system-ui,-apple-system,sans-serif'}}>
-          <span style={{fontSize:20}}>{emoji}</span>
+          <span style={{display:'flex'}}>{icon}</span>
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:800,marginBottom:1,display:'flex',alignItems:'center',gap:6}}>
               {t(k)}
@@ -3062,19 +3077,19 @@ function App(){
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)'}}>
         <div style={{width:'100%',maxWidth:340}}>
           <div style={{textAlign:'center',marginBottom:22}}>
-            <div style={{fontSize:24,marginBottom:6}}>⚙️</div>
+            <div style={{marginBottom:6,display:'flex',justifyContent:'center'}}><GearIcon size={24} color="var(--text)"/></div>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('lobbySettings')}</div>
           </div>
           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginBottom:8,paddingLeft:2}}>
             {t('visibility').toUpperCase()}
           </div>
-          <VisRow k="public" emoji="🌍" desc={t('publicDesc')}/>
-          <VisRow k="private" emoji="🔒" desc={t('privateDesc')}/>
+          <VisRow k="public" icon={<GlobeIcon size={20}/>} desc={t('publicDesc')}/>
+          <VisRow k="private" icon={<LockIcon size={20}/>} desc={t('privateDesc')}/>
           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:16,marginBottom:8,paddingLeft:2}}>
             {t('gameMode').toUpperCase()}
           </div>
-          <ModeRow k="classic" emoji="⚔️" desc={t('classicDesc')}/>
-          <ModeRow k="ranked" emoji="🏆" desc={t('rankedDesc')} disabled/>
+          <ModeRow k="classic" icon={<SwordsIcon size={20}/>} desc={t('classicDesc')}/>
+          <ModeRow k="ranked" icon={<TrophyIcon size={20}/>} desc={t('rankedDesc')} disabled/>
           <button onClick={()=>createLobby(lobbyCfgPrivate)} style={{
             width:'100%',padding:'14px 16px',marginTop:22,
             background:'#3b82f6',color:'white',border:'none',borderRadius:12,
@@ -3113,7 +3128,7 @@ function App(){
               border:'1.5px solid var(--border)',borderRadius:20,
               fontSize:11,fontWeight:700,color:'var(--text)',cursor:'pointer',marginBottom:18,
               fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {copyFlash?'✓ '+t('copied'):'📋 '+t('copyCode')}
+              {copyFlash?<span style={{display:'inline-flex',alignItems:'center',gap:5}}><CheckIcon size={13} color="currentColor"/>{t('copied')}</span>:<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ClipboardIcon size={14}/>{t('copyCode')}</span>}
             </button>
 
             {/* QR Code */}
@@ -3133,7 +3148,7 @@ function App(){
                 textDecoration:'none',textAlign:'center',display:'block',
                 boxShadow:'0 4px 12px rgba(37,211,102,0.32)',
                 fontFamily:'system-ui,-apple-system,sans-serif',marginBottom:20}}>
-              {t('shareWhatsApp')}
+              <span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={15} color="#fff"/>{t('shareWhatsApp')}</span>
             </a>
           </>
         )}
@@ -3202,6 +3217,11 @@ function App(){
         <div style={{fontSize:24,fontWeight:900,color:winner?PC[winner]:'var(--muted)',marginBottom:4,letterSpacing:-0.5}}>
           {winner?`${pname(winner)} ${t('wins')}`:t('givenUp')}
         </div>
+        {gaveUp&&(
+          <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginTop:2,marginBottom:2}}>
+            {pname(gaveUp)} {t('lostGiveUp')}
+          </div>
+        )}
 
         {gameMode==='online'&&otherDeclined&&(
           <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginTop:14,padding:'8px 16px',background:'rgba(239,68,68,0.1)',borderRadius:20}}>
@@ -3221,13 +3241,13 @@ function App(){
         )}
 
         <div style={{display:'flex',flexDirection:'column',gap:10,width:240,marginTop:24}}>
-          {gameMode!=='online'&&<GBtn onClick={()=>initGame(gameMode,'A',null,true)} dark>{t('rematch')}</GBtn>}
-          {gameMode==='online'&&!otherDeclined&&!myRematch&&<GBtn onClick={requestRematch} dark>{t('rematch')}</GBtn>}
-          {moveHist.length>0&&<GBtn onClick={()=>{setReplayStep(0);setScreen('replay');}} outline>{t('replayBtn')}</GBtn>}
+          {gameMode!=='online'&&<GBtn onClick={()=>initGame(gameMode,'A',null,true)} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><RematchIcon size={16}/>{t('rematch')}</span></GBtn>}
+          {gameMode==='online'&&!otherDeclined&&!myRematch&&<GBtn onClick={requestRematch} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><RematchIcon size={16}/>{t('rematch')}</span></GBtn>}
+          {moveHist.length>0&&<GBtn onClick={()=>{setReplayStep(0);setScreen('replay');}} outline><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><ReplayIcon size={16}/>{t('replayBtn')}</span></GBtn>}
           <GBtn onClick={()=>{
             if(gameMode==='online'&&!otherDeclined)declineRematch();
             setScreen('menu');setGameMode(null);setLobbyId(null);
-          }} outline>{t('menu')}</GBtn>
+          }} outline><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><HomeIcon size={16}/>{t('menu')}</span></GBtn>
         </div>
       </div>
     );
@@ -3591,7 +3611,7 @@ function App(){
             boxSizing:'border-box',padding:8}}>
             {chatMsgs.length===0?(
               <div style={{padding:'22px 16px',textAlign:'center'}}>
-                <div style={{fontSize:22,marginBottom:4,opacity:0.4}}>💭</div>
+                <div style={{marginBottom:4,opacity:0.4,display:'flex',justifyContent:'center'}}><BubbleIcon size={24} color="var(--muted)"/></div>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',marginBottom:3}}>{t('noChat')}</div>
                 <div style={{fontSize:10,color:'var(--subtle)',fontWeight:500}}>{t('chatHint')}</div>
               </div>
@@ -3640,8 +3660,8 @@ function App(){
                 cursor:chatInput.trim()?'pointer':'not-allowed',fontSize:13,
                 boxShadow:chatInput.trim()?'0 2px 8px rgba(139,92,246,0.3)':'none',
                 fontFamily:'system-ui,-apple-system,sans-serif',
-                transition:'all 0.15s'}}>
-              ➤
+                transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <SendIcon size={16} color="#fff"/>
             </button>
           </div>
         </div>
@@ -3982,21 +4002,152 @@ function BubbleIcon({size,color}){
     <circle cx="8.5" cy="11" r="1.5" fill="#fff"/><circle cx="12" cy="11" r="1.5" fill="#fff"/><circle cx="15.5" cy="11" r="1.5" fill="#fff"/>
   </svg>;
 }
+function GearIcon({size,color}){
+  const s=size||18;const c=color||'currentColor';const t=[];
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;t.push(<line key={i} x1={12+Math.cos(a)*6.2} y1={12+Math.sin(a)*6.2} x2={12+Math.cos(a)*9.2} y2={12+Math.sin(a)*9.2} stroke={c} strokeWidth="2.5" strokeLinecap="round"/>);}
+  return <svg width={s} height={s} viewBox="0 0 24 24" style={{display:'block'}}>{t}<circle cx="12" cy="12" r="6" fill="none" stroke={c} strokeWidth="2.5"/><circle cx="12" cy="12" r="2.1" fill={c}/></svg>;
+}
+function SunIcon({size}){
+  const s=size||15;const r=[];
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;r.push(<line key={i} x1={12+Math.cos(a)*7.2} y1={12+Math.sin(a)*7.2} x2={12+Math.cos(a)*10} y2={12+Math.sin(a)*10} stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>);}
+  return <svg width={s} height={s} viewBox="0 0 24 24" style={{display:'block'}}>{r}<circle cx="12" cy="12" r="4.4" fill="currentColor"/></svg>;
+}
+function MoonIcon({size}){
+  const s=size||15;
+  return <svg width={s} height={s} viewBox="0 0 24 24" style={{display:'block'}}><path d="M20.5 14.8 A8.6 8.6 0 1 1 11 3.8 a6.7 6.7 0 0 0 9.5 11 Z" fill="currentColor"/></svg>;
+}
+function MazeIcon({size,color}){
+  const s=size||20;const c=color||'#fff';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <rect x="3" y="3" width="18" height="18" rx="3"/>
+    <path d="M7.5 3 V12 H16 M7.5 16.5 H12 V21 M16.5 21 V12.5 M21 8 H16.5 V8 M3 8 H7.5"/>
+    <circle cx="16.5" cy="16.5" r="1.4" fill={c} stroke="none"/>
+  </svg>;
+}
+function BrickWallIcon({size}){
+  const s=size||48;
+  const bricks=[[4,6,18,10],[24,6,20,10],[4,18,9,10],[15,18,18,10],[35,18,9,10],[4,30,20,10],[26,30,18,10]];
+  return <svg width={s} height={s} viewBox="0 0 48 48" style={{display:'block'}}>
+    <defs><linearGradient id="brkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fb7185"/><stop offset="1" stopColor="#be123c"/></linearGradient></defs>
+    <rect x="2" y="4" width="44" height="40" rx="7" fill="#7f1d1d"/>
+    {bricks.map((b,i)=>(<rect key={i} x={b[0]} y={b[1]} width={b[2]} height={b[3]} rx="2.4" fill="url(#brkG)" stroke="rgba(0,0,0,0.14)" strokeWidth="0.7"/>))}
+  </svg>;
+}
+function BrickMini({size}){
+  const s=size||12;
+  return <svg width={s*1.45} height={s} viewBox="0 0 28 20" style={{display:'inline-block',verticalAlign:'-2px'}}>
+    <rect x="1" y="2" width="26" height="16" rx="3" fill="#ef4444" stroke="#991b1b" strokeWidth="1.6"/>
+    <path d="M14 2 V18 M1 10 H27" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2"/>
+  </svg>;
+}
+function SwordsIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <path d="M5 3 L14 12 L12 14 L3 5 Z" fill={c} stroke="none"/><path d="M11.5 13.5 L7 18"/><path d="M5.5 16.5 L9 20"/>
+    <path d="M19 3 L10 12 L12 14 L21 5 Z" fill={c} stroke="none"/><path d="M12.5 13.5 L17 18"/><path d="M18.5 16.5 L15 20"/>
+  </svg>;
+}
+function PeopleIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill={c} style={{display:'block'}}>
+    <circle cx="16" cy="8" r="2.7" opacity="0.55"/><path d="M11 19 a5 5 0 0 1 10 0 Z" opacity="0.55"/>
+    <circle cx="8" cy="7.5" r="3.2"/><path d="M2 20 a6 6 0 0 1 12 0 Z"/>
+  </svg>;
+}
+function LockIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <rect x="5" y="10" width="14" height="10.5" rx="2.6"/><path d="M8 10 V7 a4 4 0 0 1 8 0 V10"/><line x1="12" y1="14" x2="12" y2="16.6"/>
+  </svg>;
+}
+function GlobeIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.9" style={{display:'block'}}>
+    <circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3.2" y1="9" x2="20.8" y2="9"/><line x1="3.2" y1="15" x2="20.8" y2="15"/>
+  </svg>;
+}
+function PlusIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" stroke={c} strokeWidth="2.6" strokeLinecap="round" style={{display:'block'}}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
+function CheckIcon({size,color}){
+  const s=size||18;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}><path d="M5 12.5 L10 17.5 L19 6.5"/></svg>;
+}
+function DotIcon({size,color}){
+  const s=size||16;const c=color||'#16a34a';
+  return <svg width={s} height={s} viewBox="0 0 24 24" style={{display:'block'}}><circle cx="12" cy="12" r="8" fill={c}/><circle cx="9.5" cy="9.3" r="2.3" fill="rgba(255,255,255,0.55)"/></svg>;
+}
+function BotIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <rect x="4" y="8" width="16" height="11" rx="3.2"/><circle cx="9" cy="13.5" r="1.5" fill={c} stroke="none"/><circle cx="15" cy="13.5" r="1.5" fill={c} stroke="none"/>
+    <line x1="12" y1="4.5" x2="12" y2="8"/><circle cx="12" cy="3.5" r="1.3" fill={c} stroke="none"/><line x1="2.5" y1="12.5" x2="4" y2="12.5"/><line x1="20" y1="12.5" x2="21.5" y2="12.5"/>
+  </svg>;
+}
+function PhoneIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <rect x="6" y="2.5" width="12" height="19" rx="3"/><line x1="10.5" y1="18.5" x2="13.5" y2="18.5"/>
+  </svg>;
+}
+function HomeIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <path d="M4 11 L12 4 L20 11"/><path d="M6 9.5 V20 H18 V9.5"/><path d="M10 20 V14 H14 V20"/>
+  </svg>;
+}
+function ReplayIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" style={{display:'block'}}>
+    <circle cx="12" cy="12" r="9"/><path d="M10 8 L16 12 L10 16 Z" fill={c} stroke="none"/>
+  </svg>;
+}
+function RematchIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <path d="M20 11 a8 8 0 1 0 -1.5 5.2"/><path d="M20 4.5 V11 H13.5"/>
+  </svg>;
+}
+function SendIcon({size,color}){
+  const s=size||20;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill={c} style={{display:'block'}}><path d="M3 11 L21 3 L13.5 21 L11 13.5 Z"/></svg>;
+}
+function ClipboardIcon({size,color}){
+  const s=size||18;const c=color||'currentColor';
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'block'}}>
+    <rect x="8" y="3" width="9" height="12" rx="2"/><path d="M5 7 V19 a2 2 0 0 0 2 2 H14"/>
+  </svg>;
+}
 function Wall({wkey,color,opacity,animate,golden,steel}){
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
-  const goldenBg='linear-gradient(135deg,#92400e 0%,#f59e0b 30%,#fde68a 50%,#f59e0b 70%,#92400e 100%)';
-  const steelBg=isH
-    ?'linear-gradient(180deg,#cbd5e1 0%,#94a3b8 35%,#475569 60%,#334155 100%)'
-    :'linear-gradient(90deg,#cbd5e1 0%,#94a3b8 35%,#475569 60%,#334155 100%)';
   const enterAnim=isH?'wall-enter-h':'wall-enter-v';
+  if(steel){
+    const metalBg=isH
+      ?'linear-gradient(180deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)'
+      :'linear-gradient(90deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)';
+    const bolts=isH
+      ?[{left:5,top:p.height/2-2},{left:p.width/2-2,top:p.height/2-2},{left:p.width-9,top:p.height/2-2}]
+      :[{left:p.width/2-2,top:5},{left:p.width/2-2,top:p.height/2-2},{left:p.width/2-2,top:p.height-9}];
+    return <div style={{position:'absolute',...p,background:metalBg,borderRadius:2,zIndex:10,
+      pointerEvents:'none',opacity,transformOrigin:'center center',
+      boxShadow:'inset 0 0 0 1px rgba(30,41,59,0.5),inset 0 1px 1px rgba(255,255,255,0.5),0 2px 5px rgba(0,0,0,0.4)',
+      animation:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}>
+      {bolts.map((b,i)=><span key={i} style={{position:'absolute',left:b.left,top:b.top,
+        width:4,height:4,borderRadius:'50%',
+        background:'radial-gradient(circle at 35% 30%,#f8fafc 0%,#9aa6b4 55%,#334155 100%)',
+        boxShadow:'inset 0 0 0 0.5px rgba(0,0,0,0.45)'}}/>)}
+    </div>;
+  }
+  const goldenBg='linear-gradient(135deg,#92400e 0%,#f59e0b 30%,#fde68a 50%,#f59e0b 70%,#92400e 100%)';
   const goldenAnim=isH
     ?'golden-drop-h 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite'
     :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
   return <div style={{position:'absolute',...p,
-    background:golden?goldenBg:steel?steelBg:color,
+    background:golden?goldenBg:color,
     borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity,
-    boxShadow:golden?'none':steel?'inset 0 0 0 1px rgba(255,255,255,0.35),0 2px 6px rgba(0,0,0,0.3)':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
+    boxShadow:golden?'none':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
     transformOrigin:'center center',
     animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
 }
@@ -4039,7 +4190,7 @@ function BreakingWall({wkey,dark}){
   </div>;
 }
 function GBtn({onClick,children,dark,blue,outline}){
-  return <button onClick={e=>{playSound('click');if(onClick)onClick(e);}} style={{padding:'13px 16px',
+  return <button onClick={e=>{if(onClick)onClick(e);}} style={{padding:'13px 16px',
     background:dark?'#1e293b':blue?'#3b82f6':outline?'var(--card)':'var(--border)',
     color:dark||blue?'white':'var(--text)',
     border:`1.5px solid ${outline?'var(--border)':dark?'#1e293b':blue?'#3b82f6':'transparent'}`,
@@ -4069,6 +4220,9 @@ const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 
 // ── Mount ─────────────────────────────────────────────────
 const loader=document.getElementById('loader');
 if(loader)loader.style.display='none';
+document.addEventListener('pointerdown',e=>{
+  try{const b=e.target&&e.target.closest?e.target.closest('button'):null;if(b&&!b.disabled&&navigator.vibrate)navigator.vibrate(12);}catch(_){}
+},true);
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 
