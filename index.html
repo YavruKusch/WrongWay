@@ -595,6 +595,7 @@ function aiHammerBreak(aiPos,walls){
   const baseD=base.length-1;
   let best=null,bestGain=0;
   for(const k of walls){
+    if(isSteelWall(k))continue;
     const w2=new Set(walls);w2.delete(k);
     const np=bfsPath(aiPos,w2);
     if(!np)continue;
@@ -889,9 +890,13 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
   if(aiPathInit&&aiPathInit.length>1){
     const aiDI=aiPathInit.length-1;
     const humDI=humPathInit?humPathInit.length-1:999;
-    if(aiDI<=3&&humDI>aiDI+1){
-      const next=aiPathInit[1];
-      if(next.r!==humanPos.r||next.c!==humanPos.c)return{type:'move',pos:next};
+    // Reine Zielverfolgung (deterministisch, kein Kreiseln) wenn:
+    // - keine Mauern mehr zum Setzen (und kein lohnendes Item), ODER
+    // - kurzer Pfad mit Vorsprung, ODER
+    // - klar in Führung
+    if((aiBarr<=0&&!chaosItem)||(aiDI<=3&&humDI>aiDI+1)||humDI>aiDI+2){
+      const m=moveTowardGoal(aiPos,humanPos,walls,aiPathInit);
+      if(m)return{type:'move',pos:m};
     }
   }
 
