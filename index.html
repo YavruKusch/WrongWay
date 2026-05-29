@@ -1831,11 +1831,16 @@ function App(){
     }
   },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
 
-  // ── Hammer 2. Welle (bei Gesamtzug 65, fair beim Nachteil-Spieler) ──
+  // ── Hammer 2. Welle (erst wenn alle Wave-1-Hammer eingesammelt sind) ──
   useEffect(()=>{
     if(!hammerMode||hammerDrops!==2||winner||screen!=='game')return;
     if(hammerWave2Ref.current)return;
-    if(moveHist.length<65)return;
+    // Solange noch Wave-1-Hammer auf dem Feld → noch nicht spawnen
+    const wave1Remaining=hammers.some(h=>h.id.indexOf('hw2-')===-1);
+    if(wave1Remaining)return;
+    // Wave 1 muss mindestens einmal aufgehoben worden sein (nicht direkt am Spielstart)
+    const anyUsed=hammerUsed.A.w1||hammerUsed.B.w1;
+    if(!anyUsed)return;
     if(gameMode==='online'&&onlineRole!=='A')return; // nur Host spawnt
     const wave=makeHammersWave2(pA,pB,walls);
     if(wave.length){
@@ -1847,7 +1852,7 @@ function App(){
         doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,hammers:merged,hammerHeld:S.current.hammerHeld});
       }
     }
-  },[moveHist.length,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
+  },[hammers,hammerUsed,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
 
   // ── Random-Wand-Drop ──
   useEffect(()=>{
