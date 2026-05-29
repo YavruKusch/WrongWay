@@ -443,6 +443,20 @@ const INIT_A={r:ROWS-1,c:2},INIT_B={r:ROWS-1,c:6};
 const PC={A:'#ef4444',B:'#3b82f6'},PD={A:'#7f1d1d',B:'#1e3a5f'};
 const SESSION=Math.random().toString(36).slice(2,10);
 
+// ── 2v2 (Beta) ─────────────────────────────────────────────
+const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
+const CELL2=Math.max(26,Math.min(38,Math.floor((window.innerWidth-16)/COLS2)));
+// Tokens: A=Rot(links), B=Blau(rechts). Suffix 1=unten→oben(row0), 2=oben→unten(rowMax)
+const INIT_2V2={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
+const GOAL_2V2={A1:0,A2:ROWS2-1,B1:0,B2:ROWS2-1};
+const NEXT_2V2={A1:'A2',A2:'B1',B1:'B2',B2:'A1'};
+const ORDER_2V2=['A1','A2','B1','B2'];
+const TEAM_2V2=id=>id[0]; // 'A1'->'A'
+const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
+const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
+// Admin-Gate: ?admin=wrongway schaltet versteckte Beta-Modi frei (Passwort später anpassbar)
+function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='wrongway';}catch(e){return false;}}
+
 // ── i18n ───────────────────────────────────────────────────
 const LANGS={en:'English',de:'Deutsch',tr:'Türkçe',fr:'Français'};
 const I18N={
@@ -564,6 +578,86 @@ function bfsTo(from,target,walls){
         if(!vis.has(k)&&!edgeBlocked(cur.r,cur.c,nr,nc,walls)){vis.set(k,ck(cur.r,cur.c));q.push({r:nr,c:nc});}}}}
   return null;
 }
+// ── 2v2 Logik (generisch: Ziel = beliebige Zielreihe, eigene Brettmaße) ──
+function hasPathTo(pos,walls,goalRow,R,C){
+  const vis=new Set(),q=[pos];vis.add(ck(pos.r,pos.c));
+  while(q.length){const cur=q.shift();if(cur.r===goalRow)return true;
+    for(const d of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cur.r+d[0],nc=cur.c+d[1];
+      if(nr>=0&&nr<R&&nc>=0&&nc<C){const k=ck(nr,nc);
+        if(!vis.has(k)&&!edgeBlocked(cur.r,cur.c,nr,nc,walls)){vis.add(k);q.push({r:nr,c:nc});}}}}
+  return false;
+}
+// Anzahl kanten-disjunkter Wege start→Zielreihe via Max-Flow (Edmonds-Karp), gedeckelt bei cap
+function disjointPaths2(start,goalRow,walls,R,C,cap){
+  const SINK=R*C;const cp=new Map();
+  const add=(u,v,c)=>{cp.set(u+'>'+v,(cp.get(u+'>'+v)||0)+c);if(!cp.has(v+'>'+u))cp.set(v+'>'+u,0);};
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const u=r*C+c;
+    for(const d of[[1,0],[0,1]]){const nr=r+d[0],nc=c+d[1];
+      if(nr<R&&nc<C&&!edgeBlocked(r,c,nr,nc,walls)){const v=nr*C+nc;add(u,v,1);add(v,u,1);}}
+    if(r===goalRow)add(u,SINK,1);
+  }
+  const S=start.r*C+start.c;let flow=0;
+  while(flow<cap){
+    const prev=new Map();prev.set(S,-1);const q=[S];let found=false;
+    while(q.length){const u=q.shift();if(u===SINK){found=true;break;}
+      for(let v=0;v<=SINK;v++){const cc=cp.get(u+'>'+v);if(cc&&cc>0&&!prev.has(v)){prev.set(v,u);q.push(v);}}}
+    if(!found)break;
+    let v=SINK;while(prev.get(v)!==-1){const u=prev.get(v);cp.set(u+'>'+v,cp.get(u+'>'+v)-1);cp.set(v+'>'+u,(cp.get(v+'>'+u)||0)+1);v=u;}
+    flow++;
+  }
+  return flow;
+}
+// Gueltige Zuege fuer ein Token; occupied = Liste der anderen Token-Positionen (mit Sprung-Regel)
+function validMoves2(pos,occupied,walls,R,C){
+  const occ=k=>occupied.some(o=>o.r===k.r&&o.c===k.c);
+  const moves=[];
+  for(const d of[[-1,0],[1,0],[0,-1],[0,1]]){
+    const nr=pos.r+d[0],nc=pos.c+d[1];
+    if(nr<0||nr>=R||nc<0||nc>=C)continue;
+    if(edgeBlocked(pos.r,pos.c,nr,nc,walls))continue;
+    if(occ({r:nr,c:nc})){
+      const jr=nr+d[0],jc=nc+d[1];
+      const straight=jr>=0&&jr<R&&jc>=0&&jc<C&&!edgeBlocked(nr,nc,jr,jc,walls)&&!occ({r:jr,c:jc});
+      if(straight){moves.push({r:jr,c:jc});}
+      else for(const e of[[d[1],d[0]],[-d[1],-d[0]]]){
+        const sr=nr+e[0],sc=nc+e[1];
+        if(sr>=0&&sr<R&&sc>=0&&sc<C&&!edgeBlocked(nr,nc,sr,sc,walls)&&!occ({r:sr,c:sc}))moves.push({r:sr,c:sc});
+      }
+    }else moves.push({r:nr,c:nc});
+  }
+  return moves;
+}
+function snapWall2(x,y,orient,R,C,CL){
+  if(orient==='H'){const r=Math.min(Math.max(Math.round(y/CL-0.5),0),R-2),c=Math.min(Math.max(Math.floor(x/CL),0),C-2);return 'H-'+r+'-'+c;}
+  const c=Math.min(Math.max(Math.round(x/CL-0.5),0),C-2),r=Math.min(Math.max(Math.floor(y/CL),0),R-2);return 'V-'+r+'-'+c;
+}
+function wallPos2(key,CL){
+  const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
+  return type==='H'?{left:c*CL,top:(r+1)*CL-WW2/2,width:2*CL,height:WW2}:{left:(c+1)*CL-WW2/2,top:r*CL,width:WW2,height:2*CL};
+}
+// Schnelle Vorschau-Pruefung (>=1 Weg fuer alle 4) – fuer Drag-Farbe
+function quickValidWall2(key,walls,tokens,R,C){
+  if(walls.has(key))return false;
+  const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
+  if(type==='H'){if(walls.has('H-'+r+'-'+(c-1))||walls.has('H-'+r+'-'+(c+1)))return false;if(walls.has('V-'+r+'-'+c))return false;}
+  else{if(walls.has('V-'+(r-1)+'-'+c)||walls.has('V-'+(r+1)+'-'+c))return false;if(walls.has('H-'+r+'-'+c))return false;}
+  const next=new Set([...walls,key]);
+  for(const id of ORDER_2V2)if(!hasPathTo(tokens[id],next,GOAL_2V2[id],R,C))return false;
+  return true;
+}
+// Volle Pruefung beim Setzen: jeder Token behaelt >=MIN_PATHS_2V2 disjunkte Wege
+function tryWall2(key,walls,tokens,R,C){
+  if(walls.has(key))return null;
+  const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
+  if(type==='H'){if(walls.has('H-'+r+'-'+(c-1))||walls.has('H-'+r+'-'+(c+1)))return null;if(walls.has('V-'+r+'-'+c))return null;}
+  else{if(walls.has('V-'+(r-1)+'-'+c)||walls.has('V-'+(r+1)+'-'+c))return null;if(walls.has('H-'+r+'-'+c))return null;}
+  const next=new Set([...walls,key]);
+  for(const id of ORDER_2V2)if(disjointPaths2(tokens[id],GOAL_2V2[id],next,R,C,MIN_PATHS_2V2)<MIN_PATHS_2V2)return null;
+  return next;
+}
+
 let _hamCtx=null; // {hammers, seekers:[{r,c}]} – gesetzt vor tryWall, danach null
 function buildHamCtx(hammers,hammerHeld,pA,pB){
   if(!hammers||!hammers.length)return null;
@@ -2639,6 +2733,9 @@ function App(){
   const gW=dragging&&dragging.orient==='H'?CELL*2:WW;
   const gH=dragging&&dragging.orient==='V'?CELL*2:WW;
 
+  // ── 2v2 (Beta) Mount ──
+  if(screen==='twovtwo')return <TwoVTwo t={t} darkMode={darkMode} onExit={()=>{setNavDir('back');setScreen('menu');}}/>;
+
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
     // Aktuellen Modus formatieren
@@ -2696,6 +2793,16 @@ function App(){
         <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PeopleIcon size={16}/>{t('friendPlay')}</span></GBtn>
         <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><BotIcon size={16}/>{t('vsBot')}</span></GBtn>
         <GBtn onClick={()=>initGame('pvp')} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={16}/>{t('localPlay')}</span></GBtn>
+        {isAdmin()&&(
+          <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
+            background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
+            border:'none',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,width:'100%',
+            fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
+            display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,position:'relative'}}>
+            <PeopleIcon size={16}/>2 vs 2
+            <span style={{fontSize:8,fontWeight:800,background:'rgba(255,255,255,0.25)',padding:'2px 6px',borderRadius:6,letterSpacing:0.5}}>BETA</span>
+          </button>
+        )}
       </div>
       {showOptions&&(
         <div onClick={()=>setShowOptions(false)} style={{position:'fixed',inset:0,
@@ -4276,6 +4383,16 @@ function Wall({wkey,color,opacity,animate,golden,steel}){
     transformOrigin:'center center',
     animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
 }
+function Wall2({wkey,color,opacity,animate}){
+  const p=wallPos2(wkey,CELL2);
+  const isH=wkey[0]==='H';
+  const enterAnim=isH?'wall-enter-h':'wall-enter-v';
+  return <div style={{position:'absolute',...p,background:color,
+    borderRadius:WW2/2,zIndex:10,pointerEvents:'none',opacity,
+    boxShadow:opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
+    transformOrigin:'center center',
+    animation:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
+}
 function MenuBG({dark}){
   // Treibende Mauer-Segmente (Peripherie, nicht im Zentrum) – thematisch zum Spielbrett
   const bars=[
@@ -4391,6 +4508,652 @@ const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 
   background:'var(--card)',border:'1.5px solid var(--border)',color:'var(--text)',
   fontSize:24,fontWeight:800,lineHeight:1,cursor:'pointer',paddingBottom:3,
   boxShadow:'var(--shadow-soft)',fontFamily:'system-ui,-apple-system,sans-serif'};
+
+// ── 2v2 (Beta) – eigenständige Komponente mit Online-Lobby ──
+function TwoVTwo({t,darkMode,onExit}){
+  const[sub,setSub]=React.useState('config');
+  const[tokens,setTokens]=React.useState({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+  const[walls,setWalls]=React.useState(new Set());
+  const[barr,setBarr]=React.useState({A:BARR2,B:BARR2});
+  const[turn,setTurn]=React.useState('A1');
+  const[winner,setWinner]=React.useState(null);
+  const[flash,setFlash]=React.useState('');
+  const[dragging,setDragging]=React.useState(null);
+  const[ghostPos,setGhostPos]=React.useState({x:0,y:0});
+  const[previewKey,setPreviewKey]=React.useState(null);
+  const[previewValid,setPreviewValid]=React.useState(true);
+  const[snapPos,setSnapPos]=React.useState(null);
+  const[celebrating,setCelebrating]=React.useState(false);
+  const[danceStyle,setDanceStyle]=React.useState('robot');
+  const[danceSpeed,setDanceSpeed]=React.useState('slow');
+  // Online-State
+  const[isOnline,setIsOnline]=React.useState(false);
+  const[isHost,setIsHost]=React.useState(false);
+  const[lobbyCode,setLobbyCode]=React.useState('');
+  const[joinInput,setJoinInput]=React.useState('');
+  const[joinError,setJoinError]=React.useState('');
+  const[lobbyPlayers,setLobbyPlayers]=React.useState({});
+  const[myToken,setMyToken]=React.useState(null);
+  const[playerMap,setPlayerMap]=React.useState({});
+  const[codeFlash,setCodeFlash]=React.useState(false);
+  const[lobbyLoading,setLobbyLoading]=React.useState(false);
+
+  const myUidRef=React.useRef(null);
+  if(!myUidRef.current){
+    try{let u=localStorage.getItem('ww_uid');if(!u){u='P'+Math.random().toString(36).slice(2,6).toUpperCase();localStorage.setItem('ww_uid',u);}myUidRef.current=u;}
+    catch(e){myUidRef.current='P'+Math.random().toString(36).slice(2,6).toUpperCase();}
+  }
+  const uid=myUidRef.current;
+  const gridRef=React.useRef(null);
+  const snapPosRef=React.useRef(null);
+  const St=React.useRef({});
+  St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap};
+  React.useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
+
+  const lKey=c=>'barricade_2v2_lobby_'+c;
+  const gKey=c=>'barricade_2v2_game_'+c;
+
+  const myTeam=myToken?TEAM_2V2(myToken):null;
+  const team=TEAM_2V2(turn);
+  const cur=tokens[turn];
+  const others=ORDER_2V2.filter(id=>id!==turn).map(id=>tokens[id]);
+  const myTurnNow=!winner&&sub==='game'&&(!isOnline||turn===myToken);
+  const canPlace=myTurnNow&&barr[isOnline?(myTeam||team):team]>0;
+  const teamName=tm=>tm==='A'?t('red'):t('blue');
+  const sz=Math.round(CELL2*0.74),off=(CELL2-sz)/2;
+
+  const triggerWin=tm=>{
+    playSound('win');setWinner(tm);
+    setDanceStyle(Math.random()<0.5?'robot':'twerk');
+    setDanceSpeed(Math.random()<0.5?'fast':'slow');
+    setTimeout(()=>playSound('laugh'),350);
+    setCelebrating(true);setTimeout(()=>setCelebrating(false),2200);
+  };
+
+  const doSync2v2=update=>{
+    const{lobbyCode:lc,isOnline:io,playerMap:pm}=St.current;
+    if(!io||!lc)return;
+    stoSet(gKey(lc),{tokens:update.tokens,walls:[...update.walls],barr:update.barr,turn:update.turn,winner:update.winner||null,players:pm,lastUpdated:Date.now()});
+  };
+
+  // ── Online: Lobby erstellen ──
+  const createLobby=async()=>{
+    setLobbyLoading(true);setJoinError('');
+    const code=randId(4);
+    const lobby={host:uid,players:{[uid]:{team:'A',name:uid,joinedAt:Date.now()}},status:'waiting',lastUpdated:Date.now()};
+    const ok=await stoSet(lKey(code),lobby);
+    setLobbyLoading(false);
+    if(!ok){setJoinError('Firebase-Fehler – Verbindung prüfen');return;}
+    setLobbyCode(code);setIsHost(true);setIsOnline(true);setLobbyPlayers(lobby.players);
+    setSub('lobby');
+  };
+
+  // ── Online: Lobby beitreten ──
+  const joinLobby=async()=>{
+    const code=joinInput.trim().toUpperCase();
+    if(!/^[A-Z0-9]{4}$/.test(code)){setJoinError('Ungültiger Code (4 Zeichen)');return;}
+    setJoinError('');setLobbyLoading(true);
+    const data=await stoGet(lKey(code));
+    setLobbyLoading(false);
+    if(!data){setJoinError('Lobby nicht gefunden');return;}
+    if(data.status!=='waiting'){setJoinError('Lobby bereits gestartet');return;}
+    const ps=data.players||{};
+    const pCount=Object.keys(ps).length;
+    if(pCount>=4&&!ps[uid]){setJoinError('Lobby voll (max. 4 Spieler)');return;}
+    const aCount=Object.values(ps).filter(p=>p.team==='A').length;
+    const bCount=Object.values(ps).filter(p=>p.team==='B').length;
+    const initTeam=aCount<=bCount?'A':'B';
+    const updated={...data,players:{...ps,[uid]:{team:initTeam,name:uid,joinedAt:Date.now()}},lastUpdated:Date.now()};
+    await stoSet(lKey(code),updated);
+    setLobbyCode(code);setIsHost(data.host===uid);setIsOnline(true);setLobbyPlayers(updated.players);
+    setSub('lobby');
+  };
+
+  // ── Online: Team wechseln ──
+  const switchTeam=async()=>{
+    const lc=St.current.lobbyCode;
+    const data=await stoGet(lKey(lc));
+    if(!data||!data.players)return;
+    const myP=data.players[uid];if(!myP)return;
+    const newTeam=myP.team==='A'?'B':'A';
+    const destCount=Object.values(data.players).filter(p=>p.team===newTeam).length;
+    if(destCount>=2){setFlash('Team voll!');setTimeout(()=>setFlash(''),2000);return;}
+    stoSet(lKey(lc),{...data,players:{...data.players,[uid]:{...myP,team:newTeam}},lastUpdated:Date.now()});
+  };
+
+  // ── Online: Lobby verlassen ──
+  const leaveLobby=async()=>{
+    const lc=St.current.lobbyCode;
+    if(St.current.isHost){await stoDel(lKey(lc));}
+    else{
+      const data=await stoGet(lKey(lc));
+      if(data&&data.players){const ps={...data.players};delete ps[uid];stoSet(lKey(lc),{...data,players:ps,lastUpdated:Date.now()});}
+    }
+    setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setMyToken(null);setPlayerMap({});
+    setSub('config');
+  };
+
+  // ── Online: Spiel starten (Host) ──
+  const startOnlineGame=async()=>{
+    const lc=St.current.lobbyCode;
+    const data=await stoGet(lKey(lc));if(!data)return;
+    const ps=data.players||{};
+    const aP=Object.entries(ps).filter(function(e){return e[1].team==='A';}).sort(function(a,b){return a[1].joinedAt-b[1].joinedAt;});
+    const bP=Object.entries(ps).filter(function(e){return e[1].team==='B';}).sort(function(a,b){return a[1].joinedAt-b[1].joinedAt;});
+    if(aP.length!==2||bP.length!==2){setFlash('Genau 2 pro Team nötig!');setTimeout(()=>setFlash(''),3000);return;}
+    const pm={};pm[aP[0][0]]='A1';pm[aP[1][0]]='A2';pm[bP[0][0]]='B1';pm[bP[1][0]]='B2';
+    const startToken=Math.random()<0.5?'A1':'B1';
+    const initTok={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
+    const gs={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:startToken,winner:null,players:pm,lastUpdated:Date.now()};
+    await stoSet(gKey(lc),gs);
+    stoSet(lKey(lc),{...data,status:'playing',playerMap:pm,lastUpdated:Date.now()});
+  };
+
+  // ── Lobby-Listener ──
+  React.useEffect(()=>{
+    if(sub!=='lobby'||!lobbyCode)return;
+    const ref=window.db.ref(lKey(lobbyCode));
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();if(!v)return;
+      let data;try{data=JSON.parse(v);}catch(e){return;}
+      setLobbyPlayers(data.players||{});
+      if(data.status==='playing'&&data.playerMap){
+        const tok=data.playerMap[uid];
+        if(tok){setMyToken(tok);setPlayerMap(data.playerMap);setSub('game');}
+      }
+    });
+    return function(){ref.off('value',cb);};
+  },[sub,lobbyCode]);
+
+  // ── Game-Listener (online) ──
+  React.useEffect(()=>{
+    if(sub!=='game'||!isOnline||!lobbyCode)return;
+    const ref=window.db.ref(gKey(lobbyCode));
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();if(!v)return;
+      let gs;try{gs=JSON.parse(v);}catch(e){return;}
+      if(gs.tokens)setTokens(gs.tokens);
+      if(gs.walls)setWalls(new Set(gs.walls));
+      if(gs.barr)setBarr(gs.barr);
+      if(gs.turn)setTurn(gs.turn);
+      if(gs.players)setPlayerMap(gs.players);
+      if(gs.winner&&!St.current.winner)triggerWin(gs.winner);
+      else if(gs.winner)setWinner(gs.winner);
+    });
+    return function(){ref.off('value',cb);};
+  },[sub,isOnline,lobbyCode]);
+
+  // ── Bewegen ──
+  const moveTo=(r,c)=>{
+    if(!myTurnNow||dragging)return;
+    if(!validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c))return;
+    playSound('move');
+    const nt={A1:tokens.A1,A2:tokens.A2,B1:tokens.B1,B2:tokens.B2};
+    nt[turn]={r,c};
+    setTokens(nt);
+    const nextTurn=NEXT_2V2[turn];
+    if(r===GOAL_2V2[turn]){
+      const tm=TEAM_2V2(turn);
+      if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:tm});
+      triggerWin(tm);return;
+    }
+    setFlash('');setTurn(nextTurn);
+    if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:null});
+  };
+
+  const validDot=(r,c)=>myTurnNow&&!dragging&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
+
+  const startDrag=(e,orient)=>{
+    if(!canPlace)return;e.preventDefault();
+    const pt=e.touches?e.touches[0]:e;
+    setDragging({orient});setGhostPos({x:pt.clientX,y:pt.clientY});
+  };
+
+  // ── Drag-Wand ──
+  React.useEffect(()=>{
+    if(!dragging)return;
+    const OFFSET=90;
+    const getRel=(x,y)=>{if(!gridRef.current)return null;const rect=gridRef.current.getBoundingClientRect();return{x:x-rect.left,y:y-rect.top};};
+    const onMove=(x,y)=>{
+      setGhostPos({x,y});
+      const rect=gridRef.current?gridRef.current.getBoundingClientRect():null;
+      const inZone=rect&&y<=rect.bottom+20;
+      const rel=getRel(x,y-OFFSET);
+      if(inZone&&rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=0&&rel.y<=ROWS2*CELL2){
+        const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
+        setPreviewKey(key);
+        setPreviewValid(quickValidWall2(key,St.current.walls,St.current.tokens,ROWS2,COLS2));
+        const wp=wallPos2(key,CELL2);
+        setSnapPos({x:rect.left+wp.left+wp.width/2,y:rect.top+wp.top+wp.height/2});
+      }else{setPreviewKey(null);setSnapPos(null);}
+    };
+    const onEnd=(x,y)=>{
+      if(snapPosRef.current){
+        const rel=getRel(x,y-OFFSET);
+        if(rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=0&&rel.y<=ROWS2*CELL2){
+          const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
+          const{walls:w,tokens:tk,barr:bl,turn:tn,isOnline:io}=St.current;
+          const tmm=TEAM_2V2(tn);
+          if(bl[tmm]>0){
+            const next=tryWall2(key,w,tk,ROWS2,COLS2);
+            if(next){
+              playSound('wall');
+              const nextTurn=NEXT_2V2[tn];
+              const newBl={A:bl.A,B:bl.B};newBl[tmm]=bl[tmm]-1;
+              setWalls(next);setBarr(newBl);setFlash('');setTurn(nextTurn);
+              if(io)doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null});
+            }else setFlash(t('invalidPos'));
+          }
+        }
+      }
+      setDragging(null);setPreviewKey(null);setSnapPos(null);
+    };
+    const mm=e=>onMove(e.clientX,e.clientY);
+    const mu=e=>onEnd(e.clientX,e.clientY);
+    const tmv=e=>{e.preventDefault();const p=e.touches[0];onMove(p.clientX,p.clientY);};
+    const te=e=>{e.preventDefault();const p=e.changedTouches[0];onEnd(p.clientX,p.clientY);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+    document.addEventListener('touchmove',tmv,{passive:false});document.addEventListener('touchend',te);
+    return function(){document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('touchmove',tmv);document.removeEventListener('touchend',te);};
+  },[dragging]);
+
+  // ── CONFIG ──
+  if(sub==='config'){
+    return(
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={onExit} style={backChevron}>‹</button>
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+          <div style={{textAlign:'center',marginBottom:18}}>
+            <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}>
+              <div style={{width:64,height:64,borderRadius:18,
+                background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 50%,#3b82f6 100%)',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                boxShadow:'0 10px 28px rgba(99,102,241,0.3)'}}>
+                <PeopleIcon size={32} color="white"/>
+              </div>
+            </div>
+            <div style={{fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.8}}>2 vs 2</div>
+            <div style={{fontSize:10,fontWeight:700,color:'#f59e0b',letterSpacing:1.5,marginTop:4}}>BETA · ADMIN</div>
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'14px 16px',border:'1.5px solid var(--border)',marginBottom:16,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
+              <div style={{position:'relative',width:COLS2*9,height:ROWS2*9,borderRadius:8,overflow:'hidden',border:'1px solid var(--border)',background:'var(--grid-bg)'}}>
+                <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>
+                <div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>
+                {[['A1',{r:ROWS2-1,c:2}],['A2',{r:0,c:2}],['B1',{r:ROWS2-1,c:COLS2-3}],['B2',{r:0,c:COLS2-3}]].map(function(en){
+                  return <div key={en[0]} style={{position:'absolute',left:en[1].c*9+1,top:en[1].r*9+1,width:7,height:7,borderRadius:'50%',background:PC2[en[0]]}}/>;
+                })}
+              </div>
+            </div>
+            <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.8,textAlign:'center'}}>
+              11×15 Feld · 25 Barrikaden/Team<br/>
+              Rot1→Rot2→Blau1→Blau2 · Min. 2 Wege offen
+            </div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <button onClick={()=>setSub('online')} style={{padding:'14px 16px',
+              background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
+              border:'none',borderRadius:12,cursor:'pointer',fontWeight:800,fontSize:14,
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'0 2px 12px rgba(99,102,241,0.3)',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              <GlobeIcon size={16}/>Online-Lobby (4 Spieler)
+            </button>
+            <button onClick={()=>{
+              setIsOnline(false);setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+              setWalls(new Set());setBarr({A:BARR2,B:BARR2});
+              setTurn(Math.random()<0.5?'A1':'B1');setWinner(null);setFlash('');setCelebrating(false);
+              setSub('game');
+            }} style={{padding:'12px 16px',background:'var(--card)',color:'var(--text)',
+              border:'1.5px solid var(--border)',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              <PhoneIcon size={15}/>Lokal testen (Hotseat)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── ONLINE: Erstellen / Beitreten ──
+  if(sub==='online'){
+    return(
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={()=>setSub('config')} style={backChevron}>‹</button>
+        <div style={{width:'100%',maxWidth:320,position:'relative',zIndex:1}}>
+          <div style={{textAlign:'center',marginBottom:22}}>
+            <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>Online 2 vs 2</div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>Lobby erstellen oder beitreten</div>
+          </div>
+
+          {/* Erstellen */}
+          <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>NEU ERSTELLEN</div>
+            <button onClick={createLobby} disabled={lobbyLoading} style={{width:'100%',padding:'13px',
+              background:lobbyLoading?'var(--border)':'#3b82f6',color:lobbyLoading?'var(--subtle)':'white',
+              border:'none',borderRadius:10,cursor:lobbyLoading?'not-allowed':'pointer',
+              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:lobbyLoading?'none':'0 2px 8px rgba(59,130,246,0.3)'}}>
+              {lobbyLoading?'Erstelle...':'+ Lobby erstellen'}
+            </button>
+          </div>
+
+          {/* Beitreten */}
+          <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',boxShadow:'var(--shadow-soft)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>MIT CODE BEITRETEN</div>
+            <input
+              value={joinInput}
+              onChange={e=>setJoinInput(e.target.value.toUpperCase().slice(0,4))}
+              placeholder="Code eingeben..."
+              maxLength={4}
+              style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:20,fontWeight:800,
+                textAlign:'center',letterSpacing:4,textTransform:'uppercase',
+                background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:10}}
+            />
+            <button onClick={joinLobby} disabled={lobbyLoading||joinInput.length!==4} style={{width:'100%',padding:'13px',
+              background:lobbyLoading||joinInput.length!==4?'var(--border)':'#1e293b',
+              color:lobbyLoading||joinInput.length!==4?'var(--subtle)':'white',
+              border:'none',borderRadius:10,cursor:lobbyLoading||joinInput.length!==4?'not-allowed':'pointer',
+              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lobbyLoading?'Suche...':'Beitreten →'}
+            </button>
+            {joinError?<div style={{marginTop:10,fontSize:12,color:'#ef4444',fontWeight:600,textAlign:'center'}}>{joinError}</div>:null}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LOBBY: Warteraum mit Team-Auswahl ──
+  if(sub==='lobby'){
+    const ps=lobbyPlayers;
+    const entries=Object.entries(ps);
+    const aPlayers=entries.filter(function(e){return e[1].team==='A';});
+    const bPlayers=entries.filter(function(e){return e[1].team==='B';});
+    const total=entries.length;
+    const canStart=isHost&&aPlayers.length===2&&bPlayers.length===2;
+    const myEntry=ps[uid];
+    const myCurrentTeam=myEntry?myEntry.team:null;
+
+    const copyCode=()=>{
+      try{navigator.clipboard.writeText(lobbyCode);}catch(e){}
+      setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);
+    };
+    // Hilfsfunktion: Spielerzeile rendern
+    const PlayerRow=function({pUid,pData}){
+      const isMe=pUid===uid;
+      const col=pData.team==='A'?'#ef4444':'#3b82f6';
+      return(
+        <div style={{display:'flex',alignItems:'center',gap:8,padding:'9px 12px',borderRadius:10,
+          background:isMe?'var(--bg)':'transparent',
+          border:isMe?'1.5px solid var(--border)':'1.5px solid transparent',marginBottom:4}}>
+          <div style={{width:28,height:28,borderRadius:'50%',background:col,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontSize:11,fontWeight:800,color:'white',flexShrink:0}}>{pUid.slice(0,2)}</div>
+          <div style={{flex:1,fontSize:12,fontWeight:700,color:'var(--text)',minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {pUid}{isMe?' (Du)':''}{pUid===St.current.isHost&&false?' 👑':''}
+          </div>
+          {isMe&&(
+            <button onClick={switchTeam} style={{padding:'5px 10px',borderRadius:8,
+              background:'var(--bg)',border:'1.5px solid var(--border)',
+              fontSize:11,fontWeight:700,cursor:'pointer',color:'var(--text)',
+              fontFamily:'system-ui,-apple-system,sans-serif',whiteSpace:'nowrap'}}>
+              → {myCurrentTeam==='A'?t('blue'):t('red')}
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    return(
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={leaveLobby} style={backChevron}>‹</button>
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+
+          {/* Code + Teilen */}
+          <div style={{textAlign:'center',marginBottom:16}}>
+            <div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,letterSpacing:1,marginBottom:6}}>LOBBY-CODE</div>
+            <button onClick={copyCode} style={{
+              display:'inline-flex',alignItems:'center',gap:10,
+              background:'var(--card)',border:'2px solid var(--border)',borderRadius:14,
+              padding:'10px 20px',cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{fontSize:28,fontWeight:900,letterSpacing:6,color:'var(--text)'}}>{lobbyCode}</span>
+              <span style={{fontSize:11,fontWeight:700,color:codeFlash?'#16a34a':'var(--subtle)'}}>{codeFlash?'Kopiert!':'Kopieren'}</span>
+            </button>
+            <div style={{fontSize:10,color:'var(--subtle)',marginTop:8,fontWeight:500}}>Teile diesen Code mit deinen Freunden</div>
+          </div>
+
+          {/* Teams */}
+          <div style={{display:'flex',gap:10,marginBottom:14}}>
+            {['A','B'].map(tm=>{
+              const tPlayers=tm==='A'?aPlayers:bPlayers;
+              const col=tm==='A'?'#ef4444':'#3b82f6';
+              const slots=[0,1];
+              return(
+                <div key={tm} style={{flex:1,background:'var(--card)',borderRadius:14,
+                  border:'1.5px solid var(--border)',padding:'12px 10px',
+                  boxShadow:'var(--shadow-soft)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:col}}/>
+                    <div style={{fontSize:12,fontWeight:800,color:col}}>{teamName(tm)}</div>
+                    <div style={{marginLeft:'auto',fontSize:10,color:'var(--subtle)',fontWeight:600}}>{tPlayers.length}/2</div>
+                  </div>
+                  {slots.map(i=>{
+                    const entry=tPlayers[i];
+                    if(!entry){
+                      return(
+                        <div key={i} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,
+                          border:'1.5px dashed var(--border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          <span style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>Wartet...</span>
+                        </div>
+                      );
+                    }
+                    const pUid=entry[0];const pData=entry[1];const isMe=pUid===uid;
+                    return(
+                      <div key={pUid} style={{padding:'7px 10px',borderRadius:8,marginBottom:4,
+                        background:isMe?'var(--bg)':'transparent',
+                        border:isMe?'1.5px solid var(--border)':'1.5px solid transparent',
+                        display:'flex',alignItems:'center',gap:6}}>
+                        <div style={{width:22,height:22,borderRadius:'50%',background:col,flexShrink:0,
+                          display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800,color:'white'}}>
+                          {pUid.slice(0,2)}
+                        </div>
+                        <span style={{flex:1,fontSize:11,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {pUid}{isMe?' (Du)':''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {myCurrentTeam!==tm&&(
+                    <button onClick={switchTeam} style={{width:'100%',marginTop:4,padding:'6px',
+                      background:'transparent',border:'1.5px solid '+col,borderRadius:8,
+                      color:col,fontWeight:700,fontSize:11,cursor:'pointer',
+                      fontFamily:'system-ui,-apple-system,sans-serif',opacity:tPlayers.length>=2?0.35:1}}
+                      disabled={tPlayers.length>=2}>
+                      → Zu {teamName(tm)}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Status + Start */}
+          <div style={{background:'var(--card)',borderRadius:14,padding:'12px 16px',border:'1.5px solid var(--border)',marginBottom:10,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>Spieler: {total}/4</div>
+              <div style={{display:'flex',gap:4}}>
+                {[0,1,2,3].map(i=>(
+                  <div key={i} style={{width:10,height:10,borderRadius:'50%',
+                    background:i<total?'#16a34a':'var(--border)'}}/>
+                ))}
+              </div>
+            </div>
+            {canStart?(
+              <button onClick={startOnlineGame} style={{width:'100%',padding:'13px',
+                background:'#16a34a',color:'white',border:'none',borderRadius:10,
+                cursor:'pointer',fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif',
+                boxShadow:'0 2px 10px rgba(22,163,74,0.35)'}}>
+                🚀 Spiel starten
+              </button>
+            ):(
+              <div style={{textAlign:'center',fontSize:12,fontWeight:600,color:'var(--subtle)',padding:'8px 0'}}>
+                {isHost?(aPlayers.length===2&&bPlayers.length===2?'Bereit!':'Warte auf Spieler...'):'Warte auf Host...'}
+              </div>
+            )}
+          </div>
+          {flash?<div style={{textAlign:'center',fontSize:12,color:'#ef4444',fontWeight:700}}>{flash}</div>:null}
+          <button onClick={leaveLobby} style={{width:'100%',padding:'10px',background:'transparent',
+            border:'1.5px solid var(--border)',borderRadius:10,cursor:'pointer',
+            color:'var(--subtle)',fontWeight:600,fontSize:13,
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>Verlassen</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── GAME ──
+  const activeTm=isOnline?(myTurnNow?myTeam:TEAM_2V2(turn)):team;
+  return(
+    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}>‹</button>
+
+      {/* Team-Status */}
+      <div style={{display:'flex',gap:8,marginBottom:8,marginTop:6,position:'relative',zIndex:1,width:Math.min(COLS2*CELL2,window.innerWidth-16),maxWidth:'96vw'}}>
+        {['A','B'].map(tm=>{
+          const active=TEAM_2V2(turn)===tm&&!winner;
+          const col=tm==='A'?'#ef4444':'#3b82f6';
+          const isMy=isOnline&&myTeam===tm;
+          return(
+            <div key={tm} style={{flex:1,padding:'7px 10px',borderRadius:12,
+              background:active?tm==='A'?'rgba(239,68,68,0.12)':'rgba(59,130,246,0.12)':'var(--card)',
+              border:'1.5px solid '+(active?col:'var(--border)'),
+              display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.2s'}}>
+              <span style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:800,color:col}}>
+                <span style={{width:8,height:8,borderRadius:'50%',background:col}}/>
+                {teamName(tm)}{isMy?' ★':''}
+                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?'①':'②'}</span>}
+              </span>
+              <span style={{fontSize:11,fontWeight:800,color:'var(--text)',display:'flex',alignItems:'center',gap:2}}>{barr[tm]}<BrickMini size={10}/></span>
+            </div>
+          );
+        })}
+      </div>
+
+      {isOnline&&!myTurnNow&&!winner&&(
+        <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:4,letterSpacing:0.5}}>
+          {teamName(TEAM_2V2(turn))} · Token {turn[1]} ist dran...
+        </div>
+      )}
+
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>▲ ZIEL ▲</div>
+
+      <div ref={gridRef} style={{position:'relative',width:COLS2*CELL2,height:ROWS2*CELL2,touchAction:'auto',...sGrid}}>
+        {Array.from({length:ROWS2},function(_,r){return Array.from({length:COLS2},function(_,c){
+          const vDot=validDot(r,c);
+          const isGoal=r===0||r===ROWS2-1;
+          let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
+          if(isGoal)bg='var(--goal)';
+          return(
+            <div key={r+'-'+c} onClick={()=>moveTo(r,c)}
+              style={{position:'absolute',left:c*CELL2,top:r*CELL2,width:CELL2,height:CELL2,
+                background:bg,border:'1px solid var(--cell-line)',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
+              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
+              {r===ROWS2-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
+              {vDot&&<div style={{width:9,height:9,borderRadius:'50%',background:PC2[turn],opacity:0.34,pointerEvents:'none'}}/>}
+            </div>
+          );
+        });})}
+        {Array.from(walls).map(k=><Wall2 key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate/>)}
+        {previewKey&&<Wall2 wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
+        {ORDER_2V2.map(function(id){
+          const pos=tokens[id];const active=turn===id&&!winner;
+          return(
+            <div key={id} style={{position:'absolute',left:pos.c*CELL2+off,top:pos.r*CELL2+off,
+              width:sz,height:sz,
+              transition:'left 0.18s cubic-bezier(0.25,0.46,0.45,0.94),top 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
+              zIndex:20,pointerEvents:'none'}}>
+              {active&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',background:PC2[id],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
+              <Piece color={PC2[id]} dark={PD2[id]}/>
+              <div style={{position:'absolute',right:-2,bottom:-2,width:13,height:13,borderRadius:'50%',
+                background:'white',color:PD2[id],fontSize:9,fontWeight:900,lineHeight:'13px',textAlign:'center',
+                boxShadow:'0 1px 3px rgba(0,0,0,0.3)',fontFamily:'system-ui,sans-serif'}}>{id[1]}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginTop:2}}>▼ ZIEL ▼</div>
+
+      {flash&&<div style={{position:'fixed',bottom:120,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
+        <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
+      </div>}
+
+      {celebrating&&winner&&(
+        <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,pointerEvents:'none',background:'rgba(0,0,0,0.15)'}}>
+          <div style={{animation:'person-grow 0.3s ease-out both'}}>
+            <WinnerPerson color={winner==='A'?'#ef4444':'#3b82f6'} dark={winner==='A'?'#7f1d1d':'#1e3a5f'} speed={danceSpeed} dance={danceStyle}/>
+          </div>
+        </div>
+      )}
+
+      {winner&&!celebrating&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500}}
+          onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}}>
+          <Confetti color={winner==='A'?'#ef4444':'#3b82f6'}/>
+          <div style={{background:'var(--card)',borderRadius:22,padding:'32px 44px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.25)',position:'relative'}}>
+            <div style={{marginBottom:10,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}><TrophyIcon size={48}/></div>
+            <div style={{fontSize:22,fontWeight:900,color:winner==='A'?'#ef4444':'#3b82f6',letterSpacing:-0.5}}>Team {teamName(winner)} {t('wins')}</div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginTop:10,fontWeight:500}}>{t('tapContinue')}</div>
+          </div>
+        </div>
+      )}
+
+      {!winner&&(
+        <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
+          display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
+          <div style={{position:'absolute',bottom:'100%',marginBottom:5,fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
+            background:darkMode?'rgba(20,30,50,0.7)':'rgba(255,255,255,0.72)',backdropFilter:'blur(8px)',
+            padding:'2px 10px',borderRadius:20,border:'1px solid '+(darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)')}}>
+            {canPlace?teamName(isOnline?myTeam:team)+': '+barr[isOnline?myTeam:team]+' '+t('wallsLeft'):t('opponentTurn')}
+          </div>
+          {['H','V'].map(function(orient){
+            const col=isOnline?myTeam:team;
+            return(
+              <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
+                style={{pointerEvents:'all',width:orient==='H'?84:42,height:orient==='V'?54:42,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
+                  background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
+                  backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+                  border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
+                  opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
+                <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
+                  width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {dragging&&(
+        <div style={{position:'fixed',left:ghostPos.x,top:ghostPos.y-90,transform:'translate(-50%,-50%)',zIndex:400,pointerEvents:'none',opacity:0.85}}>
+          <div style={{background:(isOnline?myTeam:team)==='A'?'#ef4444':'#3b82f6',borderRadius:4,
+            width:dragging.orient==='H'?2*CELL2:WW2,height:dragging.orient==='V'?2*CELL2:WW2,
+            boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Mount ─────────────────────────────────────────────────
 const loader=document.getElementById('loader');
