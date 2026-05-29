@@ -5142,11 +5142,19 @@ function TwoVTwo({t,darkMode,onExit}){
       )}
 
       {dragging&&(
-        <div style={{position:'fixed',left:ghostPos.x,top:ghostPos.y-90,transform:'translate(-50%,-50%)',zIndex:400,pointerEvents:'none',opacity:0.85}}>
-          <div style={{background:(isOnline?myTeam:team)==='A'?'#ef4444':'#3b82f6',borderRadius:4,
-            width:dragging.orient==='H'?2*CELL2:WW2,height:dragging.orient==='V'?2*CELL2:WW2,
-            boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
-        </div>
+        snapPos
+          ? <div style={{position:'fixed',pointerEvents:'none',zIndex:400,borderRadius:WW2/2,opacity:0.88,
+              width:dragging.orient==='H'?CELL2*2:WW2,height:dragging.orient==='V'?CELL2*2:WW2,
+              background:previewValid?'#f59e0b':'#ef4444',
+              left:snapPos.x-(dragging.orient==='H'?CELL2:WW2/2),
+              top:snapPos.y-(dragging.orient==='V'?CELL2:WW2/2),
+              transition:'left 0.05s,top 0.05s,background 0.12s'}}/>
+          : <div style={{position:'fixed',pointerEvents:'none',zIndex:400,borderRadius:WW2/2,opacity:0.75,
+              width:dragging.orient==='H'?CELL2*2:WW2,height:dragging.orient==='V'?CELL2*2:WW2,
+              background:(isOnline?myTeam:team)==='A'?'#ef4444':'#3b82f6',
+              left:ghostPos.x-(dragging.orient==='H'?CELL2:WW2/2),
+              top:ghostPos.y-(dragging.orient==='V'?CELL2:WW2/2)-90,
+              boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
       )}
     </div>
   );
