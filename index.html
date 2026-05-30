@@ -454,8 +454,12 @@ const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
 const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
-// Admin-Gate: ?admin=wrongway schaltet versteckte Beta-Modi frei (Passwort später anpassbar)
-function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='wrongway';}catch(e){return false;}}
+// Admin-Gate: ?admin=wrongway schaltet das Admin-Panel frei (Passwort hier anpassbar)
+function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
+// Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
+const ADMIN_CFG_KEY='barricade_admin_config';
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true},announce:'',maintenance:false};
+function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',maintenance:!!(cfg&&cfg.maintenance)};}
 
 // ── i18n ───────────────────────────────────────────────────
 const LANGS={en:'English',de:'Deutsch',tr:'Türkçe',fr:'Français'};
@@ -1691,6 +1695,9 @@ function App(){
   const[showLang,setShowLang]=useState(false);
   const[hapticOn,setHapticOn]=useState(()=>{try{return localStorage.getItem('ww_haptic')!=='0';}catch{return true;}});
   useEffect(()=>{window.__hapticOn=hapticOn;try{localStorage.setItem('ww_haptic',hapticOn?'1':'0');}catch{}},[hapticOn]);
+  const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG);
+  const[showAdmin,setShowAdmin]=useState(false);
+  const[adminFlash,setAdminFlash]=useState('');
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
@@ -1703,6 +1710,18 @@ function App(){
     document.body.classList.toggle('dark',darkMode);
     try{localStorage.setItem('ww_dark',darkMode?'1':'0');}catch{}
   },[darkMode]);
+
+  // Globale Admin-Config live laden (alle Clients)
+  useEffect(()=>{
+    if(!window.db)return;
+    const ref=window.db.ref(ADMIN_CFG_KEY);
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();
+      if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
+      else setAdminCfg(DEFAULT_ADMIN_CFG);
+    });
+    return ()=>ref.off('value',cb);
+  },[]);
 
   // URL ?join=CODE → automatisch zum Freund-Beitritt
   useEffect(()=>{
@@ -1720,6 +1739,10 @@ function App(){
   },[]);
   const t=k=>(I18N[lang]&&I18N[lang][k])||I18N.en[k]||k;
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
+  // Admin: Config speichern (schreibt global, alle Clients übernehmen live)
+  const saveAdminCfg=(cfg)=>{const merged=mergeAdminCfg(cfg);setAdminCfg(merged);stoSet(ADMIN_CFG_KEY,merged);};
+  const toggleFeature=(key)=>{const f={...adminCfg.features};f[key]=!f[key];saveAdminCfg({...adminCfg,features:f});};
+  const clearOpenLobbies=async()=>{try{await window.db.ref('barricade_2v2_open').remove();setAdminFlash('Offene Lobbys geleert');setTimeout(()=>setAdminFlash(''),2000);}catch(e){setAdminFlash('Fehler');setTimeout(()=>setAdminFlash(''),2000);}};
 
   const[pA,setPA]=useState(INIT_A);
   const[pB,setPB]=useState(INIT_B);
@@ -2779,6 +2802,20 @@ function App(){
 
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
+    if(adminCfg.maintenance&&!isAdmin()){
+      return(
+        <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,justifyContent:'center'}}>
+          <MenuBG dark={darkMode}/>
+          <div style={{position:'relative',zIndex:1,textAlign:'center',maxWidth:300,padding:24}}>
+            <div style={{fontSize:48,marginBottom:14}}>🛠️</div>
+            <div style={{fontSize:20,fontWeight:900,color:'var(--text)',marginBottom:8}}>Wartung</div>
+            <div style={{fontSize:13,color:'var(--subtle)',fontWeight:500,lineHeight:1.6}}>
+              {adminCfg.announce?adminCfg.announce:'Das Spiel ist gerade nicht verfügbar. Bitte versuche es später nochmal.'}
+            </div>
+          </div>
+        </div>
+      );
+    }
     // Aktuellen Modus formatieren
     const modeLabel=gameTimeMode==='none'?t('noTimer')
       :gameTimeMode==='classic-3'?'3 '+t('minLabel')
@@ -2797,6 +2834,20 @@ function App(){
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
         cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
         boxShadow:'var(--shadow-soft)',zIndex:100}}><GearIcon size={18}/></button>
+      {isAdmin()&&(
+        <button onClick={()=>setShowAdmin(true)} style={{
+          position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
+          width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',
+          cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
+          boxShadow:'0 2px 10px rgba(245,158,11,0.4)',zIndex:100}}>🛡️</button>
+      )}
+      {adminCfg.announce?(
+        <div style={{position:'relative',zIndex:1,width:280,marginBottom:14,padding:'10px 14px',
+          background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',borderRadius:12,
+          fontSize:12,fontWeight:700,textAlign:'center',boxShadow:'0 2px 10px rgba(99,102,241,0.3)'}}>
+          📢 {adminCfg.announce}
+        </div>
+      ):null}
       <div style={{textAlign:'center',marginBottom:30,position:'relative',zIndex:1}}>
         <div style={{marginBottom:14,display:'flex',justifyContent:'center'}}>
           <div style={{width:78,height:78,borderRadius:22,
@@ -2830,17 +2881,32 @@ function App(){
       </button>
 
       <div style={{display:'flex',flexDirection:'column',gap:10,width:260,position:'relative',zIndex:1}}>
-        <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><GlobeIcon size={16}/>{t('createPublicLobby')}</span></GBtn>
-        <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PeopleIcon size={16}/>{t('friendPlay')}</span></GBtn>
-        <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><BotIcon size={16}/>{t('vsBot')}</span></GBtn>
-        <GBtn onClick={()=>initGame('pvp')} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={16}/>{t('localPlay')}</span></GBtn>
-        <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
+        {(adminCfg.features.online||isAdmin())&&<div style={{opacity:adminCfg.features.online?1:0.45,position:'relative'}}>
+          <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><GlobeIcon size={16}/>{t('createPublicLobby')}</span></GBtn>
+          {!adminCfg.features.online&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+        </div>}
+        {(adminCfg.features.friend||isAdmin())&&<div style={{opacity:adminCfg.features.friend?1:0.45,position:'relative'}}>
+          <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PeopleIcon size={16}/>{t('friendPlay')}</span></GBtn>
+          {!adminCfg.features.friend&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+        </div>}
+        {(adminCfg.features.bots||isAdmin())&&<div style={{opacity:adminCfg.features.bots?1:0.45,position:'relative'}}>
+          <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><BotIcon size={16}/>{t('vsBot')}</span></GBtn>
+          {!adminCfg.features.bots&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+        </div>}
+        {(adminCfg.features.local||isAdmin())&&<div style={{opacity:adminCfg.features.local?1:0.45,position:'relative'}}>
+          <GBtn onClick={()=>initGame('pvp')} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={16}/>{t('localPlay')}</span></GBtn>
+          {!adminCfg.features.local&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+        </div>}
+        {(adminCfg.features.twovtwo||isAdmin())&&<div style={{opacity:adminCfg.features.twovtwo?1:0.45,position:'relative'}}>
+          <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
             background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
             border:'none',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,width:'100%',
             fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
-            display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,position:'relative'}}>
+            display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8}}>
             <PeopleIcon size={16}/>2 vs 2
           </button>
+          {!adminCfg.features.twovtwo&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+        </div>}
       </div>
       {showOptions&&(
         <div onClick={()=>{setShowOptions(false);setShowLang(false);}} style={{position:'fixed',inset:0,
@@ -2915,6 +2981,80 @@ function App(){
                   boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
               </div>
             </button>
+          </div>
+        </div>
+      )}
+      {showAdmin&&isAdmin()&&(
+        <div onClick={()=>setShowAdmin(false)} style={{position:'fixed',inset:0,
+          background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',
+          zIndex:650,padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,
+            padding:'22px 22px 18px',width:'100%',maxWidth:340,maxHeight:'88vh',overflowY:'auto',
+            boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+              <div style={{fontSize:18,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:8}}>🛡️ Admin</div>
+              <button onClick={()=>setShowAdmin(false)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
+            </div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
+
+            {/* Feature-Toggles */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>MODI / FEATURES</div>
+            <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:18}}>
+              {[['online','Online-Lobby'],['friend','Mit Freund'],['bots','Gegen Bots'],['local','Lokal'],['twovtwo','2 vs 2']].map(function(f){
+                const on=adminCfg.features[f[0]];
+                return(
+                  <button key={f[0]} onClick={()=>toggleFeature(f[0])} style={{
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    padding:'11px 14px',borderRadius:10,background:'var(--bg)',
+                    border:'1.5px solid var(--border)',cursor:'pointer',
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{f[1]}</span>
+                    <div style={{width:44,height:26,borderRadius:13,background:on?'#16a34a':'var(--border)',position:'relative',transition:'background 0.2s'}}>
+                      <div style={{position:'absolute',top:3,left:on?20:3,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Ankündigung */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>ANKÜNDIGUNG (BANNER)</div>
+            <input value={adminCfg.announce} onChange={e=>setAdminCfg({...adminCfg,announce:e.target.value})}
+              placeholder="z.B. Neues Update: 2v2 ist live!"
+              style={{width:'100%',padding:'11px 12px',borderRadius:10,fontSize:13,
+                background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+            <div style={{display:'flex',gap:8,marginBottom:18}}>
+              <button onClick={()=>saveAdminCfg(adminCfg)} style={{flex:1,padding:'10px',borderRadius:10,
+                background:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
+                fontFamily:'system-ui,-apple-system,sans-serif'}}>Banner setzen</button>
+              <button onClick={()=>saveAdminCfg({...adminCfg,announce:''})} style={{padding:'10px 14px',borderRadius:10,
+                background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
+                fontFamily:'system-ui,-apple-system,sans-serif'}}>Löschen</button>
+            </div>
+
+            {/* Wartungsmodus */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>WARTUNGSMODUS</div>
+            <button onClick={()=>saveAdminCfg({...adminCfg,maintenance:!adminCfg.maintenance})} style={{
+              width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'11px 14px',borderRadius:10,marginBottom:18,
+              background:adminCfg.maintenance?'rgba(239,68,68,0.12)':'var(--bg)',
+              border:'1.5px solid '+(adminCfg.maintenance?'#ef4444':'var(--border)'),cursor:'pointer',
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{fontSize:13,fontWeight:700,color:adminCfg.maintenance?'#ef4444':'var(--text)'}}>{adminCfg.maintenance?'Aktiv – Menü gesperrt':'Aus'}</span>
+              <div style={{width:44,height:26,borderRadius:13,background:adminCfg.maintenance?'#ef4444':'var(--border)',position:'relative',transition:'background 0.2s'}}>
+                <div style={{position:'absolute',top:3,left:adminCfg.maintenance?20:3,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+              </div>
+            </button>
+
+            {/* Aufräumen */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>AUFRÄUMEN</div>
+            <button onClick={clearOpenLobbies} style={{width:'100%',padding:'11px',borderRadius:10,
+              background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',
+              fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              🧹 Offene 2v2-Lobbys leeren
+            </button>
+            {adminFlash?<div style={{textAlign:'center',fontSize:12,color:'#16a34a',fontWeight:700,marginTop:10}}>{adminFlash}</div>:null}
           </div>
         </div>
       )}
