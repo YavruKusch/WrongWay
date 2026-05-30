@@ -637,24 +637,41 @@ function wallPos2(key,CL){
   const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
   return type==='H'?{left:c*CL,top:(r+1)*CL-WW2/2,width:2*CL,height:WW2}:{left:(c+1)*CL-WW2/2,top:r*CL,width:WW2,height:2*CL};
 }
-// Schnelle Vorschau-Pruefung (>=1 Weg fuer alle 4) – fuer Drag-Farbe
-function quickValidWall2(key,walls,tokens,R,C){
+// Geometrische Mauer-Legalitaet (Ueberlappung)
+function wallGeomOk2(key,walls){
   if(walls.has(key))return false;
   const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
-  if(type==='H'){if(walls.has('H-'+r+'-'+(c-1))||walls.has('H-'+r+'-'+(c+1)))return false;if(walls.has('V-'+r+'-'+c))return false;}
-  else{if(walls.has('V-'+(r-1)+'-'+c)||walls.has('V-'+(r+1)+'-'+c))return false;if(walls.has('H-'+r+'-'+c))return false;}
+  if(type==='H'){if(walls.has('H-'+r+'-'+(c-1))||walls.has('H-'+r+'-'+(c+1))||walls.has('V-'+r+'-'+c))return false;}
+  else{if(walls.has('V-'+(r-1)+'-'+c)||walls.has('V-'+(r+1)+'-'+c)||walls.has('H-'+r+'-'+c))return false;}
+  return true;
+}
+// Token sicher? Keine EINZELNE weitere (geometrisch platzierbare) Barrikade darf ihn vom Ziel abschneiden.
+// Begruendung: Barrikade ist 2 Felder breit -> Passage <=2 ist mit einer Mauer schliessbar (unsicher),
+// Passage >=3 oder ein getrennter Zweitweg bleibt offen (sicher).
+function wallSafeToken2(start,goalRow,walls,R,C){
+  if(!hasPathTo(start,walls,goalRow,R,C))return false;
+  // Early-out: >=3 kanten-disjunkte Wege -> eine Mauer (2 Kanten) kann nie alle trennen
+  if(disjointPaths2(start,goalRow,walls,R,C,3)>=3)return true;
+  for(let r=0;r<R-1;r++)for(let c=0;c<C-1;c++){
+    let key='H-'+r+'-'+c;
+    if(wallGeomOk2(key,walls)){const test=new Set(walls);test.add(key);if(!hasPathTo(start,test,goalRow,R,C))return false;}
+    key='V-'+r+'-'+c;
+    if(wallGeomOk2(key,walls)){const test=new Set(walls);test.add(key);if(!hasPathTo(start,test,goalRow,R,C))return false;}
+  }
+  return true;
+}
+// Schnelle Vorschau (>=1 Weg fuer alle 4) – fuer Drag-Farbe (guenstig, exakte Pruefung beim Drop)
+function quickValidWall2(key,walls,tokens,R,C){
+  if(!wallGeomOk2(key,walls))return false;
   const next=new Set([...walls,key]);
   for(const id of ORDER_2V2)if(!hasPathTo(tokens[id],next,GOAL_2V2[id],R,C))return false;
   return true;
 }
-// Volle Pruefung beim Setzen: jeder Token behaelt >=MIN_PATHS_2V2 disjunkte Wege
+// Volle Pruefung beim Setzen: keine Barrikade darf einen Token einsperrbar machen (alle 4)
 function tryWall2(key,walls,tokens,R,C){
-  if(walls.has(key))return null;
-  const a=key.split('-');const type=a[0],r=+a[1],c=+a[2];
-  if(type==='H'){if(walls.has('H-'+r+'-'+(c-1))||walls.has('H-'+r+'-'+(c+1)))return null;if(walls.has('V-'+r+'-'+c))return null;}
-  else{if(walls.has('V-'+(r-1)+'-'+c)||walls.has('V-'+(r+1)+'-'+c))return null;if(walls.has('H-'+r+'-'+c))return null;}
+  if(!wallGeomOk2(key,walls))return null;
   const next=new Set([...walls,key]);
-  for(const id of ORDER_2V2)if(disjointPaths2(tokens[id],GOAL_2V2[id],next,R,C,MIN_PATHS_2V2)<MIN_PATHS_2V2)return null;
+  for(const id of ORDER_2V2)if(!wallSafeToken2(tokens[id],GOAL_2V2[id],next,R,C))return null;
   return next;
 }
 
@@ -1208,6 +1225,27 @@ async function stoSet(k,v){
 async function stoDel(k){
   try{await window.db.ref(k).remove();}catch(e){console.error('FB DEL fail',k,e);}
 }
+// ── 2v2 Lobby-Index (offene Lobbys zum Browsen) ──
+const LOBBY_INDEX_2V2='barricade_2v2_open';
+async function lobbyIndexSet2(code,info){
+  try{await window.db.ref(LOBBY_INDEX_2V2+'/'+code).set(JSON.stringify(info));}catch(e){}
+}
+async function lobbyIndexDel2(code){
+  try{await window.db.ref(LOBBY_INDEX_2V2+'/'+code).remove();}catch(e){}
+}
+async function lobbyIndexList2(){
+  try{
+    const snap=await window.db.ref(LOBBY_INDEX_2V2).once('value');
+    const v=snap.val();if(!v)return [];
+    const out=[];
+    for(const code of Object.keys(v)){
+      try{const info=JSON.parse(v[code]);out.push({code,count:info.count||0,updated:info.updated||0});}catch(e){}
+    }
+    // nur frische (< 5 min) und nicht volle, neueste zuerst
+    const now=Date.now();
+    return out.filter(l=>now-l.updated<300000&&l.count<4).sort((a,b)=>b.updated-a.updated);
+  }catch(e){return [];}
+}
 
 // ── Sound ───────────────────────────────────────────────────
 let _ctx=null;
@@ -1650,6 +1688,9 @@ function App(){
   const[privateCode,setPrivateCode]=useState(null);
   const[lang,setLang]=useState(getInitialLang());
   const[showOptions,setShowOptions]=useState(false);
+  const[showLang,setShowLang]=useState(false);
+  const[hapticOn,setHapticOn]=useState(()=>{try{return localStorage.getItem('ww_haptic')!=='0';}catch{return true;}});
+  useEffect(()=>{window.__hapticOn=hapticOn;try{localStorage.setItem('ww_haptic',hapticOn?'1':'0');}catch{}},[hapticOn]);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
@@ -2802,7 +2843,7 @@ function App(){
           </button>
       </div>
       {showOptions&&(
-        <div onClick={()=>setShowOptions(false)} style={{position:'fixed',inset:0,
+        <div onClick={()=>{setShowOptions(false);setShowLang(false);}} style={{position:'fixed',inset:0,
           background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',
           zIndex:600,padding:24}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,
@@ -2810,9 +2851,10 @@ function App(){
             boxShadow:'0 24px 64px rgba(0,0,0,0.25)'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
               <div style={{fontSize:18,fontWeight:900,color:'var(--text)'}}>{t('options')}</div>
-              <button onClick={()=>setShowOptions(false)} style={{background:'none',border:'none',
+              <button onClick={()=>{setShowOptions(false);setShowLang(false);}} style={{background:'none',border:'none',
                 fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
             </div>
+            {/* Theme */}
             <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>
               {t('theme').toUpperCase()}
             </div>
@@ -2829,22 +2871,50 @@ function App(){
                 </button>
               ))}
             </div>
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>
+            {/* Sprache */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:8}}>
               {t('language').toUpperCase()}
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              {Object.keys(LANGS).map(k=>(
-                <button key={k} onClick={()=>changeLang(k)} style={{
-                  padding:'11px 14px',borderRadius:10,fontSize:14,fontWeight:600,
-                  textAlign:'left',cursor:'pointer',
-                  background:lang===k?'var(--text)':'var(--card)',
-                  color:lang===k?'var(--bg)':'var(--text)',
-                  border:`1.5px solid ${lang===k?'var(--text)':'var(--border)'}`,
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  {LANGS[k]}
-                </button>
-              ))}
+            <button onClick={()=>setShowLang(v=>!v)} style={{
+              width:'100%',padding:'12px 14px',borderRadius:10,marginBottom:showLang?8:16,
+              background:'var(--bg)',border:'1.5px solid var(--border)',cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'space-between',
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{LANGS[lang]}</span>
+              <span style={{fontSize:12,color:'var(--subtle)',fontWeight:600}}>{showLang?'▲':'▼'}</span>
+            </button>
+            {showLang&&(
+              <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16,
+                background:'var(--bg)',borderRadius:10,padding:'6px',border:'1.5px solid var(--border)'}}>
+                {Object.keys(LANGS).map(k=>(
+                  <button key={k} onClick={()=>{changeLang(k);setShowLang(false);}} style={{
+                    padding:'10px 12px',borderRadius:8,fontSize:13,fontWeight:600,textAlign:'left',cursor:'pointer',
+                    background:lang===k?'var(--text)':'transparent',
+                    color:lang===k?'var(--bg)':'var(--text)',
+                    border:'none',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {LANGS[k]}{lang===k?' ✓':''}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Vibration */}
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:8}}>
+              VIBRATION
             </div>
+            <button onClick={()=>setHapticOn(v=>!v)} style={{
+              width:'100%',padding:'12px 14px',borderRadius:10,
+              background:'var(--bg)',border:'1.5px solid var(--border)',cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'space-between',
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{hapticOn?'An':'Aus'}</span>
+              <div style={{width:44,height:26,borderRadius:13,
+                background:hapticOn?'#16a34a':'var(--border)',
+                position:'relative',transition:'background 0.2s'}}>
+                <div style={{position:'absolute',top:3,left:hapticOn?20:3,width:20,height:20,
+                  borderRadius:'50%',background:'white',transition:'left 0.2s',
+                  boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -4534,6 +4604,12 @@ function TwoVTwo({t,darkMode,onExit}){
   const[playerMap,setPlayerMap]=React.useState({});
   const[codeFlash,setCodeFlash]=React.useState(false);
   const[lobbyLoading,setLobbyLoading]=React.useState(false);
+  const[reached,setReached]=React.useState({A1:false,A2:false,B1:false,B2:false});
+  const[openLobbies,setOpenLobbies]=React.useState([]);
+  const[listLoading,setListLoading]=React.useState(false);
+  const[hostUid,setHostUid]=React.useState(null);
+  const[votes,setVotes]=React.useState({});
+  const[startTeam,setStartTeam]=React.useState('A');
 
   const myUidRef=React.useRef(null);
   if(!myUidRef.current){
@@ -4544,7 +4620,7 @@ function TwoVTwo({t,darkMode,onExit}){
   const gridRef=React.useRef(null);
   const snapPosRef=React.useRef(null);
   const St=React.useRef({});
-  St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap};
+  St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap,reached};
   React.useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
 
   const lKey=c=>'barricade_2v2_lobby_'+c;
@@ -4568,31 +4644,38 @@ function TwoVTwo({t,darkMode,onExit}){
   };
 
   const doSync2v2=update=>{
-    const{lobbyCode:lc,isOnline:io,playerMap:pm}=St.current;
+    const{lobbyCode:lc,isOnline:io,playerMap:pm,reached:rc}=St.current;
     if(!io||!lc)return;
-    stoSet(gKey(lc),{tokens:update.tokens,walls:[...update.walls],barr:update.barr,turn:update.turn,winner:update.winner||null,players:pm,lastUpdated:Date.now()});
+    stoSet(gKey(lc),{tokens:update.tokens,walls:[...update.walls],barr:update.barr,turn:update.turn,winner:update.winner||null,reached:update.reached||rc,players:pm,lastUpdated:Date.now()});
   };
 
   // ── Online: Lobby erstellen ──
   const createLobby=async()=>{
     setLobbyLoading(true);setJoinError('');
+    setWinner(null);setCelebrating(false);setReached({A1:false,A2:false,B1:false,B2:false});setFlash('');
     const code=randId(4);
     const lobby={host:uid,players:{[uid]:{team:'A',name:uid,joinedAt:Date.now()}},status:'waiting',lastUpdated:Date.now()};
     const ok=await stoSet(lKey(code),lobby);
     setLobbyLoading(false);
     if(!ok){setJoinError('Firebase-Fehler – Verbindung prüfen');return;}
+    lobbyIndexSet2(code,{count:1,updated:Date.now()});
     setLobbyCode(code);setIsHost(true);setIsOnline(true);setLobbyPlayers(lobby.players);
     setSub('lobby');
   };
 
-  // ── Online: Lobby beitreten ──
+  // ── Online: Lobby beitreten (per Code-Eingabe) ──
   const joinLobby=async()=>{
     const code=joinInput.trim().toUpperCase();
     if(!/^[A-Z0-9]{4}$/.test(code)){setJoinError('Ungültiger Code (4 Zeichen)');return;}
+    joinByCode(code);
+  };
+  // ── Online: Lobby beitreten (per Code, von Liste oder Eingabe) ──
+  const joinByCode=async(code)=>{
     setJoinError('');setLobbyLoading(true);
+    setWinner(null);setCelebrating(false);setReached({A1:false,A2:false,B1:false,B2:false});setFlash('');
     const data=await stoGet(lKey(code));
     setLobbyLoading(false);
-    if(!data){setJoinError('Lobby nicht gefunden');return;}
+    if(!data){setJoinError('Lobby nicht gefunden');lobbyIndexDel2(code);return;}
     if(data.status!=='waiting'){setJoinError('Lobby bereits gestartet');return;}
     const ps=data.players||{};
     const pCount=Object.keys(ps).length;
@@ -4600,33 +4683,42 @@ function TwoVTwo({t,darkMode,onExit}){
     const aCount=Object.values(ps).filter(p=>p.team==='A').length;
     const bCount=Object.values(ps).filter(p=>p.team==='B').length;
     const initTeam=aCount<=bCount?'A':'B';
-    const updated={...data,players:{...ps,[uid]:{team:initTeam,name:uid,joinedAt:Date.now()}},lastUpdated:Date.now()};
+    const newPs={...ps,[uid]:{team:initTeam,name:uid,joinedAt:Date.now()}};
+    const updated={...data,players:newPs,lastUpdated:Date.now()};
     await stoSet(lKey(code),updated);
+    lobbyIndexSet2(code,{count:Object.keys(newPs).length,updated:Date.now()});
     setLobbyCode(code);setIsHost(data.host===uid);setIsOnline(true);setLobbyPlayers(updated.players);
     setSub('lobby');
   };
 
-  // ── Online: Team wechseln ──
+  // ── Online: Team wechseln (frei – Start nur bei 2+2) ──
   const switchTeam=async()=>{
     const lc=St.current.lobbyCode;
     const data=await stoGet(lKey(lc));
     if(!data||!data.players)return;
     const myP=data.players[uid];if(!myP)return;
     const newTeam=myP.team==='A'?'B':'A';
-    const destCount=Object.values(data.players).filter(p=>p.team===newTeam).length;
-    if(destCount>=2){setFlash('Team voll!');setTimeout(()=>setFlash(''),2000);return;}
     stoSet(lKey(lc),{...data,players:{...data.players,[uid]:{...myP,team:newTeam}},lastUpdated:Date.now()});
+    lobbyIndexSet2(lc,{count:Object.keys(data.players).length,updated:Date.now()});
   };
 
-  // ── Online: Lobby verlassen ──
+  // ── Online: Lobby verlassen (Host wird ggf. übergeben) ──
   const leaveLobby=async()=>{
     const lc=St.current.lobbyCode;
-    if(St.current.isHost){await stoDel(lKey(lc));}
-    else{
-      const data=await stoGet(lKey(lc));
-      if(data&&data.players){const ps={...data.players};delete ps[uid];stoSet(lKey(lc),{...data,players:ps,lastUpdated:Date.now()});}
+    const data=await stoGet(lKey(lc));
+    if(data&&data.players){
+      const ps={...data.players};delete ps[uid];
+      const remaining=Object.keys(ps);
+      if(remaining.length===0){
+        await stoDel(lKey(lc));lobbyIndexDel2(lc);
+      }else{
+        let newHost=data.host;
+        if(data.host===uid)newHost=remaining.sort((a,b)=>ps[a].joinedAt-ps[b].joinedAt)[0];
+        await stoSet(lKey(lc),{...data,host:newHost,players:ps,lastUpdated:Date.now()});
+        lobbyIndexSet2(lc,{count:remaining.length,updated:Date.now()});
+      }
     }
-    setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setMyToken(null);setPlayerMap({});
+    setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setMyToken(null);setPlayerMap({});setHostUid(null);
     setSub('config');
   };
 
@@ -4639,12 +4731,80 @@ function TwoVTwo({t,darkMode,onExit}){
     const bP=Object.entries(ps).filter(function(e){return e[1].team==='B';}).sort(function(a,b){return a[1].joinedAt-b[1].joinedAt;});
     if(aP.length!==2||bP.length!==2){setFlash('Genau 2 pro Team nötig!');setTimeout(()=>setFlash(''),3000);return;}
     const pm={};pm[aP[0][0]]='A1';pm[aP[1][0]]='A2';pm[bP[0][0]]='B1';pm[bP[1][0]]='B2';
-    const startToken=Math.random()<0.5?'A1':'B1';
+    const sTeam=Math.random()<0.5?'A':'B';
+    const startToken=sTeam+'1';
     const initTok={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
-    const gs={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:startToken,winner:null,players:pm,lastUpdated:Date.now()};
+    const gs={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:startToken,winner:null,reached:{A1:false,A2:false,B1:false,B2:false},players:pm,startTeam:sTeam,votes:{},lastUpdated:Date.now()};
     await stoSet(gKey(lc),gs);
     stoSet(lKey(lc),{...data,status:'playing',playerMap:pm,lastUpdated:Date.now()});
+    lobbyIndexDel2(lc);
   };
+
+  // ── Online: Revanche-Neustart (vom Leader=A1-Spieler) – anderes Team beginnt ──
+  const restartOnline=async(gs)=>{
+    const lc=St.current.lobbyCode;
+    const newStart=gs.startTeam==='A'?'B':'A';
+    const initTok={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
+    const ng={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:newStart+'1',winner:null,reached:{A1:false,A2:false,B1:false,B2:false},players:gs.players,startTeam:newStart,votes:{},lastUpdated:Date.now()};
+    await stoSet(gKey(lc),ng);
+  };
+
+  // ── Endscreen: Revanche wählen (Stimme abgeben) ──
+  const voteRematch=async()=>{
+    const lc=St.current.lobbyCode;
+    const gs=await stoGet(gKey(lc));if(!gs)return;
+    const v={...(gs.votes||{})};v[uid]=true;
+    await stoSet(gKey(lc),{...gs,votes:v,lastUpdated:Date.now()});
+  };
+
+  // ── Endscreen: zurück zur Lobby ──
+  const backToLobbyFromGame=async()=>{
+    const lc=St.current.lobbyCode;
+    const gs=await stoGet(gKey(lc));
+    if(gs&&gs.players){const pm={...gs.players};delete pm[uid];const v={...(gs.votes||{})};delete v[uid];
+      await stoSet(gKey(lc),{...gs,players:pm,votes:v,lastUpdated:Date.now()});}
+    const ld=await stoGet(lKey(lc));
+    if(ld){const ps={...(ld.players||{})};if(!ps[uid])ps[uid]={team:'A',name:uid,joinedAt:Date.now()};
+      await stoSet(lKey(lc),{...ld,status:'waiting',players:ps,lastUpdated:Date.now()});
+      lobbyIndexSet2(lc,{count:Object.keys(ps).length,updated:Date.now()});}
+    setWinner(null);setCelebrating(false);setMyToken(null);setVotes({});setSub('lobby');
+  };
+
+  // ── Endscreen: zum Hauptmenü (verlässt Spiel + Lobby) ──
+  const exitFromGame=async()=>{
+    const lc=St.current.lobbyCode;
+    if(isOnline){
+      const gs=await stoGet(gKey(lc));
+      if(gs&&gs.players){const pm={...gs.players};delete pm[uid];const v={...(gs.votes||{})};delete v[uid];
+        await stoSet(gKey(lc),{...gs,players:pm,votes:v,lastUpdated:Date.now()});}
+      const ld=await stoGet(lKey(lc));
+      if(ld&&ld.players){const ps={...ld.players};delete ps[uid];
+        if(Object.keys(ps).length===0){await stoDel(lKey(lc));lobbyIndexDel2(lc);}
+        else{let nh=ld.host;if(ld.host===uid)nh=Object.keys(ps).sort((a,b)=>ps[a].joinedAt-ps[b].joinedAt)[0];await stoSet(lKey(lc),{...ld,host:nh,players:ps,lastUpdated:Date.now()});lobbyIndexSet2(lc,{count:Object.keys(ps).length,updated:Date.now()});}}
+    }
+    onExit();
+  };
+
+  // ── Lokal: Revanche (anderes Team beginnt) ──
+  const rematchLocal=()=>{
+    const newStart=startTeam==='A'?'B':'A';setStartTeam(newStart);
+    setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+    setWalls(new Set());setBarr({A:BARR2,B:BARR2});setReached({A1:false,A2:false,B1:false,B2:false});
+    setTurn(newStart+'1');setWinner(null);setFlash('');setCelebrating(false);
+  };
+
+  // ── Online: offene Lobbys laden ──
+  const refreshLobbies=async()=>{
+    setListLoading(true);
+    const list=await lobbyIndexList2();
+    setOpenLobbies(list);setListLoading(false);
+  };
+  React.useEffect(()=>{
+    if(sub!=='online')return;
+    refreshLobbies();
+    const iv=setInterval(refreshLobbies,5000);
+    return function(){clearInterval(iv);};
+  },[sub]);
 
   // ── Lobby-Listener ──
   React.useEffect(()=>{
@@ -4654,6 +4814,10 @@ function TwoVTwo({t,darkMode,onExit}){
       const v=snap.val();if(!v)return;
       let data;try{data=JSON.parse(v);}catch(e){return;}
       setLobbyPlayers(data.players||{});
+      setHostUid(data.host||null);
+      const becameHost=data.host===uid&&!St.current.isHost;
+      setIsHost(data.host===uid);
+      if(becameHost){setFlash('👑 Du bist jetzt Host');setTimeout(()=>setFlash(''),2500);}
       if(data.status==='playing'&&data.playerMap){
         const tok=data.playerMap[uid];
         if(tok){setMyToken(tok);setPlayerMap(data.playerMap);setSub('game');}
@@ -4674,31 +4838,56 @@ function TwoVTwo({t,darkMode,onExit}){
       if(gs.barr)setBarr(gs.barr);
       if(gs.turn)setTurn(gs.turn);
       if(gs.players)setPlayerMap(gs.players);
+      if(gs.reached)setReached(gs.reached);
+      if(gs.startTeam)setStartTeam(gs.startTeam);
+      setVotes(gs.votes||{});
       if(gs.winner&&!St.current.winner)triggerWin(gs.winner);
-      else if(gs.winner)setWinner(gs.winner);
+      else setWinner(gs.winner||null);
+      // Leader (A1-Spieler) startet neu, wenn alle 4 anwesenden Spieler Revanche gewählt haben
+      if(gs.winner&&gs.players){
+        const ids=Object.keys(gs.players);
+        const leader=ids.find(u=>gs.players[u]==='A1');
+        const allVoted=ids.length===4&&ids.every(u=>gs.votes&&gs.votes[u]);
+        if(allVoted&&uid===leader)restartOnline(gs);
+      }
     });
     return function(){ref.off('value',cb);};
   },[sub,isOnline,lobbyCode]);
 
   // ── Bewegen ──
   const moveTo=(r,c)=>{
-    if(!myTurnNow||dragging)return;
+    if(!myTurnNow||dragging||reached[turn])return;
     if(!validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c))return;
     playSound('move');
     const nt={A1:tokens.A1,A2:tokens.A2,B1:tokens.B1,B2:tokens.B2};
     nt[turn]={r,c};
     setTokens(nt);
     const nextTurn=NEXT_2V2[turn];
+    const newReached={A1:reached.A1,A2:reached.A2,B1:reached.B1,B2:reached.B2};
     if(r===GOAL_2V2[turn]){
+      newReached[turn]=true;
+      setReached(newReached);
       const tm=TEAM_2V2(turn);
-      if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:tm});
-      triggerWin(tm);return;
+      const teammate=turn==='A1'?'A2':turn==='A2'?'A1':turn==='B1'?'B2':'B1';
+      if(newReached[teammate]){
+        if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:tm,reached:newReached});
+        triggerWin(tm);return;
+      }
+      setFlash('🎯 Am Ziel! Teammate noch unterwegs...');
+      setTimeout(()=>setFlash(''),2800);
     }
-    setFlash('');setTurn(nextTurn);
-    if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:null});
+    setTurn(nextTurn);
+    if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:null,reached:newReached});
   };
 
-  const validDot=(r,c)=>myTurnNow&&!dragging&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
+  const skipTurn=()=>{
+    if(!myTurnNow||!reached[turn])return;
+    const nextTurn=NEXT_2V2[turn];
+    setTurn(nextTurn);setFlash('');
+    if(isOnline)doSync2v2({tokens,walls,barr,turn:nextTurn,winner:null,reached});
+  };
+
+  const validDot=(r,c)=>myTurnNow&&!dragging&&!reached[turn]&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
 
   const startDrag=(e,orient)=>{
     if(!canPlace)return;e.preventDefault();
@@ -4738,7 +4927,7 @@ function TwoVTwo({t,darkMode,onExit}){
               const nextTurn=NEXT_2V2[tn];
               const newBl={A:bl.A,B:bl.B};newBl[tmm]=bl[tmm]-1;
               setWalls(next);setBarr(newBl);setFlash('');setTurn(nextTurn);
-              if(io)doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null});
+              if(io)doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null,reached:St.current.reached});
             }else setFlash(t('invalidPos'));
           }
         }
@@ -4799,7 +4988,7 @@ function TwoVTwo({t,darkMode,onExit}){
             </button>
             <button onClick={()=>{
               setIsOnline(false);setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
-              setWalls(new Set());setBarr({A:BARR2,B:BARR2});
+              setWalls(new Set());setBarr({A:BARR2,B:BARR2});setReached({A1:false,A2:false,B1:false,B2:false});
               setTurn(Math.random()<0.5?'A1':'B1');setWinner(null);setFlash('');setCelebrating(false);
               setSub('game');
             }} style={{padding:'12px 16px',background:'var(--card)',color:'var(--text)',
@@ -4836,6 +5025,44 @@ function TwoVTwo({t,darkMode,onExit}){
               boxShadow:lobbyLoading?'none':'0 2px 8px rgba(59,130,246,0.3)'}}>
               {lobbyLoading?'Erstelle...':'+ Lobby erstellen'}
             </button>
+          </div>
+
+          {/* Offene Lobbys */}
+          <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5}}>OFFENE LOBBYS</div>
+              <button onClick={refreshLobbies} disabled={listLoading} style={{padding:'4px 10px',borderRadius:8,
+                background:'var(--bg)',border:'1.5px solid var(--border)',cursor:listLoading?'wait':'pointer',
+                fontSize:11,fontWeight:700,color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {listLoading?'…':'↻ Aktualisieren'}
+              </button>
+            </div>
+            {openLobbies.length===0?(
+              <div style={{textAlign:'center',padding:'14px 0',fontSize:12,color:'var(--subtle)',fontWeight:500}}>
+                {listLoading?'Lade...':'Keine offenen Lobbys – erstelle eine!'}
+              </div>
+            ):(
+              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:180,overflowY:'auto'}}>
+                {openLobbies.map(function(lob){
+                  return(
+                    <button key={lob.code} onClick={function(){joinByCode(lob.code);}} disabled={lobbyLoading}
+                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                        padding:'10px 12px',borderRadius:10,background:'var(--bg)',
+                        border:'1.5px solid var(--border)',cursor:'pointer',width:'100%',
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      <span style={{fontSize:16,fontWeight:900,letterSpacing:3,color:'var(--text)'}}>{lob.code}</span>
+                      <span style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:11,fontWeight:700,color:'var(--subtle)'}}>{lob.count}/4</span>
+                        <span style={{display:'flex',gap:3}}>
+                          {[0,1,2,3].map(i=><span key={i} style={{width:7,height:7,borderRadius:'50%',background:i<lob.count?'#16a34a':'var(--border)'}}/>)}
+                        </span>
+                        <span style={{fontSize:11,fontWeight:800,color:'#3b82f6'}}>→</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Beitreten */}
@@ -4878,7 +5105,7 @@ function TwoVTwo({t,darkMode,onExit}){
 
     const copyCode=()=>{
       try{navigator.clipboard.writeText(lobbyCode);}catch(e){}
-      setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);
+      setCodeFlash(true);setTimeout(()=>setCodeFlash(false),1500);
     };
     // Hilfsfunktion: Spielerzeile rendern
     const PlayerRow=function({pUid,pData}){
@@ -4926,31 +5153,27 @@ function TwoVTwo({t,darkMode,onExit}){
           </div>
 
           {/* Teams */}
+          <div style={{fontSize:10,color:'var(--subtle)',textAlign:'center',marginBottom:8,fontWeight:500}}>
+            Tippe ein Team um zu wechseln · Start bei 2 vs 2
+          </div>
           <div style={{display:'flex',gap:10,marginBottom:14}}>
             {['A','B'].map(tm=>{
               const tPlayers=tm==='A'?aPlayers:bPlayers;
               const col=tm==='A'?'#ef4444':'#3b82f6';
-              const slots=[0,1];
+              const full=tPlayers.length===2;
               return(
-                <div key={tm} style={{flex:1,background:'var(--card)',borderRadius:14,
-                  border:'1.5px solid var(--border)',padding:'12px 10px',
-                  boxShadow:'var(--shadow-soft)'}}>
+                <div key={tm} onClick={function(){if(myCurrentTeam!==tm)switchTeam();}}
+                  style={{flex:1,background:'var(--card)',borderRadius:14,
+                  border:'1.5px solid '+(myCurrentTeam===tm?col:'var(--border)'),padding:'12px 10px',
+                  boxShadow:'var(--shadow-soft)',cursor:myCurrentTeam!==tm?'pointer':'default',
+                  minHeight:120}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
                     <div style={{width:8,height:8,borderRadius:'50%',background:col}}/>
                     <div style={{fontSize:12,fontWeight:800,color:col}}>{teamName(tm)}</div>
-                    <div style={{marginLeft:'auto',fontSize:10,color:'var(--subtle)',fontWeight:600}}>{tPlayers.length}/2</div>
+                    <div style={{marginLeft:'auto',fontSize:10,color:full?'#16a34a':'var(--subtle)',fontWeight:700}}>{tPlayers.length}/2{full?' ✓':''}</div>
                   </div>
-                  {slots.map(i=>{
-                    const entry=tPlayers[i];
-                    if(!entry){
-                      return(
-                        <div key={i} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,
-                          border:'1.5px dashed var(--border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          <span style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>Wartet...</span>
-                        </div>
-                      );
-                    }
-                    const pUid=entry[0];const pData=entry[1];const isMe=pUid===uid;
+                  {tPlayers.map(function(entry){
+                    const pUid=entry[0];const isMe=pUid===uid;
                     return(
                       <div key={pUid} style={{padding:'7px 10px',borderRadius:8,marginBottom:4,
                         background:isMe?'var(--bg)':'transparent',
@@ -4961,19 +5184,19 @@ function TwoVTwo({t,darkMode,onExit}){
                           {pUid.slice(0,2)}
                         </div>
                         <span style={{flex:1,fontSize:11,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {pUid}{isMe?' (Du)':''}
+                          {pUid}{isMe?' (Du)':''}{pUid===hostUid?' 👑':''}
                         </span>
                       </div>
                     );
                   })}
+                  {tPlayers.length===0&&(
+                    <div style={{padding:'8px 10px',borderRadius:8,border:'1.5px dashed var(--border)',
+                      display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <span style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>Leer</span>
+                    </div>
+                  )}
                   {myCurrentTeam!==tm&&(
-                    <button onClick={switchTeam} style={{width:'100%',marginTop:4,padding:'6px',
-                      background:'transparent',border:'1.5px solid '+col,borderRadius:8,
-                      color:col,fontWeight:700,fontSize:11,cursor:'pointer',
-                      fontFamily:'system-ui,-apple-system,sans-serif',opacity:tPlayers.length>=2?0.35:1}}
-                      disabled={tPlayers.length>=2}>
-                      → Zu {teamName(tm)}
-                    </button>
+                    <div style={{marginTop:6,textAlign:'center',fontSize:11,fontWeight:700,color:col}}>→ Hierher</div>
                   )}
                 </div>
               );
@@ -5081,8 +5304,8 @@ function TwoVTwo({t,darkMode,onExit}){
               {active&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',background:PC2[id],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
               <Piece color={PC2[id]} dark={PD2[id]}/>
               <div style={{position:'absolute',right:-2,bottom:-2,width:13,height:13,borderRadius:'50%',
-                background:'white',color:PD2[id],fontSize:9,fontWeight:900,lineHeight:'13px',textAlign:'center',
-                boxShadow:'0 1px 3px rgba(0,0,0,0.3)',fontFamily:'system-ui,sans-serif'}}>{id[1]}</div>
+                background:reached[id]?'#16a34a':'white',color:reached[id]?'white':PD2[id],fontSize:9,fontWeight:900,lineHeight:'13px',textAlign:'center',
+                boxShadow:'0 1px 3px rgba(0,0,0,0.3)',fontFamily:'system-ui,sans-serif'}}>{reached[id]?'✓':id[1]}</div>
             </div>
           );
         })}
@@ -5102,42 +5325,123 @@ function TwoVTwo({t,darkMode,onExit}){
         </div>
       )}
 
-      {winner&&!celebrating&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500}}
-          onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}}>
-          <Confetti color={winner==='A'?'#ef4444':'#3b82f6'}/>
-          <div style={{background:'var(--card)',borderRadius:22,padding:'32px 44px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.25)',position:'relative'}}>
-            <div style={{marginBottom:10,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}><TrophyIcon size={48}/></div>
-            <div style={{fontSize:22,fontWeight:900,color:winner==='A'?'#ef4444':'#3b82f6',letterSpacing:-0.5}}>Team {teamName(winner)} {t('wins')}</div>
-            <div style={{fontSize:11,color:'var(--subtle)',marginTop:10,fontWeight:500}}>{t('tapContinue')}</div>
+      {winner&&!celebrating&&(()=>{
+        const ids=Object.keys(playerMap);
+        const voteCount=ids.filter(u=>votes&&votes[u]).length;
+        const iVoted=votes&&votes[uid];
+        const present=ids.length;
+        const col=winner==='A'?'#ef4444':'#3b82f6';
+        return(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
+            <Confetti color={col}/>
+            <div style={{background:'var(--card)',borderRadius:22,padding:'28px 28px 22px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.3)',position:'relative',width:'100%',maxWidth:300}}>
+              <div style={{marginBottom:8,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}><TrophyIcon size={44}/></div>
+              <div style={{fontSize:21,fontWeight:900,color:col,letterSpacing:-0.5,marginBottom:4}}>Team {teamName(winner)} {t('wins')}</div>
+              {isOnline?(
+                <>
+                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Wie weiter?</div>
+                  <button onClick={voteRematch} disabled={iVoted||present<4} style={{width:'100%',padding:'13px',marginBottom:8,
+                    background:iVoted?'rgba(22,163,74,0.15)':(present<4?'var(--border)':'#16a34a'),
+                    color:iVoted?'#16a34a':(present<4?'var(--subtle)':'white'),
+                    border:iVoted?'1.5px solid #16a34a':'none',borderRadius:12,
+                    cursor:iVoted||present<4?'default':'pointer',fontWeight:800,fontSize:15,
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {iVoted?'✓ Bereit · warte ('+voteCount+'/'+present+')':(present<4?'Revanche (4 Spieler nötig)':'🔁 Revanche '+voteCount+'/'+present)}
+                  </button>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={backToLobbyFromGame} style={{flex:1,padding:'11px',
+                      background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:12,
+                      cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      Lobby
+                    </button>
+                    <button onClick={exitFromGame} style={{flex:1,padding:'11px',
+                      background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',borderRadius:12,
+                      cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      Menü
+                    </button>
+                  </div>
+                  {iVoted&&present===4&&<div style={{fontSize:10,color:'var(--subtle)',marginTop:10,fontWeight:500}}>Startet wenn alle bereit sind · anderes Team beginnt</div>}
+                </>
+              ):(
+                <>
+                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Anderes Team beginnt</div>
+                  <button onClick={rematchLocal} style={{width:'100%',padding:'13px',marginBottom:8,
+                    background:'#16a34a',color:'white',border:'none',borderRadius:12,
+                    cursor:'pointer',fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    🔁 Revanche
+                  </button>
+                  <button onClick={onExit} style={{width:'100%',padding:'11px',
+                    background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',borderRadius:12,
+                    cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    Menü
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {!winner&&(
         <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
-          display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
-          <div style={{position:'absolute',bottom:'100%',marginBottom:5,fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
-            background:darkMode?'rgba(20,30,50,0.7)':'rgba(255,255,255,0.72)',backdropFilter:'blur(8px)',
-            padding:'2px 10px',borderRadius:20,border:'1px solid '+(darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)')}}>
-            {canPlace?teamName(isOnline?myTeam:team)+': '+barr[isOnline?myTeam:team]+' '+t('wallsLeft'):t('opponentTurn')}
-          </div>
-          {['H','V'].map(function(orient){
-            const col=isOnline?myTeam:team;
-            return(
-              <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
-                style={{pointerEvents:'all',width:orient==='H'?84:42,height:orient==='V'?54:42,
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
-                  background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
-                  backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-                  border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
-                  opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
-                <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
-                  width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
+          display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,pointerEvents:'none'}}>
+          {myTurnNow&&reached[turn]?(
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,pointerEvents:'all'}}>
+              <div style={{fontSize:10,color:'#16a34a',fontWeight:700,letterSpacing:0.5}}>
+                🎯 Am Ziel! Barrikade setzen oder überspringen
               </div>
-            );
-          })}
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                {['H','V'].map(function(orient){
+                  const col=isOnline?myTeam:team;
+                  return(
+                    <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
+                      style={{width:orient==='H'?84:42,height:orient==='V'?54:42,
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
+                        background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
+                        backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+                        border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
+                        opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
+                      <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
+                        width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
+                    </div>
+                  );
+                })}
+                <button onClick={skipTurn} style={{padding:'10px 16px',borderRadius:12,
+                  background:darkMode?'rgba(30,41,68,0.85)':'rgba(255,255,255,0.85)',
+                  border:'1.5px solid var(--border)',cursor:'pointer',
+                  fontWeight:700,fontSize:12,color:'var(--text)',
+                  fontFamily:'system-ui,-apple-system,sans-serif',
+                  backdropFilter:'blur(12px)',boxShadow:'var(--shadow-soft)'}}>
+                  Überspringen →
+                </button>
+              </div>
+            </div>
+          ):(
+            <div style={{display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
+              <div style={{position:'absolute',bottom:'100%',marginBottom:5,fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
+                background:darkMode?'rgba(20,30,50,0.7)':'rgba(255,255,255,0.72)',backdropFilter:'blur(8px)',
+                padding:'2px 10px',borderRadius:20,border:'1px solid '+(darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)')}}>
+                {canPlace?teamName(isOnline?myTeam:team)+': '+barr[isOnline?myTeam:team]+' '+t('wallsLeft'):t('opponentTurn')}
+              </div>
+              {['H','V'].map(function(orient){
+                const col=isOnline?myTeam:team;
+                return(
+                  <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
+                    style={{pointerEvents:'all',width:orient==='H'?84:42,height:orient==='V'?54:42,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
+                      background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
+                      backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+                      border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
+                      opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
+                    <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
+                      width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -5164,6 +5468,7 @@ function TwoVTwo({t,darkMode,onExit}){
 const loader=document.getElementById('loader');
 if(loader)loader.style.display='none';
 function triggerHaptic(){
+  if(window.__hapticOn===false)return;
   if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}
   try{
     const C=window.AudioContext||window.webkitAudioContext;
