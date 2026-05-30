@@ -114,6 +114,13 @@
     60%{transform:scale(1.2) rotate(8deg);}
     100%{transform:scale(1) rotate(0deg);}
   }
+  @keyframes demoDrop{0%{transform:translateY(-46px);opacity:0;}22%{transform:translateY(0);opacity:1;}82%{transform:translateY(0);opacity:1;}100%{transform:translateY(0);opacity:0;}}
+  @keyframes demoFloat{0%,18%{transform:translateY(0);opacity:0;}34%{opacity:1;}100%{transform:translateY(-28px);opacity:0;}}
+  @keyframes demoSwing{0%,100%{transform:rotate(-22deg);}50%{transform:rotate(34deg);}}
+  @keyframes demoShatter{0%,52%{opacity:1;transform:scale(1) rotate(0);}68%{opacity:1;transform:scale(1.08) rotate(4deg);}100%{opacity:0;transform:scale(0.5) rotate(-10deg);}}
+  @keyframes demoBar{0%{width:100%;}100%{width:8%;}}
+  @keyframes demoFadeStagger{0%,25%{opacity:0;transform:scale(0.7);}40%{opacity:1;transform:scale(1);}88%{opacity:1;}100%{opacity:0;}}
+  @keyframes demoStepUp{0%,35%{top:var(--from);}55%,100%{top:var(--to);}}
   @keyframes winner-dance{
     0%{transform:translate(0,0) rotate(0deg) scale(1);}
     8%{transform:translate(-2px,-10px) rotate(-18deg) scale(1.1);}
@@ -463,6 +470,41 @@ function isAdmin(){try{return new URLSearchParams(window.location.search).get('a
 const ADMIN_CFG_KEY='barricade_admin_config';
 const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
+// Erklärtexte für Modi-Hilfe (umkreistes ?)
+const MODE_HELP={
+  de:{
+    classic:{t:'Classic',d:'Jeder Spieler hat eine Gesamtzeit. Läuft deine Zeit ab, verlierst du. Ohne Timer wird ohne Zeitdruck gespielt.'},
+    blitz:{t:'Blitz',d:'Pro Zug hast du nur wenige Sekunden. Bist du zu langsam, verfällt dein Zug. Schnell entscheiden!'},
+    chaos:{t:'Chaos – Barrikaden-Drop',d:'Eine Kiste erscheint auf dem Brett. Erreiche sie und du bekommst +2 Barrikaden extra zum Blockieren.'},
+    random:{t:'Zufalls-Wände',d:'Während des Spiels fallen zufällig Wände aufs Brett. Je nach Stufe selten bis sehr oft. Bleib flexibel!'},
+    hammer:{t:'Hammer-Modus',d:'Du bekommst Hämmer, um gegnerische Wände zu zerschlagen und dir einen Weg zu öffnen.'},
+    twovtwo:{t:'2 vs 2',d:'Zwei Teams mit je zwei Spielern. Ihr teilt euch die Barrikaden. Beide Spieler eines Teams müssen ihr Ziel erreichen, um zu gewinnen.'}
+  },
+  en:{
+    classic:{t:'Classic',d:'Each player has a total time bank. If your time runs out, you lose. Without a timer there is no time pressure.'},
+    blitz:{t:'Blitz',d:'Only a few seconds per turn. Too slow and your turn is skipped. Decide fast!'},
+    chaos:{t:'Chaos – Barricade Drop',d:'A crate appears on the board. Reach it to get +2 extra barricades to block with.'},
+    random:{t:'Random Walls',d:'Walls randomly drop onto the board during play — rare to very often depending on the setting. Stay flexible!'},
+    hammer:{t:'Hammer Mode',d:'You get hammers to smash your opponent\'s walls and open up a path.'},
+    twovtwo:{t:'2 vs 2',d:'Two teams of two players. You share your barricades. Both players of a team must reach their goal to win.'}
+  },
+  tr:{
+    classic:{t:'Klasik',d:'Her oyuncunun toplam bir süresi vardır. Süren biterse kaybedersin. Zamanlayıcısız modda zaman baskısı yoktur.'},
+    blitz:{t:'Blitz',d:'Her hamle için sadece birkaç saniye. Yavaş kalırsan hamlen yanar. Hızlı karar ver!'},
+    chaos:{t:'Kaos – Barikat Düşüşü',d:'Tahtada bir sandık belirir. Ona ulaşırsan +2 ekstra barikat kazanırsın.'},
+    random:{t:'Rastgele Duvarlar',d:'Oyun sırasında tahtaya rastgele duvarlar düşer — ayara göre nadir ila çok sık. Esnek ol!'},
+    hammer:{t:'Çekiç Modu',d:'Rakibin duvarlarını kırıp kendine yol açmak için çekiçler alırsın.'},
+    twovtwo:{t:'2 vs 2',d:'İkişer oyuncudan oluşan iki takım. Barikatları paylaşırsınız. Kazanmak için bir takımın iki oyuncusu da hedefine ulaşmalı.'}
+  },
+  fr:{
+    classic:{t:'Classique',d:'Chaque joueur a un temps total. Si ton temps est écoulé, tu perds. Sans minuteur, aucune pression de temps.'},
+    blitz:{t:'Blitz',d:'Seulement quelques secondes par tour. Trop lent et ton tour est sauté. Décide vite !'},
+    chaos:{t:'Chaos – Chute de barricades',d:'Une caisse apparaît sur le plateau. Atteins-la pour obtenir +2 barricades supplémentaires.'},
+    random:{t:'Murs aléatoires',d:'Des murs tombent au hasard pendant la partie — de rare à très fréquent selon le réglage. Reste souple !'},
+    hammer:{t:'Mode Marteau',d:'Tu reçois des marteaux pour briser les murs de l\'adversaire et ouvrir un passage.'},
+    twovtwo:{t:'2 vs 2',d:'Deux équipes de deux joueurs. Vous partagez vos barricades. Les deux joueurs d\'une équipe doivent atteindre leur but pour gagner.'}
+  }
+};
 
 // ── i18n ───────────────────────────────────────────────────
 const LANGS={en:'English',de:'Deutsch',tr:'Türkçe',fr:'Français'};
@@ -1726,6 +1768,7 @@ function App(){
   const[showAdmin,setShowAdmin]=useState(false);
   const[showTutorial,setShowTutorial]=useState(false);
   const[tutStep,setTutStep]=useState(0);
+  const[helpKey,setHelpKey]=useState(null);
   useEffect(()=>{try{if(localStorage.getItem('ww_tut_seen')!=='1')setShowTutorial(true);}catch{}},[]);
   const closeTutorial=()=>{setShowTutorial(false);setTutStep(0);try{localStorage.setItem('ww_tut_seen','1');}catch{}};
   const openTutorial=()=>{setShowOptions(false);setTutStep(0);setShowTutorial(true);};
@@ -2932,6 +2975,7 @@ function App(){
           {!adminCfg.features.local&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
         </div>}
         {(adminCfg.features.twovtwo||isAdmin())&&<div style={{opacity:adminCfg.features.twovtwo?1:0.45,position:'relative'}}>
+          <div style={{position:'absolute',top:-7,right:-7,zIndex:3}}><HelpDot onClick={()=>setHelpKey('twovtwo')}/></div>
           <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
             background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
             border:'none',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,width:'100%',
@@ -3152,6 +3196,7 @@ function App(){
         </div>
       )}
       {showTutorial&&<TutorialModal t={t} darkMode={darkMode} step={tutStep} setStep={setTutStep} onClose={closeTutorial}/>}
+      {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
     </div>
     );
   }
@@ -3244,7 +3289,10 @@ function App(){
           )}
 
           {/* Classic */}
-          <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
+            <HelpDot onClick={()=>setHelpKey('classic')} style={{marginBottom:6}}/>
+          </div>
           <div style={{display:'flex',gap:6}}>
             <TimeBtn val="none" label={t('noTimer')}/>
             <TimeBtn val="classic-3" label={'3 '+t('minLabel')}/>
@@ -3256,7 +3304,10 @@ function App(){
           {(adminCfg.features.blitz||isAdmin())&&(
           <div style={{opacity:adminCfg.features.blitz?1:0.45,position:'relative'}}>
             {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
+              <HelpDot onClick={()=>setHelpKey('blitz')} style={{marginBottom:6}}/>
+            </div>
             <div style={{display:'flex',gap:6}}>
               <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
               <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
@@ -3269,7 +3320,13 @@ function App(){
           {(adminCfg.features.chaos||adminCfg.features.drop||isAdmin())&&(
           <div style={{position:'relative'}}>
             {(!adminCfg.features.chaos&&!adminCfg.features.drop)&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
+              <div style={{display:'flex',gap:6,marginBottom:6}}>
+                <HelpDot onClick={()=>setHelpKey('chaos')}/>
+                <HelpDot onClick={()=>setHelpKey('random')}/>
+              </div>
+            </div>
             <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
               {(adminCfg.features.chaos||isAdmin())&&(
               <button onClick={()=>setChaosMode(c=>!c)} style={{
@@ -3311,6 +3368,7 @@ function App(){
           {(adminCfg.features.hammer||isAdmin())&&(
           <div style={{marginTop:8,opacity:adminCfg.features.hammer?1:0.45,position:'relative'}}>
             {!adminCfg.features.hammer&&<div style={{position:'absolute',top:-4,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
+            <div style={{position:'absolute',top:6,right:6,zIndex:2}}><HelpDot onClick={()=>setHelpKey('hammer')}/></div>
             <button onClick={()=>adminCfg.features.hammer&&setHammerMode(h=>!h)} style={{
               width:'100%',padding:'11px 12px',
               background:hammerMode?'#f59e0b':'var(--card)',
@@ -3360,7 +3418,8 @@ function App(){
           </div>
 
         </div>
-      </div>
+        {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
+    </div>
     );
   }
 
@@ -5711,6 +5770,95 @@ function TwoVTwo({t,darkMode,onExit}){
               top:ghostPos.y-(dragging.orient==='V'?CELL2:WW2/2)-90,
               boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
       )}
+    </div>
+  );
+}
+
+// ── Modi-Hilfe (umkreistes ? mit animierter Demo) ──────────
+function HelpDot({onClick,style}){
+  return(
+    <button onClick={e=>{e.stopPropagation();e.preventDefault();onClick();}}
+      onMouseDown={e=>e.stopPropagation()} onTouchStart={e=>e.stopPropagation()}
+      style={{width:19,height:19,borderRadius:'50%',border:'1.5px solid currentColor',
+        background:'rgba(255,255,255,0.9)',color:'#64748b',fontSize:12,fontWeight:900,
+        display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',
+        padding:0,lineHeight:1,fontFamily:'system-ui,sans-serif',flexShrink:0,
+        boxShadow:'0 1px 4px rgba(0,0,0,0.18)',...(style||{})}}>?</button>
+  );
+}
+// Animierte Mini-Demo je Modus
+function ModeDemo({kind,dark}){
+  const C=5,R=6,CL=30,WW=6;
+  const cells=[];
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const isGoal=r===0;
+    cells.push(<div key={r+'-'+c} style={{position:'absolute',left:c*CL,top:r*CL,width:CL,height:CL,
+      background:isGoal?'var(--goal)':((r+c)%2===0?'var(--cell-b)':'var(--cell-a)'),
+      border:'1px solid var(--cell-line)',boxSizing:'border-box'}}/>);
+  }
+  const tok=(r,c,col,dk,extra)=>(<div style={{position:'absolute',left:c*CL+5,top:r*CL+5,width:CL-10,height:CL-10,zIndex:5,...(extra||{})}}><Piece color={col} dark={dk}/></div>);
+  const wallColor=dark?'#e2e8f0':'#1e293b';
+  const ov=[];
+  if(kind==='classic'||kind==='blitz'){
+    const dur=kind==='blitz'?'1.6s':'4s';
+    ov.push(tok(4,2,'#ef4444','#7f1d1d'));
+    ov.push(<div key="bw" style={{position:'absolute',left:6,top:-14,width:C*CL-12,height:7,borderRadius:4,background:'var(--border)',zIndex:7}}>
+      <div style={{height:'100%',borderRadius:4,background:kind==='blitz'?'#f59e0b':'#3b82f6',animation:`demoBar ${dur} linear infinite`}}/></div>);
+    ov.push(<div key="cl" style={{position:'absolute',right:-2,top:-34,fontSize:16,zIndex:7}}>{kind==='blitz'?'⚡':'⏱️'}</div>);
+  }
+  if(kind==='chaos'){
+    ov.push(tok(5,1,'#ef4444','#7f1d1d'));
+    ov.push(<div key="cr" style={{position:'absolute',left:2*CL+3,top:2*CL+3,width:CL-6,height:CL-6,zIndex:6,animation:'demoDrop 2.6s ease-in infinite'}}><CrateIcon size={CL-6}/></div>);
+    ov.push(<div key="p2" style={{position:'absolute',left:2*CL+4,top:2*CL,fontSize:13,fontWeight:900,color:'#16a34a',zIndex:8,animation:'demoFloat 2.6s ease-out infinite'}}>+2</div>);
+  }
+  if(kind==='random'){
+    const spots=[[1,1,'h'],[2,3,'v'],[3,0,'h'],[4,2,'h']];
+    spots.forEach((s,i)=>{
+      const isH=s[2]==='h';
+      ov.push(<div key={'w'+i} style={{position:'absolute',zIndex:6,background:wallColor,borderRadius:WW/2,
+        left:isH?s[1]*CL:(s[1]+1)*CL-WW/2,top:isH?(s[0]+1)*CL-WW/2:s[0]*CL,
+        width:isH?2*CL:WW,height:isH?WW:2*CL,
+        animation:`demoFadeStagger 3s ease-in-out infinite`,animationDelay:`${i*0.5}s`}}/>);
+    });
+    ov.push(tok(5,2,'#ef4444','#7f1d1d'));
+  }
+  if(kind==='hammer'){
+    ov.push(tok(5,2,'#ef4444','#7f1d1d'));
+    ov.push(<div key="w" style={{position:'absolute',left:CL,top:3*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,animation:'demoShatter 2.4s ease-in-out infinite'}}/>);
+    ov.push(<div key="hm" style={{position:'absolute',left:2*CL,top:2.1*CL,fontSize:20,zIndex:8,transformOrigin:'bottom left',animation:'demoSwing 2.4s ease-in-out infinite'}}>🔨</div>);
+  }
+  if(kind==='twovtwo'){
+    ov.push(<div key="t1" style={{position:'absolute',left:1*CL+5,width:CL-10,height:CL-10,zIndex:5,'--from':(5*CL+5)+'px','--to':(3*CL+5)+'px',top:5*CL+5,animation:'demoStepUp 3s ease-in-out infinite'}}><Piece color="#ef4444" dark="#7f1d1d"/></div>);
+    ov.push(tok(5,3,'#f87171','#991b1b'));
+    ov.push(<div key="t3" style={{position:'absolute',left:3*CL+5,width:CL-10,height:CL-10,zIndex:5,'--from':(0*CL+5)+'px','--to':(2*CL+5)+'px',top:0*CL+5,animation:'demoStepUp 3s ease-in-out infinite',animationDelay:'0.4s'}}><Piece color="#3b82f6" dark="#1e3a5f"/></div>);
+    ov.push(tok(0,1,'#60a5fa','#1e4d8f'));
+    ov.push(<div key="gb" style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:3}}/>);
+  }
+  return(
+    <div style={{position:'relative',width:C*CL,height:R*CL,borderRadius:10,
+      border:'1.5px solid var(--border)',background:'var(--grid-bg)',boxShadow:'var(--shadow-soft)'}}>
+      {cells}
+      <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:3}}/>
+      {ov}
+    </div>
+  );
+}
+function ModeHelpModal({kind,lang,onClose}){
+  const pack=MODE_HELP[lang]&&MODE_HELP[lang][kind]?MODE_HELP[lang][kind]:MODE_HELP.en[kind];
+  if(!pack)return null;
+  return(
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:720,padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:20,padding:'22px 22px 18px',width:'100%',maxWidth:320,
+        boxShadow:'0 24px 64px rgba(0,0,0,0.3)',textAlign:'center'}}>
+        <div style={{display:'flex',justifyContent:'flex-end'}}>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
+        </div>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:16,marginTop:2,minHeight:180,alignItems:'center'}}>
+          <ModeDemo kind={kind} dark={document.body.classList.contains('dark')}/>
+        </div>
+        <div style={{fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:8,letterSpacing:-0.3}}>{pack.t}</div>
+        <div style={{fontSize:13,color:'var(--subtle)',fontWeight:500,lineHeight:1.55}}>{pack.d}</div>
+      </div>
     </div>
   );
 }
