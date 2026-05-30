@@ -5814,9 +5814,10 @@ function ModeDemo({kind,dark}){
   const ov=[];
 
   if(kind==='classic'||kind==='blitz'){
-    const path=[6,5,4,3,2,1];
-    ov.push(Tok(path[fi],2,'#ef4444','#7f1d1d','t'+cycle));
-    if(fi<5)ov.push(dot(path[fi]-1,2,'n'));
+    const rp=[6,5,4,3,2,1],bp=[6,6,5,4,3,2];
+    ov.push(Tok(rp[fi],1,'#ef4444','#7f1d1d','r'+cycle));
+    ov.push(Tok(bp[fi],3,'#3b82f6','#1e3a5f','b'+cycle));
+    if(fi<5)ov.push(dot(rp[fi]-1,1,'n'));
     const dur=kind==='blitz'?'0.85s':(N*0.85)+'s';
     ov.push(<div key={'bar'+(kind==='blitz'?fi:cycle)} style={{position:'absolute',left:8,top:-15,width:C*CL-16,height:8,borderRadius:4,background:'var(--border)',zIndex:7,overflow:'hidden'}}>
       <div style={{height:'100%',borderRadius:4,background:kind==='blitz'?'#f59e0b':'#3b82f6',animation:`demoBar ${dur} linear infinite`}}/></div>);
@@ -5825,33 +5826,38 @@ function ModeDemo({kind,dark}){
 
   if(kind==='chaos'){
     const tp=[[6,1],[5,1],[5,2],[4,2],[4,2],[4,2]];
+    const bp=[6,6,5,5,4,4];
     const got=fi>=3;
     if(!got)ov.push(<div key={'cr'+cycle} style={{position:'absolute',left:2*CL+3,top:4*CL+3,width:CL-6,height:CL-6,zIndex:4}}><CrateIcon size={CL-6}/></div>);
+    ov.push(Tok(bp[fi],3,'#3b82f6','#1e3a5f','b'+cycle));
     ov.push(Tok(tp[fi][0],tp[fi][1],'#ef4444','#7f1d1d','t'+cycle));
     if(got)ov.push(<div key={'p2'+cycle} style={{position:'absolute',left:2*CL+5,top:3.4*CL,fontSize:13,fontWeight:900,color:'#16a34a',zIndex:8,animation:'demoFloat 1.6s ease-out'}}>+2</div>);
     ov.push(<div key="cnt" style={{position:'absolute',right:-4,top:-32,fontSize:11,fontWeight:800,color:'var(--text)',zIndex:7,display:'flex',alignItems:'center',gap:3}}>{got?8:6}<BrickMini size={10}/></div>);
   }
 
   if(kind==='random'){
-    const drops=['H-2-1','V-4-2','H-5-0','H-3-3'];
+    const drops=['H-2-1','V-3-2','H-4-0','H-1-2'];
     for(let i=0;i<Math.min(fi,drops.length);i++)ov.push(Wall(drops[i],cycle));
-    ov.push(Tok(6,2,'#ef4444','#7f1d1d','t'+cycle));
+    ov.push(Tok([6,5,4,3,2,1][fi],1,'#ef4444','#7f1d1d','r'+cycle));
+    ov.push(Tok([6,6,5,4,3,2][fi],3,'#3b82f6','#1e3a5f','b'+cycle));
   }
 
   if(kind==='hammer'){
     if(fi<3)ov.push(<div key={'w'+cycle} style={{position:'absolute',left:CL,top:4*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',animation:fi===2?'demoShatter 0.85s ease-in forwards':'none'}}/>);
     const tp=[[6,2],[6,2],[6,2],[5,2],[4,2],[3,2]];
+    ov.push(Tok([6,6,6,5,5,4][fi],4,'#3b82f6','#1e3a5f','b'+cycle));
     ov.push(Tok(tp[fi][0],tp[fi][1],'#ef4444','#7f1d1d','t'+cycle));
     if(fi>=1&&fi<=2)ov.push(<div key="hm" style={{position:'absolute',left:2*CL-4,top:3.1*CL,fontSize:19,zIndex:8,transformOrigin:'bottom left',animation:'demoSwing 0.7s ease-in-out infinite'}}>🔨</div>);
   }
 
   if(kind==='twovtwo'){
-    const rb=[6,5,4,3,2,1,1];
-    const bt=[0,1,2,3,4,5,5];
-    ov.push(Tok(rb[fi],1,'#ef4444','#7f1d1d','rb'+cycle));
-    ov.push(Tok(bt[fi],3,'#3b82f6','#1e3a5f','bt'+cycle));
-    ov.push(Tok(6,3,'#f87171','#991b1b','rb2'));
-    ov.push(Tok(0,1,'#60a5fa','#1e4d8f','bt2'));
+    const up=[6,5,4,3,2,1,0],dn=[0,1,2,3,4,5,6];
+    // Rot LINKS: unten→hoch (dunkelrot) + oben→runter (hellrot)
+    ov.push(Tok(up[fi],0,'#ef4444','#7f1d1d','a1'+cycle));
+    ov.push(Tok(dn[fi],1,'#f87171','#991b1b','a2'+cycle));
+    // Blau RECHTS: unten→hoch (dunkelblau) + oben→runter (hellblau)
+    ov.push(Tok(up[fi],4,'#3b82f6','#1e3a5f','b1'+cycle));
+    ov.push(Tok(dn[fi],3,'#60a5fa','#1e4d8f','b2'+cycle));
   }
 
   return(
