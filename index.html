@@ -5788,57 +5788,78 @@ function HelpDot({onClick,style}){
 }
 // Animierte Mini-Demo je Modus
 function ModeDemo({kind,dark}){
-  const C=5,R=6,CL=30,WW=6;
+  const C=5,R=7,CL=28,WW=6;
+  const N={classic:6,blitz:6,chaos:6,random:6,hammer:6,twovtwo:7}[kind]||6;
+  const[f,setF]=React.useState(0);
+  React.useEffect(()=>{setF(0);const iv=setInterval(()=>setF(x=>x+1),850);return ()=>clearInterval(iv);},[kind]);
+  const cycle=Math.floor(f/N),fi=f%N;
+  const wallColor=dark?'#e2e8f0':'#1e293b';
   const cells=[];
   for(let r=0;r<R;r++)for(let c=0;c<C;c++){
-    const isGoal=r===0;
+    const isGoal=r===0||(kind==='twovtwo'&&r===R-1);
     cells.push(<div key={r+'-'+c} style={{position:'absolute',left:c*CL,top:r*CL,width:CL,height:CL,
       background:isGoal?'var(--goal)':((r+c)%2===0?'var(--cell-b)':'var(--cell-a)'),
       border:'1px solid var(--cell-line)',boxSizing:'border-box'}}/>);
   }
-  const tok=(r,c,col,dk,extra)=>(<div style={{position:'absolute',left:c*CL+5,top:r*CL+5,width:CL-10,height:CL-10,zIndex:5,...(extra||{})}}><Piece color={col} dark={dk}/></div>);
-  const wallColor=dark?'#e2e8f0':'#1e293b';
+  const Tok=(r,c,col,dk,id)=>(<div key={id} style={{position:'absolute',left:c*CL+4,top:r*CL+4,width:CL-8,height:CL-8,zIndex:5,
+    transition:'left 0.45s cubic-bezier(.25,.46,.45,.94),top 0.45s cubic-bezier(.25,.46,.45,.94)'}}><Piece color={col} dark={dk}/></div>);
+  const Wall=(key,dk)=>{
+    const a=key.split('-');const ty=a[0],r=+a[1],c=+a[2];
+    const p=ty==='H'?{left:c*CL,top:(r+1)*CL-WW/2,width:2*CL,height:WW,anim:'wall-enter-h'}:{left:(c+1)*CL-WW/2,top:r*CL,width:WW,height:2*CL,anim:'wall-enter-v'};
+    return <div key={key+'-'+dk} style={{position:'absolute',left:p.left,top:p.top,width:p.width,height:p.height,
+      background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',
+      animation:`${p.anim} 0.3s cubic-bezier(0.34,1.56,0.64,1) both`}}/>;
+  };
+  const dot=(r,c,k)=>(<div key={'d'+k} style={{position:'absolute',left:c*CL+CL/2-4,top:r*CL+CL/2-4,width:8,height:8,borderRadius:'50%',background:'#ef4444',opacity:0.38,zIndex:4}}/>);
   const ov=[];
+
   if(kind==='classic'||kind==='blitz'){
-    const dur=kind==='blitz'?'1.6s':'4s';
-    ov.push(tok(4,2,'#ef4444','#7f1d1d'));
-    ov.push(<div key="bw" style={{position:'absolute',left:6,top:-14,width:C*CL-12,height:7,borderRadius:4,background:'var(--border)',zIndex:7}}>
+    const path=[6,5,4,3,2,1];
+    ov.push(Tok(path[fi],2,'#ef4444','#7f1d1d','t'+cycle));
+    if(fi<5)ov.push(dot(path[fi]-1,2,'n'));
+    const dur=kind==='blitz'?'0.85s':(N*0.85)+'s';
+    ov.push(<div key={'bar'+(kind==='blitz'?fi:cycle)} style={{position:'absolute',left:8,top:-15,width:C*CL-16,height:8,borderRadius:4,background:'var(--border)',zIndex:7,overflow:'hidden'}}>
       <div style={{height:'100%',borderRadius:4,background:kind==='blitz'?'#f59e0b':'#3b82f6',animation:`demoBar ${dur} linear infinite`}}/></div>);
-    ov.push(<div key="cl" style={{position:'absolute',right:-2,top:-34,fontSize:16,zIndex:7}}>{kind==='blitz'?'⚡':'⏱️'}</div>);
+    ov.push(<div key="ic" style={{position:'absolute',right:-3,top:-37,fontSize:15,zIndex:7}}>{kind==='blitz'?'⚡':'⏱️'}</div>);
   }
+
   if(kind==='chaos'){
-    ov.push(tok(5,1,'#ef4444','#7f1d1d'));
-    ov.push(<div key="cr" style={{position:'absolute',left:2*CL+3,top:2*CL+3,width:CL-6,height:CL-6,zIndex:6,animation:'demoDrop 2.6s ease-in infinite'}}><CrateIcon size={CL-6}/></div>);
-    ov.push(<div key="p2" style={{position:'absolute',left:2*CL+4,top:2*CL,fontSize:13,fontWeight:900,color:'#16a34a',zIndex:8,animation:'demoFloat 2.6s ease-out infinite'}}>+2</div>);
+    const tp=[[6,1],[5,1],[5,2],[4,2],[4,2],[4,2]];
+    const got=fi>=3;
+    if(!got)ov.push(<div key={'cr'+cycle} style={{position:'absolute',left:2*CL+3,top:4*CL+3,width:CL-6,height:CL-6,zIndex:4}}><CrateIcon size={CL-6}/></div>);
+    ov.push(Tok(tp[fi][0],tp[fi][1],'#ef4444','#7f1d1d','t'+cycle));
+    if(got)ov.push(<div key={'p2'+cycle} style={{position:'absolute',left:2*CL+5,top:3.4*CL,fontSize:13,fontWeight:900,color:'#16a34a',zIndex:8,animation:'demoFloat 1.6s ease-out'}}>+2</div>);
+    ov.push(<div key="cnt" style={{position:'absolute',right:-4,top:-32,fontSize:11,fontWeight:800,color:'var(--text)',zIndex:7,display:'flex',alignItems:'center',gap:3}}>{got?8:6}<BrickMini size={10}/></div>);
   }
+
   if(kind==='random'){
-    const spots=[[1,1,'h'],[2,3,'v'],[3,0,'h'],[4,2,'h']];
-    spots.forEach((s,i)=>{
-      const isH=s[2]==='h';
-      ov.push(<div key={'w'+i} style={{position:'absolute',zIndex:6,background:wallColor,borderRadius:WW/2,
-        left:isH?s[1]*CL:(s[1]+1)*CL-WW/2,top:isH?(s[0]+1)*CL-WW/2:s[0]*CL,
-        width:isH?2*CL:WW,height:isH?WW:2*CL,
-        animation:`demoFadeStagger 3s ease-in-out infinite`,animationDelay:`${i*0.5}s`}}/>);
-    });
-    ov.push(tok(5,2,'#ef4444','#7f1d1d'));
+    const drops=['H-2-1','V-4-2','H-5-0','H-3-3'];
+    for(let i=0;i<Math.min(fi,drops.length);i++)ov.push(Wall(drops[i],cycle));
+    ov.push(Tok(6,2,'#ef4444','#7f1d1d','t'+cycle));
   }
+
   if(kind==='hammer'){
-    ov.push(tok(5,2,'#ef4444','#7f1d1d'));
-    ov.push(<div key="w" style={{position:'absolute',left:CL,top:3*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,animation:'demoShatter 2.4s ease-in-out infinite'}}/>);
-    ov.push(<div key="hm" style={{position:'absolute',left:2*CL,top:2.1*CL,fontSize:20,zIndex:8,transformOrigin:'bottom left',animation:'demoSwing 2.4s ease-in-out infinite'}}>🔨</div>);
+    if(fi<3)ov.push(<div key={'w'+cycle} style={{position:'absolute',left:CL,top:4*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',animation:fi===2?'demoShatter 0.85s ease-in forwards':'none'}}/>);
+    const tp=[[6,2],[6,2],[6,2],[5,2],[4,2],[3,2]];
+    ov.push(Tok(tp[fi][0],tp[fi][1],'#ef4444','#7f1d1d','t'+cycle));
+    if(fi>=1&&fi<=2)ov.push(<div key="hm" style={{position:'absolute',left:2*CL-4,top:3.1*CL,fontSize:19,zIndex:8,transformOrigin:'bottom left',animation:'demoSwing 0.7s ease-in-out infinite'}}>🔨</div>);
   }
+
   if(kind==='twovtwo'){
-    ov.push(<div key="t1" style={{position:'absolute',left:1*CL+5,width:CL-10,height:CL-10,zIndex:5,'--from':(5*CL+5)+'px','--to':(3*CL+5)+'px',top:5*CL+5,animation:'demoStepUp 3s ease-in-out infinite'}}><Piece color="#ef4444" dark="#7f1d1d"/></div>);
-    ov.push(tok(5,3,'#f87171','#991b1b'));
-    ov.push(<div key="t3" style={{position:'absolute',left:3*CL+5,width:CL-10,height:CL-10,zIndex:5,'--from':(0*CL+5)+'px','--to':(2*CL+5)+'px',top:0*CL+5,animation:'demoStepUp 3s ease-in-out infinite',animationDelay:'0.4s'}}><Piece color="#3b82f6" dark="#1e3a5f"/></div>);
-    ov.push(tok(0,1,'#60a5fa','#1e4d8f'));
-    ov.push(<div key="gb" style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:3}}/>);
+    const rb=[6,5,4,3,2,1,1];
+    const bt=[0,1,2,3,4,5,5];
+    ov.push(Tok(rb[fi],1,'#ef4444','#7f1d1d','rb'+cycle));
+    ov.push(Tok(bt[fi],3,'#3b82f6','#1e3a5f','bt'+cycle));
+    ov.push(Tok(6,3,'#f87171','#991b1b','rb2'));
+    ov.push(Tok(0,1,'#60a5fa','#1e4d8f','bt2'));
   }
+
   return(
     <div style={{position:'relative',width:C*CL,height:R*CL,borderRadius:10,
       border:'1.5px solid var(--border)',background:'var(--grid-bg)',boxShadow:'var(--shadow-soft)'}}>
       {cells}
       <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:3}}/>
+      {kind==='twovtwo'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:3}}/>}
       {ov}
     </div>
   );
