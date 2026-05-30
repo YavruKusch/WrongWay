@@ -2975,12 +2975,13 @@ function App(){
           {!adminCfg.features.local&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
         </div>}
         {(adminCfg.features.twovtwo||isAdmin())&&<div style={{opacity:adminCfg.features.twovtwo?1:0.45,position:'relative'}}>
-          <div style={{position:'absolute',top:-7,right:-7,zIndex:3}}><HelpDot onClick={()=>setHelpKey('twovtwo')}/></div>
           <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
+            position:'relative',
             background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
             border:'none',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,width:'100%',
             fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
             display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            <HelpDot onClick={()=>setHelpKey('twovtwo')} style={{position:'absolute',top:5,right:5,color:'white',borderColor:'rgba(255,255,255,0.7)',background:'rgba(255,255,255,0.15)'}}/>
             <PeopleIcon size={16}/>2 vs 2
           </button>
           {!adminCfg.features.twovtwo&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
@@ -3289,29 +3290,25 @@ function App(){
           )}
 
           {/* Classic */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
-            <HelpDot onClick={()=>setHelpKey('classic')} style={{marginBottom:6}}/>
-          </div>
-          <div style={{display:'flex',gap:6}}>
+          <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <TimeBtn val="none" label={t('noTimer')}/>
             <TimeBtn val="classic-3" label={'3 '+t('minLabel')}/>
             <TimeBtn val="classic-5" label={'5 '+t('minLabel')}/>
             <TimeBtn val="classic-8" label={'8 '+t('minLabel')}/>
+            <HelpDot onClick={()=>setHelpKey('classic')}/>
           </div>
 
           {/* Blitz */}
           {(adminCfg.features.blitz||isAdmin())&&(
           <div style={{opacity:adminCfg.features.blitz?1:0.45,position:'relative'}}>
             {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
-              <HelpDot onClick={()=>setHelpKey('blitz')} style={{marginBottom:6}}/>
-            </div>
-            <div style={{display:'flex',gap:6}}>
+            <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
               <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
               <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
               <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
+              <HelpDot onClick={()=>setHelpKey('blitz')}/>
             </div>
           </div>
           )}
@@ -3320,17 +3317,12 @@ function App(){
           {(adminCfg.features.chaos||adminCfg.features.drop||isAdmin())&&(
           <div style={{position:'relative'}}>
             {(!adminCfg.features.chaos&&!adminCfg.features.drop)&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
-              <div style={{display:'flex',gap:6,marginBottom:6}}>
-                <HelpDot onClick={()=>setHelpKey('chaos')}/>
-                <HelpDot onClick={()=>setHelpKey('random')}/>
-              </div>
-            </div>
+            <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
             <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
               {(adminCfg.features.chaos||isAdmin())&&(
               <button onClick={()=>setChaosMode(c=>!c)} style={{
                 flex:1,padding:'11px 7px',opacity:adminCfg.features.chaos?1:0.45,
+                position:'relative',
                 background:chaosMode?'#8b5cf6':'var(--card)',
                 color:chaosMode?'white':'var(--text)',
                 border:`1.5px solid ${chaosMode?'#8b5cf6':'var(--border)'}`,
@@ -3339,6 +3331,7 @@ function App(){
                 fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
                 transition:'all 0.2s'}}>
+                <HelpDot onClick={()=>setHelpKey('chaos')} style={{position:'absolute',top:5,right:5}}/>
                 <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{chaosMode?<CheckIcon size={18} color="currentColor"/>:<CrateIcon size={20}/>}</div>
                 <div>{t('chaosBarrDrop')}</div>
                 <div style={{fontSize:9,fontWeight:600,opacity:0.75,marginTop:3,lineHeight:1.25}}>
@@ -3348,9 +3341,11 @@ function App(){
               )}
               {(adminCfg.features.drop||isAdmin())&&(
               <div style={{flex:1,padding:'11px 7px',display:'flex',flexDirection:'column',opacity:adminCfg.features.drop?1:0.45,
+                position:'relative',
                 background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
                 border:`1.5px solid ${dropMode?'#ec4899':'var(--border)'}`,
                 borderRadius:11,textAlign:'center',transition:'all 0.2s'}}>
+                <HelpDot onClick={()=>setHelpKey('random')} style={{position:'absolute',top:5,right:5}}/>
                 <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{dropMode?<CheckIcon size={18} color="#ec4899"/>:<ModeGlyph kind="burst" size={18} color="#ec4899"/>}</div>
                 <div style={{fontSize:12,fontWeight:800,color:dropMode?'#ec4899':'var(--text)'}}>{t('randomDrop')}</div>
                 <div style={{fontSize:9,fontWeight:600,color:'var(--subtle)',marginTop:3,marginBottom:7,lineHeight:1.25}}>{t('randomDropDesc')}</div>
@@ -3368,9 +3363,8 @@ function App(){
           {(adminCfg.features.hammer||isAdmin())&&(
           <div style={{marginTop:8,opacity:adminCfg.features.hammer?1:0.45,position:'relative'}}>
             {!adminCfg.features.hammer&&<div style={{position:'absolute',top:-4,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <div style={{position:'absolute',top:6,right:6,zIndex:2}}><HelpDot onClick={()=>setHelpKey('hammer')}/></div>
             <button onClick={()=>adminCfg.features.hammer&&setHammerMode(h=>!h)} style={{
-              width:'100%',padding:'11px 12px',
+              width:'100%',padding:'11px 12px',position:'relative',
               background:hammerMode?'#f59e0b':'var(--card)',
               color:hammerMode?'white':'var(--text)',
               border:`1.5px solid ${hammerMode?'#f59e0b':'var(--border)'}`,
@@ -3378,6 +3372,7 @@ function App(){
               display:'flex',alignItems:'center',gap:10,
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:hammerMode?'0 4px 14px rgba(245,158,11,0.35)':'none',transition:'all 0.2s'}}>
+              <HelpDot onClick={()=>setHelpKey('hammer')} style={{position:'absolute',top:5,right:5}}/>
               <span style={{display:'flex',width:24,justifyContent:'center'}}>{hammerMode?<CheckIcon size={20} color="currentColor"/>:<HammerIcon size={22}/>}</span>
               <span>
                 <div style={{fontSize:13,fontWeight:800}}>{t('hammerMode')}</div>
