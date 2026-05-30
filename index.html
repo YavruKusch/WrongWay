@@ -5809,10 +5809,12 @@ function ModeDemo({kind,dark}){
   const ov=[];
 
   if(kind==='classic'||kind==='blitz'){
-    const rp=[6,5,4,3,2,1],bp=[6,6,5,4,3,2];
+    const rp=[6,5,5,5,4,3];
+    const br=[6,6,5,5,5,4],bc=[3,3,3,3,2,2];
     ov.push(Tok(rp[fi],1,'#ef4444','#7f1d1d','r'+cycle));
-    ov.push(Tok(bp[fi],3,'#3b82f6','#1e3a5f','b'+cycle));
-    if(fi<5)ov.push(dot(rp[fi]-1,1,'n'));
+    ov.push(Tok(br[fi],bc[fi],'#3b82f6','#1e3a5f','b'+cycle));
+    if(fi>=3)ov.push(Wall('H-3-2',cycle));
+    if(fi<5&&fi!==3)ov.push(dot(rp[fi]-1,1,'n'));
     const dur=kind==='blitz'?'0.85s':(N*0.85)+'s';
     ov.push(<div key={'bar'+(kind==='blitz'?fi:cycle)} style={{position:'absolute',left:8,top:-15,width:C*CL-16,height:8,borderRadius:4,background:'var(--border)',zIndex:7,overflow:'hidden'}}>
       <div style={{height:'100%',borderRadius:4,background:kind==='blitz'?'#f59e0b':'#3b82f6',animation:`demoBar ${dur} linear infinite`}}/></div>);
@@ -5838,21 +5840,22 @@ function ModeDemo({kind,dark}){
   }
 
   if(kind==='hammer'){
-    if(fi<3)ov.push(<div key={'w'+cycle} style={{position:'absolute',left:CL,top:4*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',animation:fi===2?'demoShatter 0.85s ease-in forwards':'none'}}/>);
-    const tp=[[6,2],[6,2],[6,2],[5,2],[4,2],[3,2]];
-    ov.push(Tok([6,6,6,5,5,4][fi],4,'#3b82f6','#1e3a5f','b'+cycle));
-    ov.push(Tok(tp[fi][0],tp[fi][1],'#ef4444','#7f1d1d','t'+cycle));
-    if(fi>=1&&fi<=2)ov.push(<div key="hm" style={{position:'absolute',left:2*CL-4,top:3.1*CL,fontSize:19,zIndex:8,transformOrigin:'bottom left',animation:'demoSwing 0.7s ease-in-out infinite'}}>🔨</div>);
+    if(fi<=1)ov.push(<div key={'w'+cycle} style={{position:'absolute',left:CL,top:4*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',animation:'none'}}/>);
+    if(fi===2)ov.push(<div key={'ws'+cycle} style={{position:'absolute',left:CL,top:4*CL-WW/2,width:2*CL,height:WW,background:wallColor,borderRadius:WW/2,zIndex:6,boxShadow:'0 2px 6px rgba(0,0,0,0.22)',animation:'demoShatter 0.85s ease-in forwards'}}/>);
+    if(fi===0)ov.push(<div key={'hi'+cycle} style={{position:'absolute',left:2*CL+CL/2-9,top:5*CL+CL/2-9,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',zIndex:4}}>🔨</div>);
+    const rr=[6,5,5,4,3,2];
+    ov.push(Tok(rr[fi],2,'#ef4444','#7f1d1d','r'+cycle));
+    ov.push(Tok(1,3,'#3b82f6','#1e3a5f','b'+cycle));
+    if(fi>=1&&fi<=2)ov.push(<div key="hm" style={{position:'absolute',left:1.5*CL,top:3.2*CL,fontSize:19,zIndex:8,transformOrigin:'bottom center',animation:'demoSwing 0.7s ease-in-out infinite'}}>🔨</div>);
   }
 
   if(kind==='twovtwo'){
-    const up=[6,5,4,3,2,1,0],dn=[0,1,2,3,4,5,6];
-    // Rot LINKS: unten→hoch (dunkelrot) + oben→runter (hellrot)
-    ov.push(Tok(up[fi],0,'#ef4444','#7f1d1d','a1'+cycle));
-    ov.push(Tok(dn[fi],1,'#f87171','#991b1b','a2'+cycle));
-    // Blau RECHTS: unten→hoch (dunkelblau) + oben→runter (hellblau)
-    ov.push(Tok(up[fi],4,'#3b82f6','#1e3a5f','b1'+cycle));
-    ov.push(Tok(dn[fi],3,'#60a5fa','#1e4d8f','b2'+cycle));
+    const a1r=[6,5,5,5,5,4,4],a2r=[0,0,1,1,1,1,2];
+    const b1r=[6,6,6,5,5,5,5],b2r=[0,0,0,0,1,1,1];
+    ov.push(Tok(a1r[fi],1,'#ef4444','#7f1d1d','a1'+cycle));
+    ov.push(Tok(a2r[fi],1,'#f87171','#991b1b','a2'+cycle));
+    ov.push(Tok(b1r[fi],3,'#3b82f6','#1e3a5f','b1'+cycle));
+    ov.push(Tok(b2r[fi],3,'#60a5fa','#1e4d8f','b2'+cycle));
   }
 
   return(
@@ -5903,10 +5906,10 @@ function TutBoard({step,dark}){
   if(step===0){extra.push(tok(5,2,'#ef4444','#7f1d1d'));
     extra.push(<div key="arr" style={{position:'absolute',left:C*CL/2-9,top:CL*1.3,fontSize:22,color:'#16a34a',zIndex:7,fontWeight:900}}>↑</div>);}
   if(step===1){extra.push(tok(3,2,'#ef4444','#7f1d1d'));extra.push(dot(2,2));extra.push(dot(4,2));extra.push(dot(3,1));extra.push(dot(3,3));}
-  if(step===2){extra.push(tok(5,2,'#ef4444','#7f1d1d'));extra.push(tok(0,2,'#3b82f6','#1e3a5f'));extra.push(hWall(2,1));}
+  if(step===2){extra.push(tok(5,2,'#ef4444','#7f1d1d'));extra.push(tok(2,2,'#3b82f6','#1e3a5f'));extra.push(hWall(1,1));}
   if(step===3){extra.push(tok(2,2,'#3b82f6','#1e3a5f'));
-    extra.push(hWall(1,1));extra.push(vWall(2,0));extra.push(vWall(2,2));
-    extra.push(<div key="ok" style={{position:'absolute',left:2*CL+CL/2-2,top:3.4*CL,fontSize:18,zIndex:7}}>⬇️</div>);}
+    extra.push(vWall(1,1));extra.push(vWall(1,2));extra.push(hWall(2,1));
+    extra.push(<div key="ok" style={{position:'absolute',left:2*CL+CL/2-5,top:1.1*CL,fontSize:18,zIndex:7}}>↑</div>);}
   if(step===4){extra.push(tok(0,2,'#ef4444','#7f1d1d'));
     extra.push(<div key="tr" style={{position:'absolute',left:C*CL/2-16,top:-30,zIndex:7}}><TrophyIcon size={32}/></div>);}
   return(
