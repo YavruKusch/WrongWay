@@ -114,6 +114,20 @@
     60%{transform:scale(1.2) rotate(8deg);}
     100%{transform:scale(1) rotate(0deg);}
   }
+  @keyframes slogan-shimmer{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+  }
+  @keyframes slogan-wobble{
+    0%,100%{transform:rotate(-2.5deg) translateY(0);}
+    33%{transform:rotate(-1.5deg) translateY(-2px);}
+    66%{transform:rotate(-3deg) translateY(1px);}
+  }
+  @keyframes aura-pulse{
+    0%,100%{opacity:0.55;}
+    50%{opacity:0.85;}
+  }
   @keyframes demoDrop{0%{transform:translateY(-46px);opacity:0;}22%{transform:translateY(0);opacity:1;}82%{transform:translateY(0);opacity:1;}100%{transform:translateY(0);opacity:0;}}
   @keyframes demoFloat{0%,18%{transform:translateY(0);opacity:0;}34%{opacity:1;}100%{transform:translateY(-28px);opacity:0;}}
   @keyframes demoSwing{0%,100%{transform:rotate(-22deg);}50%{transform:rotate(34deg);}}
@@ -2152,7 +2166,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
           <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><SwordsIcon size={13} color={muted}/> RANKED</div>
           <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>Ranglistenspiele</div>
-          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Classic 3 Min / Blitz 8 Sek</div>
+          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · 2 Runden: Classic Map → Duell Map</div>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
@@ -2162,12 +2176,11 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            {renderCard('classic','Classic',<ModeGlyph kind="clock" size={12} color={muted}/>)}
-            {renderCard('blitz','Blitz',<ModeGlyph kind="bolt" size={12} color={muted}/>)}
+            {renderCard('classic','Classic · 3 Min',<ModeGlyph kind="clock" size={12} color={muted}/>)}
             <div style={{padding:'12px 14px',borderRadius:12,
               background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
               border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6,display:'flex',alignItems:'center',gap:6}}>
-              <LightbulbIcon size={13} color={muted}/> Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s. Sieg gegen Stärkere = mehr Punkte.
+              <LightbulbIcon size={13} color={muted}/> 2 Runden: Runde 1 auf Classic Map, Runde 2 auf Duell Map. Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s.
             </div>
           </div>
         )}
@@ -2765,14 +2778,17 @@ function App(){
     await clearInvite(friendLobbyState.friendKey);
     setFriendLobbyState(null);
   };
-  const doStartRanked=(code,role,mode,oppKey,oppRating)=>{
+  const doStartRanked=(code,role,mode,oppKey,oppRating,rankedRound)=>{
     const acc=accRef.current;
     const myR=acc&&acc.stats&&acc.stats.ranked&&acc.stats.ranked[mode]?acc.stats.ranked[mode].rating:1000;
     setRankedMode(mode);setRankedMyRating(myR);setRankedOppRating(oppRating);setRankedOppKey(oppKey);
     setOppAccountKey(oppKey||null);
-    const tm=mode==='blitz'?'blitz-8':'classic-3';
+    // Ranked: immer Classic 3min; Runde 1 = classic map, Runde 2 = duel map
+    const tm='classic-3';
+    const rmap=(rankedRound===2)?'duel':'classic';
+    setSelectedMap(rmap);
     setNavDir('fwd');
-    initGame('online',role,code,false,tm,true);
+    initGame('online',role,code,false,tm,true,rmap);
   };
   // Einladung annehmen: Lobby betreten
   const doAcceptInvite=async()=>{
@@ -2810,6 +2826,8 @@ function App(){
   const[danceStyle,setDanceStyle]=useState('robot');
   const[lobbyCfgPrivate,setLobbyCfgPrivate]=useState(false);
   const[lobbyCfgMode,setLobbyCfgMode]=useState('classic');
+  const[selectedMap,setSelectedMap]=useState(()=>{try{return localStorage.getItem('ww_map')||'classic';}catch{return 'classic';}});
+  useEffect(()=>{try{localStorage.setItem('ww_map',selectedMap);}catch{}},[selectedMap]);
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
     try{localStorage.setItem('ww_dark',darkMode?'1':'0');}catch{}
@@ -3037,12 +3055,16 @@ function App(){
   const color=PC[turn];
 
   // ── Init game ──
-  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false)=>{
+  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride)=>{
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
     const tm=tmOverride!==undefined?tmOverride:gameTimeMode;
     if(tmOverride!==undefined)setGameTimeMode(tmOverride);
-    setPA({...INIT_A});setPB({...INIT_B});setWalls(new Set());
+    // Spawn-Positionen je nach Spielfeld
+    const mapToUse=mapOverride!==undefined?mapOverride:selectedMap;
+    const initA=mapToUse==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
+    const initB=mapToUse==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
+    setPA({...initA});setPB({...initB});setWalls(new Set());
     let starter;
     const prevMoves=S.current.moveHist;
     if(isRematch&&prevMoves&&prevMoves.length>0&&prevMoves[0].p){
@@ -3374,6 +3396,8 @@ function App(){
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);
         setGiveUpArmed(false);setFlash('');
+        // Map aus Online-State übernehmen
+        if(gs.map)setSelectedMap(gs.map);
         // Timer zurücksetzen
         const rtm=gs.tm||gameTimeMode;
         const classicSecs=rtm==='classic-3'?180:rtm==='classic-5'?300:rtm==='classic-8'?480:0;
@@ -3401,14 +3425,20 @@ function App(){
         // swap=false: gleiche Rollen → opposite role
         // swap=true: getauschte Rollen → gleiche role (= andere Person)
         const startTurn=swap?prevStarter:(prevStarter==='A'?'B':'A');
+        // Ranked: Runde 1 = classic, Runde 2 = duel
+        const nextRound=newGN+1;
+        const nextMap=(S.current.isRanked&&nextRound===2)?'duel':'classic';
+        const initA2=nextMap==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
+        const initB2=nextMap==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
         const ngs={
-          pA:{...INIT_A},pB:{...INIT_B},walls:[],
+          pA:{...initA2},pB:{...initB2},walls:[],
           barrLeft:{A:gameBarr,B:gameBarr},turn:startTurn,winner:null,moves:[],
           rematchA:false,rematchB:false,rematchDeclined:null,
-          gameNum:newGN+1,swapRoles:swap,
+          gameNum:nextRound,swapRoles:swap,
           chaosItem:null,
           hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},
           tm:S.current.gameTimeMode,
+          map:nextMap,
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
@@ -3579,12 +3609,15 @@ function App(){
           const nameB=lobby.guestName||'';
           const accountKeyA=lobby.hostAccountKey||null;
           const accountKeyB=lobby.guestAccountKey||null;
-          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
+          const mapNow=lobby.map||selectedMap;
+          const initA=mapNow==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
+          const initB=mapNow==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
+          const gs={pA:{...initA},pB:{...initB},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
           setPlayerNames({A:nameA,B:nameB});
           setOppAccountKey(accountKeyB);
-          initGame('online','A',lobbyId);
+          initGame('online','A',lobbyId,false,undefined,false,mapNow);
         }
       }
     };
@@ -3665,7 +3698,7 @@ function App(){
     setFlash('');
     const id=randId(6);
     const code=isPrivate?randId(4):null;
-    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops};
+    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,map:selectedMap};
     const hostName=getDisplayName(account);
     const hostAccountKey=account?account.key:null;
     const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,hostName,hostAccountKey,guestId:null,ts:Date.now(),...cfg});
@@ -3696,6 +3729,7 @@ function App(){
     if(lobby.dp!==undefined)setDropMode(lobby.dp);
     if(lobby.hm!==undefined)setHammerMode(!!lobby.hm);
     if(lobby.hd!==undefined)setHammerDrops(lobby.hd);
+    if(lobby.map!==undefined)setSelectedMap(lobby.map);
     await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,guestName:getDisplayName(account),guestAccountKey:account?account.key:null,ts:Date.now()});
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<40;i++){
@@ -3705,7 +3739,7 @@ function App(){
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
-        initGame('online','B',id,false,lobby.tm);return;
+        initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap);return;
       }
     }
     setFlash(t('hostNotResponding'));setScreen('online');
@@ -4049,16 +4083,46 @@ function App(){
         </div>
       )}
       <div style={{textAlign:'center',marginBottom:30,position:'relative',zIndex:1}}>
+        {/* Aura-Hintergrundstrahlung */}
+        <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
+          background:selectedMap==='duel'
+            ?'radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.22) 0%, transparent 65%), radial-gradient(ellipse at 50% 100%, rgba(139,92,246,0.18) 0%, transparent 65%), radial-gradient(ellipse at 0% 50%, rgba(139,92,246,0.12) 0%, transparent 50%), radial-gradient(ellipse at 100% 50%, rgba(139,92,246,0.12) 0%, transparent 50%)'
+            :'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.18) 0%, transparent 65%), radial-gradient(ellipse at 50% 100%, rgba(59,130,246,0.14) 0%, transparent 65%), radial-gradient(ellipse at 0% 50%, rgba(59,130,246,0.1) 0%, transparent 50%), radial-gradient(ellipse at 100% 50%, rgba(59,130,246,0.1) 0%, transparent 50%)',
+          transition:'background 0.6s ease',
+          animation:'aura-pulse 3s ease-in-out infinite'}}/>
         <div style={{marginBottom:14,display:'flex',justifyContent:'center'}}>
           <div style={{width:78,height:78,borderRadius:22,
-            background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+            background:selectedMap==='duel'
+              ?'linear-gradient(140deg,#8b5cf6 0%,#6d28d9 52%,#4c1d95 100%)'
+              :'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
             display:'flex',alignItems:'center',justifyContent:'center',
-            boxShadow:'0 12px 30px rgba(99,102,241,0.32),inset 0 1px 1px rgba(255,255,255,0.35)'}}>
+            boxShadow:selectedMap==='duel'
+              ?'0 12px 30px rgba(139,92,246,0.42),inset 0 1px 1px rgba(255,255,255,0.35)'
+              :'0 12px 30px rgba(99,102,241,0.32),inset 0 1px 1px rgba(255,255,255,0.35)',
+            transition:'all 0.5s ease'}}>
             <BrickWallIcon size={42} light/>
           </div>
         </div>
         <div style={{fontSize:30,fontWeight:900,letterSpacing:-1.6,color:'var(--text)',lineHeight:1}}>{t('title')}</div>
         <div style={{fontSize:12,fontWeight:600,letterSpacing:0.5,color:'var(--subtle)',marginTop:7,fontStyle:'italic'}}>{t('subtitle')}</div>
+        {/* Dynamischer Unter-Slogan */}
+        <div style={{
+          marginTop:10,
+          display:'inline-block',
+          fontSize:11,fontWeight:900,letterSpacing:1.8,
+          transform:'rotate(-2.5deg)',
+          background:selectedMap==='duel'
+            ?'linear-gradient(90deg,#8b5cf6,#c084fc,#7c3aed,#a855f7,#8b5cf6)'
+            :'linear-gradient(90deg,#3b82f6,#60a5fa,#2563eb,#93c5fd,#3b82f6)',
+          backgroundSize:'200% 200%',
+          WebkitBackgroundClip:'text',
+          WebkitTextFillColor:'transparent',
+          backgroundClip:'text',
+          animation:'slogan-shimmer 2.8s ease-in-out infinite, slogan-wobble 4s ease-in-out infinite',
+          transition:'background 0.5s ease',
+          userSelect:'none'}}>
+          {selectedMap==='duel'?'// 1v1 ARENA MODE //':'// THE ULTIMATE RACE //'}
+        </div>
         {globalStats.online>0&&adminCfg.features.showPresence&&(
           <div style={{marginTop:10,display:'inline-flex',alignItems:'center',gap:10,padding:'5px 14px',
             borderRadius:20,background:'var(--card)',border:'1.5px solid var(--border)'}}>
@@ -4086,7 +4150,7 @@ function App(){
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
           <div style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:1.2}}>{t('modeLabel')}</div>
           <div style={{fontSize:12,fontWeight:800,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {modeLabel} · {gameBarr} <BrickMini size={11}/>
+            {selectedMap==='duel'?'Duell':'Klassisch'} · {modeLabel} · {gameBarr} <BrickMini size={11}/>
           </div>
         </div>
         <span style={{fontSize:14,color:'var(--subtle)'}}>›</span>
@@ -4149,7 +4213,7 @@ function App(){
               icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
               title={t('localPlay')} desc="2 Spieler, ein Gerät"
               off={!adminCfg.features.local}
-              onClick={()=>initGame('pvp')}/>}
+              onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
           </MenuSection>
         )}
       </div>
@@ -4443,6 +4507,60 @@ function App(){
             </div>
           )}
 
+          {/* ── Spielfeld ── */}
+          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:6,marginBottom:8,paddingLeft:2,display:'flex',alignItems:'center',gap:5}}>
+            <span>🗺</span> SPIELFELD
+          </div>
+          <div style={{display:'flex',gap:6,marginBottom:4}}>
+            <button onClick={()=>setSelectedMap('classic')} style={{
+              flex:1,padding:'10px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
+              background:selectedMap==='classic'?'var(--text)':'var(--card)',
+              color:selectedMap==='classic'?'var(--bg)':'var(--text)',
+              border:'1.5px solid '+(selectedMap==='classic'?'var(--text)':'var(--border)'),
+              fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:5}}>
+                <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="1" width="34" height="26" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.3"/>
+                  <rect x="4" y="4" width="7" height="4" rx="1" fill="currentColor" opacity="0.7"/>
+                  <rect x="14" y="4" width="5" height="4" rx="1" fill="currentColor" opacity="0.5"/>
+                  <rect x="4" y="10" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
+                  <rect x="10" y="10" width="7" height="4" rx="1" fill="currentColor" opacity="0.7"/>
+                  <rect x="20" y="10" width="5" height="4" rx="1" fill="currentColor" opacity="0.4"/>
+                  <rect x="4" y="16" width="5" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+                  <rect x="12" y="16" width="8" height="4" rx="1" fill="currentColor" opacity="0.7"/>
+                  <rect x="23" y="16" width="6" height="4" rx="1" fill="currentColor" opacity="0.4"/>
+                  <circle cx="30" cy="6" r="2.5" fill="#ef4444" opacity="0.85"/>
+                  <circle cx="5" cy="24" r="2.5" fill="#3b82f6" opacity="0.85"/>
+                </svg>
+              </div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>Klassisch</div>
+            </button>
+            <button onClick={()=>setSelectedMap('duel')} style={{
+              flex:1,padding:'10px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
+              background:selectedMap==='duel'?'var(--text)':'var(--card)',
+              color:selectedMap==='duel'?'var(--bg)':'var(--text)',
+              border:'1.5px solid '+(selectedMap==='duel'?'var(--text)':'var(--border)'),
+              fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:5}}>
+                <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="1" width="34" height="26" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.3"/>
+                  <circle cx="18" cy="5" r="3" fill="#ef4444" opacity="0.85"/>
+                  <line x1="18" y1="9" x2="18" y2="13" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+                  <polygon points="14,14 22,14 18,18" fill="currentColor" opacity="0.7"/>
+                  <circle cx="18" cy="23" r="3" fill="#3b82f6" opacity="0.85"/>
+                  <line x1="18" y1="19" x2="18" y2="15" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+                  <polygon points="14,14 22,14 18,10" fill="currentColor" opacity="0.7"/>
+                </svg>
+              </div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>Duell</div>
+            </button>
+          </div>
+          {selectedMap==='duel'&&(
+            <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:8,paddingLeft:2,lineHeight:1.5}}>
+              ↕ Spieler starten gegenüber: Einer oben, einer unten
+            </div>
+          )}
+
           {/* Classic */}
           <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
@@ -4681,7 +4799,7 @@ function App(){
             <MenuItem key={d.k}
               icon={<DotIcon size={18} color="#fff"/>} iconBg={d.bg}
               title={t(d.k)} desc={t(d.k+'Desc')}
-              onClick={()=>{setAiDifficulty(d.k);initGame('pvc');}}/>
+              onClick={()=>{setAiDifficulty(d.k);initGame('pvc',undefined,null,false,undefined,false,selectedMap);}}/>
           ))}
         </div>
       </div>
@@ -4823,8 +4941,15 @@ function App(){
                         {t('join')}
                       </div>
                     </div>
-                    {(isClassic||isBlitz||l.ch||l.br)&&(
+                    {(isClassic||isBlitz||l.ch||l.br||l.map)&&(
                       <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
+                        {l.map&&(
+                          <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
+                            background:l.map==='duel'?'rgba(139,92,246,0.15)':'rgba(59,130,246,0.12)',
+                            color:l.map==='duel'?'#8b5cf6':'#3b82f6'}}>
+                            {l.map==='duel'?'⚔ Duell':'🗺 Klassisch'}
+                          </div>
+                        )}
                         {isClassic&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'rgba(59,130,246,0.12)',color:'#3b82f6'}}>
