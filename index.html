@@ -1949,10 +1949,10 @@ function rankTier(r){
   if(r>=1400)return{emoji:'💎',name:'Diamant',color:'#a78bfa'};
   if(r>=1200)return{emoji:'🥇',name:'Gold',color:'#f59e0b'};
   if(r>=1000)return{emoji:'🥈',name:'Silber',color:'#94a3b8'};
-  return{emoji:'🥉',name:'Bronze',color:'#92400e'};
+  return{emoji:'🥉',name:'Bronze',color:'#b45309'};
 }
-function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
-  const[queue,setQueue]=React.useState(null); // null | {mode,ts}
+function RankedScreen({account,t,darkMode,goBack,onStart}){
+  const[queue,setQueue]=React.useState(null);
   const[elapsed,setElapsed]=React.useState(0);
   const[foundMsg,setFoundMsg]=React.useState('');
   const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
@@ -1962,81 +1962,89 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
   const border=dk?'#334155':'#e2e8f0';
   const txt=dk?'#f1f5f9':'#1e293b';
   const muted=dk?'#64748b':'#94a3b8';
-  const bg=dk?'rgba(15,23,42,0.9)':'rgba(248,250,252,0.9)';
 
-  const joinQueue=async mode=>{
+  const joinQueue=async function(mode){
     if(!account)return;
+    const myKey=account.key;
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
-    await stoSet('ww_ranked_queue/'+account.key,{mode,rating:r,name:account.name,uid:uid,ts:Date.now()});
-    setQueue({mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
+    await stoSet('ww_ranked_queue/'+myKey,{mode:mode,rating:r,name:account.name,ts:Date.now()});
+    setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
   };
-  const leaveQueue=async()=>{
+  const leaveQueue=async function(){
     if(account)await stoDel('ww_ranked_queue/'+account.key);
-    setQueue(null);setElapsed(0);
+    setQueue(null);setElapsed(0);setFoundMsg('');
   };
 
-  React.useEffect(()=>{
-    if(!queue)return;
-    let secs=0,cancelled=false;
-    const tick=setInterval(()=>{if(!cancelled){secs++;setElapsed(secs);}},1000);
-    const poll=setInterval(async()=>{
+  React.useEffect(function(){
+    if(!queue||!account)return;
+    var secs=0,cancelled=false;
+    var myKey=account.key;
+    var tick=setInterval(function(){if(!cancelled){secs++;setElapsed(secs);}},1000);
+    var poll=setInterval(async function(){
       if(cancelled)return;
-      const myEntry=await stoGet('ww_ranked_queue/'+account.key);
-      if(!myEntry){setQueue(null);return;}
-      // Guest: host assigned a lobby
+      var myEntry=await stoGet('ww_ranked_queue/'+myKey);
+      if(!myEntry){if(!cancelled){setQueue(null);}return;}
       if(myEntry.lobbyCode){
-        await stoDel('ww_ranked_queue/'+account.key);
-        setFoundMsg('Gegner gefunden!');cancelled=true;
-        setTimeout(()=>onStart(myEntry.lobbyCode,'B',queue.mode,myEntry.oppKey,myEntry.oppRating),600);
+        if(cancelled)return;
+        cancelled=true;
+        await stoDel('ww_ranked_queue/'+myKey);
+        setFoundMsg('Gegner gefunden!');
+        var code=myEntry.lobbyCode,oppKey=myEntry.oppKey,oppR=myEntry.oppRating,md=queue.mode;
+        setTimeout(function(){onStart(code,'B',md,oppKey,oppR);},700);
         return;
       }
-      // Try to be host: find opponent
-      const all=await stoGet('ww_ranked_queue')||{};
-      const candidates=Object.entries(all)
-        .filter(function(e){return e[0]!==account.key&&e[1].mode===queue.mode&&!e[1].lobbyCode;})
-        .map(function(e){return Object.assign({},e[1],{key:e[0]});});
-      if(!candidates.length)return;
-      // Only host if I have earliest ts
-      const myTs=myEntry.ts;
-      if(candidates.some(function(c){return c.ts<myTs;}))return;
-      const range=secs<15?50:secs<30?100:200;
-      const myR=myEntry.rating;
-      const valid=candidates.filter(function(c){return Math.abs(c.rating-myR)<=range;});
+      var all=await stoGet('ww_ranked_queue')||{};
+      var others=Object.keys(all).filter(function(k){return k!==myKey&&all[k].mode===queue.mode&&!all[k].lobbyCode;});
+      if(!others.length)return;
+      var isHost=others.every(function(k){return myEntry.ts<=all[k].ts;});
+      if(!isHost)return;
+      var range=secs<15?50:secs<30?100:200;
+      var myR=myEntry.rating;
+      var valid=others.filter(function(k){return Math.abs(all[k].rating-myR)<=range;});
       if(!valid.length)return;
-      valid.sort(function(a,b){return Math.abs(a.rating-myR)-Math.abs(b.rating-myR);});
-      const opp=valid[0];
-      const code=Array.from({length:4},function(){return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)];}).join('');
-      const lobby={host:uid,players:{[uid]:{name:account.name,joinedAt:Date.now()}},status:'waiting',lastUpdated:Date.now(),ranked:true,rankedMode:queue.mode};
-      await stoSet('barricade_lobby_'+code,lobby);
-      await stoSet('ww_ranked_queue/'+opp.key,Object.assign({},opp,{lobbyCode:code,oppKey:account.key,oppRating:myR}));
-      await stoDel('ww_ranked_queue/'+account.key);
-      setFoundMsg('Gegner gefunden!');cancelled=true;
-      setTimeout(()=>onStart(code,'A',queue.mode,opp.key,opp.rating),600);
+      valid.sort(function(a,b){return Math.abs(all[a].rating-myR)-Math.abs(all[b].rating-myR);});
+      var oppK=valid[0];var opp=all[oppK];
+      var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      var lobbyCode=Array.from({length:4},function(){return chars[Math.floor(Math.random()*chars.length)];}).join('');
+      var lobby={host:SESSION,players:{},status:'waiting',lastUpdated:Date.now(),ranked:true,rankedMode:queue.mode};
+      lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
+      await stoSet('barricade_lobby_'+lobbyCode,lobby);
+      var oppEntry=Object.assign({},opp,{lobbyCode:lobbyCode,oppKey:myKey,oppRating:myR});
+      await stoSet('ww_ranked_queue/'+oppK,oppEntry);
+      await stoDel('ww_ranked_queue/'+myKey);
+      if(cancelled)return;
+      cancelled=true;
+      setFoundMsg('Gegner gefunden!');
+      var md2=queue.mode;
+      setTimeout(function(){onStart(lobbyCode,'A',md2,oppK,opp.rating);},700);
     },2000);
-    return()=>{cancelled=true;clearInterval(tick);clearInterval(poll);};
+    return function(){cancelled=true;clearInterval(tick);clearInterval(poll);};
   },[queue]);
 
-  const EloCard=function({mode,label,icon}){
-    const r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
-    const tier=rankTier(r.rating);
-    const inQueue=queue&&queue.mode===mode;
-    const range=elapsed<15?50:elapsed<30?100:200;
+  var renderCard=function(mode,label,icon){
+    var r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
+    var tier=rankTier(r.rating);
+    var inQueue=queue&&queue.mode===mode;
+    var range=elapsed<15?50:elapsed<30?100:200;
+    var wr=r.games>0?Math.round(r.wins/r.games*100):0;
     return(
-      <div style={{background:card,border:'1.5px solid '+(inQueue?tier.color+'88':border),borderRadius:16,
+      <div key={mode} style={{background:card,border:'1.5px solid '+(inQueue?tier.color+'88':border),borderRadius:16,
         padding:'18px 16px',position:'relative',overflow:'hidden',
         boxShadow:inQueue?('0 4px 20px '+tier.color+'33'):'0 2px 8px rgba(0,0,0,0.06)'}}>
-        {inQueue&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+tier.color+','+tier.color+'88)',animation:'demoBar 2s linear infinite'}}/>}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        {inQueue&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
+          background:'linear-gradient(90deg,'+tier.color+','+tier.color+'55)',
+          animation:'demoBar 1.8s linear infinite'}}/>}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
           <div style={{fontSize:12,fontWeight:800,color:muted,letterSpacing:1}}>{icon} {label.toUpperCase()}</div>
           <div style={{fontSize:11,fontWeight:700,color:tier.color,background:tier.color+'18',
             padding:'3px 9px',borderRadius:20}}>{tier.emoji} {tier.name}</div>
         </div>
-        <div style={{fontSize:44,fontWeight:900,color:tier.color,letterSpacing:-2,lineHeight:1,marginBottom:4}}>{r.rating}</div>
-        <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {r.games>0?Math.round(r.wins/r.games*100):0}%</div>
+        <div style={{fontSize:46,fontWeight:900,color:tier.color,letterSpacing:-2,lineHeight:1,marginBottom:4}}>{r.rating}</div>
+        <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {wr}%</div>
         {!queue?(
-          <button onClick={()=>joinQueue(mode)} style={{
+          <button onClick={function(){joinQueue(mode);}} style={{
             width:'100%',padding:'13px',borderRadius:11,border:'none',cursor:'pointer',
-            background:'linear-gradient(135deg,'+tier.color+','+tier.color+'cc)',
+            background:'linear-gradient(135deg,'+tier.color+','+tier.color+'aa)',
             color:'#fff',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
             boxShadow:'0 4px 12px '+tier.color+'44'}}>
             ⚔️ Ranked spielen
@@ -2046,7 +2054,7 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,justifyContent:'center'}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:tier.color,animation:'pulse 1s ease-in-out infinite'}}/>
               <span style={{fontSize:13,fontWeight:700,color:tier.color}}>
-                {foundMsg||('Suche... '+elapsed+'s · ±'+range+' ELO')}
+                {foundMsg?foundMsg:('Suche... '+elapsed+'s · ±'+range+' ELO')}
               </span>
             </div>
             <button onClick={leaveQueue} style={{width:'100%',padding:'10px',borderRadius:10,
@@ -2057,7 +2065,7 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
           </div>
         ):(
           <button disabled style={{width:'100%',padding:'13px',borderRadius:11,border:'none',
-            background:'var(--border)',color:muted,fontWeight:700,fontSize:13,
+            background:dk?'#334155':'#e2e8f0',color:muted,fontWeight:700,fontSize:13,
             fontFamily:'system-ui,-apple-system,sans-serif',cursor:'default'}}>
             Anderer Modus aktiv
           </button>
@@ -2072,7 +2080,8 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
       background:'transparent',position:'relative',zIndex:1,
       animation:'fadeSlideUp 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={()=>{leaveQueue();goBack();}} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
+      <button onClick={function(){leaveQueue();goBack();}} style={{position:'fixed',
+        top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
         zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
@@ -2081,7 +2090,7 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
           <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4}}>⚔️ RANKED</div>
           <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>Ranglistenspiele</div>
-          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Standard 3 Min / 8 Sek</div>
+          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Classic 3 Min / Blitz 8 Sek</div>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
@@ -2091,11 +2100,12 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            <EloCard mode="classic" label="Classic" icon="⏱️"/>
-            <EloCard mode="blitz" label="Blitz" icon="⚡"/>
-            <div style={{padding:'12px 14px',borderRadius:12,background:bg,
+            {renderCard('classic','Classic','⏱️')}
+            {renderCard('blitz','Blitz','⚡')}
+            <div style={{padding:'12px 14px',borderRadius:12,
+              background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
               border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>
-              💡 Punkte ±50 ELO Bereich → expandiert auf ±100 nach 15s → ±200 nach 30s. Gewinne gegen Stärkere = mehr Punkte.
+              💡 Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s. Sieg gegen Stärkere = mehr Punkte.
             </div>
           </div>
         )}
@@ -2103,6 +2113,28 @@ function RankedScreen({account,uid,t,darkMode,goBack,onStart}){
     </div>
   );
 }
+  const[queue,setQueue]=React.useState(null); // null | {mode,ts}
+  const[elapsed,setElapsed]=React.useState(0);
+  const[foundMsg,setFoundMsg]=React.useState('');
+  const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
+
+  const dk=darkMode;
+  const card=dk?'#1e293b':'#fff';
+  const border=dk?'#334155':'#e2e8f0';
+  const txt=dk?'#f1f5f9':'#1e293b';
+  const muted=dk?'#64748b':'#94a3b8';
+
+  const joinQueue=async function(mode){
+    if(!account)return;
+    const r=(ranked[mode]&&ranked[mode].rating)||1000;
+    await stoSet('ww_ranked_queue/'+account.key,{mode:mode,rating:r,name:account.name,ts:Date.now()});
+    setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
+  };
+  const leaveQueue=async function(){
+    if(account)await stoDel('ww_ranked_queue/'+account.key);
+    setQueue(null);setElapsed(0);setFoundMsg('');
+  };
+
 function RankedResetAdmin({t}){
   const[step,setStep]=React.useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=busy, 4=done
   const doReset=async()=>{
@@ -2609,7 +2641,8 @@ function App(){
   const doInviteFriend=async(friendKey,friendName)=>{
     if(!account)return;
     const code=randId(4);
-    const lobby={host:uid,players:{[uid]:{name:account.name,joinedAt:Date.now()}},status:'waiting',lastUpdated:Date.now()};
+    const lobby={host:SESSION,players:{},status:'waiting',lastUpdated:Date.now()};
+    lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
     await stoSet('barricade_lobby_'+code,lobby);
     await sendLobbyInvite(friendKey,account.key,account.name,code,'1v1');
     setFriendLobbyState({code:code,friendKey:friendKey,friendName:friendName});
@@ -2639,7 +2672,7 @@ function App(){
       const lob=await stoGet('barricade_lobby_'+code);
       if(lob){
         const players=Object.assign({},lob.players||{});
-        players[uid]={name:account.name,joinedAt:Date.now()};
+        players[SESSION]={name:account.name,joinedAt:Date.now()};
         await stoSet('barricade_lobby_'+code,Object.assign({},lob,{players:players}));
       }
     }catch(e){}
@@ -4413,7 +4446,7 @@ function App(){
 
   // ── RANKED ──────────────────────────────────────────────
   if(screen==='ranked'){
-    return <RankedScreen account={account} uid={uid} t={t} darkMode={darkMode} goBack={goBack}
+    return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
       onStart={doStartRanked}/>;
   }
 
