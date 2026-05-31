@@ -3992,7 +3992,7 @@ function App(){
 
       {/* Modus-Konfigurations-Button */}
       <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} style={{
-        width:260,padding:'10px 14px',marginBottom:14,position:'relative',zIndex:1,
+        width:280,padding:'10px 14px',marginBottom:18,position:'relative',zIndex:1,
         background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:14,
         cursor:'pointer',display:'flex',alignItems:'center',gap:10,
         boxShadow:'var(--shadow-soft)',
@@ -4009,64 +4009,69 @@ function App(){
         <span style={{fontSize:14,color:'var(--subtle)'}}>›</span>
       </button>
 
-      <div style={{display:'flex',flexDirection:'column',gap:10,width:260,position:'relative',zIndex:1}}>
+      <div style={{width:280,position:'relative',zIndex:1}}>
+        {/* RANKED — prominent */}
         {(adminCfg.features.ranked||isAdmin())&&(
-          <div style={{opacity:adminCfg.features.ranked?1:0.45,position:'relative'}}>
-            <button onClick={()=>{setNavDir('fwd');setScreen('ranked');}} style={{
-              width:'100%',padding:'14px 16px',borderRadius:13,border:'none',cursor:'pointer',
-              background:'linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)',
-              color:'white',fontWeight:800,fontSize:14,
-              fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:'0 4px 16px rgba(245,158,11,0.35)',
-              display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-              <span style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontSize:16}}>⚔️</span>
-                <span>Ranked</span>
-              </span>
-              {account&&account.stats&&account.stats.ranked&&(
-                <span style={{fontSize:11,fontWeight:700,background:'rgba(255,255,255,0.2)',
-                  padding:'3px 8px',borderRadius:10}}>
+          <div style={{marginBottom:18}}>
+            <MenuItem
+              highlight highlightBg="linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)"
+              icon={<span style={{fontSize:19}}>⚔️</span>}
+              iconBg="rgba(255,255,255,0.18)"
+              title="Ranked"
+              desc="Ranglistenspiele · ELO"
+              off={!adminCfg.features.ranked}
+              onClick={()=>{setNavDir('fwd');setScreen('ranked');}}
+              right={account&&account.stats&&account.stats.ranked?(
+                <span style={{fontSize:11,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
+                  padding:'3px 9px',borderRadius:10,whiteSpace:'nowrap'}}>
                   {rankTier(Math.max(
                     (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
                     (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
                   )).emoji} {Math.max(
                     (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
                     (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
-                  )} ELO
+                  )}
                 </span>
-              )}
-            </button>
-            {!adminCfg.features.ranked&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+              ):null}/>
           </div>
         )}
-        {(adminCfg.features.online||isAdmin())&&<div style={{opacity:adminCfg.features.online?1:0.45,position:'relative'}}>
-          <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><GlobeIcon size={16}/>{t('createPublicLobby')}</span></GBtn>
-          {!adminCfg.features.online&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
-        </div>}
-        {(adminCfg.features.friend||isAdmin())&&<div style={{opacity:adminCfg.features.friend?1:0.45,position:'relative'}}>
-          <GBtn onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PeopleIcon size={16}/>{t('friendPlay')}</span></GBtn>
-          {!adminCfg.features.friend&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
-        </div>}
-        {(adminCfg.features.bots||isAdmin())&&<div style={{opacity:adminCfg.features.bots?1:0.45,position:'relative'}}>
-          <GBtn onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><BotIcon size={16}/>{t('vsBot')}</span></GBtn>
-          {!adminCfg.features.bots&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
-        </div>}
-        {(adminCfg.features.local||isAdmin())&&<div style={{opacity:adminCfg.features.local?1:0.45,position:'relative'}}>
-          <GBtn onClick={()=>initGame('pvp')} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={16}/>{t('localPlay')}</span></GBtn>
-          {!adminCfg.features.local&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
-        </div>}
-        {(adminCfg.features.twovtwo||isAdmin())&&<div style={{opacity:adminCfg.features.twovtwo?1:0.45,position:'relative'}}>
-          <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'13px 16px',
-            position:'relative',
-            background:'linear-gradient(135deg,#ef4444 0%,#3b82f6 100%)',color:'white',
-            border:'none',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,width:'100%',
-            fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
-            display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            <HelpDot onClick={()=>setHelpKey('twovtwo')} style={{position:'absolute',top:5,right:5,color:'white',borderColor:'rgba(255,255,255,0.7)',background:'rgba(255,255,255,0.15)'}}/>
-            <PeopleIcon size={16}/>2 vs 2
-          </button>
-          {!adminCfg.features.twovtwo&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
-        </div>}
+
+        {/* ONLINE SPIELEN */}
+        {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
+          <MenuSection label="🌐 Online spielen">
+            {(adminCfg.features.online||isAdmin())&&<MenuItem
+              icon={<GlobeIcon size={19}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
+              title={t('createPublicLobby')} desc="Gegen zufällige Spieler"
+              off={!adminCfg.features.online}
+              onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
+            {(adminCfg.features.friend||isAdmin())&&<MenuItem
+              icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
+              title={t('friendPlay')} desc="Mit privatem Code"
+              off={!adminCfg.features.friend}
+              onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
+            {(adminCfg.features.twovtwo||isAdmin())&&<MenuItem
+              icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#ef4444,#3b82f6)"
+              title="2 vs 2" desc="Team-Modus (Beta)"
+              off={!adminCfg.features.twovtwo}
+              onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
+          </MenuSection>
+        )}
+
+        {/* ÜBEN & OFFLINE */}
+        {(adminCfg.features.bots||adminCfg.features.local||isAdmin())&&(
+          <MenuSection label="🎮 Üben & Offline">
+            {(adminCfg.features.bots||isAdmin())&&<MenuItem
+              icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
+              title={t('vsBot')} desc="Gegen den Computer"
+              off={!adminCfg.features.bots}
+              onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
+            {(adminCfg.features.local||isAdmin())&&<MenuItem
+              icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
+              title={t('localPlay')} desc="2 Spieler, ein Gerät"
+              off={!adminCfg.features.local}
+              onClick={()=>initGame('pvp')}/>}
+          </MenuSection>
+        )}
       </div>
       {showOptions&&(
         <div onClick={()=>{setShowOptions(false);setShowLang(false);}} style={{position:'fixed',inset:0,
@@ -6228,6 +6233,43 @@ function BreakingWall({wkey,dark}){
         animation:`debris-fly ${0.4+Math.random()*0.2}s ease-out forwards`}}/>;
     })}
   </div>;
+}
+function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg}){
+  return(
+    <div style={{position:'relative'}}>
+      <button onClick={onClick} style={{
+        width:'100%',padding:'11px 13px',borderRadius:14,position:'relative',
+        background:highlight?highlightBg:'var(--card)',
+        border:'1.5px solid '+(highlight?'transparent':'var(--border)'),
+        display:'flex',alignItems:'center',gap:12,cursor:'pointer',
+        boxShadow:highlight?'0 4px 16px rgba(245,158,11,0.32)':'var(--shadow-soft)',
+        opacity:off?0.5:1,fontFamily:'system-ui,-apple-system,sans-serif',
+        transition:'transform 0.12s,box-shadow 0.12s'}}>
+        <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:iconBg,
+          display:'flex',alignItems:'center',justifyContent:'center'}}>{icon}</div>
+        <div style={{flex:1,textAlign:'left',minWidth:0}}>
+          <div style={{fontSize:14,fontWeight:800,lineHeight:1.15,
+            color:highlight?'#fff':'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{title}</div>
+          {desc?<div style={{fontSize:11,fontWeight:600,marginTop:2,
+            color:highlight?'rgba(255,255,255,0.85)':'var(--subtle)'}}>{desc}</div>:null}
+        </div>
+        {right?right:null}
+        <span style={{fontSize:18,fontWeight:400,flexShrink:0,
+          color:highlight?'rgba(255,255,255,0.75)':'var(--subtle)'}}>›</span>
+      </button>
+      {off?<span style={{position:'absolute',top:-6,right:8,fontSize:8,fontWeight:800,
+        background:'#ef4444',color:'white',padding:'2px 7px',borderRadius:6,zIndex:2}}>AUS</span>:null}
+    </div>
+  );
+}
+function MenuSection({label,children}){
+  return(
+    <div style={{marginBottom:16}}>
+      <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,color:'var(--subtle)',
+        marginBottom:9,paddingLeft:4,textTransform:'uppercase'}}>{label}</div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>{children}</div>
+    </div>
+  );
 }
 function GBtn({onClick,children,dark,blue,outline}){
   return <button onClick={e=>{if(onClick)onClick(e);}} style={{padding:'13px 16px',
