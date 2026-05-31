@@ -472,6 +472,8 @@ const CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
 const INIT_A={r:ROWS-1,c:2},INIT_B={r:ROWS-1,c:6};
 const PC={A:'#ef4444',B:'#3b82f6'},PD={A:'#7f1d1d',B:'#1e3a5f'};
 const SESSION=Math.random().toString(36).slice(2,10);
+const GUEST_ID=(()=>{try{let n=localStorage.getItem('ww_guest_id');if(!n){n='User'+Math.floor(1000+Math.random()*9000);localStorage.setItem('ww_guest_id',n);}return n;}catch(e){return 'User'+Math.floor(1000+Math.random()*9000);}})();
+function getDisplayName(account){return account?account.name:GUEST_ID;}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
@@ -488,7 +490,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedBlitz:true,rankedChaosEvent:false},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedBlitz:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -1453,6 +1455,18 @@ const FLIST_KEY=u=>'ww_friends/'+u;
 const FR_KEY=u=>'ww_freq/'+u;
 const PRESENCE_KEY=u=>'ww_presence/'+u;
 const INVITE_KEY=u=>'ww_invites/'+u;
+async function sendFriendRequestByKey(fromKey,toKey){
+  if(!toKey||!fromKey)return{err:'friends_notFound'};
+  if(toKey===fromKey)return{err:'friends_self'};
+  const target=await stoGet(PROFILE_KEY(toKey));
+  if(!target)return{err:'friends_notFound'};
+  const myList=await stoGet(FLIST_KEY(fromKey))||[];
+  if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
+  const existing=await stoGet(FR_KEY(fromKey)+'/'+toKey);
+  if(existing)return{err:'friends_alreadySent'};
+  await stoSet(FR_KEY(toKey)+'/'+fromKey,{from:fromKey,ts:Date.now()});
+  return{ok:true};
+}
 async function sendFriendRequest(fromKey,toName){
   const toKey=normUser(toName);
   if(!toKey)return{err:'friends_notFound'};
@@ -1485,8 +1499,8 @@ async function removeFriend(myKey,friendKey){
   await stoSet(FLIST_KEY(myKey),myList);
   await stoSet(FLIST_KEY(friendKey),theirList);
 }
-async function setPresence(key,online){
-  try{await window.db.ref(PRESENCE_KEY(key)).update({online:online,lastSeen:Date.now()});}catch(e){}
+async function setPresence(key,online,name){
+  try{await window.db.ref(PRESENCE_KEY(key)).update({online:online,lastSeen:Date.now(),name:name||null});}catch(e){}
 }
 async function setGamePresence(key,inGame,lobbyId){
   try{await window.db.ref(PRESENCE_KEY(key)).update({inGame:inGame,lobbyId:lobbyId||null});}catch(e){}
@@ -1494,12 +1508,16 @@ async function setGamePresence(key,inGame,lobbyId){
 async function getPresenceMany(keys){
   const res={};
   await Promise.all(keys.map(async k=>{
-    const p=await stoGet(PRESENCE_KEY(k));
-    const isOnline=p&&p.online&&(Date.now()-p.lastSeen<120000);
-    res[k]={
-      status:isOnline?(p.inGame?'in_game':'online'):'offline',
-      lobbyId:isOnline&&p.inGame&&p.lobbyId?p.lobbyId:null
-    };
+    try{
+      const snap=await window.db.ref(PRESENCE_KEY(k)).once('value');
+      const p=snap.val();
+      const isOnline=p&&p.online&&(Date.now()-p.lastSeen<90000);
+      res[k]={
+        status:isOnline?(p.inGame?'in_game':'online'):'offline',
+        lobbyId:isOnline&&p.inGame&&p.lobbyId?p.lobbyId:null,
+        name:p&&p.name?p.name:null
+      };
+    }catch(e){res[k]={status:'offline',lobbyId:null,name:null};}
   }));
   return res;
 }
@@ -2602,11 +2620,13 @@ function App(){
   const[navDir,setNavDir]=useState('fwd'); // Richtung für Seitenwechsel-Animation
   const[gameMode,setGameMode]=useState(null);
   const[onlineRole,setOnlineRole]=useState(null);
+  const[playerNames,setPlayerNames]=useState({A:null,B:null});
   const[isRanked,setIsRanked]=useState(false);
   const[rankedMode,setRankedMode]=useState(null);
   const[rankedMyRating,setRankedMyRating]=useState(1000);
   const[rankedOppRating,setRankedOppRating]=useState(1000);
   const[rankedOppKey,setRankedOppKey]=useState(null);
+  const[oppAccountKey,setOppAccountKey]=useState(null);
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
   const[codeInput,setCodeInput]=useState('');
@@ -2668,7 +2688,7 @@ function App(){
       const all=snap.val()||{};const now=Date.now();
       let on=0,ig=0;
       Object.values(all).forEach(p=>{
-        if(p&&p.online&&(now-p.lastSeen<120000)){on++;if(p.inGame)ig++;}
+        if(p&&p.online&&(now-p.lastSeen<90000)){on++;if(p.inGame)ig++;}
       });
       setGlobalStats({online:on,inGame:ig});
     });
@@ -2676,10 +2696,11 @@ function App(){
   },[]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
   useEffect(()=>{
-    if(!account)return;
-    setPresence(account.key,true);
-    const iv=setInterval(()=>setPresence(account.key,true),25000);
-    return()=>{clearInterval(iv);setPresence(account.key,false);};
+    const key=account?account.key:GUEST_ID;
+    const name=getDisplayName(account);
+    setPresence(key,true,name);
+    const iv=setInterval(()=>setPresence(key,true,name),25000);
+    return()=>{clearInterval(iv);setPresence(key,false,name);};
   },[account]);
   // HOST: sobald friend-Lobby existiert, auf Guest warten
   useEffect(()=>{
@@ -2748,6 +2769,7 @@ function App(){
     const acc=accRef.current;
     const myR=acc&&acc.stats&&acc.stats.ranked&&acc.stats.ranked[mode]?acc.stats.ranked[mode].rating:1000;
     setRankedMode(mode);setRankedMyRating(myR);setRankedOppRating(oppRating);setRankedOppKey(oppKey);
+    setOppAccountKey(oppKey||null);
     const tm=mode==='blitz'?'blitz-8':'classic-3';
     setNavDir('fwd');
     initGame('online',role,code,false,tm,true);
@@ -2897,7 +2919,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -2919,7 +2941,7 @@ function App(){
     };
   },[]);
 
-  const pname=p=>p==='A'?t('red'):t('blue');
+  const pname=p=>{if(gameMode==='online'&&playerNames[p])return playerNames[p];return p==='A'?t('red'):t('blue');};
   const isOwnLoss=w=>{
     if(!w)return false;
     if(gameMode==='online')return w!==onlineRole;
@@ -2932,8 +2954,9 @@ function App(){
     setWinner(p);
     if(S.current.gameMode==='online'){
       const acc=accRef.current;
+      const presKey=acc?acc.key:GUEST_ID;
+      setGamePresence(presKey,false,null);
       if(acc){
-        setGamePresence(acc.key,false,null);
         const won=p===S.current.onlineRole;
         const tm=S.current.gameTimeMode||'';
         const modeKey=tm.indexOf('blitz-')===0?'blitz':'classic';
@@ -3046,7 +3069,12 @@ function App(){
     setRematchA(false);setRematchB(false);setRematchDeclined(null);
     setChatMsgs([]);setChatInput('');
     if(mode!=='online')setGameNum(0);
-    if(mode==='online'&&lid){const acc=accRef.current;if(acc)setGamePresence(acc.key,true,lid);}
+    setPlayerNames({A:null,B:null});
+    if(mode==='online'&&lid){
+      const acc=accRef.current;
+      const presKey=acc?acc.key:GUEST_ID;
+      setGamePresence(presKey,true,lid);
+    }
     setScreen('game');
   };
 
@@ -3357,7 +3385,10 @@ function App(){
       }
       setGameNum(newGN);
 
-      // Rematch flags
+      // Spielernamen falls vorhanden
+      if((gs.nameA||gs.nameB)&&(!S.current.playerNames||!S.current.playerNames.A)){
+        setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
+      }
       const rA=gs.rematchA||false,rB=gs.rematchB||false,rD=gs.rematchDeclined||null;
       setRematchA(rA);setRematchB(rB);setRematchDeclined(rD);
 
@@ -3544,9 +3575,15 @@ function App(){
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
         if(lobby&&lobby.guestId){
-          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,lastUpdated:Date.now()};
+          const nameA=lobby.hostName||getDisplayName(account);
+          const nameB=lobby.guestName||'';
+          const accountKeyA=lobby.hostAccountKey||null;
+          const accountKeyB=lobby.guestAccountKey||null;
+          const gs={pA:{...INIT_A},pB:{...INIT_B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
+          setPlayerNames({A:nameA,B:nameB});
+          setOppAccountKey(accountKeyB);
           initGame('online','A',lobbyId);
         }
       }
@@ -3629,7 +3666,9 @@ function App(){
     const id=randId(6);
     const code=isPrivate?randId(4):null;
     const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops};
-    const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,guestId:null,ts:Date.now(),...cfg});
+    const hostName=getDisplayName(account);
+    const hostAccountKey=account?account.key:null;
+    const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,hostName,hostAccountKey,guestId:null,ts:Date.now(),...cfg});
     if(!ok){setFlash(t('firebaseError')+(window.lastFbError||'?')+t('checkRules'));return;}
     if(isPrivate)await stoSet(`barricade_code_${code}`,{id});
     else{const list=await stoGet('barricade_lobby_list')||[];await stoSet('barricade_lobby_list',[...list.filter(l=>l.hostId!==SESSION),{id,hostId:SESSION,ts:Date.now(),...cfg}]);}
@@ -3657,12 +3696,17 @@ function App(){
     if(lobby.dp!==undefined)setDropMode(lobby.dp);
     if(lobby.hm!==undefined)setHammerMode(!!lobby.hm);
     if(lobby.hd!==undefined)setHammerDrops(lobby.hd);
-    await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,ts:Date.now()});
+    await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,guestName:getDisplayName(account),guestAccountKey:account?account.key:null,ts:Date.now()});
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<40;i++){
       await new Promise(r=>setTimeout(r,500));
       const gs=await stoGet(`barricade_game_${id}`);
-      if(gs){lastOnlineTs.current=gs.lastUpdated;initGame('online','B',id,false,lobby.tm);return;}
+      if(gs){
+        lastOnlineTs.current=gs.lastUpdated;
+        if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
+        setOppAccountKey(gs.accountKeyA||null);
+        initGame('online','B',id,false,lobby.tm);return;
+      }
     }
     setFlash(t('hostNotResponding'));setScreen('online');
   };
@@ -4015,14 +4059,14 @@ function App(){
         </div>
         <div style={{fontSize:30,fontWeight:900,letterSpacing:-1.6,color:'var(--text)',lineHeight:1}}>{t('title')}</div>
         <div style={{fontSize:12,fontWeight:600,letterSpacing:0.5,color:'var(--subtle)',marginTop:7,fontStyle:'italic'}}>{t('subtitle')}</div>
-        {globalStats.online>0&&(
+        {globalStats.online>0&&adminCfg.features.showPresence&&(
           <div style={{marginTop:10,display:'inline-flex',alignItems:'center',gap:10,padding:'5px 14px',
             borderRadius:20,background:'var(--card)',border:'1.5px solid var(--border)'}}>
             <span style={{display:'flex',alignItems:'center',gap:5,fontSize:12,fontWeight:700,color:'#22c55e'}}>
               <span style={{width:7,height:7,borderRadius:'50%',background:'#22c55e',display:'inline-block',animation:'pulse 1.5s ease-in-out infinite'}}/>
               {globalStats.online} online
             </span>
-            {globalStats.inGame>0&&(
+            {globalStats.inGame>0&&adminCfg.features.showInGame&&(
               <span style={{fontSize:12,fontWeight:700,color:'var(--subtle)',display:'inline-flex',alignItems:'center',gap:4}}>· <GamepadIcon size={12} color="var(--subtle)"/> {globalStats.inGame} {t('friends_inGame')||'in einer Runde'}</span>
             )}
           </div>
@@ -4237,6 +4281,11 @@ function App(){
               <div style={{marginTop:10}}>
                 <RankedResetAdmin t={t}/>
               </div>
+            </AdminSection>
+
+            <AdminSection label="SPIELER-SICHTBARKEIT">
+              <AdminToggle label="Online-Status sichtbar (wer ist online)" on={adminCfg.features.showPresence} onClick={()=>toggleFeature('showPresence')}/>
+              <AdminToggle label="In-Runde-Status sichtbar (wer spielt gerade)" on={adminCfg.features.showInGame} onClick={()=>toggleFeature('showInGame')}/>
             </AdminSection>
 
             <AdminSection label="ANKÜNDIGUNG (BANNER)">
@@ -4534,7 +4583,8 @@ function App(){
     if(!account){setNavDir('fwd');setScreen('auth');return null;}
     return <FriendsScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
       onInvite={doInviteFriend} onSpectate={lid=>{setSpectateId(lid);setNavDir('fwd');setScreen('spectate');}}
-      friendLobbyState={friendLobbyState} onCancelInvite={doCancelFriendInvite}/>;
+      friendLobbyState={friendLobbyState} onCancelInvite={doCancelFriendInvite}
+      showPresence={adminCfg.features.showPresence} showInGame={adminCfg.features.showInGame}/>;
   }
   // ── SPECTATE ─────────────────────────────────────────────
   if(screen==='spectate'){
@@ -5042,6 +5092,8 @@ function App(){
     const otherRematch=onlineRole==='A'?rematchB:rematchA;
     const otherDeclined=rematchDeclined&&rematchDeclined!==onlineRole;
     const isLoss=isOwnLoss(winner);
+    const[addFriendSent,setAddFriendSent]=React.useState(false);
+    const canAddFriend=gameMode==='online'&&account&&oppAccountKey&&oppAccountKey!==account.key&&!addFriendSent;
     return (
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
         background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
@@ -5115,15 +5167,32 @@ function App(){
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
                 onClick={requestRematch}/>
             )}
-            {moveHist.length>0&&(
+            {canAddFriend&&(
+              <MenuItem icon={<PeopleIcon size={18} color="#fff"/>}
+                iconBg="linear-gradient(135deg,#8b5cf6,#6d28d9)"
+                title="Freund hinzufügen" desc="Gegner als Freund hinzufügen"
+                onClick={async()=>{
+                  await sendFriendRequestByKey(account.key,oppAccountKey);
+                  setAddFriendSent(true);
+                }}/>
+            )}
+            {addFriendSent&&(
+              <div style={{padding:'10px 14px',borderRadius:12,background:'rgba(139,92,246,0.08)',
+                border:'1.5px solid rgba(139,92,246,0.2)',fontSize:13,fontWeight:700,color:'#8b5cf6',textAlign:'center'}}>
+                ✓ Anfrage gesendet!
+              </div>
+            )}
               <MenuItem icon={<ReplayIcon size={18}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
                 title={t('replayBtn')} desc="Spiel Zug für Zug ansehen"
-                onClick={()=>{setReplayStep(0);setScreen('replay');}}/>
+                onClick={()=>{
+                  if(gameMode==='online'&&myRematch)declineRematch();
+                  setReplayStep(0);setScreen('replay');
+                }}/>
             )}
             <MenuItem icon={<HomeIcon size={18}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
               title={t('menu')} desc="Zurück zum Hauptmenü"
               onClick={()=>{
-                if(gameMode==='online'&&!otherDeclined)declineRematch();
+                if(gameMode==='online'&&myRematch)declineRematch();
                 setScreen('menu');setGameMode(null);setLobbyId(null);
               }}/>
           </div>
@@ -6104,7 +6173,7 @@ function StatCard({label,value,color}){
     </div>
   );
 }
-function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobbyState,onCancelInvite}){
+function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobbyState,onCancelInvite,showPresence=true,showInGame=true}){
   const[tab,setTab]=React.useState('list');
   const[friends,setFriends]=React.useState([]);
   const[requests,setRequests]=React.useState([]);
@@ -6232,7 +6301,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:800,color:text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
                         <div style={{fontSize:11,fontWeight:600,color:f.status==='online'?'#22c55e':f.status==='in_game'?'#f59e0b':muted,display:'flex',alignItems:'center',gap:4}}>
-                          {f.status==='online'?t('friends_online'):f.status==='in_game'?(<span style={{display:'inline-flex',alignItems:'center',gap:3}}><GamepadIcon size={11} color="#f59e0b"/>{t('friends_inGame')}</span>):t('friends_offline')}
+                          {!showPresence?t('friends_offline'):f.status==='online'?t('friends_online'):f.status==='in_game'&&showInGame?(<span style={{display:'inline-flex',alignItems:'center',gap:3}}><GamepadIcon size={11} color="#f59e0b"/>{t('friends_inGame')}</span>):f.status==='in_game'?t('friends_online'):t('friends_offline')}
                         </div>
                       </div>
                       {f.status==='online'&&!friendLobbyState&&(
