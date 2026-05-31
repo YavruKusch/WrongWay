@@ -1347,6 +1347,16 @@ async function stoSet(k,v){
 async function stoDel(k){
   try{await window.db.ref(k).remove();}catch(e){console.error('FB DEL fail',k,e);}
 }
+async function stoGetChildren(k){
+  try{
+    const snap=await window.db.ref(k).once('value');
+    const v=snap.val();if(!v)return{};
+    if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return{};}}
+    const out={};
+    for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
+    return out;
+  }catch(e){return{};}
+}
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
@@ -1965,11 +1975,19 @@ async function playSound(type){
 
 // ── App ─────────────────────────────────────────────────────
 function rankTier(r){
-  if(r>=1600)return{emoji:'👑',name:'Master',color:'#60a5fa'};
-  if(r>=1400)return{emoji:'💎',name:'Diamant',color:'#a78bfa'};
-  if(r>=1200)return{emoji:'🥇',name:'Gold',color:'#f59e0b'};
-  if(r>=1000)return{emoji:'🥈',name:'Silber',color:'#94a3b8'};
-  return{emoji:'🥉',name:'Bronze',color:'#b45309'};
+  if(r>=1600)return{icon:'crown',name:'Master',color:'#60a5fa'};
+  if(r>=1400)return{icon:'diamond',name:'Diamant',color:'#a78bfa'};
+  if(r>=1200)return{icon:'gold',name:'Gold',color:'#f59e0b'};
+  if(r>=1000)return{icon:'silver',name:'Silber',color:'#94a3b8'};
+  return{icon:'bronze',name:'Bronze',color:'#b45309'};
+}
+function TierIcon({icon,size}){
+  const s=size||16;
+  if(icon==='crown')return <CrownIcon size={s} color="#60a5fa"/>;
+  if(icon==='diamond')return <DiamondIcon size={s} color="#a78bfa"/>;
+  if(icon==='gold')return <MedalIcon size={s} color="#f59e0b" letter="1"/>;
+  if(icon==='silver')return <MedalIcon size={s} color="#94a3b8" letter="2"/>;
+  return <MedalIcon size={s} color="#b45309" letter="3"/>;
 }
 function RankedScreen({account,t,darkMode,goBack,onStart,features}){
   const[queue,setQueue]=React.useState(null);
@@ -2058,22 +2076,23 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
           background:'linear-gradient(90deg,'+tier.color+','+tier.color+'55)',
           animation:'demoBar 1.8s linear infinite'}}/>}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-          <div style={{fontSize:12,fontWeight:800,color:muted,letterSpacing:1}}>{icon} {label.toUpperCase()}</div>
+          <div style={{fontSize:12,fontWeight:800,color:muted,letterSpacing:1,display:'flex',alignItems:'center',gap:4}}><span style={{display:'flex'}}>{icon}</span> {label.toUpperCase()}</div>
           <div style={{fontSize:11,fontWeight:700,color:tier.color,background:tier.color+'18',
-            padding:'3px 9px',borderRadius:20}}>{tier.emoji} {tier.name}</div>
+            padding:'3px 9px',borderRadius:20,display:'flex',alignItems:'center',gap:4}}>
+            <TierIcon icon={tier.icon} size={13}/> {tier.name}</div>
         </div>
         <div style={{fontSize:46,fontWeight:900,color:tier.color,letterSpacing:-2,lineHeight:1,marginBottom:4}}>{r.rating}</div>
         <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {wr}%</div>
         {!modeEnabled?(
           <div style={{padding:'12px',borderRadius:10,background:dk?'#334155':'#f1f5f9',
-            textAlign:'center',fontSize:12,fontWeight:700,color:muted}}>🔒 Vom Admin deaktiviert</div>
+            textAlign:'center',fontSize:12,fontWeight:700,color:muted,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><LockIcon size={12} color={muted}/> Vom Admin deaktiviert</div>
         ):!queue?(
           <button onClick={function(){joinQueue(mode);}} style={{
             width:'100%',padding:'13px',borderRadius:11,border:'none',cursor:'pointer',
             background:'linear-gradient(135deg,'+tier.color+','+tier.color+'aa)',
             color:'#fff',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
-            boxShadow:'0 4px 12px '+tier.color+'44'}}>
-            ⚔️ Ranked spielen
+            boxShadow:'0 4px 12px '+tier.color+'44',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+            <SwordsIcon size={16} color="#fff"/> Ranked spielen
           </button>
         ):inQueue?(
           <div>
@@ -2114,24 +2133,24 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
-          <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4}}>⚔️ RANKED</div>
+          <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><SwordsIcon size={13} color={muted}/> RANKED</div>
           <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>Ranglistenspiele</div>
           <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Classic 3 Min / Blitz 8 Sek</div>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
-            <div style={{fontSize:28,marginBottom:8}}>🔒</div>
+            <div style={{fontSize:28,marginBottom:8,display:'flex',justifyContent:'center'}}><LockIcon size={28} color={muted}/></div>
             <div style={{fontSize:14,fontWeight:700,color:txt,marginBottom:4}}>Konto erforderlich</div>
             <div style={{fontSize:12,color:muted}}>Melde dich an um Ranked zu spielen</div>
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            {renderCard('classic','Classic','⏱️')}
-            {renderCard('blitz','Blitz','⚡')}
+            {renderCard('classic','Classic',<ModeGlyph kind="clock" size={12} color={muted}/>)}
+            {renderCard('blitz','Blitz',<ModeGlyph kind="bolt" size={12} color={muted}/>)}
             <div style={{padding:'12px 14px',borderRadius:12,
               background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
-              border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>
-              💡 Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s. Sieg gegen Stärkere = mehr Punkte.
+              border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6,display:'flex',alignItems:'center',gap:6}}>
+              <LightbulbIcon size={13} color={muted}/> Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s. Sieg gegen Stärkere = mehr Punkte.
             </div>
           </div>
         )}
@@ -2172,7 +2191,7 @@ function AdminConfirmAction({label,confirmLabel,btnLabel,danger,active,onConfirm
   if(confirm)return(
     <div style={{background:danger?'rgba(239,68,68,0.08)':'rgba(245,158,11,0.08)',
       border:'1.5px solid '+(danger?'#ef4444':'#f59e0b'),borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:13,fontWeight:700,color:danger?'#ef4444':'#f59e0b',marginBottom:10}}>⚠️ {confirmLabel}</div>
+      <div style={{fontSize:13,fontWeight:700,color:danger?'#ef4444':'#f59e0b',marginBottom:10,display:'flex',alignItems:'center',gap:6}}><WarningIcon size={14} color={danger?'#ef4444':'#f59e0b'}/> {confirmLabel}</div>
       <div style={{display:'flex',gap:8}}>
         <button onClick={()=>{setConfirm(false);onConfirm();}} style={{flex:1,padding:'10px',borderRadius:9,
           background:danger?'#ef4444':'#f59e0b',color:'white',border:'none',cursor:'pointer',
@@ -2189,7 +2208,7 @@ function AdminConfirmAction({label,confirmLabel,btnLabel,danger,active,onConfirm
       border:'1.5px solid '+(active?(danger?'#ef4444':'#f59e0b'):'var(--border)'),
       cursor:'pointer',fontWeight:700,fontSize:13,color:active?(danger?'#ef4444':'#f59e0b'):'var(--text)',
       fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left',display:'flex',alignItems:'center',gap:8}}>
-      {active?'🔴':'⚪'} {label}
+      <div style={{width:10,height:10,borderRadius:'50%',background:active?(danger?'#ef4444':'#f59e0b'):'var(--border)',flexShrink:0}}/> {label}
     </button>
   );
 }
@@ -2205,7 +2224,7 @@ function RankedResetAdmin({t}){
     <button onClick={()=>setStep(1)} style={{width:'100%',padding:'11px',borderRadius:10,
       background:'var(--bg)',color:'#f59e0b',border:'1.5px solid #f59e0b44',cursor:'pointer',
       fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-      🏆 {t('adminResetRanked')}
+      <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrophySmIcon size={15} color="#f59e0b"/>{t('adminResetRanked')}</span>
     </button>
   );
   if(step===1)return(
@@ -2223,7 +2242,7 @@ function RankedResetAdmin({t}){
   );
   if(step===2)return(
     <div style={{background:'rgba(239,68,68,0.1)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4}}>⚠️ Letzte Bestätigung</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4,display:'flex',alignItems:'center',gap:6}}><WarningIcon size={13} color="#ef4444"/> Letzte Bestätigung</div>
       <div style={{fontSize:12,color:'var(--subtle)',marginBottom:10}}>Alle ELO-Wertungen werden auf 1000 zurückgesetzt. Nicht rückgängig machbar.</div>
       <div style={{display:'flex',gap:8}}>
         <button onClick={doReset} style={{flex:1,padding:'10px',borderRadius:9,background:'#ef4444',
@@ -2331,7 +2350,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
               color:canNC?txt:muted,fontWeight:700,fontSize:13,
               fontFamily:'system-ui,-apple-system,sans-serif',
               display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span>✏️ {t('nameChange')}</span>
+              <span style={{display:'flex',alignItems:'center',gap:6}}><PencilIcon size={15} color="currentColor"/> {t('nameChange')}</span>
               <span style={{fontSize:11,color:muted}}>{canNC?t('nameChangeOnce'):(daysLeft+' '+t('days'))}</span>
             </button>
           ):(
@@ -2363,7 +2382,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
               border:'1.5px solid '+border,cursor:'pointer',color:txt,fontWeight:700,fontSize:13,
               fontFamily:'system-ui,-apple-system,sans-serif',
               display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span>🔒 {t('pwChange')}</span>
+              <span style={{display:'flex',alignItems:'center',gap:6}}><LockIcon size={15} color="currentColor"/> {t('pwChange')}</span>
               <span style={{fontSize:11,color:muted}}>SHA-256</span>
             </button>
           ):(
@@ -2382,7 +2401,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
                 <button onClick={doPW} disabled={pwBusy} style={{flex:1,padding:'11px',borderRadius:9,
                   background:'linear-gradient(135deg,#16a34a,#22c55e)',color:'#fff',border:'none',
                   cursor:pwBusy?'default':'pointer',fontWeight:800,fontSize:13,
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>{pwBusy?'…':'🔒 '+t('save')}</button>
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>{pwBusy?'…':<span style={{display:'inline-flex',alignItems:'center',gap:5}}><LockIcon size={13} color="#fff"/>{t('save')}</span>}</button>
                 <button onClick={()=>{setShowPW(false);setPwOld('');setPwNew('');setPwConf('');setPwErr('');}} style={{
                   padding:'11px 16px',borderRadius:9,background:'transparent',border:'1.5px solid '+border,
                   color:muted,cursor:'pointer',fontWeight:700,fontSize:13,
@@ -2402,8 +2421,8 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
             <StatCard label={t('lossesLabel')} value={st.losses||0} color="#ef4444"/>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <StatCard label={t('streakLabel')} value={'🔥 '+(st.streak||0)} color="#f59e0b"/>
-            <StatCard label={t('bestStreakLabel')} value={'🏆 '+(st.bestStreak||0)} color="#f59e0b"/>
+            <StatCard label={t('streakLabel')} value={<span style={{display:'flex',alignItems:'center',gap:3}}><FlameIcon size={14} color="#f59e0b"/>{st.streak||0}</span>} color="#f59e0b"/>
+            <StatCard label={t('bestStreakLabel')} value={<span style={{display:'flex',alignItems:'center',gap:3}}><TrophySmIcon size={14} color="#f59e0b"/>{st.bestStreak||0}</span>} color="#f59e0b"/>
           </div>
         </div>
 
@@ -2411,12 +2430,12 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
         <div style={{marginBottom:14}}>
           <Lbl v={t('ranked')}/>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            {[['classic','⏱️','#8b5cf6'],['blitz','⚡','#f59e0b']].map(([mode,icon,col])=>{
+            {[['classic',<ModeGlyph kind="clock" size={11} color="#8b5cf6"/>,'#8b5cf6'],['blitz',<ModeGlyph kind="bolt" size={11} color="#f59e0b"/>,'#f59e0b']].map(([mode,icon,col])=>{
               const r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
               return(
                 <div key={mode} style={{background:card,border:'1.5px solid '+border,borderRadius:14,
                   padding:'14px 12px',textAlign:'center'}}>
-                  <div style={{fontSize:11,color:muted,fontWeight:700,letterSpacing:0.5,marginBottom:4}}>{icon} {mode.toUpperCase()}</div>
+                  <div style={{fontSize:11,color:muted,fontWeight:700,letterSpacing:0.5,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:4}}><span style={{display:'flex'}}>{icon}</span> {mode.toUpperCase()}</div>
                   <div style={{fontSize:26,fontWeight:900,color:col,letterSpacing:-0.5}}>{r.rating}</div>
                   <div style={{fontSize:10,color:muted,marginTop:3}}>{r.wins}W · {r.losses}L</div>
                 </div>
@@ -2454,12 +2473,12 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
                 width:'100%',padding:'12px',borderRadius:11,background:'transparent',
                 border:'1.5px solid '+border,color:'#ef4444',cursor:'pointer',
                 fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                🗑️ {t('resetStats')}
+                <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrashIcon size={15} color="#ef4444"/>{t('resetStats')}</span>
               </button>
             ):(
               <div style={{background:'rgba(239,68,68,0.06)',borderRadius:12,
                 border:'1.5px solid rgba(239,68,68,0.3)',padding:'16px'}}>
-                <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:6}}>⚠️ {t('resetStatsWarn')}</div>
+                <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:6,display:'flex',alignItems:'center',gap:6}}><WarningIcon size={15} color="#ef4444"/>{t('resetStatsWarn')}</div>
                 <div style={{fontSize:12,color:muted,marginBottom:12,lineHeight:1.5}}>{t('resetStatsOnce')}</div>
                 <div style={{display:'flex',gap:8}}>
                   <button onClick={doReset} disabled={resetBusy} style={{flex:1,padding:'11px',borderRadius:9,
@@ -2551,13 +2570,11 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
           {gone?(
             <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')||'Spiel beendet'}</div>
           ):gs&&gs.winner?(
-            <div style={{fontSize:16,fontWeight:900,color:gs.winner==='A'?'#ef4444':'#3b82f6',marginTop:4}}>
-              {gs.winner==='A'?'🔴':'🔵'} {t('winner')||'Gewonnen'}!
-            </div>
+            <div style={{fontSize:16,fontWeight:900,color:gs.winner==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/> {t('winner')||'Gewonnen'}!</div>
           ):gs?(
-            <div style={{fontSize:13,fontWeight:700,color:gs.turn==='A'?'#ef4444':'#3b82f6',marginTop:4}}>
-              {gs.turn==='A'?'🔴':'🔵'} {t('turn')||'am Zug'}
-            </div>
+            <div style={{fontSize:13,fontWeight:700,color:gs.turn==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/> {t('turn')||'am Zug'}</div>
           ):null}
         </div>
         <div style={{display:'flex',justifyContent:'center'}}>
@@ -2573,8 +2590,8 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
         </div>
         {gs&&gs.barrLeft&&(
           <div style={{display:'flex',justifyContent:'space-between',marginTop:10,padding:'0 4px'}}>
-            <div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>🔴 {gs.barrLeft.A||0} 🧱</div>
-            <div style={{fontSize:12,color:'#3b82f6',fontWeight:700}}>🧱 {gs.barrLeft.B||0} 🔵</div>
+            <div style={{fontSize:12,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><div style={{width:9,height:9,borderRadius:'50%',background:'#ef4444'}}/> {gs.barrLeft.A||0} <BrickMini size={12}/></div>
+            <div style={{fontSize:12,color:'#3b82f6',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><BrickMini size={12}/> {gs.barrLeft.B||0} <div style={{width:9,height:9,borderRadius:'50%',background:'#3b82f6'}}/></div>
           </div>
         )}
       </div>
@@ -2641,6 +2658,7 @@ function App(){
   // ── Presence / Friends / Invite ──────────────────────────
   const[friendLobbyState,setFriendLobbyState]=useState(null);
   const[pendingInvite,setPendingInvite]=useState(null);
+  const[friendReqCount,setFriendReqCount]=useState(0);
   const[globalStats,setGlobalStats]=useState({online:0,inGame:0});
   const[spectateId,setSpectateId]=useState(null);
   // Globaler Realtime-Listener: wieviele Spieler online / in Runde
@@ -2695,6 +2713,21 @@ function App(){
     poll();const iv=setInterval(poll,4000);
     return()=>{cancelled=true;clearInterval(iv);};
   },[account,screen]);
+  // Freundschaftsanfragen pollen (Badge im Menü)
+  useEffect(()=>{
+    if(!account)return;
+    let cancelled=false;
+    const poll=async()=>{
+      if(cancelled)return;
+      try{
+        const snap=await window.db.ref(FR_KEY(account.key)).once('value');
+        const v=snap.val()||{};
+        if(!cancelled)setFriendReqCount(Object.keys(v).length);
+      }catch(e){}
+    };
+    poll();const iv=setInterval(poll,12000);
+    return()=>{cancelled=true;clearInterval(iv);};
+  },[account]);
   // Freund einladen: Lobby erstellen + Einladung senden
   const doInviteFriend=async(friendKey,friendName)=>{
     if(!account)return;
@@ -3913,9 +3946,15 @@ function App(){
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:62,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
         cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'var(--shadow-soft)',zIndex:100}}>
-        <span style={{fontSize:18}}>👥</span>
-        {pendingInvite&&<div style={{position:'absolute',top:2,right:2,width:10,height:10,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--card)'}}/>}
+        boxShadow:'var(--shadow-soft)',zIndex:100,overflow:'visible'}}>
+        <PeopleIcon size={18} color="var(--text)"/>
+        {(pendingInvite||friendReqCount>0)&&(
+          <div style={{position:'absolute',top:2,right:2,minWidth:14,height:14,borderRadius:7,
+            background:'#ef4444',border:'2px solid var(--card)',
+            display:'flex',alignItems:'center',justifyContent:'center',padding:'0 2px'}}>
+            {friendReqCount>0&&<span style={{fontSize:8,fontWeight:900,color:'#fff',lineHeight:1}}>{friendReqCount>9?'9+':friendReqCount}</span>}
+          </div>
+        )}
       </button>
       <button onClick={()=>{setNavDir('fwd');setScreen(account?'profile':'auth');}} style={{
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
@@ -3933,13 +3972,14 @@ function App(){
           position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:62,
           width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',
           cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
-          boxShadow:'0 2px 10px rgba(245,158,11,0.4)',zIndex:100}}>🛡️</button>
+          boxShadow:'0 2px 10px rgba(245,158,11,0.4)',zIndex:100}}><ShieldSmIcon size={20} color="#fff"/></button>
       )}
       {adminCfg.announce&&(adminCfg.announceUntil===0||Date.now()<adminCfg.announceUntil)?(
         <div style={{position:'relative',zIndex:1,width:280,marginBottom:14,padding:'10px 14px',
           background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',borderRadius:12,
-          fontSize:12,fontWeight:700,textAlign:'center',boxShadow:'0 2px 10px rgba(99,102,241,0.3)'}}>
-          📢 {adminCfg.announce}
+          fontSize:12,fontWeight:700,textAlign:'center',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+          <MegaphoneIcon size={14} color="#fff"/> {adminCfg.announce}
         </div>
       ):null}
       {pendingInvite&&(
@@ -3947,8 +3987,8 @@ function App(){
           background:'var(--card)',border:'1.5px solid #8b5cf644',boxShadow:'0 4px 14px rgba(99,102,241,0.18)',overflow:'hidden'}}>
           <div style={{background:'linear-gradient(90deg,#8b5cf6,#3b82f6)',height:3}}/>
           <div style={{padding:'12px 14px'}}>
-            <div style={{fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:4}}>
-              🎮 <b>{pendingInvite.fromName}</b> {t('friends_incomingInvite')}
+            <div style={{fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+              <GamepadIcon size={15} color="var(--text)"/> <b>{pendingInvite.fromName}</b> {t('friends_incomingInvite')}
             </div>
             <div style={{display:'flex',gap:8,marginTop:8}}>
               <button onClick={doAcceptInvite} style={{flex:1,padding:'9px',borderRadius:9,
@@ -3984,7 +4024,7 @@ function App(){
               {globalStats.online} online
             </span>
             {globalStats.inGame>0&&(
-              <span style={{fontSize:12,fontWeight:700,color:'var(--subtle)'}}>· 🎮 {globalStats.inGame} {t('friends_inGame')||'in einer Runde'}</span>
+              <span style={{fontSize:12,fontWeight:700,color:'var(--subtle)',display:'inline-flex',alignItems:'center',gap:4}}>· <GamepadIcon size={12} color="var(--subtle)"/> {globalStats.inGame} {t('friends_inGame')||'in einer Runde'}</span>
             )}
           </div>
         )}
@@ -4015,30 +4055,27 @@ function App(){
           <div style={{marginBottom:18}}>
             <MenuItem
               highlight highlightBg="linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)"
-              icon={<span style={{fontSize:19}}>⚔️</span>}
+              icon={<SwordsIcon size={19} color="#fff"/>}
               iconBg="rgba(255,255,255,0.18)"
               title="Ranked"
               desc="Ranglistenspiele · ELO"
               off={!adminCfg.features.ranked}
               onClick={()=>{setNavDir('fwd');setScreen('ranked');}}
-              right={account&&account.stats&&account.stats.ranked?(
-                <span style={{fontSize:11,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
-                  padding:'3px 9px',borderRadius:10,whiteSpace:'nowrap'}}>
-                  {rankTier(Math.max(
-                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                    (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
-                  )).emoji} {Math.max(
-                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                    (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
-                  )}
-                </span>
-              ):null}/>
+              right={account&&account.stats&&account.stats.ranked?(()=>{
+                const maxR=Math.max(
+                  (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
+                  (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000);
+                const tier=rankTier(maxR);
+                return <span style={{fontSize:11,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
+                  padding:'3px 9px',borderRadius:10,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:4}}>
+                  <TierIcon icon={tier.icon} size={13}/> {maxR}</span>;
+              })():null}/>
           </div>
         )}
 
         {/* ONLINE SPIELEN */}
         {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
-          <MenuSection label="🌐 Online spielen">
+          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
             {(adminCfg.features.online||isAdmin())&&<MenuItem
               icon={<GlobeIcon size={19}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
               title={t('createPublicLobby')} desc="Gegen zufällige Spieler"
@@ -4059,7 +4096,7 @@ function App(){
 
         {/* ÜBEN & OFFLINE */}
         {(adminCfg.features.bots||adminCfg.features.local||isAdmin())&&(
-          <MenuSection label="🎮 Üben & Offline">
+          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>Üben &amp; Offline</span>}>
             {(adminCfg.features.bots||isAdmin())&&<MenuItem
               icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
               title={t('vsBot')} desc="Gegen den Computer"
@@ -4137,7 +4174,7 @@ function App(){
               background:'var(--bg)',border:'1.5px solid var(--border)',cursor:'pointer',
               display:'flex',alignItems:'center',justifyContent:'space-between',
               fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>📖 {t('tutHelp')}</span>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--text)',display:'inline-flex',alignItems:'center',gap:6}}><BookIcon size={15} color="#3b82f6"/> {t('tutHelp')}</span>
               <span style={{fontSize:13,color:'var(--subtle)',fontWeight:600}}>›</span>
             </button>
             {/* Vibration */}
@@ -4171,33 +4208,30 @@ function App(){
 
             {/* Header */}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-              <div style={{fontSize:17,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}>🛡️ Admin-Panel</div>
+              <div style={{fontSize:17,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}><ShieldSmIcon size={18} color="#8b5cf6"/> Admin-Panel</div>
               <button onClick={()=>setShowAdmin(false)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
             </div>
             <div style={{fontSize:11,color:'var(--subtle)',marginBottom:18,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
 
-            {/* ── 🎮 SPIELMODI ── */}
-            <AdminSection label="🎮 SPIELMODI">
-              {[['online','🌐 Online-Lobby'],['friend','👥 Mit Freund'],['bots','🤖 Gegen Bots'],['local','📱 Lokal (gleiches Gerät)'],['twovtwo','⚔️ 2 vs 2']].map(function(f){
-                return <AdminToggle key={f[0]} label={f[1]} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
+            <AdminSection label="SPIELMODI">
+              {[['online','Online-Lobby',<GlobeIcon size={13} color="var(--subtle)"/>],['friend','Mit Freund',<PeopleIcon size={13} color="var(--subtle)"/>],['bots','Gegen Bots',<BotIcon size={13} color="var(--subtle)"/>],['local','Lokal',<PhoneIcon size={13} color="var(--subtle)"/>],['twovtwo','2 vs 2',<SwordsIcon size={13} color="var(--subtle)"/>]].map(function(f){
+                return <AdminToggle key={f[0]} label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'flex'}}>{f[2]}</span>{f[1]}</span>} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
               })}
             </AdminSection>
 
-            {/* ── ⚡ MODI & OPTIONEN ── */}
-            <AdminSection label="⚡ SPIEL-MODI & OPTIONEN">
-              {[['blitz','⏱️ Blitz (Kurz-Timer)'],['chaos','🎲 Chaos (Barrikaden-Drop)'],['drop','🌧️ Zufalls-Wände'],['hammer','🔨 Hammer-Modus']].map(function(f){
-                return <AdminToggle key={f[0]} label={f[1]} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
+            <AdminSection label="SPIEL-MODI & OPTIONEN">
+              {[['blitz','Blitz (Kurz-Timer)',<ModeGlyph kind="bolt" size={12} color="var(--subtle)"/>],['chaos','Chaos (Drop)',<DiceIcon size={13} color="var(--subtle)"/>],['drop','Zufalls-Wände',<RainIcon size={13} color="var(--subtle)"/>],['hammer','Hammer-Modus',<HammerIcon size={13}/>]].map(function(f){
+                return <AdminToggle key={f[0]} label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'flex'}}>{f[2]}</span>{f[1]}</span>} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
               })}
             </AdminSection>
 
-            {/* ── ⚔️ RANKED ── */}
-            <AdminSection label="⚔️ RANKED-SYSTEM">
-              <AdminToggle label="Ranked aktiv" on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
+            <AdminSection label="RANKED-SYSTEM">
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><SwordsIcon size={13} color="var(--subtle)"/>Ranked aktiv</span>} on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
               <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.ranked?1:0.4}}>
-                <AdminToggle label="⏱️ Classic Ranked (3 Min)" on={adminCfg.features.rankedClassic} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedClassic');}}/>
-                <AdminToggle label="⚡ Blitz Ranked (8 Sek)" on={adminCfg.features.rankedBlitz} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedBlitz');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>Classic Ranked (3 Min)</span>} on={adminCfg.features.rankedClassic} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedClassic');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>Blitz Ranked (8 Sek)</span>} on={adminCfg.features.rankedBlitz} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedBlitz');}}/>
                 <div style={{marginTop:4,paddingTop:10,borderTop:'1px solid var(--border)'}}>
-                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:7}}>🎉 EVENT-MODUS</div>
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:7}}>EVENT-MODUS</div>
                   <AdminToggle label="Chaos-Modi für Ranked freischalten" on={adminCfg.features.rankedChaosEvent} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedChaosEvent');}}/>
                 </div>
               </div>
@@ -4206,10 +4240,9 @@ function App(){
               </div>
             </AdminSection>
 
-            {/* ── 📢 ANKÜNDIGUNG ── */}
-            <AdminSection label="📢 ANKÜNDIGUNG (BANNER)">
+            <AdminSection label="ANKÜNDIGUNG (BANNER)">
               <input value={adminCfg.announce} onChange={e=>setAdminCfg({...adminCfg,announce:e.target.value})}
-                placeholder="z.B. 🎉 Event-Weekend: Chaos Ranked aktiv!"
+                placeholder="z.B. Event-Weekend: Chaos Ranked aktiv!"
                 style={{width:'100%',padding:'11px 12px',borderRadius:10,fontSize:13,
                   background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
                   fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
@@ -4238,7 +4271,7 @@ function App(){
             <AdminSection label="🔧 WARTUNG & AUFRÄUMEN">
               {/* Wartungsmodus mit Bestätigung */}
               <AdminConfirmAction
-                label={adminCfg.maintenance?'🔴 Wartungsmodus aktiv — Spiel gesperrt':'Wartungsmodus einschalten'}
+                label={adminCfg.maintenance?'Wartungsmodus aktiv — Spiel gesperrt':'Wartungsmodus einschalten'}
                 confirmLabel="Wirklich einschalten? Alle Spieler werden ausgesperrt."
                 btnLabel={adminCfg.maintenance?'Deaktivieren':'Aktivieren'}
                 danger={!adminCfg.maintenance}
@@ -4919,18 +4952,39 @@ function App(){
   if(screen==='replay'){
     const rs=applyMoves(moveHist,replayStep);
     const curMove=moveHist[replayStep];
+    const progress=moveHist.length>0?Math.round((replayStep/moveHist.length)*100):0;
     return (
-      <div style={{...sCont,paddingBottom:80}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:12}}>
-          <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>{t('replay')}</div>
-          <div style={{fontSize:12,color:'var(--subtle)',fontWeight:600}}>
-            {replayStep} / {moveHist.length}
+      <div style={{...sCont,paddingBottom:80,paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:28,height:28,borderRadius:9,
+              background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:'0 2px 8px rgba(99,102,241,0.3)'}}>
+              <BrickWallIcon size={16} light/>
+            </div>
+            <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('replay')}</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:6,
+            background:'var(--card)',border:'1.5px solid var(--border)',
+            borderRadius:20,padding:'4px 12px',boxShadow:'var(--shadow-soft)'}}>
+            <ReplayIcon size={12}/>
+            <span style={{fontSize:12,fontWeight:800,color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>
+              {replayStep}<span style={{color:'var(--subtle)'}}>/{moveHist.length}</span>
+            </span>
           </div>
         </div>
+
+        {/* Progress bar */}
+        <div style={{width:'100%',maxWidth:360,height:3,background:'var(--border)',borderRadius:2,marginBottom:10,overflow:'hidden'}}>
+          <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
+        </div>
+
         <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{t('goalLabel')}</div>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
           {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>(
-            <div key={`${r}-${c}`} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
+            <div key={r+'-'+c} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
               background:r===0?'var(--goal)':r===ROWS-1?'var(--start)':(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
               border:'1px solid var(--cell-line)',boxSizing:'border-box'}}>
               {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
@@ -4944,17 +4998,41 @@ function App(){
             </div>
           );})}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2,marginBottom:16}}>{t('startLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{t('startLabel')}</div>
+
+        {/* Current move info */}
         {curMove&&(
-          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:10}}>
-            {pname(curMove.p)} – {curMove.type==='move'?t('step'):t('wallPlaced')}
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',marginBottom:12,
+            background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:12,
+            boxShadow:'var(--shadow-soft)'}}>
+            <div style={{width:10,height:10,borderRadius:'50%',background:PC[curMove.p],flexShrink:0}}/>
+            <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{pname(curMove.p)}</span>
+            <span style={{fontSize:12,color:'var(--subtle)'}}>—</span>
+            <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>{curMove.type==='move'?t('step'):t('wallPlaced')}</span>
           </div>
         )}
-        <div style={{display:'flex',gap:12,alignItems:'center'}}>
-          <button onClick={()=>setReplayStep(s=>Math.max(0,s-1))} disabled={replayStep===0} style={rBtn(replayStep===0)}>◀</button>
-          <button onClick={()=>setReplayStep(s=>Math.min(moveHist.length,s+1))} disabled={replayStep>=moveHist.length} style={rBtn(replayStep>=moveHist.length)}>▶</button>
+
+        {/* Navigation */}
+        <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:16}}>
+          <button onClick={()=>setReplayStep(s=>Math.max(0,s-1))} disabled={replayStep===0}
+            style={{flex:1,padding:'12px',borderRadius:12,border:'1.5px solid var(--border)',
+              background:'var(--card)',color:replayStep===0?'var(--subtle)':'var(--text)',
+              fontSize:18,cursor:replayStep===0?'not-allowed':'pointer',
+              opacity:replayStep===0?0.4:1,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'var(--shadow-soft)'}}>◀</button>
+          <button onClick={()=>setReplayStep(s=>Math.min(moveHist.length,s+1))} disabled={replayStep>=moveHist.length}
+            style={{flex:1,padding:'12px',borderRadius:12,border:'none',
+              background:replayStep>=moveHist.length?'var(--border)':'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+              color:'white',fontSize:18,cursor:replayStep>=moveHist.length?'not-allowed':'pointer',
+              opacity:replayStep>=moveHist.length?0.4:1,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:replayStep>=moveHist.length?'none':'0 3px 10px rgba(59,130,246,0.3)'}}>▶</button>
         </div>
-        <button onClick={()=>setScreen('end')} style={{...sBack,marginTop:16}}>{t('back')}</button>
+
+        <button onClick={()=>setScreen('end')} style={{
+          padding:'11px 28px',borderRadius:12,background:'var(--card)',
+          border:'1.5px solid var(--border)',color:'var(--text)',cursor:'pointer',
+          fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif',
+          boxShadow:'var(--shadow-soft)'}}>{t('back')}</button>
       </div>
     );
   }
@@ -4964,44 +5042,92 @@ function App(){
     const myRematch=onlineRole==='A'?rematchA:rematchB;
     const otherRematch=onlineRole==='A'?rematchB:rematchA;
     const otherDeclined=rematchDeclined&&rematchDeclined!==onlineRole;
+    const isLoss=isOwnLoss(winner);
     return (
-      <div style={sPage}>
-        {winner&&!isOwnLoss(winner)&&<Confetti color={PC[winner]}/>}
-        <div style={{marginBottom:8,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{winner&&isOwnLoss(winner)?<SadIcon size={48}/>:<TrophyIcon size={48}/>}</div>
-        <div style={{fontSize:24,fontWeight:900,color:winner?PC[winner]:'var(--muted)',marginBottom:4,letterSpacing:-0.5}}>
-          {winner?`${pname(winner)} ${t('wins')}`:t('givenUp')}
-        </div>
-        {gaveUp&&(
-          <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginTop:2,marginBottom:2}}>
-            {pname(gaveUp)} {t('lostGiveUp')}
-          </div>
-        )}
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
+        background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+        <MenuBG dark={darkMode}/>
+        {winner&&!isLoss&&<Confetti color={PC[winner]}/>}
 
-        {gameMode==='online'&&otherDeclined&&(
-          <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginTop:14,padding:'8px 16px',background:'rgba(239,68,68,0.1)',borderRadius:20}}>
-            ✗ {t('rematchDeclined')}
+        {/* Winner Card */}
+        <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
+          <div style={{borderRadius:22,overflow:'hidden',
+            boxShadow:winner?`0 12px 40px ${PC[winner]}40`:'0 8px 24px rgba(0,0,0,0.12)',
+            marginBottom:16}}>
+            {/* Top color stripe */}
+            <div style={{height:6,background:winner?`linear-gradient(90deg,${PC[winner]},${PC[winner]}88)`:'var(--border)'}}/>
+            <div style={{background:'var(--card)',padding:'24px 20px',textAlign:'center'}}>
+              <div style={{marginBottom:12,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+                {winner&&isLoss?<SadIcon size={52}/>:<TrophyIcon size={52}/>}
+              </div>
+              <div style={{fontSize:26,fontWeight:900,letterSpacing:-0.8,lineHeight:1.1,
+                color:winner?PC[winner]:'var(--text)',marginBottom:4}}>
+                {winner?pname(winner):t('givenUp')}
+              </div>
+              <div style={{fontSize:14,fontWeight:700,color:'var(--subtle)',marginBottom:gaveUp?8:0}}>
+                {winner?t('wins'):''}
+              </div>
+              {gaveUp&&(
+                <div style={{fontSize:12,fontWeight:700,color:'#ef4444',
+                  background:'rgba(239,68,68,0.09)',padding:'5px 12px',borderRadius:10,display:'inline-block'}}>
+                  {pname(gaveUp)} {t('lostGiveUp')}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-        {gameMode==='online'&&!otherDeclined&&myRematch&&!otherRematch&&(
-          <div style={{fontSize:13,fontWeight:700,color:'#f59e0b',marginTop:14,padding:'8px 16px',background:'rgba(245,158,11,0.1)',borderRadius:20,display:'flex',alignItems:'center',gap:8}}>
-            <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'piece-pulse 1.4s ease-in-out infinite'}}/>
-            {t('rematchWaiting')}
-          </div>
-        )}
-        {gameMode==='online'&&!otherDeclined&&!myRematch&&otherRematch&&(
-          <div style={{fontSize:13,fontWeight:700,color:'#16a34a',marginTop:14,padding:'8px 16px',background:'rgba(22,163,74,0.1)',borderRadius:20}}>
-            ↻ {t('rematchAsked')}
-          </div>
-        )}
 
-        <div style={{display:'flex',flexDirection:'column',gap:10,width:240,marginTop:24}}>
-          {gameMode!=='online'&&<GBtn onClick={()=>initGame(gameMode,'A',null,true)} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><RematchIcon size={16}/>{t('rematch')}</span></GBtn>}
-          {gameMode==='online'&&!otherDeclined&&!myRematch&&<GBtn onClick={requestRematch} dark><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><RematchIcon size={16}/>{t('rematch')}</span></GBtn>}
-          {moveHist.length>0&&<GBtn onClick={()=>{setReplayStep(0);setScreen('replay');}} outline><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><ReplayIcon size={16}/>{t('replayBtn')}</span></GBtn>}
-          <GBtn onClick={()=>{
-            if(gameMode==='online'&&!otherDeclined)declineRematch();
-            setScreen('menu');setGameMode(null);setLobbyId(null);
-          }} outline><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><HomeIcon size={16}/>{t('menu')}</span></GBtn>
+          {/* Online status messages */}
+          {gameMode==='online'&&otherDeclined&&(
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
+              background:'rgba(239,68,68,0.08)',border:'1.5px solid rgba(239,68,68,0.2)',borderRadius:12}}>
+              <span style={{fontSize:14}}>✗</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#ef4444'}}>{t('rematchDeclined')}</span>
+            </div>
+          )}
+          {gameMode==='online'&&!otherDeclined&&myRematch&&!otherRematch&&(
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
+              background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.2)',borderRadius:12}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',
+                animation:'piece-pulse 1.4s ease-in-out infinite',flexShrink:0}}/>
+              <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>{t('rematchWaiting')}</span>
+            </div>
+          )}
+          {gameMode==='online'&&!otherDeclined&&!myRematch&&otherRematch&&(
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
+              background:'rgba(22,163,74,0.08)',border:'1.5px solid rgba(22,163,74,0.2)',borderRadius:12}}>
+              <span style={{fontSize:14}}>↻</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#16a34a'}}>{t('rematchAsked')}</span>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{display:'flex',flexDirection:'column',gap:9}}>
+            {gameMode!=='online'&&(
+              <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
+                iconBg="linear-gradient(135deg,#16a34a,#15803d)"
+                title={t('rematch')} desc="Gleicher Modus, neue Runde"
+                highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
+                onClick={()=>initGame(gameMode,'A',null,true)}/>
+            )}
+            {gameMode==='online'&&!otherDeclined&&!myRematch&&(
+              <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
+                iconBg="linear-gradient(135deg,#16a34a,#15803d)"
+                title={t('rematch')} desc="Gegner zur Revanche auffordern"
+                highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
+                onClick={requestRematch}/>
+            )}
+            {moveHist.length>0&&(
+              <MenuItem icon={<ReplayIcon size={18}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
+                title={t('replayBtn')} desc="Spiel Zug für Zug ansehen"
+                onClick={()=>{setReplayStep(0);setScreen('replay');}}/>
+            )}
+            <MenuItem icon={<HomeIcon size={18}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
+              title={t('menu')} desc="Zurück zum Hauptmenü"
+              onClick={()=>{
+                if(gameMode==='online'&&!otherDeclined)declineRematch();
+                setScreen('menu');setGameMode(null);setLobbyId(null);
+              }}/>
+          </div>
         </div>
       </div>
     );
@@ -5237,15 +5363,28 @@ function App(){
       )}
 
       {winner&&!celebrating&&(
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.45)',
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,
+          background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',
           display:'flex',alignItems:'center',justifyContent:'center',zIndex:500}}
           onClick={()=>setScreen('end')}>
           {!isOwnLoss(winner)&&<Confetti color={PC[winner]}/>}
-          <div style={{background:'var(--card)',borderRadius:22,padding:'32px 44px',textAlign:'center',
-            boxShadow:'0 24px 64px rgba(0,0,0,0.25)',zIndex:9999,position:'relative'}}>
-            <div style={{marginBottom:10,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>{isOwnLoss(winner)?<SadIcon size={48}/>:<TrophyIcon size={48}/>}</div>
-            <div style={{fontSize:22,fontWeight:900,color:PC[winner],letterSpacing:-0.5}}>{pname(winner)} {t('wins')}</div>
-            <div style={{fontSize:11,color:'var(--subtle)',marginTop:10,fontWeight:500}}>{t('tapContinue')}</div>
+          <div style={{background:'var(--card)',borderRadius:24,padding:'28px 32px',textAlign:'center',
+            boxShadow:`0 24px 64px ${PC[winner]}40, 0 8px 24px rgba(0,0,0,0.25)`,
+            zIndex:9999,position:'relative',minWidth:220,
+            border:`1.5px solid ${PC[winner]}30`,
+            animation:'trophy-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+            <div style={{marginBottom:12,display:'flex',justifyContent:'center'}}>
+              {isOwnLoss(winner)?<SadIcon size={52}/>:<TrophyIcon size={52}/>}
+            </div>
+            <div style={{fontSize:24,fontWeight:900,color:PC[winner],
+              letterSpacing:-0.5,lineHeight:1.1,marginBottom:4}}>{pname(winner)}</div>
+            <div style={{fontSize:15,fontWeight:700,color:'var(--text)',marginBottom:16}}>{t('wins')}</div>
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,
+              display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:'var(--subtle)',
+                animation:'piece-pulse 1.5s ease-in-out infinite'}}/>
+              {t('tapContinue')}
+            </div>
           </div>
         </div>
       )}
@@ -5874,6 +6013,24 @@ function HomeIcon({size,color}){
     <path d="M4 11 L12 4 L20 11"/><path d="M6 9.5 V20 H18 V9.5"/><path d="M10 20 V14 H14 V20"/>
   </svg>;
 }
+function CrownIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><polygon points="4,22 8,10 14,18 16,8 18,18 24,10 28,22" fill={c} strokeLinejoin="round"/><rect x="4" y="23" width="24" height="4" rx="2" fill={c}/><circle cx="4" cy="10" r="2.5" fill={c}/><circle cx="16" cy="8" r="2.5" fill={c}/><circle cx="28" cy="10" r="2.5" fill={c}/></svg>;}
+function DiamondIcon({size,color}){const s=size||24;const c=color||'#a78bfa';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><polygon points="16,2 28,12 16,30 4,12" fill={c}/><polygon points="16,2 28,12 16,14 4,12" fill="rgba(255,255,255,0.3)"/></svg>;}
+function MedalIcon({size,color,letter}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><circle cx="16" cy="20" r="10" fill={c}/><circle cx="16" cy="20" r="8" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5"/><text x="16" y="25" textAnchor="middle" fontSize="11" fontWeight="900" fill="#fff" fontFamily="system-ui">{letter||'1'}</text><path d="M11 4 L16 12 L21 4" fill="none" stroke={c} strokeWidth="2.5" strokeLinejoin="round"/></svg>;}
+function FlameIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><path d="M16 2 C16 2 22 10 20 16 C20 16 24 14 22 8 C22 8 28 14 26 22 C24 30 8 30 8 22 C6 16 10 12 12 10 C12 10 10 16 14 18 C14 18 12 12 16 2Z" fill={c}/><ellipse cx="16" cy="24" rx="5" ry="4" fill="rgba(255,200,50,0.6)"/></svg>;}
+function TrophySmIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M8 4h16v12a8 8 0 01-16 0V4z" fill={c}/><path d="M8 8 C4 8 4 14 8 14" stroke={c} strokeWidth="2"/><path d="M24 8 C28 8 28 14 24 14" stroke={c} strokeWidth="2"/><rect x="13" y="22" width="6" height="5" fill={c}/><rect x="10" y="26" width="12" height="3" rx="1.5" fill={c}/></svg>;}
+function ShieldSmIcon({size,color}){const s=size||24;const c=color||'#8b5cf6';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><path d="M16 3 L28 7 V16 C28 23 16 29 16 29 C16 29 4 23 4 16 V7 Z" fill={c}/><path d="M11 16 L14 19 L21 13" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>;}
+function MegaphoneIcon({size,color}){const s=size||24;const c=color||'#8b5cf6';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M6 11H11V21H6z" fill={c}/><path d="M11 11 L24 5 L24 27 L11 21Z" fill={c}/><path d="M14 22 L14 29" stroke={c} strokeWidth="2.5" strokeLinecap="round"/></svg>;}
+function WarningIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><polygon points="16,4 30,28 2,28" fill={c} strokeLinejoin="round"/><rect x="15" y="14" width="2" height="7" rx="1" fill="#fff"/><circle cx="16" cy="24" r="1.2" fill="#fff"/></svg>;}
+function TrashIcon({size,color}){const s=size||24;const c=color||'#ef4444';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><rect x="6" y="10" width="20" height="18" rx="2" stroke={c} strokeWidth="1.8"/><path d="M4 10h24M12 6h8" stroke={c} strokeWidth="1.8" strokeLinecap="round"/><path d="M13 15v8M19 15v8" stroke={c} strokeWidth="1.6" strokeLinecap="round"/></svg>;}
+function PencilIcon({size,color}){const s=size||24;const c=color||'currentColor';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M22 4l6 6-16 16H6v-6z" fill={c}/><path d="M19 7l6 6" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2"/></svg>;}
+function EnvelopeIcon({size,color}){const s=size||24;const c=color||'#8b5cf6';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><rect x="3" y="7" width="26" height="18" rx="2" stroke={c} strokeWidth="1.8"/><path d="M3 9l13 9 13-9" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></svg>;}
+function EyeIcon({size,color}){const s=size||24;const c=color||'currentColor';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M3 16 C6 8 26 8 29 16 C26 24 6 24 3 16Z" stroke={c} strokeWidth="1.8"/><circle cx="16" cy="16" r="4" fill={c}/></svg>;}
+function BookIcon({size,color}){const s=size||24;const c=color||'#3b82f6';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M6 4h12a4 4 0 014 4v18a4 4 0 01-4 4H6V4z" fill={c} opacity="0.85"/><path d="M22 4h4v22h-4" stroke={c} strokeWidth="1.8"/><path d="M10 10h8M10 15h8M10 20h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity="0.7"/></svg>;}
+function LightbulbIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M16 4a9 9 0 016.5 15.2L22 22H10l-.5-2.8A9 9 0 0116 4z" fill={c}/><rect x="11" y="23" width="10" height="2.5" rx="1.25" fill={c}/><rect x="12" y="26.5" width="8" height="2" rx="1" fill={c}/></svg>;}
+function GamepadIcon({size,color}){const s=size||24;const c=color||'currentColor';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><rect x="3" y="9" width="26" height="14" rx="7" fill={c} opacity="0.9"/><path d="M11 12v6M8 15h6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><circle cx="21" cy="13.5" r="1.5" fill="#fff"/><circle cx="24" cy="16" r="1.5" fill="#fff"/><circle cx="21" cy="18.5" r="1.5" fill="#fff"/><circle cx="18" cy="16" r="1.5" fill="#fff"/></svg>;}
+function DiceIcon({size,color}){const s=size||24;const c=color||'#8b5cf6';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><rect x="4" y="4" width="24" height="24" rx="5" fill={c}/><circle cx="11" cy="11" r="2" fill="#fff"/><circle cx="21" cy="11" r="2" fill="#fff"/><circle cx="16" cy="16" r="2" fill="#fff"/><circle cx="11" cy="21" r="2" fill="#fff"/><circle cx="21" cy="21" r="2" fill="#fff"/></svg>;}
+function RainIcon({size,color}){const s=size||24;const c=color||'#60a5fa';return <svg width={s} height={s} viewBox="0 0 32 32" fill="none" style={{display:'block',pointerEvents:'none'}}><path d="M8 14a8 8 0 1116 0c2 0 5 2 5 5s-3 5-5 5H8c-2 0-5-2-5-5s3-5 5-5z" fill={c} opacity="0.7"/><path d="M10 26 L8 30M16 26 L14 30M22 26 L20 30" stroke={c} strokeWidth="2" strokeLinecap="round"/></svg>;}
+function StarIcon({size,color}){const s=size||24;const c=color||'#f59e0b';return <svg width={s} height={s} viewBox="0 0 32 32" style={{display:'block',pointerEvents:'none'}}><polygon points="16,3 19.5,12 29,13 22,19.5 24,29 16,24.5 8,29 10,19.5 3,13 12.5,12" fill={c}/></svg>;}
 function ReplayIcon({size,color}){
   const s=size||20;const c=color||'currentColor';
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" style={{display:'block'}}>
@@ -5961,7 +6118,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
     let cancelled=false;
     const load=async()=>{
       const keys=(await stoGet(FLIST_KEY(account.key)))||[];
-      const reqs=(await stoGet(FR_KEY(account.key)))||{};
+      const reqs=await stoGetChildren(FR_KEY(account.key));
       const fps=await Promise.all(keys.map(k=>stoGet(PROFILE_KEY(k)).then(p=>p?Object.assign({},p,{key:k}):null)));
       const presence=await getPresenceMany(keys);
       const reqKeys=Object.keys(reqs);
@@ -6034,7 +6191,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:18}}>
-          <div style={{fontSize:21,fontWeight:900,color:text2,letterSpacing:-0.5}}>👥 {t('friends')}</div>
+          <div style={{fontSize:21,fontWeight:900,color:text2,letterSpacing:-0.5,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><PeopleIcon size={22} color={text2}/> {t('friends')}</div>
         </div>
 
         {friendLobbyState&&(
@@ -6053,9 +6210,9 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
         )}
 
         <div style={{display:'flex',background:dk?'rgba(15,23,42,0.8)':'#f1f5f9',borderRadius:10,padding:4,marginBottom:14,gap:2}}>
-          {tabBtn('list','👥 '+t('friends_list')+(friends.length?' ('+friends.length+')':''))}
-          {tabBtn('requests','📩 '+t('friends_requests')+(requests.length?' ('+requests.length+')':''))}
-          {tabBtn('add','➕ '+t('friends_add'))}
+          {tabBtn('list',<span style={{display:'inline-flex',alignItems:'center',gap:4}}><PeopleIcon size={12} color={tab==='list'?text2:muted}/>{t('friends_list')+(friends.length?' ('+friends.length+')':'')}</span>)}
+          {tabBtn('requests',<span style={{display:'inline-flex',alignItems:'center',gap:4}}>{requests.length>0&&<span style={{minWidth:14,height:14,borderRadius:7,background:'#ef4444',color:'#fff',fontSize:9,fontWeight:900,display:'inline-flex',alignItems:'center',justifyContent:'center',padding:'0 3px'}}>{requests.length}</span>}<EnvelopeIcon size={12} color={tab==='requests'?text2:muted}/>{t('friends_requests')}</span>)}
+          {tabBtn('add',<span style={{display:'inline-flex',alignItems:'center',gap:4}}><PlusIcon size={12} color={tab==='add'?text2:muted}/>{t('friends_add')}</span>)}
         </div>
 
         {loading&&tab==='list'
@@ -6074,8 +6231,8 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:800,color:text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
-                        <div style={{fontSize:11,fontWeight:600,color:f.status==='online'?'#22c55e':f.status==='in_game'?'#f59e0b':muted}}>
-                          {f.status==='online'?t('friends_online'):f.status==='in_game'?('🎮 '+t('friends_inGame')):t('friends_offline')}
+                        <div style={{fontSize:11,fontWeight:600,color:f.status==='online'?'#22c55e':f.status==='in_game'?'#f59e0b':muted,display:'flex',alignItems:'center',gap:4}}>
+                          {f.status==='online'?t('friends_online'):f.status==='in_game'?(<span style={{display:'inline-flex',alignItems:'center',gap:3}}><GamepadIcon size={11} color="#f59e0b"/>{t('friends_inGame')}</span>):t('friends_offline')}
                         </div>
                       </div>
                       {f.status==='online'&&!friendLobbyState&&(
@@ -6088,8 +6245,8 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
                       {f.status==='in_game'&&f.lobbyId&&(
                         <button onClick={()=>onSpectate(f.lobbyId)} style={{padding:'7px 11px',borderRadius:8,
                           background:'linear-gradient(135deg,#f59e0b,#ef4444)',color:'#fff',border:'none',
-                          cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif',whiteSpace:'nowrap'}}>
-                          👁️ {t('friends_watch')}
+                          cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:5}}>
+                          <EyeIcon size={12} color="#fff"/> {t('friends_watch')}
                         </button>
                       )}
                       <button onClick={()=>doRemove(f.key)} style={{width:28,height:28,borderRadius:'50%',
@@ -6563,7 +6720,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       setHostUid(data.host||null);
       const becameHost=data.host===uid&&!St.current.isHost;
       setIsHost(data.host===uid);
-      if(becameHost){setFlash('👑 Du bist jetzt Host');setTimeout(()=>setFlash(''),2500);}
+      if(becameHost){setFlash('Du bist jetzt Host');setTimeout(()=>setFlash(''),2500);}
       if(data.status==='playing'&&data.playerMap){
         const tok=data.playerMap[uid];
         if(tok){setMyToken(tok);setPlayerMap(data.playerMap);setSub('game');}
@@ -6865,7 +7022,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
             display:'flex',alignItems:'center',justifyContent:'center',
             fontSize:11,fontWeight:800,color:'white',flexShrink:0}}>{pUid.slice(0,2)}</div>
           <div style={{flex:1,fontSize:12,fontWeight:700,color:'var(--text)',minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-            {pUid}{isMe?' (Du)':''}{pUid===St.current.isHost&&false?' 👑':''}
+            {pUid}{isMe?' (Du)':''}{pUid===St.current.isHost&&false?<CrownIcon size={11} color="#f59e0b"/>:''}
           </div>
           {isMe&&(
             <button onClick={switchTeam} style={{padding:'5px 10px',borderRadius:8,
@@ -6930,7 +7087,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                           {pUid.slice(0,2)}
                         </div>
                         <span style={{flex:1,fontSize:11,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {pUid}{isMe?' (Du)':''}{pUid===hostUid?' 👑':''}
+                          {pUid}{isMe?' (Du)':''}{pUid===hostUid?<CrownIcon size={11} color="#f59e0b"/>:''}
                         </span>
                       </div>
                     );
@@ -7259,7 +7416,7 @@ function ModeDemo({kind,dark}){
     const dur=kind==='blitz'?'0.85s':(N*0.85)+'s';
     ov.push(<div key={'bar'+(kind==='blitz'?fi:cycle)} style={{position:'absolute',left:8,top:-15,width:C*CL-16,height:8,borderRadius:4,background:'var(--border)',zIndex:7,overflow:'hidden'}}>
       <div style={{height:'100%',borderRadius:4,background:kind==='blitz'?'#f59e0b':'#3b82f6',animation:`demoBar ${dur} linear infinite`}}/></div>);
-    ov.push(<div key="ic" style={{position:'absolute',right:-3,top:-37,fontSize:15,zIndex:7}}>{kind==='blitz'?'⚡':'⏱️'}</div>);
+    ov.push(<div key="ic" style={{position:'absolute',right:-3,top:-37,zIndex:7,display:'flex'}}><ModeGlyph kind={kind==='blitz'?'bolt':'clock'} size={14} color="#f59e0b"/></div>);
   }
 
   if(kind==='chaos'){
