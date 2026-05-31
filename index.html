@@ -5035,14 +5035,22 @@ function App(){
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:12}}>
-        <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('title')}</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:28,height:28,borderRadius:9,
+            background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:'0 2px 8px rgba(99,102,241,0.3)'}}>
+            <BrickWallIcon size={16} light/>
+          </div>
+          <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('title')}</div>
+        </div>
         {!winner&&(
           <button onClick={handleGiveUp} style={{
-            padding:'5px 14px',fontSize:11,fontWeight:700,cursor:'pointer',
-            background:giveUpArmed?'#ef4444':'transparent',
+            padding:'6px 15px',fontSize:11,fontWeight:800,cursor:'pointer',
+            background:giveUpArmed?'#ef4444':'var(--card)',
             color:giveUpArmed?'white':'var(--subtle)',
-            border:`1px solid ${giveUpArmed?'#ef4444':'var(--border)'}`,
-            borderRadius:20,transition:'all 0.2s',
+            border:`1.5px solid ${giveUpArmed?'#ef4444':'var(--border)'}`,
+            borderRadius:20,transition:'all 0.2s',boxShadow:giveUpArmed?'0 2px 10px rgba(239,68,68,0.35)':'var(--shadow-soft)',
             fontFamily:'system-ui,-apple-system,sans-serif'}}>
             {giveUpArmed?t('sure'):t('giveUp')}
           </button>
@@ -5091,28 +5099,37 @@ function App(){
         {['A','B'].map(p=>{
           const active=turn===p&&!winner;
           return(
-            <div key={p} style={{flex:1,padding:'8px 12px',borderRadius:12,
+            <div key={p} style={{flex:1,padding:'9px 13px',borderRadius:13,
               background:active?PC[p]:'var(--score-bg)',
               border:`1.5px solid ${active?PC[p]:'var(--score-border)'}`,
-              boxShadow:active?`0 3px 12px ${PC[p]}35`:'var(--shadow-soft)',
-              transition:'all 0.2s',display:'flex',alignItems:'center',gap:8}}>
-              <div style={{width:12,height:12,borderRadius:'50%',flexShrink:0,
-                background:active?'rgba(255,255,255,0.9)':PC[p],
-                border:active?`2px solid rgba(255,255,255,0.5)`:`2px solid ${PD[p]}`}}/>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:active?'rgba(255,255,255,0.75)':'var(--subtle)'}}>{pname(p)}</div>
-                <div style={{fontSize:12,fontWeight:700,color:active?'white':'var(--text)'}}>{barrLeft[p]} {t('walls')}</div>
+              boxShadow:active?`0 4px 16px ${PC[p]}40`:'var(--shadow-soft)',
+              transition:'all 0.2s',display:'flex',alignItems:'center',gap:9}}>
+              <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                background:active?'rgba(255,255,255,0.22)':'var(--bg)',
+                border:active?'1.5px solid rgba(255,255,255,0.5)':`1.5px solid ${PC[p]}40`}}>
+                <div style={{width:13,height:13,borderRadius:'50%',
+                  background:active?'#fff':PC[p],
+                  border:active?'none':`2px solid ${PD[p]}`}}/>
+              </div>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:10,fontWeight:800,letterSpacing:0.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                  color:active?'rgba(255,255,255,0.8)':'var(--subtle)'}}>{pname(p)}</div>
+                <div style={{fontSize:12.5,fontWeight:800,display:'flex',alignItems:'center',gap:4,marginTop:1,
+                  color:active?'white':'var(--text)'}}>
+                  <BrickMini size={12}/>{barrLeft[p]}
+                </div>
               </div>
               {gameTimeMode&&gameTimeMode.indexOf('classic-')===0&&(
-                <div style={{marginLeft:'auto',fontSize:13,fontWeight:800,letterSpacing:0.5,
+                <div style={{fontSize:13,fontWeight:800,letterSpacing:0.5,flexShrink:0,
                   fontVariantNumeric:'tabular-nums',
                   color:active?'white':(timeLeft[p]<=30?'#ef4444':'var(--text)')}}>
                   {Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}
                 </div>
               )}
               {active&&!winner&&!(gameTimeMode&&gameTimeMode.indexOf('classic-')===0)&&(
-                <div style={{marginLeft:'auto',fontSize:9,letterSpacing:0.5,
-                  color:'rgba(255,255,255,0.75)',fontWeight:600}}>
+                <div style={{flexShrink:0,fontSize:8.5,letterSpacing:0.4,textAlign:'right',
+                  color:'rgba(255,255,255,0.8)',fontWeight:700,textTransform:'uppercase'}}>
                   {isOnlineWait&&p===turn?t('statusWait'):aiThinking&&p==='B'?t('statusThink'):t('statusTurn')}
                 </div>
               )}
