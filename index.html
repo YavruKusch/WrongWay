@@ -1971,11 +1971,12 @@ function rankTier(r){
   if(r>=1000)return{emoji:'🥈',name:'Silber',color:'#94a3b8'};
   return{emoji:'🥉',name:'Bronze',color:'#b45309'};
 }
-function RankedScreen({account,t,darkMode,goBack,onStart}){
+function RankedScreen({account,t,darkMode,goBack,onStart,features}){
   const[queue,setQueue]=React.useState(null);
   const[elapsed,setElapsed]=React.useState(0);
   const[foundMsg,setFoundMsg]=React.useState('');
   const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
+  const feat=features||{ranked:true,rankedClassic:true,rankedBlitz:true};
 
   const dk=darkMode;
   const card=dk?'#1e293b':'#fff';
@@ -2047,10 +2048,12 @@ function RankedScreen({account,t,darkMode,goBack,onStart}){
     var inQueue=queue&&queue.mode===mode;
     var range=elapsed<15?50:elapsed<30?100:200;
     var wr=r.games>0?Math.round(r.wins/r.games*100):0;
+    var modeEnabled=mode==='classic'?feat.rankedClassic:feat.rankedBlitz;
     return(
       <div key={mode} style={{background:card,border:'1.5px solid '+(inQueue?tier.color+'88':border),borderRadius:16,
         padding:'18px 16px',position:'relative',overflow:'hidden',
-        boxShadow:inQueue?('0 4px 20px '+tier.color+'33'):'0 2px 8px rgba(0,0,0,0.06)'}}>
+        boxShadow:inQueue?('0 4px 20px '+tier.color+'33'):'0 2px 8px rgba(0,0,0,0.06)',
+        opacity:modeEnabled?1:0.5}}>
         {inQueue&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
           background:'linear-gradient(90deg,'+tier.color+','+tier.color+'55)',
           animation:'demoBar 1.8s linear infinite'}}/>}
@@ -2061,7 +2064,10 @@ function RankedScreen({account,t,darkMode,goBack,onStart}){
         </div>
         <div style={{fontSize:46,fontWeight:900,color:tier.color,letterSpacing:-2,lineHeight:1,marginBottom:4}}>{r.rating}</div>
         <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {wr}%</div>
-        {!queue?(
+        {!modeEnabled?(
+          <div style={{padding:'12px',borderRadius:10,background:dk?'#334155':'#f1f5f9',
+            textAlign:'center',fontSize:12,fontWeight:700,color:muted}}>🔒 Vom Admin deaktiviert</div>
+        ):!queue?(
           <button onClick={function(){joinQueue(mode);}} style={{
             width:'100%',padding:'13px',borderRadius:11,border:'none',cursor:'pointer',
             background:'linear-gradient(135deg,'+tier.color+','+tier.color+'aa)',
@@ -4004,33 +4010,35 @@ function App(){
       </button>
 
       <div style={{display:'flex',flexDirection:'column',gap:10,width:260,position:'relative',zIndex:1}}>
-        {(adminCfg.features.online||isAdmin())&&<div style={{opacity:adminCfg.features.online?1:0.45,position:'relative'}}>
-          {/* Ranked Button — prominent mit Gradient */}
-          <button onClick={()=>{setNavDir('fwd');setScreen('ranked');}} style={{
-            width:'100%',padding:'14px 16px',borderRadius:13,border:'none',cursor:'pointer',
-            background:'linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)',
-            color:'white',fontWeight:800,fontSize:14,
-            fontFamily:'system-ui,-apple-system,sans-serif',
-            boxShadow:'0 4px 16px rgba(245,158,11,0.35)',
-            display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-            <span style={{display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontSize:16}}>⚔️</span>
-              <span>Ranked</span>
-            </span>
-            {account&&account.stats&&account.stats.ranked&&(
-              <span style={{fontSize:11,fontWeight:700,background:'rgba(255,255,255,0.2)',
-                padding:'3px 8px',borderRadius:10}}>
-                {rankTier(Math.max(
-                  (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                  (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
-                )).emoji} {Math.max(
-                  (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                  (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
-                )} ELO
+        {(adminCfg.features.ranked||isAdmin())&&(
+          <div style={{opacity:adminCfg.features.ranked?1:0.45,position:'relative'}}>
+            <button onClick={()=>{setNavDir('fwd');setScreen('ranked');}} style={{
+              width:'100%',padding:'14px 16px',borderRadius:13,border:'none',cursor:'pointer',
+              background:'linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)',
+              color:'white',fontWeight:800,fontSize:14,
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'0 4px 16px rgba(245,158,11,0.35)',
+              display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+              <span style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:16}}>⚔️</span>
+                <span>Ranked</span>
               </span>
-            )}
-          </button>
-        </div>}
+              {account&&account.stats&&account.stats.ranked&&(
+                <span style={{fontSize:11,fontWeight:700,background:'rgba(255,255,255,0.2)',
+                  padding:'3px 8px',borderRadius:10}}>
+                  {rankTier(Math.max(
+                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
+                    (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
+                  )).emoji} {Math.max(
+                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
+                    (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000
+                  )} ELO
+                </span>
+              )}
+            </button>
+            {!adminCfg.features.ranked&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
+          </div>
+        )}
         {(adminCfg.features.online||isAdmin())&&<div style={{opacity:adminCfg.features.online?1:0.45,position:'relative'}}>
           <GBtn onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}} blue><span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><GlobeIcon size={16}/>{t('createPublicLobby')}</span></GBtn>
           {!adminCfg.features.online&&<span style={{position:'absolute',top:-6,right:-4,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6}}>AUS</span>}
@@ -4483,7 +4491,7 @@ function App(){
   // ── RANKED ──────────────────────────────────────────────
   if(screen==='ranked'){
     return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
-      onStart={doStartRanked}/>;
+      onStart={doStartRanked} features={adminCfg.features}/>;
   }
 
   // ── FRIENDS ─────────────────────────────────────────────
