@@ -4323,10 +4323,8 @@ function App(){
         <MenuBG dark={darkMode}/>
         <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
-          <div style={{textAlign:'center',marginBottom:14}}>
-            <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="#8b5cf6"/></div>
-            <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('mode')}</div>
-          </div>
+          <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
+            title={t('mode')} sub="Timer, Barrikaden & Spezial-Modi"/>
 
           {/* Aktive Auswahl */}
           {(gameTimeMode!=='none'||chaosMode||dropMode||hammerMode)&&(
@@ -4586,28 +4584,24 @@ function App(){
 
   // ── DIFFICULTY ──────────────────────────────────────────
   if(screen==='difficulty') return (
-    <div style={{...sPage,animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <button onClick={goBack} style={backChevron}>‹</button>
-      <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:24,position:'relative',zIndex:1}}>{t('chooseDifficulty')}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:10,width:280,position:'relative',zIndex:1}}>
-        {[
-          {k:'easy',color:'#16a34a'},
-          {k:'normal',color:'#eab308'},
-          {k:'hard',color:'#ef4444'}
-        ].map(d=>(
-          <button key={d.k} onClick={()=>{setAiDifficulty(d.k);initGame('pvc');}} style={{
-            padding:'14px 16px',background:'var(--card)',border:`1.5px solid ${d.color}30`,
-            borderRadius:12,cursor:'pointer',textAlign:'left',
-            boxShadow:'var(--shadow-soft)',
-            fontFamily:'system-ui,-apple-system,sans-serif'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:2}}>
-              <span style={{display:'flex'}}><DotIcon size={16} color={d.color}/></span>
-              <span style={{fontSize:15,fontWeight:800,color:d.color}}>{t(d.k)}</span>
-            </div>
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500,marginLeft:26}}>{t(d.k+'Desc')}</div>
-          </button>
-        ))}
+      <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
+        <ScreenHead icon={<BotIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
+          title={t('chooseDifficulty')} sub="Gegen den Computer"/>
+        <div style={{display:'flex',flexDirection:'column',gap:9}}>
+          {[
+            {k:'easy',color:'#16a34a',bg:'linear-gradient(135deg,#16a34a,#15803d)'},
+            {k:'normal',color:'#eab308',bg:'linear-gradient(135deg,#eab308,#ca8a04)'},
+            {k:'hard',color:'#ef4444',bg:'linear-gradient(135deg,#ef4444,#dc2626)'}
+          ].map(d=>(
+            <MenuItem key={d.k}
+              icon={<DotIcon size={18} color="#fff"/>} iconBg={d.bg}
+              title={t(d.k)} desc={t(d.k+'Desc')}
+              onClick={()=>{setAiDifficulty(d.k);initGame('pvc');}}/>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -4617,11 +4611,9 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <button onClick={goBack} style={backChevron}>‹</button>
-      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
-        <div style={{textAlign:'center',marginBottom:20}}>
-          <div style={{marginBottom:4,display:'flex',justifyContent:'center'}}><PeopleIcon size={30} color="#8b5cf6"/></div>
-          <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('friendPlay')}</div>
-        </div>
+      <div style={{width:'100%',maxWidth:300,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
+        <ScreenHead icon={<PeopleIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
+          title={t('friendPlay')} sub="Privat mit Code spielen"/>
 
         {/* Private Lobby erstellen */}
         <button onClick={()=>createLobby(true)} style={{
@@ -4667,10 +4659,8 @@ function App(){
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
         {/* Header */}
-        <div style={{textAlign:'center',marginBottom:20}}>
-          <div style={{marginBottom:6,display:'flex',justifyContent:'center'}}><GlobeIcon size={26} color="#3b82f6"/></div>
-          <div style={{fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('playOnline')}</div>
-        </div>
+        <ScreenHead icon={<GlobeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
+          title={t('playOnline')} sub="Öffentliche Lobbys"/>
 
         {/* Create section */}
         <div style={{width:'100%',marginBottom:16}}>
@@ -6233,6 +6223,18 @@ function BreakingWall({wkey,dark}){
         animation:`debris-fly ${0.4+Math.random()*0.2}s ease-out forwards`}}/>;
     })}
   </div>;
+}
+function ScreenHead({icon,iconBg,title,sub}){
+  return(
+    <div style={{textAlign:'center',marginBottom:22,position:'relative',zIndex:1}}>
+      {icon?<div style={{width:58,height:58,borderRadius:17,margin:'0 auto 12px',
+        background:iconBg||'var(--card)',border:iconBg?'none':'1.5px solid var(--border)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        boxShadow:iconBg?'0 6px 18px rgba(99,102,241,0.25)':'var(--shadow-soft)'}}>{icon}</div>:null}
+      <div style={{fontSize:23,fontWeight:900,color:'var(--text)',letterSpacing:-0.6,lineHeight:1.1}}>{title}</div>
+      {sub?<div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,marginTop:5}}>{sub}</div>:null}
+    </div>
+  );
 }
 function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg}){
   return(
