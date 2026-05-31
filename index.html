@@ -417,7 +417,7 @@
 
 <div id="loader">
   <div class="dot"><svg width="46" height="46" viewBox="0 0 48 48"><rect x="2" y="4" width="44" height="40" rx="7" fill="#7f1d1d"/><rect x="4" y="6" width="18" height="10" rx="2.4" fill="#fb7185"/><rect x="24" y="6" width="20" height="10" rx="2.4" fill="#be123c"/><rect x="4" y="18" width="9" height="10" rx="2.4" fill="#be123c"/><rect x="15" y="18" width="18" height="10" rx="2.4" fill="#fb7185"/><rect x="35" y="18" width="9" height="10" rx="2.4" fill="#be123c"/><rect x="4" y="30" width="20" height="10" rx="2.4" fill="#fb7185"/><rect x="26" y="30" width="18" height="10" rx="2.4" fill="#be123c"/></svg></div>
-  <div class="txt">Loading...</div>
+  <div class="txt" id="loader-msg">Wird geladen…</div>
 </div>
 
 <div id="root"></div>
@@ -442,6 +442,26 @@
     appId: "1:252603563986:web:705bc3ffcbb9d8ced2d20b"
   });
   window.db = firebase.database();
+  // Fehler sichtbar anzeigen (kein DevTools nötig)
+  window.onerror = function(msg,src,line){
+    var m=document.getElementById('loader-msg');
+    if(m)m.innerHTML='<span style="color:#ef4444">Fehler Zeile '+line+':<br>'+msg+'</span>';
+  };
+  // Nach 12s: Hinweis wenn noch loading
+  setTimeout(function(){
+    var l=document.getElementById('loader');
+    var m=document.getElementById('loader-msg');
+    if(l&&l.style.display!=='none'&&m&&m.style.color!=='#ef4444'){
+      m.innerHTML='Babel kompiliert… (großes Script, bitte warten)';
+    }
+  },5000);
+  setTimeout(function(){
+    var l=document.getElementById('loader');
+    var m=document.getElementById('loader-msg');
+    if(l&&l.style.display!=='none'){
+      m.innerHTML='<span style="color:#ef4444">Timeout — Seite neu laden</span>';
+    }
+  },20000);
 </script>
 
 <script type="text/babel" data-presets="react">
@@ -2113,28 +2133,6 @@ function RankedScreen({account,t,darkMode,goBack,onStart}){
     </div>
   );
 }
-  const[queue,setQueue]=React.useState(null); // null | {mode,ts}
-  const[elapsed,setElapsed]=React.useState(0);
-  const[foundMsg,setFoundMsg]=React.useState('');
-  const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
-
-  const dk=darkMode;
-  const card=dk?'#1e293b':'#fff';
-  const border=dk?'#334155':'#e2e8f0';
-  const txt=dk?'#f1f5f9':'#1e293b';
-  const muted=dk?'#64748b':'#94a3b8';
-
-  const joinQueue=async function(mode){
-    if(!account)return;
-    const r=(ranked[mode]&&ranked[mode].rating)||1000;
-    await stoSet('ww_ranked_queue/'+account.key,{mode:mode,rating:r,name:account.name,ts:Date.now()});
-    setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
-  };
-  const leaveQueue=async function(){
-    if(account)await stoDel('ww_ranked_queue/'+account.key);
-    setQueue(null);setElapsed(0);setFoundMsg('');
-  };
-
 function AdminSection({label,children}){
   return(
     <div style={{marginBottom:16}}>
