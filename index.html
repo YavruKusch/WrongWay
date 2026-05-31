@@ -789,10 +789,9 @@ function tryWall2(key,walls,tokens,R,C){
   if(!wallGeomOk2(key,walls))return null;
   const next=new Set([...walls,key]);
   for(const id of ORDER_2V2)if(!wallSafeToken2(tokens[id],GOAL_2V2[id],next,R,C))return null;
-  // Breitenregel: nur bei H-Wänden prüfen
+  // Breitenregel: alle Reihen prüfen (nicht nur die neue Mauer-Reihe)
   if(key[0]==='H'){
-    const r=+key.split('-')[1];
-    if(!passageWidthOk2(next,r,C))return null;
+    for(let r=0;r<R-1;r++){if(!passageWidthOk2(next,r,C))return null;}
   }
   return next;
 }
