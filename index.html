@@ -468,7 +468,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedBlitz:true,rankedChaosEvent:false},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -2135,6 +2135,60 @@ function RankedScreen({account,t,darkMode,goBack,onStart}){
     setQueue(null);setElapsed(0);setFoundMsg('');
   };
 
+function AdminSection({label,children}){
+  return(
+    <div style={{marginBottom:16}}>
+      <div style={{fontSize:10,fontWeight:800,color:'var(--subtle)',letterSpacing:1.2,marginBottom:8,textTransform:'uppercase'}}>{label}</div>
+      <div style={{display:'flex',flexDirection:'column',gap:7,padding:'12px',borderRadius:12,
+        background:'var(--bg)',border:'1.5px solid var(--border)'}}>
+        {children}
+      </div>
+    </div>
+  );
+}
+function AdminToggle({label,on,onClick,accent}){
+  const col=accent?(on?'#f59e0b':'var(--border)'):(on?'#16a34a':'var(--border)');
+  return(
+    <button onClick={onClick} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+      padding:'10px 12px',borderRadius:9,background:'var(--card)',
+      border:'1.5px solid '+(on&&accent?'#f59e0b44':'var(--border)'),cursor:'pointer',
+      fontFamily:'system-ui,-apple-system,sans-serif',width:'100%',
+      boxShadow:on&&accent?'0 2px 8px rgba(245,158,11,0.2)':'none'}}>
+      <span style={{fontSize:13,fontWeight:700,color:'var(--text)',textAlign:'left'}}>{label}</span>
+      <div style={{width:40,height:24,borderRadius:12,background:col,position:'relative',
+        transition:'background 0.2s',flexShrink:0,marginLeft:8}}>
+        <div style={{position:'absolute',top:2,left:on?18:2,width:20,height:20,borderRadius:'50%',
+          background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+      </div>
+    </button>
+  );
+}
+function AdminConfirmAction({label,confirmLabel,btnLabel,danger,active,onConfirm}){
+  const[confirm,setConfirm]=React.useState(false);
+  if(confirm)return(
+    <div style={{background:danger?'rgba(239,68,68,0.08)':'rgba(245,158,11,0.08)',
+      border:'1.5px solid '+(danger?'#ef4444':'#f59e0b'),borderRadius:10,padding:'12px 14px'}}>
+      <div style={{fontSize:13,fontWeight:700,color:danger?'#ef4444':'#f59e0b',marginBottom:10}}>⚠️ {confirmLabel}</div>
+      <div style={{display:'flex',gap:8}}>
+        <button onClick={()=>{setConfirm(false);onConfirm();}} style={{flex:1,padding:'10px',borderRadius:9,
+          background:danger?'#ef4444':'#f59e0b',color:'white',border:'none',cursor:'pointer',
+          fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{btnLabel}</button>
+        <button onClick={()=>setConfirm(false)} style={{flex:1,padding:'10px',borderRadius:9,
+          background:'var(--card)',color:'var(--text)',border:'1.5px solid var(--border)',
+          cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>Abbrechen</button>
+      </div>
+    </div>
+  );
+  return(
+    <button onClick={()=>setConfirm(true)} style={{width:'100%',padding:'10px 12px',borderRadius:9,
+      background:active?(danger?'rgba(239,68,68,0.12)':'rgba(245,158,11,0.12)'):'var(--card)',
+      border:'1.5px solid '+(active?(danger?'#ef4444':'#f59e0b'):'var(--border)'),
+      cursor:'pointer',fontWeight:700,fontSize:13,color:active?(danger?'#ef4444':'#f59e0b'):'var(--text)',
+      fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left',display:'flex',alignItems:'center',gap:8}}>
+      {active?'🔴':'⚪'} {label}
+    </button>
+  );
+}
 function RankedResetAdmin({t}){
   const[step,setStep]=React.useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=busy, 4=done
   const doReset=async()=>{
@@ -4098,125 +4152,109 @@ function App(){
       )}
       {showAdmin&&isAdmin()&&(
         <div onClick={()=>setShowAdmin(false)} style={{position:'fixed',inset:0,
-          background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',
-          zIndex:650,padding:20}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,
-            padding:'22px 22px 18px',width:'100%',maxWidth:340,maxHeight:'88vh',overflowY:'auto',
-            boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-              <div style={{fontSize:18,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:8}}>🛡️ Admin</div>
+          background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',
+          zIndex:650,padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:20,
+            padding:'20px 18px 18px',width:'100%',maxWidth:360,maxHeight:'90vh',overflowY:'auto',
+            boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
+
+            {/* Header */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+              <div style={{fontSize:17,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}>🛡️ Admin-Panel</div>
               <button onClick={()=>setShowAdmin(false)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
             </div>
-            <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginBottom:18,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
 
-            {/* Feature-Toggles Haupt-Modi */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>HAUPT-MODI</div>
-            <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:14}}>
-              {[['online','Online-Lobby'],['friend','Mit Freund'],['bots','Gegen Bots'],['local','Lokal'],['twovtwo','2 vs 2']].map(function(f){
-                const on=adminCfg.features[f[0]];
-                return(
-                  <button key={f[0]} onClick={()=>toggleFeature(f[0])} style={{
-                    display:'flex',alignItems:'center',justifyContent:'space-between',
-                    padding:'11px 14px',borderRadius:10,background:'var(--bg)',
-                    border:'1.5px solid var(--border)',cursor:'pointer',
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{f[1]}</span>
-                    <div style={{width:44,height:26,borderRadius:13,background:on?'#16a34a':'var(--border)',position:'relative',transition:'background 0.2s'}}>
-                      <div style={{position:'absolute',top:3,left:on?20:3,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
-                    </div>
-                  </button>
-                );
+            {/* ── 🎮 SPIELMODI ── */}
+            <AdminSection label="🎮 SPIELMODI">
+              {[['online','🌐 Online-Lobby'],['friend','👥 Mit Freund'],['bots','🤖 Gegen Bots'],['local','📱 Lokal (gleiches Gerät)'],['twovtwo','⚔️ 2 vs 2']].map(function(f){
+                return <AdminToggle key={f[0]} label={f[1]} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
               })}
-            </div>
+            </AdminSection>
 
-            {/* Feature-Toggles Chaos/Spezial-Modi */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>CHAOS & SPEZIAL-MODI</div>
-            <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:18}}>
-              {[['blitz','Blitz (Zeitlimit)'],['chaos','Chaos (Barrikaden-Drop)'],['drop','Zufalls-Wände'],['hammer','Hammer-Modus']].map(function(f){
-                const on=adminCfg.features[f[0]];
-                return(
-                  <button key={f[0]} onClick={()=>toggleFeature(f[0])} style={{
-                    display:'flex',alignItems:'center',justifyContent:'space-between',
-                    padding:'11px 14px',borderRadius:10,background:'var(--bg)',
-                    border:'1.5px solid var(--border)',cursor:'pointer',
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{f[1]}</span>
-                    <div style={{width:44,height:26,borderRadius:13,background:on?'#16a34a':'var(--border)',position:'relative',transition:'background 0.2s'}}>
-                      <div style={{position:'absolute',top:3,left:on?20:3,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
-                    </div>
-                  </button>
-                );
+            {/* ── ⚡ MODI & OPTIONEN ── */}
+            <AdminSection label="⚡ SPIEL-MODI & OPTIONEN">
+              {[['blitz','⏱️ Blitz (Kurz-Timer)'],['chaos','🎲 Chaos (Barrikaden-Drop)'],['drop','🌧️ Zufalls-Wände'],['hammer','🔨 Hammer-Modus']].map(function(f){
+                return <AdminToggle key={f[0]} label={f[1]} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
               })}
-            </div>
+            </AdminSection>
 
-            {/* Ankündigung */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>ANKÜNDIGUNG (BANNER)</div>
-            <input value={adminCfg.announce} onChange={e=>setAdminCfg({...adminCfg,announce:e.target.value})}
-              placeholder="z.B. Neues Update: 2v2 ist live!"
-              style={{width:'100%',padding:'11px 12px',borderRadius:10,fontSize:13,
-                background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-                fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Anzeigedauer:</div>
-            <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
-              {[[0,'Immer'],[30,'30 Min'],[60,'1 Std'],[120,'2 Std'],[480,'8 Std'],[1440,'24 Std']].map(function(o){
-                return(
-                  <button key={o[0]} onClick={()=>setAnnounceDur(o[0])} style={{
-                    padding:'6px 10px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
-                    background:announceDur===o[0]?'#3b82f6':'var(--bg)',
-                    color:announceDur===o[0]?'white':'var(--text)',
-                    border:'1.5px solid '+(announceDur===o[0]?'#3b82f6':'var(--border)'),
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>
-                );
-              })}
-            </div>
-            <div style={{display:'flex',gap:8,marginBottom:18}}>
-              <button onClick={()=>{const until=announceDur===0?0:Date.now()+announceDur*60000;saveAdminCfg({...adminCfg,announceUntil:until});}} style={{flex:1,padding:'10px',borderRadius:10,
-                background:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-                fontFamily:'system-ui,-apple-system,sans-serif'}}>Banner setzen</button>
-              <button onClick={()=>saveAdminCfg({...adminCfg,announce:'',announceUntil:0})} style={{padding:'10px 14px',borderRadius:10,
-                background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-                fontFamily:'system-ui,-apple-system,sans-serif'}}>Löschen</button>
-            </div>
-
-            {/* Wartungsmodus */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>WARTUNGSMODUS</div>
-            <button onClick={()=>saveAdminCfg({...adminCfg,maintenance:!adminCfg.maintenance})} style={{
-              width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
-              padding:'11px 14px',borderRadius:10,marginBottom:18,
-              background:adminCfg.maintenance?'rgba(239,68,68,0.12)':'var(--bg)',
-              border:'1.5px solid '+(adminCfg.maintenance?'#ef4444':'var(--border)'),cursor:'pointer',
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              <span style={{fontSize:13,fontWeight:700,color:adminCfg.maintenance?'#ef4444':'var(--text)'}}>{adminCfg.maintenance?'Aktiv – Menü gesperrt':'Aus'}</span>
-              <div style={{width:44,height:26,borderRadius:13,background:adminCfg.maintenance?'#ef4444':'var(--border)',position:'relative',transition:'background 0.2s'}}>
-                <div style={{position:'absolute',top:3,left:adminCfg.maintenance?20:3,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
-              </div>
-            </button>
-
-            {/* Aufräumen mit Bestätigung */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:10}}>AUFRÄUMEN</div>
-            {clearConfirm?(
-              <div style={{background:'rgba(239,68,68,0.08)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px',marginBottom:4}}>
-                <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginBottom:10}}>Wirklich alle offenen Lobbys leeren?</div>
-                <div style={{display:'flex',gap:8}}>
-                  <button onClick={()=>{setClearConfirm(false);clearOpenLobbies();}} style={{flex:1,padding:'10px',borderRadius:9,
-                    background:'#ef4444',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>Ja, leeren</button>
-                  <button onClick={()=>setClearConfirm(false)} style={{flex:1,padding:'10px',borderRadius:9,
-                    background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>Abbrechen</button>
+            {/* ── ⚔️ RANKED ── */}
+            <AdminSection label="⚔️ RANKED-SYSTEM">
+              <AdminToggle label="Ranked aktiv" on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
+              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.ranked?1:0.4}}>
+                <AdminToggle label="⏱️ Classic Ranked (3 Min)" on={adminCfg.features.rankedClassic} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedClassic');}}/>
+                <AdminToggle label="⚡ Blitz Ranked (8 Sek)" on={adminCfg.features.rankedBlitz} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedBlitz');}}/>
+                <div style={{marginTop:4,paddingTop:10,borderTop:'1px solid var(--border)'}}>
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:7}}>🎉 EVENT-MODUS</div>
+                  <AdminToggle label="Chaos-Modi für Ranked freischalten" on={adminCfg.features.rankedChaosEvent} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedChaosEvent');}}/>
                 </div>
               </div>
-            ):(
-              <button onClick={()=>setClearConfirm(true)} style={{width:'100%',padding:'11px',borderRadius:10,
-                background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',
-                fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                🧹 Offene 2v2-Lobbys leeren
-              </button>
-            )}
+              <div style={{marginTop:10}}>
+                <RankedResetAdmin t={t}/>
+              </div>
+            </AdminSection>
 
-            {/* Ranked ELO Reset */}
-            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginTop:14,marginBottom:10}}>RANKED ELO</div>
-            <RankedResetAdmin t={t}/>
+            {/* ── 📢 ANKÜNDIGUNG ── */}
+            <AdminSection label="📢 ANKÜNDIGUNG (BANNER)">
+              <input value={adminCfg.announce} onChange={e=>setAdminCfg({...adminCfg,announce:e.target.value})}
+                placeholder="z.B. 🎉 Event-Weekend: Chaos Ranked aktiv!"
+                style={{width:'100%',padding:'11px 12px',borderRadius:10,fontSize:13,
+                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>ANZEIGEDAUER</div>
+              <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
+                {[[0,'Immer'],[30,'30 Min'],[60,'1 Std'],[120,'2 Std'],[480,'8 Std'],[1440,'24 Std']].map(function(o){
+                  const sel=announceDur===o[0];
+                  return <button key={o[0]} onClick={()=>setAnnounceDur(o[0])} style={{
+                    padding:'6px 10px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
+                    background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
+                    border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
+                })}
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>{const until=announceDur===0?0:Date.now()+announceDur*60000;saveAdminCfg({...adminCfg,announceUntil:until});}} style={{flex:1,padding:'10px',borderRadius:10,
+                  background:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>Setzen</button>
+                <button onClick={()=>saveAdminCfg({...adminCfg,announce:'',announceUntil:0})} style={{padding:'10px 14px',borderRadius:10,
+                  background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>Löschen</button>
+              </div>
+            </AdminSection>
+
+            {/* ── 🔧 WARTUNG & AUFRÄUMEN ── */}
+            <AdminSection label="🔧 WARTUNG & AUFRÄUMEN">
+              {/* Wartungsmodus mit Bestätigung */}
+              <AdminConfirmAction
+                label={adminCfg.maintenance?'🔴 Wartungsmodus aktiv — Spiel gesperrt':'Wartungsmodus einschalten'}
+                confirmLabel="Wirklich einschalten? Alle Spieler werden ausgesperrt."
+                btnLabel={adminCfg.maintenance?'Deaktivieren':'Aktivieren'}
+                danger={!adminCfg.maintenance}
+                active={adminCfg.maintenance}
+                onConfirm={()=>saveAdminCfg({...adminCfg,maintenance:!adminCfg.maintenance})}/>
+              <div style={{marginTop:8}}>
+                {clearConfirm?(
+                  <div style={{background:'rgba(239,68,68,0.08)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px'}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginBottom:10}}>Wirklich alle offenen Lobbys leeren?</div>
+                    <div style={{display:'flex',gap:8}}>
+                      <button onClick={()=>{setClearConfirm(false);clearOpenLobbies();}} style={{flex:1,padding:'10px',borderRadius:9,
+                        background:'#ef4444',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>Ja, leeren</button>
+                      <button onClick={()=>setClearConfirm(false)} style={{flex:1,padding:'10px',borderRadius:9,
+                        background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>Abbrechen</button>
+                    </div>
+                  </div>
+                ):(
+                  <button onClick={()=>setClearConfirm(true)} style={{width:'100%',padding:'11px',borderRadius:10,
+                    background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',
+                    fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    🧹 Offene Lobbys leeren
+                  </button>
+                )}
+              </div>
+            </AdminSection>
 
             {adminFlash?<div style={{textAlign:'center',fontSize:12,color:'#16a34a',fontWeight:700,marginTop:10}}>{adminFlash}</div>:null}
           </div>
@@ -7314,8 +7352,6 @@ function TutorialModal({t,darkMode,step,setStep,onClose}){
 }
 
 // ── Mount ─────────────────────────────────────────────────
-const loader=document.getElementById('loader');
-if(loader)loader.style.display='none';
 function triggerHaptic(){
   if(window.__hapticOn===false)return;
   if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}
@@ -7332,7 +7368,10 @@ function triggerHaptic(){
 document.addEventListener('pointerdown',e=>{
   try{const b=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;if(b&&!b.disabled)triggerHaptic();}catch(_){}
 },true);
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+const loader=document.getElementById('loader');
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+requestAnimationFrame(()=>requestAnimationFrame(()=>{if(loader)loader.style.display='none';}));
 </script>
 
 </body>
