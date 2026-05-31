@@ -5142,12 +5142,19 @@ function App(){
       {dragging&&(
         snapPos
           ? <div style={{position:'fixed',pointerEvents:'none',zIndex:1000,width:gW,height:gH,
-              background:previewValid?'#f59e0b':'#ef4444',borderRadius:4,opacity:0.9,
+              borderRadius:4,opacity:0.92,overflow:'hidden',
               boxShadow:previewValid?'0 0 20px #f59e0b80':'0 0 20px #ef444480',
-              left:snapPos.x-gW/2,top:snapPos.y-gH/2,transition:'left 0.05s,top 0.05s,background 0.12s'}}/>
+              left:snapPos.x-gW/2,top:snapPos.y-gH/2,transition:'left 0.05s,top 0.05s'}}>
+              {dragging.orient==='H'
+                ?[0,1,2,3].map(i=><div key={i} style={{position:'absolute',left:i*(gW/4),top:0,width:gW/4,height:gH,background:previewValid?(i%2===0?'#fb7185':'#be123c'):(i%2===0?'#f87171':'#dc2626')}}/>)
+                :[0,1,2,3].map(i=><div key={i} style={{position:'absolute',top:i*(gH/4),left:0,height:gH/4,width:gW,background:previewValid?(i%2===0?'#fb7185':'#be123c'):(i%2===0?'#f87171':'#dc2626')}}/>)
+              }
+            </div>
           : <div style={{position:'fixed',pointerEvents:'none',zIndex:1000,width:44,height:44,borderRadius:'50%',
-              background:'#94a3b8',opacity:0.85,left:ghostPos.x-22,top:ghostPos.y-22-90,
-              display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:'white',fontWeight:800}}>✕</div>
+              background:'rgba(127,29,29,0.85)',opacity:0.9,left:ghostPos.x-22,top:ghostPos.y-22-90,
+              display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <BrickWallIcon size={28} light/>
+            </div>
       )}
 
       {/* Hammer-Ghost */}
@@ -5399,22 +5406,52 @@ function App(){
             padding:'2px 10px',borderRadius:20,border:`1px solid ${darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)'}`}}>
             {barrLeft[turn]} {t('wallsLeft')}
           </div>
-          {[['H'],['V']].map(([orient])=>(
+          {[['H'],['V']].map(([orient])=>{
+            const isH=orient==='H';
+            return(
             <div key={orient}
               onMouseDown={e=>startDrag(e,orient)}
               onTouchStart={e=>startDrag(e,orient)}
               style={{pointerEvents:'all',
-                width:orient==='H'?84:42,height:orient==='V'?54:42,
+                width:isH?88:44,height:isH?44:60,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:canDrag?'grab':'not-allowed',touchAction:'none',
-                borderRadius:12,background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
+                borderRadius:12,background:darkMode?'rgba(30,41,68,0.75)':'rgba(255,255,255,0.78)',
                 backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-                border:`1px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.85)'}`,
-                boxShadow:'0 4px 14px rgba(0,0,0,0.1)',opacity:canDrag?1:0.35}}>
-              <div style={{width:orient==='H'?58:WW,height:orient==='V'?28:WW,
-                background:canDrag?(darkMode?'#e2e8f0':'#1e293b'):(darkMode?'#475569':'#aaa'),borderRadius:3,pointerEvents:'none'}}/>
+                border:`1px solid ${darkMode?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.9)'}`,
+                boxShadow:'0 4px 14px rgba(0,0,0,0.13)',opacity:canDrag?1:0.32,
+                position:'relative'}}>
+              {/* Mauer-Vorschau in Chip-Form mit Brick-Muster */}
+              <div style={{
+                width:isH?66:WW+2,height:isH?WW+2:36,
+                borderRadius:isH?4:4,overflow:'hidden',
+                display:'flex',flexDirection:isH?'row':'column',
+                boxShadow:'0 2px 8px rgba(0,0,0,0.22)',
+                opacity:canDrag?1:0.6}}>
+                {/* Brick-Reihen als Streifen für H/V */}
+                {isH?(
+                  // Horizontal: 3 Segmente nebeneinander
+                  [0,1,2].map(i=>(
+                    <div key={i} style={{flex:1,height:'100%',display:'flex',flexDirection:'column',gap:1.5,padding:'1.5px 1.5px'}}>
+                      <div style={{flex:1,borderRadius:2,background:i%2===0?'#fb7185':'#be123c'}}/>
+                      <div style={{flex:1,borderRadius:2,background:i%2===0?'#be123c':'#fb7185'}}/>
+                    </div>
+                  ))
+                ):(
+                  // Vertikal: 4 Segmente übereinander
+                  [0,1,2,3].map(i=>(
+                    <div key={i} style={{flex:1,width:'100%',display:'flex',flexDirection:'row',gap:1.5,padding:'1.5px 1.5px'}}>
+                      <div style={{flex:1,borderRadius:2,background:i%2===0?'#fb7185':'#be123c'}}/>
+                      <div style={{flex:1,borderRadius:2,background:i%2===0?'#be123c':'#fb7185'}}/>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div style={{position:'absolute',inset:0,borderRadius:12,
+                background:'linear-gradient(135deg,rgba(127,29,29,0.18) 0%,transparent 60%)',pointerEvents:'none'}}/>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -5951,9 +5988,10 @@ function BrickWallIcon({size,light}){
 }
 function BrickMini({size}){
   const s=size||12;
-  return <svg width={s*1.45} height={s} viewBox="0 0 28 20" style={{display:'inline-block',verticalAlign:'-2px'}}>
-    <rect x="1" y="2" width="26" height="16" rx="3" fill="#ef4444" stroke="#991b1b" strokeWidth="1.6"/>
-    <path d="M14 2 V18 M1 10 H27" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2"/>
+  const bricks=[[4,6,18,10],[24,6,20,10],[4,18,9,10],[15,18,18,10],[35,18,9,10],[4,30,20,10],[26,30,18,10]];
+  return <svg width={s} height={s} viewBox="0 0 48 48" style={{display:'inline-block',verticalAlign:'-2px',flexShrink:0}}>
+    <rect x="2" y="4" width="44" height="40" rx="6" fill="#7f1d1d"/>
+    {bricks.map((b,i)=><rect key={i} x={b[0]} y={b[1]} width={b[2]} height={b[3]} rx="2.2" fill={i%2===0?'#fb7185':'#be123c'} stroke="rgba(0,0,0,0.12)" strokeWidth="0.5"/>)}
   </svg>;
 }
 function SwordsIcon({size,color}){
