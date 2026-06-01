@@ -484,6 +484,20 @@ const { useState, useEffect, useRef, useMemo } = React;
 const COLS=9,ROWS=13,WW=8,BARR=10;
 const CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
 const INIT_A={r:ROWS-1,c:2},INIT_B={r:ROWS-1,c:6};
+// Duell (vertikal): Spieler 1 (A) unten zentriert → Ziel oben; Spieler 2/Bot (B) oben zentriert → Ziel unten
+const DUEL_A={r:ROWS-1,c:Math.floor(COLS/2)},DUEL_B={r:0,c:Math.floor(COLS/2)};
+// Startpositionen je nach Map
+function startPos(map){
+  if(map==='duel')return{A:{...DUEL_A},B:{...DUEL_B}};
+  return{A:{...INIT_A},B:{...INIT_B}};
+}
+// Aktiver Map-Typ der laufenden 1v1-Runde (für isSteelWall etc.), wird bei Spielstart gesetzt
+let CUR_MAP='classic';
+// Zielreihe je Spieler und Map. Klassisch: beide nach oben (0). Duell: A→0 (oben), B→ROWS-1 (unten).
+function goalRowOf(player,map){
+  if(map==='duel')return player==='B'?ROWS-1:0;
+  return 0;
+}
 const PC={A:'#ef4444',B:'#3b82f6'},PD={A:'#7f1d1d',B:'#1e3a5f'};
 const SESSION=Math.random().toString(36).slice(2,10);
 const GUEST_ID=(()=>{try{let n=localStorage.getItem('ww_guest_id');if(!n){n='User'+Math.floor(1000+Math.random()*9000);localStorage.setItem('ww_guest_id',n);}return n;}catch(e){return 'User'+Math.floor(1000+Math.random()*9000);}})();
@@ -663,19 +677,19 @@ function edgeBlocked(r,c,nr,nc,walls){
   if(dc===-1) return walls.has(`V-${r}-${nc}`) ||(r>0&&walls.has(`V-${r-1}-${nc}`));
   return false;
 }
-function hasPath(pos,walls){
+function hasPath(pos,walls,goalRow=0){
   const vis=new Set(),q=[pos];vis.add(ck(pos.r,pos.c));
-  while(q.length){const cur=q.shift();if(cur.r===0)return true;
+  while(q.length){const cur=q.shift();if(cur.r===goalRow)return true;
     for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
       const nr=cur.r+dr,nc=cur.c+dc;
       if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){const k=ck(nr,nc);
         if(!vis.has(k)&&!edgeBlocked(cur.r,cur.c,nr,nc,walls)){vis.add(k);q.push({r:nr,c:nc});}}}}
   return false;
 }
-function bfsPath(pos,walls){
+function bfsPath(pos,walls,goalRow=0){
   const vis=new Map(),q=[pos];vis.set(ck(pos.r,pos.c),null);
   while(q.length){const cur=q.shift();
-    if(cur.r===0){const path=[];let k=ck(cur.r,cur.c);
+    if(cur.r===goalRow){const path=[];let k=ck(cur.r,cur.c);
       while(k!==null){const[r,c]=k.split(',').map(Number);path.unshift({r,c});k=vis.get(k);}return path;}
     for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
       const nr=cur.r+dr,nc=cur.c+dc;
@@ -820,13 +834,13 @@ function buildHamCtx(hammers,hammerHeld,pA,pB){
   if(hammerHeld&&!hammerHeld.B)seekers.push(pB);
   return seekers.length?{hammers,seekers}:null;
 }
-function tryWall(key,walls,pA,pB){
+function tryWall(key,walls,pA,pB,goalA=0,goalB=0){
   if(walls.has(key))return null;
   const[type,rs,cs]=key.split('-');const r=+rs,c=+cs;
   if(type==='H'){if(walls.has(`H-${r}-${c-1}`)||walls.has(`H-${r}-${c+1}`))return null;if(walls.has(`V-${r}-${c}`))return null;}
   else{if(walls.has(`V-${r-1}-${c}`)||walls.has(`V-${r+1}-${c}`))return null;if(walls.has(`H-${r}-${c}`))return null;}
   const next=new Set([...walls,key]);
-  if(!hasPath(pA,next)||!hasPath(pB,next))return null;
+  if(!hasPath(pA,next,goalA)||!hasPath(pB,next,goalB))return null;
   if(_hamCtx&&_hamCtx.seekers.length&&_hamCtx.hammers.length){
     const ok=_hamCtx.hammers.every(h=>_hamCtx.seekers.some(s=>!!bfsTo(s,h,next)));
     if(!ok)return null;
@@ -844,12 +858,16 @@ function makeHammers(){
 function waveOf(id){return id&&id.indexOf('hw2-')===0?'w2':'w1';}
 function freshHammerUsed(){return{A:{w1:false,w2:false},B:{w1:false,w2:false}};}
 function isSteelWall(key){
-  // Horizontale Mauer direkt vor dem Ziel (zwischen Reihe 0 und 1) ist unzerstörbar
+  // Horizontale Mauer direkt vor einem Ziel ist unzerstörbar.
+  // Klassisch: nur oben (Reihe 0). Duell: oben (0) UND unten (ROWS-2).
   const parts=key.split('-');
-  return parts[0]==='H'&&parts[1]==='0';
+  if(parts[0]!=='H')return false;
+  if(parts[1]==='0')return true;
+  if(CUR_MAP==='duel'&&parts[1]===String(ROWS-2))return true;
+  return false;
 }
-function makeHammersWave2(pA,pB,walls){
-  const pathA=bfsPath(pA,walls),pathB=bfsPath(pB,walls);
+function makeHammersWave2(pA,pB,walls,goalA=0,goalB=0){
+  const pathA=bfsPath(pA,walls,goalA),pathB=bfsPath(pB,walls,goalB);
   if(!pathA||!pathB)return[];
   const dA=pathA.length-1,dB=pathB.length-1;
   const behind=dA>=dB?pA:pB;
@@ -884,15 +902,15 @@ function makeHammersWave2(pA,pB,walls){
   if(h2)result.push({r:h2.r,c:h2.c,id:'hw2-1'});
   return result;
 }
-function aiHammerBreak(aiPos,walls){
-  const base=bfsPath(aiPos,walls);
+function aiHammerBreak(aiPos,walls,goalRow=0){
+  const base=bfsPath(aiPos,walls,goalRow);
   if(!base)return null;
   const baseD=base.length-1;
   let best=null,bestGain=0;
   for(const k of walls){
     if(isSteelWall(k))continue;
     const w2=new Set(walls);w2.delete(k);
-    const np=bfsPath(aiPos,w2);
+    const np=bfsPath(aiPos,w2,goalRow);
     if(!np)continue;
     const gain=baseD-(np.length-1);
     if(gain>bestGain){bestGain=gain;best=k;}
@@ -933,12 +951,15 @@ function bfsDistMap(from,walls){
   }
   return dist;
 }
-function pickChaosPos(pA,pB,walls){
-  const pa=bfsPath(pA,walls),pb=bfsPath(pB,walls);
+function pickChaosPos(pA,pB,walls,goalA=0,goalB=0){
+  const pa=bfsPath(pA,walls,goalA),pb=bfsPath(pB,walls,goalB);
   if(!pa||!pb)return null;
   const lenA=pa.length-1,lenB=pb.length-1;
-  const minR=Math.floor(ROWS/3); // nicht im letzten Drittel (oben am Ziel)
-  const maxR=Math.max(pA.r,pB.r); // nicht hinter hintestem Spieler
+  // Faire Zone: vertikal zwischen den beiden Spielern (richtungsneutral),
+  // mit 1 Reihe Abstand zu beiden Ziellinien, nie hinter/auf einem Spieler.
+  const loR=Math.min(pA.r,pB.r),hiR=Math.max(pA.r,pB.r);
+  const minR=Math.max(1,loR);
+  const maxR=Math.min(ROWS-2,hiR);
   if(maxR<minR)return null;
   const inZone=p=>{
     if(p.r<minR||p.r>maxR)return false;
@@ -988,21 +1009,23 @@ function dropInterval(mode){
 // ── Random-Drop: faire Wand wählen ─────────────────────────
 // Behindert eher den Führenden, niemals den Hinterherlaufenden stärker;
 // tryWall garantiert, dass beide immer einen Weg zum Ziel behalten.
-function pickFairDropWall(pA,pB,walls){
-  const pa=bfsPath(pA,walls),pb=bfsPath(pB,walls);
+function pickFairDropWall(pA,pB,walls,goalA=0,goalB=0){
+  const pa=bfsPath(pA,walls,goalA),pb=bfsPath(pB,walls,goalB);
   if(!pa||!pb)return null;
   const lenA=pa.length-1,lenB=pb.length-1;
   const leaderIsA=lenA<=lenB;                 // kleinere Distanz = näher am Ziel = Vorteil
   const leaderPos=leaderIsA?pA:pB;
   const trailerPos=leaderIsA?pB:pA;
+  const leaderGoal=leaderIsA?goalA:goalB;
+  const trailerGoal=leaderIsA?goalB:goalA;
   const lenLeader=leaderIsA?lenA:lenB;
   const lenTrailer=leaderIsA?lenB:lenA;
-  const cands=wallCandidates(leaderPos,walls,6);
+  const cands=wallCandidates(leaderPos,walls,6,leaderGoal);
   const scored=[];
   for(const key of cands){
-    const next=tryWall(key,walls,pA,pB);      // null wenn ungültig / sperrt jemanden ein
+    const next=tryWall(key,walls,pA,pB,goalA,goalB); // null wenn ungültig / sperrt jemanden ein
     if(!next)continue;
-    const npL=bfsPath(leaderPos,next),npT=bfsPath(trailerPos,next);
+    const npL=bfsPath(leaderPos,next,leaderGoal),npT=bfsPath(trailerPos,next,trailerGoal);
     if(!npL||!npT)continue;
     const dLeader=(npL.length-1)-lenLeader;
     const dTrailer=(npT.length-1)-lenTrailer;
@@ -1034,8 +1057,8 @@ function getMovesFrom(pos,opp,walls){
   return moves;
 }
 
-function wallCandidates(targetPos,walls,depth){
-  const path=bfsPath(targetPos,walls);
+function wallCandidates(targetPos,walls,depth,goalRow=0){
+  const path=bfsPath(targetPos,walls,goalRow);
   const result=new Set();
   if(!path)return[];
   const limit=Math.min(depth,path.length);
@@ -1052,7 +1075,7 @@ function wallCandidates(targetPos,walls,depth){
   return[...result];
 }
 
-function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr){
+function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr,aiGoal=0){
   if(!chaosItem||!aiPath)return null;
   // Item direkt erreichbar?
   const moves=getMovesFrom(aiPos,humanPos,walls);
@@ -1061,7 +1084,7 @@ function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr){
   // Detour-Berechnung: AI → Item → Ziel vs AI → Ziel
   const toItem=bfsTo(aiPos,chaosItem,walls);
   if(!toItem||toItem.length<2)return null;
-  const fromItem=bfsPath(chaosItem,walls);
+  const fromItem=bfsPath(chaosItem,walls,aiGoal);
   if(!fromItem)return null;
   const itemDist=toItem.length-1;
   const detour=(itemDist+(fromItem.length-1))-(aiPath.length-1);
@@ -1073,11 +1096,11 @@ function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr){
   return next;
 }
 
-function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi,chaosItem){
+function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi,chaosItem,aiGoal=0,humGoal=0){
   difficulty=difficulty||'normal';
-  if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem);
-  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem);
-  return aiNormal(aiPos,humanPos,walls,aiBarr,chaosItem);
+  if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal);
+  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
+  return aiNormal(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
 }
 
 function moveTowardGoal(aiPos,humanPos,walls,aiPath){
@@ -1096,16 +1119,18 @@ function moveTowardGoal(aiPos,humanPos,walls,aiPath){
   return null;
 }
 
-function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem){
-  const aiPath=bfsPath(aiPos,walls);
-  const humPath=bfsPath(humanPos,walls);
+function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
+  // Schrittrichtung Richtung eigenes Ziel (oben=-1, unten=+1)
+  const fwd=aiGoal>aiPos.r?1:-1;
+  const aiPath=bfsPath(aiPos,walls,aiGoal);
+  const humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
   if(aiD===1)return{type:'move',pos:aiPath[1]};
 
   // Easy: nimmt das Item nur wenn quasi gratis (Detour-Toleranz in shouldPickupItem niedrig)
   if(chaosItem){
-    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft);
+    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft,aiGoal);
     if(pick)return{type:'move',pos:pick};
   }
 
@@ -1115,16 +1140,16 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem){
   // Zufällige Chance, manchmal Mauer auch ohne starken Grund
   const proactive=barrLeft>0&&humD<=aiD+5&&Math.random()<0.45;
   if(shouldConsiderWall||proactive){
-    const cands=wallCandidates(humanPos,walls,5);
+    const cands=wallCandidates(humanPos,walls,5,humGoal);
     // Zufällige Reihenfolge → suboptimale Wahl
     for(let i=cands.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [cands[i],cands[j]]=[cands[j],cands[i]];
     }
     for(const k of cands){
-      const next=tryWall(k,walls,aiPos,humanPos);
+      const next=tryWall(k,walls,aiPos,humanPos,aiGoal,humGoal);
       if(!next)continue;
-      const nh=bfsPath(humanPos,next),na=bfsPath(aiPos,next);
+      const nh=bfsPath(humanPos,next,humGoal),na=bfsPath(aiPos,next,aiGoal);
       if(!nh||!na)continue;
       // Gelockert: Gegner muss um ≥1 verlangsamt werden, AI darf max ≤2 leiden
       if((nh.length-1)-humD>=1&&(na.length-1)-aiD<=2){
@@ -1138,22 +1163,22 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem){
   return fallback.length?{type:'move',pos:fallback[0]}:null;
 }
 
-function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem){
-  const aiPath=bfsPath(aiPos,walls),humPath=bfsPath(humanPos,walls);
+function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
+  const aiPath=bfsPath(aiPos,walls,aiGoal),humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
   if(aiD===1)return{type:'move',pos:aiPath[1]};
   // Item einsammeln wenn lohnenswert
   if(chaosItem){
-    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft);
+    const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft,aiGoal);
     if(pick)return{type:'move',pos:pick};
   }
   let bestWall=null,bestRel=humD-aiD;
   if(barrLeft>0){
     for(let r=0;r<ROWS-1;r++)for(let c=0;c<COLS-1;c++)for(const t of['H','V']){
-      const next=tryWall(`${t}-${r}-${c}`,walls,aiPos,humanPos);
+      const next=tryWall(`${t}-${r}-${c}`,walls,aiPos,humanPos,aiGoal,humGoal);
       if(!next)continue;
-      const nh=bfsPath(humanPos,next),na=bfsPath(aiPos,next);
+      const nh=bfsPath(humanPos,next,humGoal),na=bfsPath(aiPos,next,aiGoal);
       if(!nh||!na)continue;
       const rel=(nh.length-1)-(na.length-1);
       if(rel>bestRel){bestRel=rel;bestWall=next;}
@@ -1167,21 +1192,23 @@ function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem){
   return null;
 }
 
-function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
+function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal=0,humGoal=0){
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
-  // Sofortiger Sieg hat absolute Priorität
-  for(const m of initMoves)if(m.r===0)return{type:'move',pos:m};
+  // Sofortiger Sieg hat absolute Priorität (eigene Zielreihe erreichen)
+  for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
   // Item-Pickup wenn direkt erreichbar (sehr lohnenswert) — vor Minimax
   if(chaosItem){
     const direct=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);
     if(direct)return{type:'move',pos:direct};
   }
   const recent=recentAi||[];
+  // Vorwärts = Richtung eigenes Ziel
+  const aiFwdDown=aiGoal>aiPos.r;
 
   // Endspiel-Sprint: bei kurzem Pfad und klarem Vorsprung direkt zum Ziel laufen,
   // statt unnötig Mauern zu suchen oder im Minimax-Rauschen zu trödeln.
-  const aiPathInit=bfsPath(aiPos,walls);
-  const humPathInit=bfsPath(humanPos,walls);
+  const aiPathInit=bfsPath(aiPos,walls,aiGoal);
+  const humPathInit=bfsPath(humanPos,walls,humGoal);
   if(aiPathInit&&aiPathInit.length>1){
     const aiDI=aiPathInit.length-1;
     const humDI=humPathInit?humPathInit.length-1:999;
@@ -1197,11 +1224,11 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
 
   // Statische Evaluation: positiver Score = gut für AI
   const evalState=(ap,hp,w,ab,hb)=>{
-    const apath=bfsPath(ap,w),hpath=bfsPath(hp,w);
+    const apath=bfsPath(ap,w,aiGoal),hpath=bfsPath(hp,w,humGoal);
     if(!apath)return-99999;
     if(!hpath)return 99999;
-    if(ap.r===0)return 50000;
-    if(hp.r===0)return-50000;
+    if(ap.r===aiGoal)return 50000;
+    if(hp.r===humGoal)return-50000;
     const aiD=apath.length-1,humD=hpath.length-1;
     // Hauptfaktor: relative Distanz
     // Eigener Progress STARK belohnt (verhindert Trödeln/Hin-und-Her)
@@ -1215,26 +1242,29 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
     const me=forAi?ap:hp;
     const opp=forAi?hp:ap;
     const myBarr=forAi?ab:hb;
+    const meGoal=forAi?aiGoal:humGoal;
+    const oppGoal=forAi?humGoal:aiGoal;
     const acts=[];
-    const myPath=bfsPath(me,w);
+    const myPath=bfsPath(me,w,meGoal);
     const moves=getMovesFrom(me,opp,w);
     for(const m of moves){
       let pri=0;
       if(myPath&&myPath.length>1&&myPath[1].r===m.r&&myPath[1].c===m.c)pri=30;
-      if(m.r<me.r)pri+=8;
+      // Bonus für Schritt Richtung eigenes Ziel
+      if(meGoal>me.r?m.r>me.r:m.r<me.r)pri+=8;
       acts.push({type:'move',pos:m,_p:pri});
     }
     if(myBarr>0){
-      const cands=wallCandidates(opp,w,6);
-      const oldOppPath=bfsPath(opp,w);
+      const cands=wallCandidates(opp,w,6,oppGoal);
+      const oldOppPath=bfsPath(opp,w,oppGoal);
       const oldOppD=oldOppPath?oldOppPath.length-1:0;
       const scored=[];
       for(const k of cands){
-        const next=tryWall(k,w,ap,hp);
+        const next=tryWall(k,w,ap,hp,aiGoal,humGoal);
         if(!next)continue;
-        const np=bfsPath(opp,next);
+        const np=bfsPath(opp,next,oppGoal);
         if(!np)continue;
-        const myNew=bfsPath(me,next);
+        const myNew=bfsPath(me,next,meGoal);
         if(!myNew)continue;
         // Score: wieviel verlangsamt es Gegner abzüglich Eigenkosten
         const gain=((np.length-1)-oldOppD)-((myNew.length-1)-(myPath?myPath.length-1:0));
@@ -1253,8 +1283,8 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
 
   // Minimax mit Alpha-Beta
   const search=(ap,hp,w,ab,hb,depth,maximizing,alpha,beta)=>{
-    if(ap.r===0)return 50000-depth;
-    if(hp.r===0)return-50000+depth;
+    if(ap.r===aiGoal)return 50000-depth;
+    if(hp.r===humGoal)return-50000+depth;
     if(depth===0)return evalState(ap,hp,w,ab,hb);
     const maxW=depth>=2?6:4;
     const acts=genActions(ap,hp,w,ab,hb,maximizing,maxW);
@@ -1296,9 +1326,9 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
       if(aiPathInit&&aiPathInit.length>1&&aiPathInit[1].r===a.pos.r&&aiPathInit[1].c===a.pos.c){
         s+=20;
       }
-      // Zusätzlicher Bonus für tatsächliche Annäherung Richtung Ziel (kleinere row)
-      if(a.pos.r<aiPos.r)s+=6;
-      else if(a.pos.r>aiPos.r)s-=4;
+      // Zusätzlicher Bonus für tatsächliche Annäherung Richtung eigenes Ziel
+      if(aiFwdDown?a.pos.r>aiPos.r:a.pos.r<aiPos.r)s+=6;
+      else if(aiFwdDown?a.pos.r<aiPos.r:a.pos.r>aiPos.r)s-=4;
       // Bonus für Annäherung ans Chaos-Item (proportional zum Wert von +2 Barrikaden)
       if(chaosItem){
         const oldD=Math.abs(aiPos.r-chaosItem.r)+Math.abs(aiPos.c-chaosItem.c);
@@ -1321,7 +1351,7 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
 
   // Fallback: vorwärts gehen wenn nichts gefunden
   if(!bestAction){
-    const aiPath=bfsPath(aiPos,walls);
+    const aiPath=bfsPath(aiPos,walls,aiGoal);
     if(aiPath&&aiPath.length>1)return{type:'move',pos:aiPath[1]};
     const fm=getMovesFrom(aiPos,humanPos,walls);
     if(fm.length)return{type:'move',pos:fm[0]};
@@ -1333,8 +1363,9 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem){
 }
 
 // ── Replay ─────────────────────────────────────────────────
-function applyMoves(moveList,step){
-  let pA={...INIT_A},pB={...INIT_B};
+function applyMoves(moveList,step,map){
+  const sp=startPos(map||'classic');
+  let pA={...sp.A},pB={...sp.B};
   const walls=new Set();
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
@@ -2728,7 +2759,18 @@ function App(){
       if(players.length>=2){
         const code=friendLobbyState.code;
         setFriendLobbyState(null);
-        initGame('online','A',code);
+        // Initialen Spielstand schreiben (inkl. Map), damit der Gast starten kann
+        const myName=getDisplayName(account);
+        const plArr=Object.values(lob.players||{});
+        const oppName=(plArr.find(p=>p&&p.name!==myName)||{}).name||'';
+        const mapNow=lob.map||selectedMap;
+        CUR_MAP=mapNow;
+        const spH=startPos(mapNow);
+        const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,nameA:myName,nameB:oppName,accountKeyA:account?account.key:null,accountKeyB:null,lastUpdated:Date.now()};
+        stoSet('barricade_game_'+code,gs);
+        lastOnlineTs.current=gs.lastUpdated;
+        setPlayerNames({A:myName,B:oppName});
+        initGame('online','A',code,false,undefined,false,mapNow);
       }
     });
     return()=>{cancelled=true;ref.off('value',cb);};
@@ -2765,7 +2807,7 @@ function App(){
   const doInviteFriend=async(friendKey,friendName)=>{
     if(!account)return;
     const code=randId(4);
-    const lobby={host:SESSION,players:{},status:'waiting',lastUpdated:Date.now()};
+    const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
     lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
     await stoSet('barricade_lobby_'+code,lobby);
     await sendLobbyInvite(friendKey,account.key,account.name,code,'1v1');
@@ -2802,10 +2844,31 @@ function App(){
         const players=Object.assign({},lob.players||{});
         players[SESSION]={name:account.name,joinedAt:Date.now()};
         await stoSet('barricade_lobby_'+code,Object.assign({},lob,{players:players}));
+        // Map & Optionen des Einladenden übernehmen, damit Gast korrekt spawnt/rendert
+        if(lob.map!==undefined){setSelectedMap(lob.map);CUR_MAP=lob.map;}
+        if(lob.tm!==undefined)setGameTimeMode(lob.tm);
+        if(lob.ch!==undefined)setChaosMode(!!lob.ch);
+        if(lob.br!==undefined)setGameBarr(lob.br);
+        if(lob.dp!==undefined)setDropMode(lob.dp);
+        if(lob.hm!==undefined)setHammerMode(!!lob.hm);
+        if(lob.hd!==undefined)setHammerDrops(lob.hd);
       }
     }catch(e){}
     setLobbyId(code);setOnlineRole('B');setPrivateCode(null);
     setNavDir('fwd');setScreen('waiting');
+    // Auf initialen Spielstand des Einladenden warten (wie beim öffentlichen Beitritt)
+    for(let i=0;i<40;i++){
+      await new Promise(r=>setTimeout(r,500));
+      const gs=await stoGet('barricade_game_'+code);
+      if(gs){
+        lastOnlineTs.current=gs.lastUpdated;
+        if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
+        setOppAccountKey(gs.accountKeyA||null);
+        const gmap=gs.map||selectedMap;
+        initGame('online','B',code,false,gs.tm,false,gmap);return;
+      }
+    }
+    setNavDir('back');setScreen('friends');
   };
   const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG);
   const[showAdmin,setShowAdmin]=useState(false);
@@ -2892,6 +2955,8 @@ function App(){
   const[breakingWall,setBreakingWall]=useState(null);
   const[collecting,setCollecting]=useState([]); // Items die gerade ausgeblendet werden
   const dropNextRef=useRef(99999);
+  // Anti-Stall-Wächter für Bot: bestDist = bisher kleinste BFS-Distanz zum Ziel, stall = Züge ohne Fortschritt
+  const aiProgRef=useRef({best:Infinity,stall:0});
   const[goldenWalls,setGoldenWalls]=useState(new Set());
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
@@ -2937,7 +3002,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -3060,11 +3125,12 @@ function App(){
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
     const tm=tmOverride!==undefined?tmOverride:gameTimeMode;
     if(tmOverride!==undefined)setGameTimeMode(tmOverride);
-    // Spawn-Positionen je nach Spielfeld
+    // Spawn-Positionen je nach Spielfeld (Duell: A unten zentriert, B oben zentriert)
     const mapToUse=mapOverride!==undefined?mapOverride:selectedMap;
-    const initA=mapToUse==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
-    const initB=mapToUse==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
-    setPA({...initA});setPB({...initB});setWalls(new Set());
+    CUR_MAP=mapToUse;
+    setSelectedMap(mapToUse); // React-State synchron halten (Win-Condition & Rendering nutzen selectedMap)
+    const sp=startPos(mapToUse);
+    setPA({...sp.A});setPB({...sp.B});setWalls(new Set());
     let starter;
     const prevMoves=S.current.moveHist;
     if(isRematch&&prevMoves&&prevMoves.length>0&&prevMoves[0].p){
@@ -3081,6 +3147,7 @@ function App(){
     setBreakingWall(null);setHammerDrag(false);setHammerTarget(null);setCollecting([]);
     hammerWave2Ref.current=false;
     hammerWave1ClearedRef.current=null;
+    aiProgRef.current={best:Infinity,stall:0};
     dropNextRef.current=dropMode?dropInterval(dropMode):99999;
     setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
@@ -3107,6 +3174,7 @@ function App(){
     stoSet(`barricade_game_${lid}`,{
       ...gs,
       walls:[...gs.walls],
+      map:gs.map===undefined?(S.current.selectedMap||'classic'):gs.map,
       rematchA:gs.rematchA===undefined?rA:gs.rematchA,
       rematchB:gs.rematchB===undefined?rB:gs.rematchB,
       rematchDeclined:gs.rematchDeclined===undefined?rD:gs.rematchDeclined,
@@ -3144,7 +3212,7 @@ function App(){
     if(moveHist.length<chaosSpawnRef.current)return;
     // Online: nur der Host spawnt, syncs via doSync; Guest übernimmt aus gs.chaosItem
     if(gameMode==='online'&&onlineRole!=='A')return;
-    const pos=pickChaosPos(pA,pB,walls);
+    const pos=pickChaosPos(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(pos){
       setChaosItem(pos);
       playSound('wall');
@@ -3170,7 +3238,7 @@ function App(){
     // Warte 50 Züge seit Wave-1-Abschluss
     if(moveHist.length-hammerWave1ClearedRef.current<50)return;
     if(gameMode==='online'&&onlineRole!=='A')return;
-    const wave=makeHammersWave2(pA,pB,walls);
+    const wave=makeHammersWave2(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(wave.length){
       hammerWave2Ref.current=true;
       const merged=[...S.current.hammers,...wave];
@@ -3187,7 +3255,7 @@ function App(){
     if(!dropMode||winner||screen!=='game')return;
     if(moveHist.length<dropNextRef.current)return;
     if(gameMode==='online'&&onlineRole!=='A')return; // nur Host dropt, syncs via walls
-    const key=pickFairDropWall(pA,pB,walls);
+    const key=pickFairDropWall(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(key){
       const next=new Set([...walls,key]);
       setWalls(next);
@@ -3258,6 +3326,10 @@ function App(){
       const st=S.current;
       let a=st.pA,b=st.pB,w=new Set(st.walls),bl=st.barrLeft,moves=[...st.moveHist];
       const hms=st.hammers,hh=st.hammerHeld||{A:false,B:false};
+      // Zielreihen je nach Map: Bot=B, Mensch=A
+      const mp=st.selectedMap||'classic';
+      const aiGoal=goalRowOf('B',mp);   // Bot
+      const humGoal=goalRowOf('A',mp);  // Mensch
       // Letzte 5 AI-Positionen (inkl. aktuelle) für Anti-Cycling
       const recentAi=[{r:b.r,c:b.c}];
       for(let i=moves.length-1;i>=0&&recentAi.length<6;i--){
@@ -3267,7 +3339,7 @@ function App(){
       // Hammer gratis nutzen, falls die AI sich selbst befreien kann
       let heldB=!!hh.B;
       if(st.hammerMode&&heldB){
-        const bk=aiHammerBreak(b,w);
+        const bk=aiHammerBreak(b,w,aiGoal);
         if(bk){
           w.delete(bk);
           moves.push({type:'break',p:'B',k:bk});
@@ -3280,8 +3352,8 @@ function App(){
       let d=null;
       if(st.hammerMode&&!heldB&&hms&&hms.length){
         const nh=nearestHammer(b,w,hms);
-        const ownPath=bfsPath(b,w);
-        const humPath=bfsPath(a,w);
+        const ownPath=bfsPath(b,w,aiGoal);
+        const humPath=bfsPath(a,w,humGoal);
         const ownD=ownPath?ownPath.length-1:99;
         const humD=humPath?humPath.length-1:99;
         const hammerDist=nh&&nh.path?nh.path.length-1:99;
@@ -3301,10 +3373,26 @@ function App(){
       }
       if(!d){
         _hamCtx=st.hammerMode?buildHamCtx(hms,hh,a,b):null;
-        d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem);
+        d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem,aiGoal,humGoal);
         _hamCtx=null;
       }
-      let nextHammers=hms,nextHeld={A:hh.A,B:heldB};
+      // ── Anti-Stall-Garantie ──
+      // Greift NUR wenn der Bot mehrere Züge in Folge keinen Distanz-Fortschritt macht.
+      // Dann wird der deterministische BFS-Schritt erzwungen → garantiert Fortschritt, kein Kreiseln.
+      // Strategische Barrikaden-Züge und Item-Pickups bleiben unangetastet.
+      if(d&&d.type==='move'){
+        const beforeP=bfsPath(b,w,aiGoal);
+        const beforeD=beforeP?beforeP.length-1:Infinity;
+        const afterP=bfsPath(d.pos,w,aiGoal);
+        const afterD=afterP?afterP.length-1:Infinity;
+        const isItem=!!(chaosItem&&d.pos.r===chaosItem.r&&d.pos.c===chaosItem.c);
+        if(afterD<beforeD||isItem)aiProgRef.current.stall=0;
+        else aiProgRef.current.stall++;
+        if(aiProgRef.current.stall>=3&&afterD>=beforeD&&!isItem&&beforeP){
+          const forced=moveTowardGoal(b,a,w,beforeP);
+          if(forced){d={type:'move',pos:forced};aiProgRef.current.stall=0;}
+        }
+      }
       if(d){
         if(d.type==='move'){
           playSound('move');setPB(d.pos);
@@ -3342,7 +3430,7 @@ function App(){
           }
           moves.push({type:'move',p:'B',r:d.pos.r,c:d.pos.c});
           setWalls(w);setMoveHist(moves);setHammerHeld(nextHeld);
-          if(d.pos.r===0){setAiThinking(false);triggerWin('B');return;}
+          if(d.pos.r===aiGoal){setAiThinking(false);triggerWin('B');return;}
         }else{
           playSound('wall');setWalls(d.walls);setBarrLeft(p=>({...p,B:p.B-1}));
           const nk=[...d.walls].find(k=>!w.has(k));
@@ -3397,7 +3485,7 @@ function App(){
         setGameNum(newGN);
         setGiveUpArmed(false);setFlash('');
         // Map aus Online-State übernehmen
-        if(gs.map)setSelectedMap(gs.map);
+        if(gs.map){setSelectedMap(gs.map);CUR_MAP=gs.map;}
         // Timer zurücksetzen
         const rtm=gs.tm||gameTimeMode;
         const classicSecs=rtm==='classic-3'?180:rtm==='classic-5'?300:rtm==='classic-8'?480:0;
@@ -3425,13 +3513,13 @@ function App(){
         // swap=false: gleiche Rollen → opposite role
         // swap=true: getauschte Rollen → gleiche role (= andere Person)
         const startTurn=swap?prevStarter:(prevStarter==='A'?'B':'A');
-        // Ranked: Runde 1 = classic, Runde 2 = duel
+        // Map-Logik: Ranked → Runde 1 classic, Runde 2 duell. Sonst: gewählte Map beibehalten.
         const nextRound=newGN+1;
-        const nextMap=(S.current.isRanked&&nextRound===2)?'duel':'classic';
-        const initA2=nextMap==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
-        const initB2=nextMap==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
+        const curMap=S.current.selectedMap||'classic';
+        const nextMap=S.current.isRanked?((nextRound===2)?'duel':'classic'):curMap;
+        const spR=startPos(nextMap);
         const ngs={
-          pA:{...initA2},pB:{...initB2},walls:[],
+          pA:{...spR.A},pB:{...spR.B},walls:[],
           barrLeft:{A:gameBarr,B:gameBarr},turn:startTurn,winner:null,moves:[],
           rematchA:false,rematchB:false,rematchDeclined:null,
           gameNum:nextRound,swapRoles:swap,
@@ -3450,6 +3538,8 @@ function App(){
       // Normales Game-Update
       const newMoves=gs.moves||[];
       const oldLen=S.current.moveHist.length;
+      // Map synchron halten (wichtig für Freunde-/Online-Duell, falls Gast andere Map gewählt hatte)
+      if(gs.map){CUR_MAP=gs.map;if(gs.map!==S.current.selectedMap)setSelectedMap(gs.map);}
       if(newMoves.length>oldLen){
         const last=newMoves[newMoves.length-1];
         if(last&&last.p!==S.current.onlineRole)playSound(last.type==='move'?'move':'wall');
@@ -3610,9 +3700,9 @@ function App(){
           const accountKeyA=lobby.hostAccountKey||null;
           const accountKeyB=lobby.guestAccountKey||null;
           const mapNow=lobby.map||selectedMap;
-          const initA=mapNow==='duel'?{r:0,c:2}:{r:ROWS-1,c:2};
-          const initB=mapNow==='duel'?{r:ROWS-1,c:6}:{r:ROWS-1,c:6};
-          const gs={pA:{...initA},pB:{...initB},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
+          CUR_MAP=mapNow;
+          const spH=startPos(mapNow);
+          const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
           setPlayerNames({A:nameA,B:nameB});
@@ -3833,7 +3923,7 @@ function App(){
     const nm=[...S.current.moveHist,{type:'move',p:turn,r,c}];
     setMoveHist(nm);
     const newTurn=turn==='A'?'B':'A';
-    if(r===0){
+    if(r===goalRowOf(turn,selectedMap)){
       doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld,hammerUsed:nextUsed});
       triggerWin(turn);
       return;
@@ -3886,7 +3976,7 @@ function App(){
           const{walls:w,pA:a,pB:b,barrLeft:bl,turn:t,moveHist:mh}=S.current;
           if(bl[t]>0){
             _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b):null;
-            const next=tryWall(key,w,a,b);
+            const next=tryWall(key,w,a,b,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
             _hamCtx=null;
             if(next){
               playSound('wall');
@@ -3975,9 +4065,9 @@ function App(){
   const previewValid=useMemo(()=>{
     if(!previewKey)return false;
     _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,S.current.pA,S.current.pB):null;
-    const v=!!tryWall(previewKey,S.current.walls,S.current.pA,S.current.pB);
+    const v=!!tryWall(previewKey,S.current.walls,S.current.pA,S.current.pB,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     _hamCtx=null;return v;
-  },[previewKey]);
+  },[previewKey,selectedMap]);
 
   const gW=dragging&&dragging.orient==='H'?CELL*2:WW;
   const gH=dragging&&dragging.orient==='V'?CELL*2:WW;
@@ -4014,6 +4104,7 @@ function App(){
     <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,
       animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) both':'none'}}>
       <MenuBG dark={darkMode}/>
+      <MapAura map={selectedMap} dark={darkMode}/>
       <button onClick={()=>setShowOptions(true)} style={{
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
@@ -4083,13 +4174,6 @@ function App(){
         </div>
       )}
       <div style={{textAlign:'center',marginBottom:30,position:'relative',zIndex:1}}>
-        {/* Aura-Hintergrundstrahlung */}
-        <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-          background:selectedMap==='duel'
-            ?'radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.22) 0%, transparent 65%), radial-gradient(ellipse at 50% 100%, rgba(139,92,246,0.18) 0%, transparent 65%), radial-gradient(ellipse at 0% 50%, rgba(139,92,246,0.12) 0%, transparent 50%), radial-gradient(ellipse at 100% 50%, rgba(139,92,246,0.12) 0%, transparent 50%)'
-            :'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.18) 0%, transparent 65%), radial-gradient(ellipse at 50% 100%, rgba(59,130,246,0.14) 0%, transparent 65%), radial-gradient(ellipse at 0% 50%, rgba(59,130,246,0.1) 0%, transparent 50%), radial-gradient(ellipse at 100% 50%, rgba(59,130,246,0.1) 0%, transparent 50%)',
-          transition:'background 0.6s ease',
-          animation:'aura-pulse 3s ease-in-out infinite'}}/>
         <div style={{marginBottom:14,display:'flex',justifyContent:'center'}}>
           <div style={{width:78,height:78,borderRadius:22,
             background:selectedMap==='duel'
@@ -4466,14 +4550,21 @@ function App(){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
+        <MapAura map={selectedMap} dark={darkMode}/>
         <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
             title={t('mode')} sub="Timer, Barrikaden & Spezial-Modi"/>
 
           {/* Aktive Auswahl */}
-          {(gameTimeMode!=='none'||chaosMode||dropMode||hammerMode)&&(
+          {(gameTimeMode!=='none'||chaosMode||dropMode||hammerMode||selectedMap==='duel')&&(
             <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap',justifyContent:'center'}}>
+              {selectedMap==='duel'&&(
+                <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
+                  background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:5}}>
+                  <span>⚔</span><span>Duell</span>
+                </div>
+              )}
               {gameTimeMode.indexOf('classic-')===0&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(59,130,246,0.12)',color:'#3b82f6',display:'flex',alignItems:'center',gap:5}}>
@@ -4786,6 +4877,7 @@ function App(){
   if(screen==='difficulty') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
+      <MapAura map={selectedMap} dark={darkMode}/>
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
         <ScreenHead icon={<BotIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
@@ -4810,6 +4902,7 @@ function App(){
   if(screen==='friendPlay') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
+      <MapAura map={selectedMap} dark={darkMode}/>
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:300,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <ScreenHead icon={<PeopleIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
@@ -4855,6 +4948,7 @@ function App(){
   if(screen==='online') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
+      <MapAura map={selectedMap} dark={darkMode}/>
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
@@ -5035,6 +5129,7 @@ function App(){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
+        <MapAura map={selectedMap} dark={darkMode}/>
         <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{marginBottom:6,display:'flex',justifyContent:'center'}}><GearIcon size={24} color="var(--text)"/></div>
@@ -5124,7 +5219,7 @@ function App(){
 
   // ── REPLAY ──────────────────────────────────────────────
   if(screen==='replay'){
-    const rs=applyMoves(moveHist,replayStep);
+    const rs=applyMoves(moveHist,replayStep,selectedMap);
     const curMove=moveHist[replayStep];
     const progress=moveHist.length>0?Math.round((replayStep/moveHist.length)*100):0;
     return (
@@ -5155,13 +5250,14 @@ function App(){
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{t('goalLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?'⬆ '+t('goalLabel')+' (Rot)':t('goalLabel')}</div>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
           {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>(
             <div key={r+'-'+c} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
-              background:r===0?'var(--goal)':r===ROWS-1?'var(--start)':(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
+              background:r===0?'var(--goal)':r===ROWS-1?(selectedMap==='duel'?'var(--goal)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
               border:'1px solid var(--cell-line)',boxSizing:'border-box'}}>
               {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
+              {selectedMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
             </div>
           )))}
           {[...rs.walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} steel={isSteelWall(k)}/>)}
@@ -5172,7 +5268,7 @@ function App(){
             </div>
           );})}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{t('startLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,color:selectedMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{selectedMap==='duel'?'⬇ '+t('goalLabel')+' (Blau)':t('startLabel')}</div>
 
         {/* Current move info */}
         {curMove&&(
@@ -5459,16 +5555,17 @@ function App(){
 
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{t('goalLabel')}</div>
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?'⬆ ZIEL ROT':t('goalLabel')}</div>
 
       {/* Grid */}
       <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'auto',...sGrid}}>
         {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>{
           const isA=pA.r===r&&pA.c===c,isB=pB.r===r&&pB.c===c;
           const vDot=validDot(r,c);
+          const duel=selectedMap==='duel';
           const isGoal=r===0,isStart=r===ROWS-1;
           let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
-          if(isGoal)bg='var(--goal)';if(isStart)bg='var(--start)';
+          if(isGoal)bg='var(--goal)';if(isStart)bg=duel?'var(--goal)':'var(--start)';
           return(
             <div key={`${r}-${c}`} data-r={r} data-c={c} onClick={()=>handleCellClick(r,c)}
               style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
@@ -5476,7 +5573,8 @@ function App(){
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
               {isGoal&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
-              {isStart&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'var(--border)',pointerEvents:'none'}}/>}
+              {isStart&&duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
+              {isStart&&!duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'var(--border)',pointerEvents:'none'}}/>}
               {vDot&&!isA&&!isB&&<div style={{width:10,height:10,borderRadius:'50%',background:color,opacity:0.32,pointerEvents:'none'}}/>}
             </div>
           );
@@ -5524,7 +5622,7 @@ function App(){
         })}
       </div>
 
-      <div style={{fontSize:9,letterSpacing:3,color:'var(--subtle)',fontWeight:600,textTransform:'uppercase',marginTop:2}}>{t('startLabel')}</div>
+      <div style={{fontSize:9,letterSpacing:3,color:selectedMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2}}>{selectedMap==='duel'?'⬇ ZIEL BLAU':t('startLabel')}</div>
 
       {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:64,zIndex:51,pointerEvents:'none'}}>
@@ -6503,6 +6601,21 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
       </div>
     </div>
   );
+}
+function MapAura({map,dark}){
+  // Vollflächige Rand-Aura: Blau = Klassisch, Lila = Duell. Läuft dauerhaft (Puls).
+  const duel=map==='duel';
+  const c1=duel?'139,92,246':'59,130,246';
+  const strong=duel?0.30:0.20;
+  const mid=duel?0.20:0.14;
+  const side=duel?0.16:0.11;
+  return <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
+    background:`radial-gradient(ellipse 120% 30% at 50% 0%, rgba(${c1},${strong}) 0%, transparent 60%),`+
+      `radial-gradient(ellipse 120% 30% at 50% 100%, rgba(${c1},${mid}) 0%, transparent 60%),`+
+      `radial-gradient(ellipse 30% 120% at 0% 50%, rgba(${c1},${side}) 0%, transparent 55%),`+
+      `radial-gradient(ellipse 30% 120% at 100% 50%, rgba(${c1},${side}) 0%, transparent 55%)`,
+    transition:'background 0.6s ease',
+    animation:'aura-pulse 3.2s ease-in-out infinite'}}/>;
 }
 function MenuBG({dark}){
   // Treibende Mauer-Segmente (Peripherie, nicht im Zentrum) – thematisch zum Spielbrett
