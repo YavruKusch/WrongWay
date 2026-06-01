@@ -518,7 +518,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedBlitz:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -1417,7 +1417,7 @@ async function hashPw(pw){
     return 'f'+(h>>>0).toString(16);
   }
 }
-function freshRankedStats(){return{classic:{rating:1000,wins:0,losses:0,games:0},blitz:{rating:1000,wins:0,losses:0,games:0}};}
+function freshRankedStats(){return{classic:{rating:1000,wins:0,losses:0,games:0},duel:{rating:1000,wins:0,losses:0,games:0}};}
 function freshAccountStats(){return{games:0,wins:0,losses:0,streak:0,bestStreak:0,modes:{},ranked:freshRankedStats()};}
 function calculateElo(myRating,oppRating,won){
   const K=32,exp=1/(1+Math.pow(10,(oppRating-myRating)/400));
@@ -2056,7 +2056,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
   const[elapsed,setElapsed]=React.useState(0);
   const[foundMsg,setFoundMsg]=React.useState('');
   const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
-  const feat=features||{ranked:true,rankedClassic:true,rankedBlitz:true};
+  const feat=features||{ranked:true,rankedClassic:true,rankedDuel:true};
 
   const dk=darkMode;
   const card=dk?'#1e293b':'#fff';
@@ -2128,7 +2128,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
     var inQueue=queue&&queue.mode===mode;
     var range=elapsed<15?50:elapsed<30?100:200;
     var wr=r.games>0?Math.round(r.wins/r.games*100):0;
-    var modeEnabled=mode==='classic'?feat.rankedClassic:feat.rankedBlitz;
+    var modeEnabled=mode==='classic'?feat.rankedClassic:feat.rankedDuel;
     return(
       <div key={mode} style={{background:card,border:'1.5px solid '+(inQueue?tier.color+'88':border),borderRadius:16,
         padding:'18px 16px',position:'relative',overflow:'hidden',
@@ -2197,7 +2197,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
           <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><SwordsIcon size={13} color={muted}/> RANKED</div>
           <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>Ranglistenspiele</div>
-          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · 2 Runden: Classic Map → Duell Map</div>
+          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Zwei getrennte Modi, je 3 Min</div>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
@@ -2207,11 +2207,12 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            {renderCard('classic','Classic · 3 Min',<ModeGlyph kind="clock" size={12} color={muted}/>)}
+            {renderCard('classic','Classic Race · 3 Min',<ModeGlyph kind="clock" size={12} color={muted}/>)}
+            {renderCard('duel','Duell · 3 Min',<SwordsIcon size={12} color={muted}/>)}
             <div style={{padding:'12px 14px',borderRadius:12,
               background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
               border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6,display:'flex',alignItems:'center',gap:6}}>
-              <LightbulbIcon size={13} color={muted}/> 2 Runden: Runde 1 auf Classic Map, Runde 2 auf Duell Map. Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s.
+              <LightbulbIcon size={13} color={muted}/> Zwei getrennte Wertungen: Classic Race (Standard) und vertikales Duell. Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s.
             </div>
           </div>
         )}
@@ -2491,12 +2492,12 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
         <div style={{marginBottom:14}}>
           <Lbl v={t('ranked')}/>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            {[['classic',<ModeGlyph kind="clock" size={11} color="#8b5cf6"/>,'#8b5cf6'],['blitz',<ModeGlyph kind="bolt" size={11} color="#f59e0b"/>,'#f59e0b']].map(([mode,icon,col])=>{
+            {[['classic',<ModeGlyph kind="clock" size={11} color="#8b5cf6"/>,'#8b5cf6','CLASSIC'],['duel',<SwordsIcon size={11} color="#f59e0b"/>,'#f59e0b','DUELL']].map(([mode,icon,col,lbl])=>{
               const r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
               return(
                 <div key={mode} style={{background:card,border:'1.5px solid '+border,borderRadius:14,
                   padding:'14px 12px',textAlign:'center'}}>
-                  <div style={{fontSize:11,color:muted,fontWeight:700,letterSpacing:0.5,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:4}}><span style={{display:'flex'}}>{icon}</span> {mode.toUpperCase()}</div>
+                  <div style={{fontSize:11,color:muted,fontWeight:700,letterSpacing:0.5,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:4}}><span style={{display:'flex'}}>{icon}</span> {lbl}</div>
                   <div style={{fontSize:26,fontWeight:900,color:col,letterSpacing:-0.5}}>{r.rating}</div>
                   <div style={{fontSize:10,color:muted,marginTop:3}}>{r.wins}W · {r.losses}L</div>
                 </div>
@@ -2820,14 +2821,14 @@ function App(){
     await clearInvite(friendLobbyState.friendKey);
     setFriendLobbyState(null);
   };
-  const doStartRanked=(code,role,mode,oppKey,oppRating,rankedRound)=>{
+  const doStartRanked=(code,role,mode,oppKey,oppRating)=>{
     const acc=accRef.current;
     const myR=acc&&acc.stats&&acc.stats.ranked&&acc.stats.ranked[mode]?acc.stats.ranked[mode].rating:1000;
     setRankedMode(mode);setRankedMyRating(myR);setRankedOppRating(oppRating);setRankedOppKey(oppKey);
     setOppAccountKey(oppKey||null);
-    // Ranked: immer Classic 3min; Runde 1 = classic map, Runde 2 = duel map
+    // Zwei getrennte Ranked-Modi, beide 3 Min: 'classic' → Race-Map, 'duel' → vertikales Duell
     const tm='classic-3';
-    const rmap=(rankedRound===2)?'duel':'classic';
+    const rmap=mode==='duel'?'duel':'classic';
     setSelectedMap(rmap);
     setNavDir('fwd');
     initGame('online',role,code,false,tm,true,rmap);
@@ -3123,6 +3124,9 @@ function App(){
   const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride)=>{
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
+    // Ranked = faires Standard-Regelwerk: keine Modifikatoren (Casual-Einstellungen bleiben erhalten)
+    const effHammer=ranked?false:hammerMode;
+    const effDrop=ranked?false:dropMode;
     const tm=tmOverride!==undefined?tmOverride:gameTimeMode;
     if(tmOverride!==undefined)setGameTimeMode(tmOverride);
     // Spawn-Positionen je nach Spielfeld (Duell: A unten zentriert, B oben zentriert)
@@ -3143,12 +3147,12 @@ function App(){
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     setHammerHeld({A:false,B:false});
     setHammerUsed(freshHammerUsed());
-    setHammers(hammerMode?makeHammers():[]);
+    setHammers(effHammer?makeHammers():[]);
     setBreakingWall(null);setHammerDrag(false);setHammerTarget(null);setCollecting([]);
     hammerWave2Ref.current=false;
     hammerWave1ClearedRef.current=null;
     aiProgRef.current={best:Infinity,stall:0};
-    dropNextRef.current=dropMode?dropInterval(dropMode):99999;
+    dropNextRef.current=effDrop?dropInterval(effDrop):99999;
     setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
     const classicSecs=tm==='classic-3'?180:tm==='classic-5'?300:tm==='classic-8'?480:0;
@@ -3208,7 +3212,7 @@ function App(){
 
   // ── Chaos-Item Spawn ──
   useEffect(()=>{
-    if(!chaosMode||winner||screen!=='game'||chaosItem)return;
+    if(!chaosMode||isRanked||winner||screen!=='game'||chaosItem)return;
     if(moveHist.length<chaosSpawnRef.current)return;
     // Online: nur der Host spawnt, syncs via doSync; Guest übernimmt aus gs.chaosItem
     if(gameMode==='online'&&onlineRole!=='A')return;
@@ -3220,12 +3224,12 @@ function App(){
         doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:pos});
       }
     }
-  },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole]);
+  },[moveHist.length,chaosMode,winner,screen,chaosItem,pA,pB,walls,gameMode,onlineRole,isRanked]);
 
   // ── Hammer 2. Welle: Countdown startet wenn alle Wave-1 weg, spawnt nach 50 Zügen ──
   const hammerWave1ClearedRef=useRef(null); // moveHist.length zu dem Zeitpunkt
   useEffect(()=>{
-    if(!hammerMode||hammerDrops!==2||winner||screen!=='game')return;
+    if(!hammerMode||isRanked||hammerDrops!==2||winner||screen!=='game')return;
     if(hammerWave2Ref.current)return;
     const wave1Remaining=hammers.some(h=>h.id.indexOf('hw2-')===-1);
     const anyUsed=hammerUsed.A.w1||hammerUsed.B.w1;
@@ -3248,11 +3252,11 @@ function App(){
         doSync({pA:S.current.pA,pB:S.current.pB,walls:S.current.walls,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,hammers:merged,hammerHeld:S.current.hammerHeld});
       }
     }
-  },[hammers,hammerUsed,moveHist.length,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole]);
+  },[hammers,hammerUsed,moveHist.length,hammerMode,hammerDrops,winner,screen,pA,pB,walls,gameMode,onlineRole,isRanked]);
 
   // ── Random-Wand-Drop ──
   useEffect(()=>{
-    if(!dropMode||winner||screen!=='game')return;
+    if(!dropMode||isRanked||winner||screen!=='game')return;
     if(moveHist.length<dropNextRef.current)return;
     if(gameMode==='online'&&onlineRole!=='A')return; // nur Host dropt, syncs via walls
     const key=pickFairDropWall(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
@@ -3269,7 +3273,7 @@ function App(){
     }else{
       dropNextRef.current=moveHist.length+3; // kein fairer Drop möglich → bald erneut
     }
-  },[moveHist.length,dropMode,winner,screen,pA,pB,walls,gameMode,onlineRole]);
+  },[moveHist.length,dropMode,winner,screen,pA,pB,walls,gameMode,onlineRole,isRanked]);
 
   useEffect(()=>{
     if(screen!=='game')return;
@@ -3513,10 +3517,9 @@ function App(){
         // swap=false: gleiche Rollen → opposite role
         // swap=true: getauschte Rollen → gleiche role (= andere Person)
         const startTurn=swap?prevStarter:(prevStarter==='A'?'B':'A');
-        // Map-Logik: Ranked → Runde 1 classic, Runde 2 duell. Sonst: gewählte Map beibehalten.
+        // Rematch behält die aktuelle Map (Ranked-Modi sind je eigene Map: classic bzw. duel)
         const nextRound=newGN+1;
-        const curMap=S.current.selectedMap||'classic';
-        const nextMap=S.current.isRanked?((nextRound===2)?'duel':'classic'):curMap;
+        const nextMap=S.current.selectedMap||'classic';
         const spR=startPos(nextMap);
         const ngs={
           pA:{...spR.A},pB:{...spR.B},walls:[],
@@ -4255,7 +4258,7 @@ function App(){
               right={account&&account.stats&&account.stats.ranked?(()=>{
                 const maxR=Math.max(
                   (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                  (account.stats.ranked.blitz&&account.stats.ranked.blitz.rating)||1000);
+                  (account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000);
                 const tier=rankTier(maxR);
                 return <span style={{fontSize:11,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
                   padding:'3px 9px',borderRadius:10,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:4}}>
@@ -4420,7 +4423,7 @@ function App(){
               <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><SwordsIcon size={13} color="var(--subtle)"/>Ranked aktiv</span>} on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
               <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.ranked?1:0.4}}>
                 <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>Classic Ranked (3 Min)</span>} on={adminCfg.features.rankedClassic} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedClassic');}}/>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>Blitz Ranked (8 Sek)</span>} on={adminCfg.features.rankedBlitz} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedBlitz');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><SwordsIcon size={11} color="var(--subtle)"/>Duell Ranked (3 Min)</span>} on={adminCfg.features.rankedDuel} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedDuel');}}/>
                 <div style={{marginTop:4,paddingTop:10,borderTop:'1px solid var(--border)'}}>
                   <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:7}}>EVENT-MODUS</div>
                   <AdminToggle label="Chaos-Modi für Ranked freischalten" on={adminCfg.features.rankedChaosEvent} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedChaosEvent');}}/>
@@ -5145,6 +5148,28 @@ function App(){
           </div>
           <ModeRow k="classic" icon={<SwordsIcon size={20}/>} desc={t('classicDesc')}/>
           <ModeRow k="ranked" icon={<TrophyIcon size={20}/>} desc={t('rankedDesc')} disabled/>
+          {/* Übersicht: diese Lobby wird mit den Einstellungen aus dem Modus-Menü erstellt */}
+          <div style={{marginTop:14,padding:'10px 12px',borderRadius:11,
+            background:selectedMap==='duel'?'rgba(139,92,246,0.1)':'rgba(59,130,246,0.08)',
+            border:'1.5px solid '+(selectedMap==='duel'?'rgba(139,92,246,0.3)':'rgba(59,130,246,0.25)')}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:1,color:'var(--subtle)',marginBottom:5}}>DIESE LOBBY</div>
+            <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+              <span style={{padding:'3px 8px',borderRadius:8,fontSize:10,fontWeight:800,
+                background:selectedMap==='duel'?'rgba(139,92,246,0.2)':'rgba(59,130,246,0.16)',
+                color:selectedMap==='duel'?'#8b5cf6':'#3b82f6'}}>
+                {selectedMap==='duel'?'⚔ Duell':'🗺 Klassisch'}
+              </span>
+              <span style={{fontSize:11,fontWeight:700,color:'var(--muted)'}}>
+                {gameTimeMode==='none'?t('noTimer')
+                  :gameTimeMode.indexOf('classic-')===0?(gameTimeMode.split('-')[1]+' '+t('minLabel'))
+                  :(gameTimeMode.split('-')[1]+t('secLabel')+' '+t('perTurn'))}
+              </span>
+              <span style={{fontSize:11,fontWeight:700,color:'var(--muted)',display:'inline-flex',alignItems:'center',gap:3}}>· {gameBarr} <BrickMini size={10}/></span>
+              {chaosMode&&<span style={{fontSize:10,fontWeight:700,color:'#8b5cf6'}}>· {t('modeChaos')}</span>}
+              {hammerMode&&<span style={{fontSize:10,fontWeight:700,color:'#d97706'}}>· {t('hammerMode')}</span>}
+            </div>
+            <div style={{fontSize:9,color:'var(--subtle)',marginTop:6}}>Ändern im Menü unter „{t('mode')}"</div>
+          </div>
           <button onClick={()=>createLobby(lobbyCfgPrivate)} style={{
             width:'100%',padding:'14px 16px',marginTop:22,
             background:'#3b82f6',color:'white',border:'none',borderRadius:12,
