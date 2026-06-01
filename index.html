@@ -2885,6 +2885,7 @@ function App(){
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
+  const[addFriendSent,setAddFriendSent]=useState(false);
   const[winEmoji,setWinEmoji]=useState('');
   const[danceSpeed,setDanceSpeed]=useState('slow');
   const[danceStyle,setDanceStyle]=useState('robot');
@@ -3158,6 +3159,7 @@ function App(){
     const classicSecs=tm==='classic-3'?180:tm==='classic-5'?300:tm==='classic-8'?480:0;
     setTimeLeft({A:classicSecs,B:classicSecs});
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
+    setAddFriendSent(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
     setRematchA(false);setRematchB(false);setRematchDeclined(null);
     setChatMsgs([]);setChatInput('');
@@ -5339,7 +5341,6 @@ function App(){
     const otherRematch=onlineRole==='A'?rematchB:rematchA;
     const otherDeclined=rematchDeclined&&rematchDeclined!==onlineRole;
     const isLoss=isOwnLoss(winner);
-    const[addFriendSent,setAddFriendSent]=React.useState(false);
     const canAddFriend=gameMode==='online'&&account&&oppAccountKey&&oppAccountKey!==account.key&&!addFriendSent;
     return (
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
