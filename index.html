@@ -3397,6 +3397,7 @@ function App(){
           if(forced){d={type:'move',pos:forced};aiProgRef.current.stall=0;}
         }
       }
+      let nextHammers=hms,nextHeld={A:hh.A,B:heldB};
       if(d){
         if(d.type==='move'){
           playSound('move');setPB(d.pos);
