@@ -30,8 +30,9 @@
     --shadow-soft:0 2px 8px rgba(0,0,0,0.3);
   }
   html,body{width:100%;overflow-x:hidden;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;transition:background 0.25s;}
+  html.dark{background:#0a1020;}
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
-  #root{width:100%;min-height:100vh;min-height:100dvh;}
+  #root{width:100%;min-height:100vh;min-height:100dvh;background:var(--bg);}
   input,button{-webkit-appearance:none;font-family:inherit;}
   button{transition:transform 0.07s ease;}
   button:active{transform:scale(0.95);}
@@ -2895,6 +2896,7 @@ function App(){
   useEffect(()=>{try{localStorage.setItem('ww_map',selectedMap);}catch{}},[selectedMap]);
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
+    document.documentElement.classList.toggle('dark',darkMode);
     try{localStorage.setItem('ww_dark',darkMode?'1':'0');}catch{}
   },[darkMode]);
 
@@ -5444,13 +5446,12 @@ function App(){
                 ✓ Anfrage gesendet!
               </div>
             )}
-              <MenuItem icon={<ReplayIcon size={18}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
+            <MenuItem icon={<ReplayIcon size={18}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
                 title={t('replayBtn')} desc="Spiel Zug für Zug ansehen"
                 onClick={()=>{
                   if(gameMode==='online'&&myRematch)declineRematch();
                   setReplayStep(0);setScreen('replay');
                 }}/>
-            )}
             <MenuItem icon={<HomeIcon size={18}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
               title={t('menu')} desc="Zurück zum Hauptmenü"
               onClick={()=>{
@@ -6646,20 +6647,19 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
 function MapAura({map,dark}){
   const duel=map==='duel';
   const c=duel?'139,92,246':'59,130,246';
-  const cHex=duel?'#8b5cf6':'#3b82f6';
   return(
     <React.Fragment>
-      {/* Starke Rand-Aura via Inset-Box-Shadow — sofort sichtbar auf allen Seiten */}
+      {/* Inset-Randglow — dezent aber klar erkennbar */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-        boxShadow:`inset 0 0 90px 30px rgba(${c},0.55)`,
+        boxShadow:`inset 0 0 70px 20px rgba(${c},0.28)`,
         transition:'box-shadow 0.5s ease',
-        animation:'aura-pulse 3.2s ease-in-out infinite'}}/>
-      {/* Zusätzlicher Gradient-Vignette-Effekt für Tiefe */}
+        animation:'aura-pulse 3.5s ease-in-out infinite'}}/>
+      {/* Gradient-Vignette an den 4 Seiten */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-        background:`radial-gradient(ellipse 150% 22% at 50% 0%, rgba(${c},0.42) 0%, transparent 70%),`+
-          `radial-gradient(ellipse 150% 22% at 50% 100%, rgba(${c},0.38) 0%, transparent 70%),`+
-          `radial-gradient(ellipse 22% 150% at 0% 50%, rgba(${c},0.32) 0%, transparent 65%),`+
-          `radial-gradient(ellipse 22% 150% at 100% 50%, rgba(${c},0.32) 0%, transparent 65%)`,
+        background:`radial-gradient(ellipse 140% 18% at 50% 0%, rgba(${c},0.22) 0%, transparent 65%),`+
+          `radial-gradient(ellipse 140% 18% at 50% 100%, rgba(${c},0.18) 0%, transparent 65%),`+
+          `radial-gradient(ellipse 18% 140% at 0% 50%, rgba(${c},0.15) 0%, transparent 60%),`+
+          `radial-gradient(ellipse 18% 140% at 100% 50%, rgba(${c},0.15) 0%, transparent 60%)`,
         transition:'background 0.5s ease'}}/>
     </React.Fragment>
   );
