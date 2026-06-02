@@ -2480,6 +2480,39 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
           )}
         </div>
 
+        {/* Privatsphäre */}
+        <div style={{marginBottom:14}}>
+          <Lbl v="Privatsphäre"/>
+          <button onClick={async()=>{
+            const newVal=account.profilePublic===false;
+            const updated={...account,profilePublic:newVal};
+            setAccount(updated);
+            try{localStorage.setItem('ww_acc',JSON.stringify(updated));}catch{}
+            await saveAccountProfile(account.key,{profilePublic:newVal});
+          }} style={{width:'100%',padding:'13px 16px',borderRadius:12,background:card,
+            border:'1.5px solid '+border,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'space-between',
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>
+            <div style={{textAlign:'left'}}>
+              <div style={{fontSize:13,fontWeight:800,color:txt}}>
+                {account.profilePublic===false?'Profil ist privat':'Profil ist öffentlich'}
+              </div>
+              <div style={{fontSize:11,color:muted,marginTop:2}}>
+                {account.profilePublic===false?'Niemand sieht deine Stats':'Andere sehen deine Stats im Spiel'}
+              </div>
+            </div>
+            {/* Toggle */}
+            <div style={{width:44,height:26,borderRadius:13,flexShrink:0,
+              background:account.profilePublic===false?'#64748b':'#8b5cf6',
+              transition:'background 0.2s',position:'relative'}}>
+              <div style={{position:'absolute',top:3,
+                left:account.profilePublic===false?3:21,
+                width:20,height:20,borderRadius:'50%',background:'#fff',
+                transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.25)'}}/>
+            </div>
+          </button>
+        </div>
+
         {/* Stats */}
         <div style={{marginBottom:14}}>
           <Lbl v={t('stats')}/>
@@ -2828,8 +2861,24 @@ function App(){
     await clearInvite(friendLobbyState.friendKey);
     setFriendLobbyState(null);
   };
-  const doStartRanked=(code,role,mode,oppKey,oppRating)=>{
-    const acc=accRef.current;
+  const openOppProfile=async()=>{
+    if(!oppAccountKey)return;
+    setOppProfileModal({loading:true,name:'',profilePublic:true});
+    try{
+      const prof=await stoGet(PROFILE_KEY(oppAccountKey));
+      if(!prof){setOppProfileModal(null);return;}
+      setOppProfileModal({
+        loading:false,
+        name:prof.name||'Spieler',
+        color:prof.color||'#8b5cf6',
+        profilePublic:prof.profilePublic!==false, // default public
+        stats:prof.profilePublic!==false?prof.stats:null,
+        ranked:prof.profilePublic!==false?(prof.stats&&prof.stats.ranked):null,
+      });
+    }catch{setOppProfileModal(null);}
+  };
+
+  const doStartRanked=(code,role,mode,oppKey,oppRating)=>{    const acc=accRef.current;
     const myR=acc&&acc.stats&&acc.stats.ranked&&acc.stats.ranked[mode]?acc.stats.ranked[mode].rating:1000;
     setRankedMode(mode);setRankedMyRating(myR);setRankedOppRating(oppRating);setRankedOppKey(oppKey);
     setOppAccountKey(oppKey||null);
@@ -2892,6 +2941,7 @@ function App(){
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
+  const[oppProfileModal,setOppProfileModal]=useState(null); // {name,stats,ranked,profilePublic,loading}
   const[addFriendSent,setAddFriendSent]=useState(false);
   const[winEmoji,setWinEmoji]=useState('');
   const[danceSpeed,setDanceSpeed]=useState('slow');
@@ -4635,18 +4685,25 @@ function App(){
               border:'1.5px solid '+(selectedMap==='classic'?'var(--text)':'var(--border)'),
               fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
               <div style={{display:'flex',justifyContent:'center',marginBottom:5}}>
-                <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="1" y="1" width="34" height="26" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.3"/>
-                  <rect x="4" y="4" width="7" height="4" rx="1" fill="currentColor" opacity="0.7"/>
-                  <rect x="14" y="4" width="5" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="4" y="10" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="10" y="10" width="7" height="4" rx="1" fill="currentColor" opacity="0.7"/>
-                  <rect x="20" y="10" width="5" height="4" rx="1" fill="currentColor" opacity="0.4"/>
-                  <rect x="4" y="16" width="5" height="4" rx="1" fill="currentColor" opacity="0.6"/>
-                  <rect x="12" y="16" width="8" height="4" rx="1" fill="currentColor" opacity="0.7"/>
-                  <rect x="23" y="16" width="6" height="4" rx="1" fill="currentColor" opacity="0.4"/>
-                  <circle cx="30" cy="6" r="2.5" fill="#ef4444" opacity="0.85"/>
-                  <circle cx="5" cy="24" r="2.5" fill="#3b82f6" opacity="0.85"/>
+                <svg width="44" height="34" viewBox="0 0 44 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Brett-Hintergrund */}
+                  <rect x="2" y="2" width="40" height="30" rx="3" fill="currentColor" opacity="0.06"/>
+                  {/* Grüne Ziel-Linie oben */}
+                  <rect x="2" y="2" width="40" height="5" rx="3" fill="#16a34a" opacity="0.7"/>
+                  {/* Zellen-Gitter */}
+                  {[8,14,20,26].map(y=><line key={y} x1="2" y1={y} x2="42" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>)}
+                  {[9,17,25,34].map(x=><line key={x} x1={x} y1="7" x2={x} y2="32" stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>)}
+                  {/* Horizontale Mauern */}
+                  <rect x="9" y="13.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.55"/>
+                  <rect x="25" y="19.5" width="10" height="2.5" rx="1.2" fill="currentColor" opacity="0.55"/>
+                  <rect x="15" y="24.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.4"/>
+                  {/* Spieler A (Rot) unten links */}
+                  <circle cx="13" cy="29" r="3.5" fill="#ef4444" opacity="0.9"/>
+                  {/* Spieler B (Blau) unten rechts */}
+                  <circle cx="31" cy="29" r="3.5" fill="#3b82f6" opacity="0.9"/>
+                  {/* Pfeile nach oben */}
+                  <polyline points="13,25 13,12" stroke="#ef4444" strokeWidth="1.2" opacity="0.45" strokeDasharray="2,2"/>
+                  <polyline points="31,25 31,12" stroke="#3b82f6" strokeWidth="1.2" opacity="0.45" strokeDasharray="2,2"/>
                 </svg>
               </div>
               <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>Klassisch</div>
@@ -5555,15 +5612,20 @@ function App(){
       )}
 
       {/* Score cards */}
+      {oppProfileModal&&<OppProfileModal data={oppProfileModal} onClose={()=>setOppProfileModal(null)} darkMode={darkMode}/>}
       <div style={{display:'flex',gap:8,marginBottom:10,width:'100%',maxWidth:360}}>
         {['A','B'].map(p=>{
           const active=turn===p&&!winner;
+          const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
+          const canTapProfile=isOpp&&oppAccountKey&&!winner;
           return(
-            <div key={p} style={{flex:1,padding:'9px 13px',borderRadius:13,
+            <div key={p} onClick={canTapProfile?openOppProfile:undefined}
+              style={{flex:1,padding:'9px 13px',borderRadius:13,
               background:active?PC[p]:'var(--score-bg)',
               border:`1.5px solid ${active?PC[p]:'var(--score-border)'}`,
               boxShadow:active?`0 4px 16px ${PC[p]}40`:'var(--shadow-soft)',
-              transition:'all 0.2s',display:'flex',alignItems:'center',gap:9}}>
+              transition:'all 0.2s',display:'flex',alignItems:'center',gap:9,
+              cursor:canTapProfile?'pointer':'default'}}>
               <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 background:active?'rgba(255,255,255,0.22)':'var(--bg)',
@@ -5574,7 +5636,9 @@ function App(){
               </div>
               <div style={{minWidth:0,flex:1}}>
                 <div style={{fontSize:10,fontWeight:800,letterSpacing:0.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                  color:active?'rgba(255,255,255,0.8)':'var(--subtle)'}}>{pname(p)}</div>
+                  color:active?'rgba(255,255,255,0.8)':'var(--subtle)'}}>
+                  {pname(p)}{canTapProfile?<span style={{opacity:0.6,marginLeft:4,fontSize:9}}>↗</span>:null}
+                </div>
                 <div style={{fontSize:12.5,fontWeight:800,display:'flex',alignItems:'center',gap:4,marginTop:1,
                   color:active?'white':'var(--text)'}}>
                   <BrickMini size={12}/>{barrLeft[p]}
@@ -6647,25 +6711,83 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
     </div>
   );
 }
+function OppProfileModal({data,onClose,darkMode}){
+  const dk=darkMode;
+  const card=dk?'#161e33':'#fff';
+  const txt=dk?'#f1f5f9':'#0f172a';
+  const muted=dk?'#94a3b8':'#64748b';
+  const border=dk?'#252d44':'#e2e8f0';
+  const tier=data.ranked?rankTier(Math.max((data.ranked.classic&&data.ranked.classic.rating)||1000,(data.ranked.duel&&data.ranked.duel.rating)||1000)):{icon:'–',label:'–'};
+  return(
+    <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 24px'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:card,borderRadius:24,width:'100%',maxWidth:360,padding:'24px 20px',
+        boxShadow:'0 -4px 40px rgba(0,0,0,0.3)',border:'1.5px solid '+border}}>
+        {data.loading?(
+          <div style={{textAlign:'center',padding:'20px 0',color:muted,fontSize:14}}>Laden…</div>
+        ):!data.profilePublic?(
+          <div style={{textAlign:'center',padding:'16px 0'}}>
+            <div style={{fontSize:32,marginBottom:8}}>🔒</div>
+            <div style={{fontSize:16,fontWeight:800,color:txt,marginBottom:4}}>{data.name}</div>
+            <div style={{fontSize:13,color:muted}}>Profil ist privat</div>
+          </div>
+        ):(
+          <div>
+            {/* Header */}
+            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20}}>
+              <div style={{width:52,height:52,borderRadius:'50%',background:data.color||'#8b5cf6',
+                display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
+                boxShadow:'0 4px 16px '+(data.color||'#8b5cf6')+'55'}}>
+                <span style={{fontSize:24,fontWeight:900,color:'#fff'}}>{(data.name||'?').slice(0,1).toUpperCase()}</span>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:18,fontWeight:900,color:txt,letterSpacing:-0.3,marginBottom:2}}>{data.name}</div>
+                <div style={{fontSize:12,fontWeight:700,color:muted,display:'flex',alignItems:'center',gap:5}}>
+                  <TierIcon icon={tier.icon} size={13}/>{tier.label} · {(data.stats&&data.stats.games)||0} Spiele
+                </div>
+              </div>
+            </div>
+            {/* Stats Grid */}
+            {data.stats&&(
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
+                {[['Siege',data.stats.wins||0,'#16a34a'],['Siege-%',Math.round(((data.stats.wins||0)/Math.max(data.stats.games||1,1))*100)+'%','#8b5cf6'],['Serie',data.stats.bestStreak||0,'#f59e0b']].map(([l,v,c])=>(
+                  <div key={l} style={{background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:12,padding:'10px 8px',textAlign:'center'}}>
+                    <div style={{fontSize:18,fontWeight:900,color:c}}>{v}</div>
+                    <div style={{fontSize:9,color:muted,fontWeight:700,letterSpacing:0.5,textTransform:'uppercase',marginTop:2}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Ranked */}
+            {data.ranked&&(
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                {[['classic','#8b5cf6','CLASSIC'],['duel','#f59e0b','DUELL']].map(([mode,col,lbl])=>{
+                  const r=data.ranked[mode]||{rating:1000,wins:0,losses:0};
+                  return(
+                    <div key={mode} style={{background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:12,padding:'10px',textAlign:'center'}}>
+                      <div style={{fontSize:9,color:muted,fontWeight:700,letterSpacing:0.5,marginBottom:3}}>{lbl}</div>
+                      <div style={{fontSize:20,fontWeight:900,color:col}}>{r.rating}</div>
+                      <div style={{fontSize:9,color:muted,marginTop:2}}>{r.wins}W · {r.losses}L</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        <button onClick={onClose} style={{width:'100%',marginTop:18,padding:'12px',borderRadius:12,
+          background:'transparent',border:'1.5px solid '+border,color:muted,fontSize:14,fontWeight:700,
+          cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>Schließen</button>
+      </div>
+    </div>
+  );
+}
 function MapAura({map,dark}){
   const duel=map==='duel';
   const c=duel?'139,92,246':'59,130,246';
-  return(
-    <React.Fragment>
-      {/* Inset-Randglow — dezent aber klar erkennbar */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-        boxShadow:`inset 0 0 70px 20px rgba(${c},0.28)`,
-        transition:'box-shadow 0.5s ease',
-        animation:'aura-pulse 3.5s ease-in-out infinite'}}/>
-      {/* Gradient-Vignette an den 4 Seiten */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-        background:`radial-gradient(ellipse 140% 18% at 50% 0%, rgba(${c},0.22) 0%, transparent 65%),`+
-          `radial-gradient(ellipse 140% 18% at 50% 100%, rgba(${c},0.18) 0%, transparent 65%),`+
-          `radial-gradient(ellipse 18% 140% at 0% 50%, rgba(${c},0.15) 0%, transparent 60%),`+
-          `radial-gradient(ellipse 18% 140% at 100% 50%, rgba(${c},0.15) 0%, transparent 60%)`,
-        transition:'background 0.5s ease'}}/>
-    </React.Fragment>
-  );
+  // Nur subtiler Oberkante-Schimmer — unterscheidbar ohne aufdringlich zu sein
+  return <div style={{position:'fixed',top:0,left:0,right:0,height:'32%',pointerEvents:'none',zIndex:0,
+    background:`radial-gradient(ellipse 85% 100% at 50% 0%, rgba(${c},0.17) 0%, transparent 100%)`,
+    transition:'background 0.55s ease'}}/>;
 }
 function MenuBG({dark}){
   // Treibende Mauer-Segmente (Peripherie, nicht im Zentrum) – thematisch zum Spielbrett
