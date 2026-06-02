@@ -2918,7 +2918,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
                 {account.profilePublic===false?t('profilePrivate'):t('profilePublic')}
               </div>
               <div style={{fontSize:11,color:muted,marginTop:2}}>
-                {account.profilePublic===false?'Niemand sieht deine Stats im Spiel':'Andere sehen deine Stats im Spiel'}
+                {account.profilePublic===false?t('profilePrivateDesc')||'Nobody sees your stats':t('profilePublicDesc')||'Others can see your stats'}
               </div>
             </div>
             {/* Toggle-Switch */}
@@ -4249,7 +4249,7 @@ function App(){
         setHammerUsed(gs.hammerUsed||freshHammerUsed());
         setWinner(null);setCelebrating(false);setGaveUp(null);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
-        setGameNum(newGN);
+        setGameNum(newGN);setEloChange(null);
         setGiveUpArmed(false);setFlash('');
         // Map aus Online-State übernehmen
         if(gs.map){setSelectedMap(gs.map);CUR_MAP=gs.map;}
@@ -4820,10 +4820,13 @@ function App(){
   useEffect(()=>{
     if(!hammerDrag)return;
     const OFFSET=90;
+    const boardFlip=S.current.gameMode==='online'&&S.current.onlineRole==='B';
     const findWall=(x,y)=>{
       if(!gridRef.current)return null;
       const rect=gridRef.current.getBoundingClientRect();
-      const rx=x-rect.left,ry=y-OFFSET-rect.top;
+      const rx=x-rect.left;
+      let ry=y-OFFSET-rect.top;
+      if(boardFlip)ry=ROWS*CELL-ry;
       let best=null,bestD=Infinity;
       for(const k of S.current.walls){
         if(isSteelWall(k))continue;
@@ -5843,7 +5846,7 @@ function App(){
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:300,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <ScreenHead icon={<PeopleIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
-          title={t('friendPlay')} sub="Privat mit Code spielen"/>
+          title={t('friendPlay')} sub={t('friendDesc')}/>
 
         {/* Private Lobby erstellen */}
         <button onClick={()=>createLobby(true)} style={{
@@ -5891,7 +5894,7 @@ function App(){
 
         {/* Header */}
         <ScreenHead icon={<GlobeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
-          title={t('playOnline')} sub="Öffentliche Lobbys"/>
+          title={t('playOnline')} sub={t('vsRandomDesc')}/>
 
         {/* Create section */}
         <div style={{width:'100%',marginBottom:16}}>
@@ -6547,7 +6550,7 @@ function App(){
       {/* Score cards */}
       {oppProfileModal&&<OppProfileModal data={oppProfileModal} onClose={()=>setOppProfileModal(null)} darkMode={darkMode} t={t}/>}
       <div style={{display:'flex',gap:8,marginBottom:10,width:'100%',maxWidth:360}}>
-        {['A','B'].map(p=>{
+        {(gameMode==='online'&&onlineRole==='B'?['B','A']:['A','B']).map(p=>{
           const active=turn===p&&!winner;
           const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
           const canTapProfile=isOpp&&oppAccountKey&&!winner;
@@ -8585,7 +8588,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               <span style={{fontSize:28,fontWeight:900,letterSpacing:6,color:'var(--text)'}}>{lobbyCode}</span>
               <span style={{fontSize:11,fontWeight:700,color:codeFlash?'#16a34a':'var(--subtle)'}}>{codeFlash?'Kopiert!':'Kopieren'}</span>
             </button>
-            <div style={{fontSize:10,color:'var(--subtle)',marginTop:8,fontWeight:500}}>Teile diesen Code mit deinen Freunden</div>
+            <div style={{fontSize:10,color:'var(--subtle)',marginTop:8,fontWeight:500}}>{t('shareCode')}</div>
           </div>
 
           <div style={{display:'flex',gap:10,marginBottom:14}}>
