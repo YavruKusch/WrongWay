@@ -683,17 +683,17 @@ const I18N={
 // ── Erweiterte i18n-Keys (alle neuen UI-Strings, viersprachig) ──
 const I18N_EXT={
 en:{
-  duel:'Duel',
+  duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
   rankedAccountRequired:'Account required',rankedLoginHint:'Log in to play Ranked',
-  rankedClassicCard:'Race · 3 Min',rankedDuelCard:'Duel · 3 Min',
-  rankedInfoText:'Two separate ratings: Race and vertical Duel. Matchmaking: \u00b150 ELO \u2192 \u00b1100 after 15s \u2192 \u00b1200 after 30s.',
+  rankedClassicCard:'Race · 3 Min',rankedDuelCard:'Duell · 3 Min',
+  rankedInfoText:'Two separate ratings: Race and vertical Duell. Matchmaking: \u00b150 ELO \u2192 \u00b1100 after 15s \u2192 \u00b1200 after 30s.',
   rankedPlay:'Play Ranked',rankedSearching:'Searching...',rankedOtherActive:'Other mode active',rankedDisabled:'Disabled by admin',
   profilePublic:'Profile is public',profilePrivate:'Profile is private',
-  leaderboardTitle:'Leaderboard',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duel',leaderboardLoading:'Loading leaderboard\u2026',
+  leaderboardTitle:'Leaderboard',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duelll',leaderboardLoading:'Loading leaderboard\u2026',
   noEntriesYet:'No entries yet',playRankedToAppear:'Play a Ranked match to appear here!',rankedMinOneGame:'Only players with at least 1 Ranked game appear here',
-  rankedMenuDesc:'Ranked Games \u00b7 ELO',leaderboardDesc:'All Ranked Players \u00b7 Classic & Duel',
+  rankedMenuDesc:'Ranked Games \u00b7 ELO',leaderboardDesc:'All Ranked Players \u00b7 Classic & Duelll',
   vsRandomDesc:'Against random players',friendDesc:'Via private code',teamModeDesc:'Team mode (Beta)',
   practiceOffline:'Practice & Offline',vsBotDesc:'Against the computer',localDesc:'2 players, one device',
   duelDesc:'\u2195 Players start opposite: one top, one bottom',
@@ -708,8 +708,10 @@ en:{
   rematchReady:'Ready \u00b7 waiting',rematchNeed4:'Rematch (4 players needed)',rematch2v2:'Rematch',
   modeConfigSub:'Timer, Barricades & Special Modes',
   statWins:'Wins',statWinRate:'Win-%',statStreak:'Streak',
-  duelModeClassic:'RACE',duelModeDuel:'DUEL',
-  onlineLobby4:'Online Lobby (4 players)',playersLabel:'Players'
+  duelModeClassic:'RACE',duelModeDuel:'DUELL',
+  onlineLobby4:'Online Lobby (4 players)',playersLabel:'Players',
+  replayHistSub:'Last 10 games',replayEmpty:'No games saved yet.',
+  rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move'
 },
 de:{
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
@@ -719,7 +721,7 @@ de:{
   rankedInfoText:'Zwei getrennte Wertungen: Race und vertikales Duell. Matchmaking: \u00b150 ELO \u2192 \u00b1100 nach 15s \u2192 \u00b1200 nach 30s.',
   rankedPlay:'Ranked spielen',rankedSearching:'Suche...',rankedOtherActive:'Anderer Modus aktiv',rankedDisabled:'Vom Admin deaktiviert',
   profilePublic:'Profil ist \u00f6ffentlich',profilePrivate:'Profil ist privat',
-  leaderboardTitle:'Rangliste',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duell',leaderboardLoading:'Lade Rangliste\u2026',
+  leaderboardTitle:'Rangliste',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duelll',leaderboardLoading:'Lade Rangliste\u2026',
   noEntriesYet:'Noch keine Eintr\u00e4ge',playRankedToAppear:'Spiel ein Ranked-Match um hier zu erscheinen!',rankedMinOneGame:'Nur Spieler mit min. 1 Ranked-Spiel erscheinen hier',
   rankedMenuDesc:'Ranglistenspiele \u00b7 ELO',leaderboardDesc:'Alle Ranked-Spieler \u00b7 Classic & Duell',
   vsRandomDesc:'Gegen zuf\u00e4llige Spieler',friendDesc:'Mit privatem Code',teamModeDesc:'Team-Modus (Beta)',
@@ -737,7 +739,9 @@ de:{
   modeConfigSub:'Timer, Barrikaden & Spezial-Modi',
   statWins:'Siege',statWinRate:'Siege-%',statStreak:'Serie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
-  onlineLobby4:'Online-Lobby (4 Spieler)',playersLabel:'Spieler'
+  onlineLobby4:'Online-Lobby (4 Spieler)',playersLabel:'Spieler',
+  replayHistSub:'Letzte 10 Spiele',replayEmpty:'Noch keine Spiele gespeichert.',
+  rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen'
 },
 tr:{
   gameOver:'Oyun bitti',winner:'Kazand\u0131',turn:'s\u0131rada',
@@ -765,19 +769,21 @@ tr:{
   modeConfigSub:'Zamanlay\u0131c\u0131, Barikatlar & \u00d6zel Modlar',
   statWins:'Galibiyet',statWinRate:'Kazan-%',statStreak:'Seri',
   duelModeClassic:'RACE',duelModeDuel:'D\u00dcELLO',
-  onlineLobby4:'\u00c7evrimiçi Lobi (4 oyuncu)',playersLabel:'Oyuncular'
+  onlineLobby4:'\u00c7evrimiçi Lobi (4 oyuncu)',playersLabel:'Oyuncular',
+  replayHistSub:'Son 10 oyun',replayEmpty:'Henüz kayıtlı oyun yok.',
+  rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle'
 },
 fr:{
   gameOver:'Partie termin\u00e9e',winner:'Gagnant',turn:'\u00e0 jouer',
   rankedTitle:'Parties class\u00e9es',rankedSubtitle:'ELO d\u00e9bute \u00e0 1000 \u00b7 Deux modes, 3 min chacun',
   rankedAccountRequired:'Compte requis',rankedLoginHint:'Connecte-toi pour jouer en class\u00e9',
-  rankedClassicCard:'Race \u00b7 3 Min',rankedDuelCard:'Duel \u00b7 3 Min',
-  rankedInfoText:'Deux classements s\u00e9par\u00e9s : Race et Duel vertical. Matchmaking : \u00b150 ELO \u2192 \u00b1100 apr\u00e8s 15s \u2192 \u00b1200 apr\u00e8s 30s.',
+  rankedClassicCard:'Race \u00b7 3 Min',rankedDuelCard:'Duell \u00b7 3 Min',
+  rankedInfoText:'Deux classements s\u00e9par\u00e9s : Race et Duell vertical. Matchmaking : \u00b150 ELO \u2192 \u00b1100 apr\u00e8s 15s \u2192 \u00b1200 apr\u00e8s 30s.',
   rankedPlay:'Jouer en class\u00e9',rankedSearching:'Recherche...',rankedOtherActive:'Autre mode actif',rankedDisabled:"D\u00e9sactiv\u00e9 par l'admin",
   profilePublic:'Profil public',profilePrivate:'Profil priv\u00e9',
-  leaderboardTitle:'Classement',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duel',leaderboardLoading:'Chargement du classement\u2026',
+  leaderboardTitle:'Classement',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duelll',leaderboardLoading:'Chargement du classement\u2026',
   noEntriesYet:'Aucune entr\u00e9e',playRankedToAppear:'Joue un match Ranked pour appara\u00eetre ici !',rankedMinOneGame:'Seuls les joueurs avec au moins 1 partie Ranked apparaissent ici',
-  rankedMenuDesc:'Parties class\u00e9es \u00b7 ELO',leaderboardDesc:'Tous les joueurs class\u00e9s \u00b7 Classic & Duel',
+  rankedMenuDesc:'Parties class\u00e9es \u00b7 ELO',leaderboardDesc:'Tous les joueurs class\u00e9s \u00b7 Classic & Duell',
   vsRandomDesc:'Contre des joueurs al\u00e9atoires',friendDesc:'Via code priv\u00e9',teamModeDesc:'Mode \u00e9quipe (B\u00eata)',
   practiceOffline:'Pratique & Hors ligne',vsBotDesc:"Contre l'ordinateur",localDesc:'2 joueurs, un appareil',
   duelDesc:"↕ Joueurs face \u00e0 face : un en haut, un en bas",
@@ -792,8 +798,10 @@ fr:{
   rematchReady:'Pr\u00eat \u00b7 attente',rematchNeed4:'Revanche (4 joueurs requis)',rematch2v2:'Revanche',
   modeConfigSub:'Minuteur, Barricades & Modes sp\u00e9ciaux',
   statWins:'Victoires',statWinRate:'Victoires-%',statStreak:'S\u00e9rie',
-  duelModeClassic:'RACE',duelModeDuel:'DUEL',
-  onlineLobby4:'Salon en ligne (4 joueurs)',playersLabel:'Joueurs'
+  duelModeClassic:'RACE',duelModeDuel:'DUELL',
+  onlineLobby4:'Salon en ligne (4 joueurs)',playersLabel:'Joueurs',
+  replayHistSub:'10 dernières parties',replayEmpty:'Aucune partie sauvegardée.',
+  rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup'
 }
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
@@ -3353,6 +3361,7 @@ function App(){
   const[rankedMode,setRankedMode]=useState(null);
   const[rankedMyRating,setRankedMyRating]=useState(1000);
   const[rankedOppRating,setRankedOppRating]=useState(1000);
+  const[eloChange,setEloChange]=useState(null); // {change, newRating, won}
   const[rankedOppKey,setRankedOppKey]=useState(null);
   const[oppAccountKey,setOppAccountKey]=useState(null);
   const[lobbyId,setLobbyId]=useState(null);
@@ -3782,6 +3791,7 @@ function App(){
           rs.rating=elo.newRating;rs.games=(rs.games||0)+1;
           if(won)rs.wins=(rs.wins||0)+1;else rs.losses=(rs.losses||0)+1;
           rk[rm]=rs;newStats.ranked=rk;
+          setEloChange({change:elo.change,newRating:elo.newRating,won});
           // Rangliste aktualisieren
           if(window.db){
             window.db.ref('ww_leaderboard/'+acc.key).update({
@@ -3882,6 +3892,7 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
+    setEloChange(null);
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     setHammerHeld({A:false,B:false});
@@ -4636,7 +4647,10 @@ function App(){
     const rWinner=replayHistEntry?replayHistEntry.winner:winner;
     if(replayStep>lastReplayStep.current){
       const m=rMoves[replayStep-1];
-      if(m&&m.type!=='emote')playSound(m.type==='move'?'move':'wall');
+      if(m){
+        if(m.type==='emote')playSound(m.emote);
+        else if(m.type!=='emote')playSound(m.type==='move'?'move':'wall');
+      }
       // Gewinner-Sound wenn Ende erreicht
       if(replayStep>=rMoves.length&&rWinner){
         playSound('win');
@@ -5145,7 +5159,7 @@ function App(){
                 <div style={{display:'flex',flexDirection:'column',gap:4}}>
                   {[
                     {icon:'⚙', label:t('options'), sub:'Design, Sprache, Vibration', tab:'settings'},
-                    {icon:<ReplayIcon size={18} color="var(--text)"/>, label:'Replays', sub:'Letzte 10 Spiele', tab:'replays'},
+                    {icon:<ReplayIcon size={18} color="var(--text)"/>, label:'Replays', sub:t('replayHistSub')||'Replays', tab:'replays'},
                     {icon:<BookIcon size={18} color="var(--text)"/>, label:t('tutHelp'), sub:'So funktioniert\'s', tab:'howto'}
                   ].map(function(it){return(
                     <button key={it.tab} onClick={()=>it.tab==='replays'?
@@ -6243,13 +6257,13 @@ function App(){
               <Piece color={PC[p]} dark={PD[p]}/>
             </div>
           );})}
-          {/* Emote-Anzeige über Spieler */}
+          {/* Emote-Anzeige neben Spieler */}
           {activeEmote&&(
             <div key={replayStep+'e'} style={{position:'absolute',
-              left:(activeEmote.p==='A'?rs.pA.c:rs.pB.c)*CELL+CELL/2-28,
-              top:(activeEmote.p==='A'?rs.pA.r:rs.pB.r)*CELL-52,
+              left:(activeEmote.p==='A'?rs.pA.c:rs.pB.c)*CELL+CELL+4,
+              top:(activeEmote.p==='A'?rs.pA.r:rs.pB.r)*CELL-18,
               zIndex:30,pointerEvents:'none',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
-              <EmoteHead color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote} size={40}/>
+              <EmoteChar color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote}/>
             </div>
           )}
         </div>
@@ -6356,7 +6370,21 @@ function App(){
             </div>
           </div>
 
-          {/* Online status messages */}
+          {/* ELO-Änderung nach Ranked */}
+          {isRanked&&eloChange&&(
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 16px',marginBottom:12,
+              borderRadius:14,
+              background:eloChange.won?'rgba(22,163,74,0.10)':'rgba(239,68,68,0.08)',
+              border:'1.5px solid '+(eloChange.won?'rgba(22,163,74,0.25)':'rgba(239,68,68,0.2)')}}>
+              <div style={{textAlign:'center'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,marginBottom:2}}>RANKED ELO</div>
+                <div style={{fontSize:22,fontWeight:900,color:eloChange.won?'#16a34a':'#ef4444',letterSpacing:-0.5}}>
+                  {eloChange.change>=0?'+':''}{eloChange.change}
+                </div>
+                <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginTop:1}}>{eloChange.newRating} ELO</div>
+              </div>
+            </div>
+          )}
           {gameMode==='online'&&otherDeclined&&(
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
               background:'rgba(239,68,68,0.08)',border:'1.5px solid rgba(239,68,68,0.2)',borderRadius:12}}>
@@ -6385,14 +6413,14 @@ function App(){
             {gameMode!=='online'&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
-                title={t('rematch')} desc="Gleicher Modus, neue Runde"
+                title={t('rematch')} desc={t('rematchDescLocal')||'Same mode, new round'}
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
                 onClick={()=>initGame(gameMode,'A',null,true)}/>
             )}
             {gameMode==='online'&&!otherDeclined&&!myRematch&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
-                title={t('rematch')} desc="Gegner zur Revanche auffordern"
+                title={t('rematch')} desc={t('rematchDescOnline')||'Challenge opponent to rematch'}
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
                 onClick={requestRematch}/>
             )}
@@ -6408,11 +6436,11 @@ function App(){
             {addFriendSent&&(
               <div style={{padding:'10px 14px',borderRadius:12,background:'rgba(139,92,246,0.08)',
                 border:'1.5px solid rgba(139,92,246,0.2)',fontSize:13,fontWeight:700,color:'#8b5cf6',textAlign:'center'}}>
-                ✓ Anfrage gesendet!
+                ✓ {t('friends_sent')}
               </div>
             )}
             <MenuItem icon={<ReplayIcon size={18}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
-                title={t('replayBtn')} desc="Spiel Zug für Zug ansehen"
+                title={t('replayBtn')} desc={t('replayDesc')||'Watch game move by move'}
                 onClick={()=>{
                   if(gameMode==='online'&&myRematch)declineRematch();
                   setReplayStep(0);setScreen('replay');
@@ -6596,7 +6624,7 @@ function App(){
 
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?'>> ZIEL ROT':t('goalLabel')}</div>
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?('>> '+t('goalLabel')+' '+pname('A')):t('goalLabel')}</div>
 
       {/* Grid */}
       {(()=>{
@@ -6672,7 +6700,7 @@ function App(){
       })()}
 
       <div style={{fontSize:9,letterSpacing:3,color:selectedMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2}}>
-        {selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?'>> ZIEL ROT':'<< ZIEL BLAU'):t('startLabel')}
+        {selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?('>> '+t('goalLabel')+' '+pname('A')):('<< '+t('goalLabel')+' '+pname('B'))):t('startLabel')}
       </div>
 
       {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
@@ -7142,20 +7170,20 @@ function ReplayHistoryScreen({t,darkMode,goBack,onWatch}){
             display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
             <ReplayIcon size={20} color={txt}/> Replays
           </div>
-          <div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>Letzte 10 Spiele</div>
+          <div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>{t('replayHistSub')||'Replays'}</div>
         </div>
         {list.length===0?(
           <div style={{textAlign:'center',padding:'36px 16px',color:muted,fontSize:14,fontWeight:600}}>
-            Noch keine Spiele gespeichert.
+            {t('replayEmpty')||'No games yet.'}
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:9}}>
             {list.map(function(entry,i){
               var wc=entry.winner==='A'?'#ef4444':'#3b82f6';
-              var na=entry.nameA||'Rot';
-              var nb=entry.nameB||'Blau';
+              var na=entry.nameA||t('red');
+              var nb=entry.nameB||t('blue');
               var wname=entry.winner==='A'?na:nb;
-              var mapLabel=entry.map==='duel'?'\u2694 Duell':'\uD83C\uDFC1 Race';
+              var mapLabel=entry.map==='duel'?('\u2694 '+t('duel')):('\uD83C\uDFC1 '+t('classic'));
               return(
                 <button key={i} onClick={function(){onWatch(entry);}}
                   style={{width:'100%',padding:'14px 16px',background:card,border:'1.5px solid '+border,
@@ -7167,11 +7195,11 @@ function ReplayHistoryScreen({t,darkMode,goBack,onWatch}){
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
                       <div style={{width:8,height:8,borderRadius:'50%',background:wc,flexShrink:0}}/>
-                      <span style={{fontSize:13,fontWeight:800,color:txt}}>{wname} gewinnt</span>
+                      <span style={{fontSize:13,fontWeight:800,color:txt}}>{wname} {t('wins')}</span>
                       <span style={{fontSize:9,fontWeight:700,color:muted,marginLeft:'auto'}}>{mapLabel}</span>
                     </div>
                     <div style={{fontSize:11,color:muted,fontWeight:600}}>
-                      {na} vs {nb} · {entry.moveHist?entry.moveHist.length:0} Züge
+                      {na} vs {nb} · {entry.moveHist?entry.moveHist.length:0} {t('step')||'moves'}
                     </div>
                     <div style={{fontSize:10,color:muted,fontWeight:500,marginTop:3}}>{fmt(entry.ts)}</div>
                   </div>
@@ -7751,7 +7779,7 @@ function OppProfileModal({data,onClose,darkMode,t}){
       <div onClick={e=>e.stopPropagation()} style={{background:card,borderRadius:24,width:'100%',maxWidth:360,padding:'24px 20px',
         boxShadow:'0 -4px 40px rgba(0,0,0,0.3)',border:'1.5px solid '+border}}>
         {data.loading?(
-          <div style={{textAlign:'center',padding:'20px 0',color:muted,fontSize:14}}>Laden…</div>
+          <div style={{textAlign:'center',padding:'20px 0',color:muted,fontSize:14}}>{t('loading')||'Loading...'}</div>
         ):!data.profilePublic?(
           <div style={{textAlign:'center',padding:'16px 0'}}>
             <div style={{fontSize:32,marginBottom:8}}>🔒</div>
