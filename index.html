@@ -488,15 +488,24 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
 
-const COLS=9,ROWS=13,WW=8,BARR=10;
-const CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
-const INIT_A={r:ROWS-1,c:2},INIT_B={r:ROWS-1,c:6};
-// Duell (vertikal): Spieler 1 (A) unten zentriert → Ziel oben; Spieler 2/Bot (B) oben zentriert → Ziel unten
-const DUEL_A={r:ROWS-1,c:Math.floor(COLS/2)},DUEL_B={r:0,c:Math.floor(COLS/2)};
-// Startpositionen je nach Map
+let COLS=9,ROWS=13;const WW=8,BARR=10;
+let CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
+// Feldgröße je Modus setzen. Classic bleibt 9x13. Duell: Blitz 7x7, Standard 9x9.
+function applyBoardSize(map,duelSize){
+  if(map==='duel'){
+    if(duelSize==='blitz'){COLS=7;ROWS=7;}
+    else{COLS=9;ROWS=9;}
+    CELL=Math.max(38,Math.min(50,Math.floor((window.innerWidth-20)/COLS)));
+  }else{
+    COLS=9;ROWS=13;
+    CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
+  }
+}
+// Startpositionen je nach Map (dynamisch aus aktueller Feldgröße)
 function startPos(map){
-  if(map==='duel')return{A:{...DUEL_A},B:{...DUEL_B}};
-  return{A:{...INIT_A},B:{...INIT_B}};
+  const mid=Math.floor(COLS/2);
+  if(map==='duel')return{A:{r:ROWS-1,c:mid},B:{r:0,c:mid}};
+  return{A:{r:ROWS-1,c:2},B:{r:ROWS-1,c:6}};
 }
 // Aktiver Map-Typ der laufenden 1v1-Runde (für isSteelWall etc.), wird bei Spielstart gesetzt
 let CUR_MAP='classic';
@@ -525,7 +534,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:true,duelStandard:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -1197,6 +1206,71 @@ function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
   if(bestMove)return{type:'move',pos:bestMove};
   if(bestWall)return{type:'barricade',walls:bestWall};
   return null;
+}
+
+// ── Aggressive Duell-KI (nur Duell-Modus, 7x7 & 9x9) ──────────────
+// Distanz = kürzester Pfad (BFS = A*-Ergebnis auf ungewichtetem Grid).
+// Bewertet jede sinnvolle Mauer und wählt strategisch zwischen Blocken und Vordrang.
+function duelDist(pos,walls,goal){const p=bfsPath(pos,walls,goal);return p?p.length-1:Infinity;}
+function duelBestWall(aiPos,humPos,walls,aiGoal,humGoal){
+  // Kandidaten: Mauern entlang des Gegnerpfads (verlangsamen ihn maximal)
+  const cand=wallCandidates(humPos,walls,5,humGoal);
+  const baseHum=duelDist(humPos,walls,humGoal);
+  const baseAi=duelDist(aiPos,walls,aiGoal);
+  let best=null,bestScore=-Infinity;
+  for(const key of cand){
+    const nw=tryWall(key,walls,aiPos,humPos,aiGoal,humGoal); // null = ungültig / sperrt jemanden ein
+    if(!nw)continue;
+    const newHum=duelDist(humPos,nw,humGoal);
+    const newAi=duelDist(aiPos,nw,aiGoal);
+    if(newHum===Infinity||newAi===Infinity)continue;
+    const humDelay=newHum-baseHum;   // wie sehr Gegner verlangsamt wird (gut)
+    const aiCost=newAi-baseAi;       // wie sehr man sich selbst behindert (schlecht)
+    if(humDelay<=0)continue;         // nur Mauern die wirklich blocken
+    // Score: Gegner-Verzögerung stark gewichten, Eigenschaden doppelt bestrafen
+    const score=humDelay*3-aiCost*2;
+    if(score>bestScore){bestScore=score;best={key,walls:nw,humDelay,aiCost};}
+  }
+  return best;
+}
+function aiDuel(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  const initMoves=getMovesFrom(aiPos,humanPos,walls);
+  // 1) Sofortiger Sieg
+  for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
+  // Item direkt erreichbar mitnehmen
+  if(chaosItem){const d=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);if(d)return{type:'move',pos:d};}
+
+  const aiPath=bfsPath(aiPos,walls,aiGoal);
+  const humPath=bfsPath(humanPos,walls,humGoal);
+  if(!aiPath)return{type:'move',pos:initMoves[0]||aiPos};
+  const aiD=aiPath.length-1;
+  const humD=humPath?humPath.length-1:999;
+  const advance=()=>{const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};};
+
+  // 2) Gegner führt (humD < aiD): aggressiv blocken (70%)
+  if(humD<aiD&&aiBarr>0){
+    const block=duelBestWall(aiPos,humanPos,walls,aiGoal,humGoal);
+    if(block){
+      // 70% blocken wenn die Mauer wirklich etwas bringt; sonst vorrücken
+      const wantBlock=Math.random()<0.7&&block.humDelay>=1;
+      if(wantBlock)return{type:'barricade',key:block.key,walls:block.walls};
+    }
+    return advance();
+  }
+
+  // 3) KI führt oder gleichauf: clever vordrängen, aber Gegner einmauern wenn extrem effektiv
+  if(aiBarr>0){
+    const block=duelBestWall(aiPos,humanPos,walls,aiGoal,humGoal);
+    // Nur blocken wenn es den Gegner deutlich (>=2) verzögert und kaum eigenen Schaden macht
+    if(block&&block.humDelay>=2&&block.aiCost<=1&&Math.random()<0.45){
+      return{type:'barricade',key:block.key,walls:block.walls};
+    }
+    // Bei sehr knappem Vorsprung des Gegners zumindest leicht blocken
+    if(block&&humD<=aiD+1&&block.humDelay>=1&&block.aiCost<=0&&Math.random()<0.35){
+      return{type:'barricade',key:block.key,walls:block.walls};
+    }
+  }
+  return advance();
 }
 
 function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal=0,humGoal=0){
@@ -3036,13 +3110,15 @@ function App(){
         const plArr=Object.values(lob.players||{});
         const oppName=(plArr.find(p=>p&&p.name!==myName)||{}).name||'';
         const mapNow=lob.map||selectedMap;
+        const dsNow=lob.duelSize||'standard';
         CUR_MAP=mapNow;
+        applyBoardSize(mapNow,dsNow);
         const spH=startPos(mapNow);
-        const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,nameA:myName,nameB:oppName,accountKeyA:account?account.key:null,accountKeyB:null,lastUpdated:Date.now()};
+        const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,duelSize:dsNow,nameA:myName,nameB:oppName,accountKeyA:account?account.key:null,accountKeyB:null,lastUpdated:Date.now()};
         stoSet('barricade_game_'+code,gs);
         lastOnlineTs.current=gs.lastUpdated;
         setPlayerNames({A:myName,B:oppName});
-        initGame('online','A',code,false,undefined,false,mapNow);
+        initGame('online','A',code,false,undefined,false,mapNow,dsNow);
       }
     });
     return()=>{cancelled=true;ref.off('value',cb);};
@@ -3079,7 +3155,7 @@ function App(){
   const doInviteFriend=async(friendKey,friendName)=>{
     if(!account)return;
     const code=randId(4);
-    const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
+    const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,duelSize:duelSize,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
     lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
     await stoSet('barricade_lobby_'+code,lobby);
     await sendLobbyInvite(friendKey,account.key,account.name,code,'1v1');
@@ -3116,9 +3192,10 @@ function App(){
     // Zwei getrennte Ranked-Modi, beide 3 Min: 'classic' → Race-Map, 'duel' → vertikales Duell
     const tm='classic-3';
     const rmap=mode==='duel'?'duel':'classic';
-    setSelectedMap(rmap);
+    const rsize='standard'; // Ranked-Duell immer 9x9 (beide Spieler deterministisch gleich)
+    setSelectedMap(rmap);setDuelSize(rsize);
     setNavDir('fwd');
-    initGame('online',role,code,false,tm,true,rmap);
+    initGame('online',role,code,false,tm,true,rmap,rsize);
   };
   // Einladung annehmen: Lobby betreten
   const doAcceptInvite=async()=>{
@@ -3153,7 +3230,7 @@ function App(){
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
         const gmap=gs.map||selectedMap;
-        initGame('online','B',code,false,gs.tm,false,gmap);return;
+        initGame('online','B',code,false,gs.tm,false,gmap,gs.duelSize||'standard');return;
       }
     }
     setNavDir('back');setScreen('friends');
@@ -3182,7 +3259,9 @@ function App(){
   const[lobbyCfgPrivate,setLobbyCfgPrivate]=useState(false);
   const[lobbyCfgMode,setLobbyCfgMode]=useState('classic');
   const[selectedMap,setSelectedMap]=useState(()=>{try{return localStorage.getItem('ww_map')||'classic';}catch{return 'classic';}});
+  const[duelSize,setDuelSize]=useState(()=>{try{return localStorage.getItem('ww_duelsize')||'standard';}catch{return 'standard';}});
   useEffect(()=>{try{localStorage.setItem('ww_map',selectedMap);}catch{}},[selectedMap]);
+  useEffect(()=>{try{localStorage.setItem('ww_duelsize',duelSize);}catch{}},[duelSize]);
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
     document.documentElement.classList.toggle('dark',darkMode);
@@ -3222,8 +3301,8 @@ function App(){
   const toggleFeature=(key)=>{const f={...adminCfg.features};f[key]=!f[key];saveAdminCfg({...adminCfg,features:f});};
   const clearOpenLobbies=async()=>{try{await window.db.ref('barricade_2v2_open').remove();setAdminFlash('Offene Lobbys geleert');setTimeout(()=>setAdminFlash(''),2000);}catch(e){setAdminFlash('Fehler');setTimeout(()=>setAdminFlash(''),2000);}};
 
-  const[pA,setPA]=useState(INIT_A);
-  const[pB,setPB]=useState(INIT_B);
+  const[pA,setPA]=useState({r:ROWS-1,c:2});
+  const[pB,setPB]=useState({r:ROWS-1,c:6});
   const[walls,setWalls]=useState(new Set());
   const[barrLeft,setBarrLeft]=useState({A:BARR,B:BARR});
   const[turn,setTurn]=useState('A');
@@ -3295,7 +3374,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -3420,7 +3499,7 @@ function App(){
   const color=PC[turn];
 
   // ── Init game ──
-  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride)=>{
+  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride)=>{
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
     // Ranked = faires Standard-Regelwerk: keine Modifikatoren (Casual-Einstellungen bleiben erhalten)
@@ -3430,8 +3509,10 @@ function App(){
     if(tmOverride!==undefined)setGameTimeMode(tmOverride);
     // Spawn-Positionen je nach Spielfeld (Duell: A unten zentriert, B oben zentriert)
     const mapToUse=mapOverride!==undefined?mapOverride:selectedMap;
+    const sizeToUse=sizeOverride!==undefined?sizeOverride:duelSize;
     CUR_MAP=mapToUse;
-    setSelectedMap(mapToUse); // React-State synchron halten (Win-Condition & Rendering nutzen selectedMap)
+    applyBoardSize(mapToUse,sizeToUse); // setzt COLS/ROWS/CELL je nach Modus+Größe
+    setSelectedMap(mapToUse);setDuelSize(sizeToUse); // React-State synchron halten
     const sp=startPos(mapToUse);
     setPA({...sp.A});setPB({...sp.B});setWalls(new Set());
     let starter;
@@ -3479,6 +3560,7 @@ function App(){
       ...gs,
       walls:[...gs.walls],
       map:gs.map===undefined?(S.current.selectedMap||'classic'):gs.map,
+      duelSize:gs.duelSize===undefined?(S.current.duelSize||'standard'):gs.duelSize,
       rematchA:gs.rematchA===undefined?rA:gs.rematchA,
       rematchB:gs.rematchB===undefined?rB:gs.rematchB,
       rematchDeclined:gs.rematchDeclined===undefined?rD:gs.rematchDeclined,
@@ -3677,7 +3759,12 @@ function App(){
       }
       if(!d){
         _hamCtx=st.hammerMode?buildHamCtx(hms,hh,a,b):null;
-        d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem,aiGoal,humGoal);
+        // Duell-Modus: dedizierte aggressive/strategische KI (A*-Distanz, Blocken/Vordrang)
+        if(mp==='duel'&&aiDifficulty==='hard'){
+          d=aiDuel(b,a,w,bl.B,bl.A,recentAi,chaosItem,aiGoal,humGoal);
+        }else{
+          d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem,aiGoal,humGoal);
+        }
         _hamCtx=null;
       }
       // ── Anti-Stall-Garantie ──
@@ -3821,6 +3908,8 @@ function App(){
         // Rematch behält die aktuelle Map (Ranked-Modi sind je eigene Map: classic bzw. duel)
         const nextRound=newGN+1;
         const nextMap=S.current.selectedMap||'classic';
+        const nextSize=S.current.duelSize||'standard';
+        applyBoardSize(nextMap,nextSize);
         const spR=startPos(nextMap);
         const ngs={
           pA:{...spR.A},pB:{...spR.B},walls:[],
@@ -3830,7 +3919,7 @@ function App(){
           chaosItem:null,
           hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},
           tm:S.current.gameTimeMode,
-          map:nextMap,
+          map:nextMap,duelSize:nextSize,
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
@@ -3843,7 +3932,10 @@ function App(){
       const newMoves=gs.moves||[];
       const oldLen=S.current.moveHist.length;
       // Map synchron halten (wichtig für Freunde-/Online-Duell, falls Gast andere Map gewählt hatte)
-      if(gs.map){CUR_MAP=gs.map;if(gs.map!==S.current.selectedMap)setSelectedMap(gs.map);}
+      if(gs.map){CUR_MAP=gs.map;if(gs.map!==S.current.selectedMap)setSelectedMap(gs.map);
+        const ds=gs.duelSize||'standard';
+        applyBoardSize(gs.map,ds);
+        if(ds!==S.current.duelSize)setDuelSize(ds);}
       if(newMoves.length>oldLen){
         const last=newMoves[newMoves.length-1];
         if(last&&last.p!==S.current.onlineRole)playSound(last.type==='move'?'move':'wall');
@@ -4024,14 +4116,16 @@ function App(){
           const accountKeyA=lobby.hostAccountKey||null;
           const accountKeyB=lobby.guestAccountKey||null;
           const mapNow=lobby.map||selectedMap;
+          const dsNow=lobby.duelSize||'standard';
           CUR_MAP=mapNow;
+          applyBoardSize(mapNow,dsNow);
           const spH=startPos(mapNow);
-          const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
+          const gs={pA:{...spH.A},pB:{...spH.B},walls:[],barrLeft:{A:gameBarr,B:gameBarr},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapNow,duelSize:dsNow,nameA,nameB,accountKeyA,accountKeyB,lastUpdated:Date.now()};
           await stoSet(`barricade_game_${lobbyId}`,gs);
           lastOnlineTs.current=gs.lastUpdated;
           setPlayerNames({A:nameA,B:nameB});
           setOppAccountKey(accountKeyB);
-          initGame('online','A',lobbyId,false,undefined,false,mapNow);
+          initGame('online','A',lobbyId,false,undefined,false,mapNow,dsNow);
         }
       }
     };
@@ -4112,7 +4206,7 @@ function App(){
     setFlash('');
     const id=randId(6);
     const code=isPrivate?randId(4):null;
-    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,map:selectedMap};
+    const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,map:selectedMap,duelSize:duelSize};
     const hostName=getDisplayName(account);
     const hostAccountKey=account?account.key:null;
     const ok=await stoSet(`barricade_lobby_${id}`,{id,code,isPrivate,hostId:SESSION,hostName,hostAccountKey,guestId:null,ts:Date.now(),...cfg});
@@ -4153,7 +4247,7 @@ function App(){
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
-        initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap);return;
+        initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap,lobby.duelSize||'standard');return;
       }
     }
     setFlash(t('hostNotResponding'));setScreen('online');
@@ -4750,6 +4844,12 @@ function App(){
               })}
             </AdminSection>
 
+            <AdminSection label="DUELL-MODI">
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Welche Duell-Feldgrößen Spieler wählen können:</div>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}>⚡ Blitz-Duell (7×7)</span>} on={adminCfg.features.duelBlitz} onClick={()=>toggleFeature('duelBlitz')}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}>🛡 Standard-Duell (9×9)</span>} on={adminCfg.features.duelStandard} onClick={()=>toggleFeature('duelStandard')}/>
+            </AdminSection>
+
             <AdminSection label="ZEITMODI — CLASSIC">
               <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Welche Classic-Optionen Spieler wählen können:</div>
               <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>3 Minuten</span>} on={adminCfg.features.classicTime3} onClick={()=>toggleFeature('classicTime3')}/>
@@ -5001,6 +5101,36 @@ function App(){
           {selectedMap==='duel'&&(
             <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:8,paddingLeft:2,lineHeight:1.5}}>
               ↕ Spieler starten gegenüber: Einer oben, einer unten
+            </div>
+          )}
+          {/* Duell-Feldgröße */}
+          {selectedMap==='duel'&&(
+            <div style={{marginBottom:14}}>
+              <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label="DUELL-FELDGRÖSSE"/>
+              <div style={{display:'flex',gap:8}}>
+                {(adminCfg.features.duelBlitz||isAdmin())&&(
+                  <button onClick={()=>setDuelSize('blitz')} style={{
+                    flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
+                    background:duelSize==='blitz'?'#8b5cf6':'var(--card)',
+                    color:duelSize==='blitz'?'#fff':'var(--text)',
+                    border:'1.5px solid '+(duelSize==='blitz'?'#8b5cf6':'var(--border)'),
+                    fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
+                    <div style={{fontSize:13,fontWeight:900}}>⚡ Blitz-Duell</div>
+                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>7 × 7 · schnell</div>
+                  </button>
+                )}
+                {(adminCfg.features.duelStandard||isAdmin())&&(
+                  <button onClick={()=>setDuelSize('standard')} style={{
+                    flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
+                    background:duelSize==='standard'?'#8b5cf6':'var(--card)',
+                    color:duelSize==='standard'?'#fff':'var(--text)',
+                    border:'1.5px solid '+(duelSize==='standard'?'#8b5cf6':'var(--border)'),
+                    fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
+                    <div style={{fontSize:13,fontWeight:900}}>🛡 Standard</div>
+                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>9 × 9 · taktisch</div>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -5597,6 +5727,7 @@ function App(){
 
   // ── REPLAY ──────────────────────────────────────────────
   if(screen==='replay'){
+    applyBoardSize(selectedMap,duelSize);
     const rs=applyMoves(moveHist,replayStep,selectedMap);
     const curMove=moveHist[replayStep];
     const progress=moveHist.length>0?Math.round((replayStep/moveHist.length)*100):0;
