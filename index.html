@@ -509,7 +509,7 @@ const CELL2=Math.max(26,Math.min(38,Math.floor((window.innerWidth-16)/COLS2)));
 // Tokens: A=Rot(links), B=Blau(rechts). Suffix 1=unten→oben(row0), 2=oben→unten(rowMax)
 const INIT_2V2={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
 const GOAL_2V2={A1:0,A2:ROWS2-1,B1:0,B2:ROWS2-1};
-const NEXT_2V2={A1:'A2',A2:'B1',B1:'B2',B2:'A1'};
+const NEXT_2V2={A1:'B1',B1:'A2',A2:'B2',B2:'A1'}; // Unten (A1+B1) → Oben (A2+B2) → Unten ...
 const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
@@ -518,7 +518,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -3105,7 +3105,7 @@ function App(){
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
-  const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) both':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) both';
+  const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards';
   useEffect(()=>{
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
@@ -4108,7 +4108,7 @@ function App(){
       :t('noTimer');
     return(
     <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,
-      animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) both':'none'}}>
+      animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'none'}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
       <button onClick={()=>setShowOptions(true)} style={{
@@ -4422,6 +4422,20 @@ function App(){
               })}
             </AdminSection>
 
+            <AdminSection label="ZEITMODI — CLASSIC">
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Welche Classic-Optionen Spieler wählen können:</div>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>3 Minuten</span>} on={adminCfg.features.classicTime3} onClick={()=>toggleFeature('classicTime3')}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>5 Minuten</span>} on={adminCfg.features.classicTime5} onClick={()=>toggleFeature('classicTime5')}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>8 Minuten</span>} on={adminCfg.features.classicTime8} onClick={()=>toggleFeature('classicTime8')}/>
+            </AdminSection>
+
+            <AdminSection label="ZEITMODI — BLITZ">
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Nur aktiv wenn Blitz-Modus an:</div>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>5 Sekunden / Zug</span>} on={adminCfg.features.blitzTime5} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime5');}}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>8 Sekunden / Zug</span>} on={adminCfg.features.blitzTime8} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime8');}}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>10 Sekunden / Zug</span>} on={adminCfg.features.blitzTime10} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime10');}}/>
+            </AdminSection>
+
             <AdminSection label="RANKED-SYSTEM">
               <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><SwordsIcon size={13} color="var(--subtle)"/>Ranked aktiv</span>} on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
               <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.ranked?1:0.4}}>
@@ -4662,9 +4676,9 @@ function App(){
           <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <TimeBtn val="none" label={t('noTimer')}/>
-            <TimeBtn val="classic-3" label={'3 '+t('minLabel')}/>
-            <TimeBtn val="classic-5" label={'5 '+t('minLabel')}/>
-            <TimeBtn val="classic-8" label={'8 '+t('minLabel')}/>
+            <TimeBtn val="classic-3" label={'3 '+t('minLabel')} disabled={!adminCfg.features.classicTime3&&!isAdmin()}/>
+            <TimeBtn val="classic-5" label={'5 '+t('minLabel')} disabled={!adminCfg.features.classicTime5&&!isAdmin()}/>
+            <TimeBtn val="classic-8" label={'8 '+t('minLabel')} disabled={!adminCfg.features.classicTime8&&!isAdmin()}/>
             <HelpDot onClick={()=>setHelpKey('classic')}/>
           </div>
 
@@ -4674,9 +4688,9 @@ function App(){
             {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
             <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
-              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
-              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={!adminCfg.features.blitz&&!isAdmin()}/>
+              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime5)&&!isAdmin()}/>
+              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime8)&&!isAdmin()}/>
+              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime10)&&!isAdmin()}/>
               <HelpDot onClick={()=>setHelpKey('blitz')}/>
             </div>
           </div>
@@ -6630,19 +6644,25 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
   );
 }
 function MapAura({map,dark}){
-  // Vollflächige Rand-Aura: Blau = Klassisch, Lila = Duell. Läuft dauerhaft (Puls).
   const duel=map==='duel';
-  const c1=duel?'139,92,246':'59,130,246';
-  const strong=duel?0.30:0.20;
-  const mid=duel?0.20:0.14;
-  const side=duel?0.16:0.11;
-  return <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
-    background:`radial-gradient(ellipse 120% 30% at 50% 0%, rgba(${c1},${strong}) 0%, transparent 60%),`+
-      `radial-gradient(ellipse 120% 30% at 50% 100%, rgba(${c1},${mid}) 0%, transparent 60%),`+
-      `radial-gradient(ellipse 30% 120% at 0% 50%, rgba(${c1},${side}) 0%, transparent 55%),`+
-      `radial-gradient(ellipse 30% 120% at 100% 50%, rgba(${c1},${side}) 0%, transparent 55%)`,
-    transition:'background 0.6s ease',
-    animation:'aura-pulse 3.2s ease-in-out infinite'}}/>;
+  const c=duel?'139,92,246':'59,130,246';
+  const cHex=duel?'#8b5cf6':'#3b82f6';
+  return(
+    <React.Fragment>
+      {/* Starke Rand-Aura via Inset-Box-Shadow — sofort sichtbar auf allen Seiten */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
+        boxShadow:`inset 0 0 90px 30px rgba(${c},0.55)`,
+        transition:'box-shadow 0.5s ease',
+        animation:'aura-pulse 3.2s ease-in-out infinite'}}/>
+      {/* Zusätzlicher Gradient-Vignette-Effekt für Tiefe */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,
+        background:`radial-gradient(ellipse 150% 22% at 50% 0%, rgba(${c},0.42) 0%, transparent 70%),`+
+          `radial-gradient(ellipse 150% 22% at 50% 100%, rgba(${c},0.38) 0%, transparent 70%),`+
+          `radial-gradient(ellipse 22% 150% at 0% 50%, rgba(${c},0.32) 0%, transparent 65%),`+
+          `radial-gradient(ellipse 22% 150% at 100% 50%, rgba(${c},0.32) 0%, transparent 65%)`,
+        transition:'background 0.5s ease'}}/>
+    </React.Fragment>
+  );
 }
 function MenuBG({dark}){
   // Treibende Mauer-Segmente (Peripherie, nicht im Zentrum) – thematisch zum Spielbrett
@@ -7495,7 +7515,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               <span style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:800,color:col}}>
                 <span style={{width:8,height:8,borderRadius:'50%',background:col}}/>
                 {teamName(tm)}{isMy?' ★':''}
-                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?'①':'②'}</span>}
+                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?'⬆ unten':'⬇ oben'}</span>}
               </span>
               <span style={{fontSize:11,fontWeight:800,color:'var(--text)',display:'flex',alignItems:'center',gap:2}}>{barr[tm]}<BrickMini size={10}/></span>
             </div>
@@ -7505,7 +7525,16 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
       {isOnline&&!myTurnNow&&!winner&&(
         <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:4,letterSpacing:0.5}}>
-          {teamName(TEAM_2V2(turn))} · Token {turn[1]} ist dran...
+          {turn[1]==='1'?'Unten':'Oben'} · {teamName(TEAM_2V2(turn))} ist dran...
+        </div>
+      )}
+      {/* Phase-Indikator */}
+      {!winner&&(
+        <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:'uppercase',
+          marginBottom:4,padding:'4px 12px',borderRadius:8,
+          background:turn[1]==='1'?'rgba(59,130,246,0.15)':'rgba(139,92,246,0.15)',
+          color:turn[1]==='1'?'#3b82f6':'#8b5cf6'}}>
+          {turn[1]==='1'?'⬆ Unten-Runde':'⬇ Oben-Runde'}
         </div>
       )}
 
