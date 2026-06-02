@@ -680,6 +680,122 @@ const I18N={
     profile:'Profil',login:'Connexion',register:'Inscription',logout:'Déconnexion',guest:'Invité',username:"Nom d'utilisateur",password:'Mot de passe',chooseColor:'Couleur avatar',haveAccount:'Déjà un compte ? Connexion',needAccount:'Nouveau ? Créer un compte',loginTitle:'Bon retour',registerTitle:'Créer un compte',loginToTrack:'Connecte-toi pour sauver tes stats',stats:'Statistiques',gamesPlayed:'Parties',winsLabel:'Victoires',lossesLabel:'Défaites',winrate:'Taux de victoire',streakLabel:'Série',bestStreakLabel:'Meilleure série',byMode:'Par mode',noGamesYet:'Aucune partie en ligne',myProfile:'Mon profil',accountHint:'Les parties en ligne sont liées à ton profil',
     auth_tooShort:'Nom trop court (min. 3)',auth_badChars:'Lettres, chiffres, _ uniquement',auth_pwShort:'Mot de passe trop court (min. 6)',auth_taken:'Nom déjà pris',auth_network:'Erreur de connexion',auth_notFound:'Compte introuvable',auth_wrongPw:'Mauvais mot de passe',auth_rateLimit:'Trop de comptes créés – réessaie dans 24h',nameChange:'Changer le nom',nameChangeOnce:'Une fois par semaine',nameChangeNew:'Nouveau pseudo',nameChangeSame:'C\'est déjà ton nom',days:'jours',save:'Enregistrer',pwChange:'Changer le mot de passe',pwOld:'Mot de passe actuel',pwNew:'Nouveau mot de passe (min. 6)',pwConfirm:'Confirmer le nouveau mot de passe',pwChanged:'Mot de passe changé!',pw_pwTooShort:'6 caractères minimum',pw_pwNoMatch:'Les mots de passe ne correspondent pas',pw_wrongPw:'Mot de passe actuel incorrect',pw_notFound:'Compte introuvable',ranked:'Ranked ELO',resetStats:'Réinitialiser les stats',resetStatsWarn:'Toutes les statistiques seront supprimées définitivement!',resetStatsOnce:'Possible une seule fois.',resetStatsConfirm:'Oui, réinitialiser',resetStatsDone:'Stats réinitialisées',resetStatsUsed:'Déjà réinitialisé une fois',adminResetRanked:'Réinitialiser tout le ranked ELO',adminResetRankedWarn:'Vraiment réinitialiser TOUS les classements ranked?',adminResetRankedDone:'Tous les classements ranked réinitialisés',friends:'Amis',friends_list:'Amis',friends_requests:'Demandes',friends_add:'Ajouter',friends_empty:'Pas encore d\'amis',friends_noRequests:'Aucune demande',friends_online:'En ligne',friends_offline:'Hors ligne',friends_invite:'Inviter',friends_wantsToAdd:'Veut t\'ajouter',friends_addHint:'Entre le pseudo pour envoyer une demande d\'amitié',friends_sent:'Demande envoyée!',friends_notFound:'Utilisateur introuvable',friends_self:'C\'est toi!',friends_already:'Déjà amis',friends_alreadySent:'Demande déjà envoyée',friends_waitingFor:'Attend',friends_waiting:'En attente...',friends_lobbyCode:'Code du salon',friends_incomingInvite:'t\'invite à jouer!',friends_join:'Rejoindre',friends_decline:'Refuser',friends_inGame:'En partie',friends_watch:'Regarder'}
 };
+// ── Erweiterte i18n-Keys (alle neuen UI-Strings, viersprachig) ──
+const I18N_EXT={
+en:{
+  duel:'Duel',
+  gameOver:'Game over',winner:'Winner',turn:'playing',
+  rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
+  rankedAccountRequired:'Account required',rankedLoginHint:'Log in to play Ranked',
+  rankedClassicCard:'Classic Race · 3 Min',rankedDuelCard:'Duel · 3 Min',
+  rankedInfoText:'Two separate ratings: Classic Race and vertical Duel. Matchmaking: \u00b150 ELO \u2192 \u00b1100 after 15s \u2192 \u00b1200 after 30s.',
+  rankedPlay:'Play Ranked',rankedSearching:'Searching...',rankedOtherActive:'Other mode active',rankedDisabled:'Disabled by admin',
+  profilePublic:'Profile is public',profilePrivate:'Profile is private',
+  leaderboardTitle:'Leaderboard',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duel',leaderboardLoading:'Loading leaderboard\u2026',
+  noEntriesYet:'No entries yet',playRankedToAppear:'Play a Ranked match to appear here!',rankedMinOneGame:'Only players with at least 1 Ranked game appear here',
+  rankedMenuDesc:'Ranked Games \u00b7 ELO',leaderboardDesc:'All Ranked Players \u00b7 Classic & Duel',
+  vsRandomDesc:'Against random players',friendDesc:'Via private code',teamModeDesc:'Team mode (Beta)',
+  practiceOffline:'Practice & Offline',vsBotDesc:'Against the computer',localDesc:'2 players, one device',
+  duelDesc:'\u2195 Players start opposite: one top, one bottom',
+  duelFieldSize:'DUEL FIELD SIZE',duelBlitzName:'Flash Duel',duelBlitzSpeed:'fast',duelTactical:'tactical',
+  featureOff:'OFF',thisLobby:'THIS LOBBY',
+  foundOpponent:'Opponent found!',
+  lobbyFull4:'Lobby full (max. 4 players)',noLobbiesCreate:'No open lobbies \u2013 create one!',
+  readyState:'Ready!',waitingPlayers4:'Waiting for players...',waitingHost4:'Waiting for host...',
+  startGame:'Start game',leave:'Leave',whatsNext:'What now?',refresh:'Refresh',joiningGame:'Joining...',
+  addFriendTitle:'Add friend',addFriendDesc:'Add opponent as friend',
+  spectatorReact:'React as spectator',
+  rematchReady:'Ready \u00b7 waiting',rematchNeed4:'Rematch (4 players needed)',rematch2v2:'Rematch',
+  modeConfigSub:'Timer, Barricades & Special Modes',
+  statWins:'Wins',statWinRate:'Win-%',statStreak:'Streak',
+  duelModeClassic:'CLASSIC',duelModeDuel:'DUEL',
+  onlineLobby4:'Online Lobby (4 players)',playersLabel:'Players'
+},
+de:{
+  gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
+  rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
+  rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
+  rankedClassicCard:'Classic Race \u00b7 3 Min',rankedDuelCard:'Duell \u00b7 3 Min',
+  rankedInfoText:'Zwei getrennte Wertungen: Classic Race und vertikales Duell. Matchmaking: \u00b150 ELO \u2192 \u00b1100 nach 15s \u2192 \u00b1200 nach 30s.',
+  rankedPlay:'Ranked spielen',rankedSearching:'Suche...',rankedOtherActive:'Anderer Modus aktiv',rankedDisabled:'Vom Admin deaktiviert',
+  profilePublic:'Profil ist \u00f6ffentlich',profilePrivate:'Profil ist privat',
+  leaderboardTitle:'Rangliste',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duell',leaderboardLoading:'Lade Rangliste\u2026',
+  noEntriesYet:'Noch keine Eintr\u00e4ge',playRankedToAppear:'Spiel ein Ranked-Match um hier zu erscheinen!',rankedMinOneGame:'Nur Spieler mit min. 1 Ranked-Spiel erscheinen hier',
+  rankedMenuDesc:'Ranglistenspiele \u00b7 ELO',leaderboardDesc:'Alle Ranked-Spieler \u00b7 Classic & Duell',
+  vsRandomDesc:'Gegen zuf\u00e4llige Spieler',friendDesc:'Mit privatem Code',teamModeDesc:'Team-Modus (Beta)',
+  practiceOffline:'\u00dcben & Offline',vsBotDesc:'Gegen den Computer',localDesc:'2 Spieler, ein Ger\u00e4t',
+  duelDesc:'\u2195 Spieler starten gegen\u00fcber: Einer oben, einer unten',
+  duelFieldSize:'DUELL-FELDGR\u00d6SSE',duelBlitzName:'Blitz-Duell',duelBlitzSpeed:'schnell',duelTactical:'taktisch',
+  featureOff:'AUS',thisLobby:'DIESE LOBBY',
+  foundOpponent:'Gegner gefunden!',
+  lobbyFull4:'Lobby voll (max. 4 Spieler)',noLobbiesCreate:'Keine offenen Lobbys \u2013 erstelle eine!',
+  readyState:'Bereit!',waitingPlayers4:'Warte auf Spieler...',waitingHost4:'Warte auf Host...',
+  startGame:'Spiel starten',leave:'Verlassen',whatsNext:'Wie weiter?',refresh:'Aktualisieren',joiningGame:'Suche...',
+  addFriendTitle:'Freund hinzuf\u00fcgen',addFriendDesc:'Gegner als Freund hinzuf\u00fcgen',
+  spectatorReact:'Als Zuschauer reagieren',
+  rematchReady:'Bereit \u00b7 warte',rematchNeed4:'Revanche (4 Spieler n\u00f6tig)',rematch2v2:'Revanche',
+  modeConfigSub:'Timer, Barrikaden & Spezial-Modi',
+  statWins:'Siege',statWinRate:'Siege-%',statStreak:'Serie',
+  duelModeClassic:'CLASSIC',duelModeDuel:'DUELL',
+  onlineLobby4:'Online-Lobby (4 Spieler)',playersLabel:'Spieler'
+},
+tr:{
+  gameOver:'Oyun bitti',winner:'Kazand\u0131',turn:'s\u0131rada',
+  rankedTitle:'Dereceli Oyunlar',rankedSubtitle:'ELO 1000\'den ba\u015flar \u00b7 \u0130ki mod, 3 dk.',
+  rankedAccountRequired:'Hesap gerekli',rankedLoginHint:'Ranked oynamak i\u00e7in giri\u015f yap',
+  rankedClassicCard:'Classic Race \u00b7 3 Dk.',rankedDuelCard:'D\u00fcello \u00b7 3 Dk.',
+  rankedInfoText:'\u0130ki ayr\u0131 puan: Classic Race ve dikey D\u00fcello. E\u015fle\u015fme: \u00b150 ELO \u2192 15s sonra \u00b1100 \u2192 30s sonra \u00b1200.',
+  rankedPlay:'Ranked oyna',rankedSearching:'Ar\u0131yor...',rankedOtherActive:'Di\u011fer mod aktif',rankedDisabled:'Admin taraf\u0131ndan devre d\u0131\u015f\u0131',
+  profilePublic:'Profil herkese a\u00e7\u0131k',profilePrivate:'Profil gizli',
+  leaderboardTitle:'S\u0131ralama',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & D\u00fcello',leaderboardLoading:'S\u0131ralama y\u00fckleniyor\u2026',
+  noEntriesYet:'Hen\u00fcz giri\u015f yok',playRankedToAppear:'Burada g\u00f6r\u00fcnmek i\u00e7in Ranked ma\u00e7 oyna!',rankedMinOneGame:'Sadece en az 1 Ranked oyunu olan oyuncular g\u00f6r\u00fcn\u00fcr',
+  rankedMenuDesc:'Dereceli Oyunlar \u00b7 ELO',leaderboardDesc:'T\u00fcm Ranked Oyuncular',
+  vsRandomDesc:'Rastgele oyunculara kar\u015f\u0131',friendDesc:'\u00d6zel kodla',teamModeDesc:'Tak\u0131m modu (Beta)',
+  practiceOffline:'Pratik & \u00c7evrimd\u0131\u015f\u0131',vsBotDesc:'Bilgisayara kar\u015f\u0131',localDesc:'2 oyuncu, bir cihaz',
+  duelDesc:'\u2195 Oyuncular kar\u015f\u0131dan ba\u015flar: Biri \u00fcste, biri altta',
+  duelFieldSize:'D\u00dcELLO ALAN BOYUTU',duelBlitzName:'H\u0131zl\u0131 D\u00fcello',duelBlitzSpeed:'h\u0131zl\u0131',duelTactical:'taktik',
+  featureOff:'KAPALI',thisLobby:'BU LOB\u0130',
+  foundOpponent:'Rakip bulundu!',
+  lobbyFull4:'Lobi dolu (maks. 4 oyuncu)',noLobbiesCreate:'A\u00e7\u0131k lobi yok \u2013 bir tane olu\u015ftur!',
+  readyState:'Haz\u0131r!',waitingPlayers4:'Oyuncular bekleniyor...',waitingHost4:'Host bekleniyor...',
+  startGame:'Oyunu ba\u015flat',leave:'Ayr\u0131l',whatsNext:'S\u0131rada ne var?',refresh:'Yenile',joiningGame:'Kat\u0131l\u0131yor...',
+  addFriendTitle:'Arkada\u015f ekle',addFriendDesc:'Rakibi arkada\u015f olarak ekle',
+  spectatorReact:'Seyirci olarak tepki ver',
+  rematchReady:'Haz\u0131r \u00b7 bekleniyor',rematchNeed4:'R\u00f6van\u015f (4 oyuncu gerekli)',rematch2v2:'R\u00f6van\u015f',
+  modeConfigSub:'Zamanlay\u0131c\u0131, Barikatlar & \u00d6zel Modlar',
+  statWins:'Galibiyet',statWinRate:'Kazan-%',statStreak:'Seri',
+  duelModeClassic:'CLASSIC',duelModeDuel:'D\u00dcELLO',
+  onlineLobby4:'\u00c7evrimiçi Lobi (4 oyuncu)',playersLabel:'Oyuncular'
+},
+fr:{
+  gameOver:'Partie termin\u00e9e',winner:'Gagnant',turn:'\u00e0 jouer',
+  rankedTitle:'Parties class\u00e9es',rankedSubtitle:'ELO d\u00e9bute \u00e0 1000 \u00b7 Deux modes, 3 min chacun',
+  rankedAccountRequired:'Compte requis',rankedLoginHint:'Connecte-toi pour jouer en class\u00e9',
+  rankedClassicCard:'Classic Race \u00b7 3 Min',rankedDuelCard:'Duel \u00b7 3 Min',
+  rankedInfoText:'Deux classements s\u00e9par\u00e9s : Classic Race et Duel vertical. Matchmaking : \u00b150 ELO \u2192 \u00b1100 apr\u00e8s 15s \u2192 \u00b1200 apr\u00e8s 30s.',
+  rankedPlay:'Jouer en class\u00e9',rankedSearching:'Recherche...',rankedOtherActive:'Autre mode actif',rankedDisabled:"D\u00e9sactiv\u00e9 par l'admin",
+  profilePublic:'Profil public',profilePrivate:'Profil priv\u00e9',
+  leaderboardTitle:'Classement',leaderboardSubtitle:'Ranked ELO \u00b7 Classic & Duel',leaderboardLoading:'Chargement du classement\u2026',
+  noEntriesYet:'Aucune entr\u00e9e',playRankedToAppear:'Joue un match Ranked pour appara\u00eetre ici !',rankedMinOneGame:'Seuls les joueurs avec au moins 1 partie Ranked apparaissent ici',
+  rankedMenuDesc:'Parties class\u00e9es \u00b7 ELO',leaderboardDesc:'Tous les joueurs class\u00e9s \u00b7 Classic & Duel',
+  vsRandomDesc:'Contre des joueurs al\u00e9atoires',friendDesc:'Via code priv\u00e9',teamModeDesc:'Mode \u00e9quipe (B\u00eata)',
+  practiceOffline:'Pratique & Hors ligne',vsBotDesc:"Contre l'ordinateur",localDesc:'2 joueurs, un appareil',
+  duelDesc:"↕ Joueurs face \u00e0 face : un en haut, un en bas",
+  duelFieldSize:'TAILLE DU TERRAIN DE DUEL',duelBlitzName:'Duel \u00c9clair',duelBlitzSpeed:'rapide',duelTactical:'tactique',
+  featureOff:'NON',thisLobby:'CE SALON',
+  foundOpponent:'Adversaire trouv\u00e9 !',
+  lobbyFull4:'Salon complet (max. 4 joueurs)',noLobbiesCreate:"Aucun salon ouvert \u2013 cr\u00e9e-en un !",
+  readyState:'Pr\u00eat !',waitingPlayers4:'Attente de joueurs...',waitingHost4:"En attente de l'h\u00f4te...",
+  startGame:'D\u00e9marrer la partie',leave:'Quitter',whatsNext:'Et maintenant ?',refresh:'Actualiser',joiningGame:'Connexion...',
+  addFriendTitle:'Ajouter un ami',addFriendDesc:"Ajouter l'adversaire en ami",
+  spectatorReact:'R\u00e9agir en spectateur',
+  rematchReady:'Pr\u00eat \u00b7 attente',rematchNeed4:'Revanche (4 joueurs requis)',rematch2v2:'Revanche',
+  modeConfigSub:'Minuteur, Barricades & Modes sp\u00e9ciaux',
+  statWins:'Victoires',statWinRate:'Victoires-%',statStreak:'S\u00e9rie',
+  duelModeClassic:'CLASSIC',duelModeDuel:'DUEL',
+  onlineLobby4:'Salon en ligne (4 joueurs)',playersLabel:'Joueurs'
+}
+};
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
 function getInitialDark(){try{return localStorage.getItem('ww_dark')==='1';}catch{return false;}}
 
@@ -2361,7 +2477,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         if(cancelled)return;
         cancelled=true;
         await stoDel('ww_ranked_queue/'+myKey);
-        setFoundMsg('Gegner gefunden!');
+        setFoundMsg(t('foundOpponent'));
         var code=myEntry.lobbyCode,oppKey=myEntry.oppKey,oppR=myEntry.oppRating,md=queue.mode;
         setTimeout(function(){onStart(code,'B',md,oppKey,oppR);},700);
         return;
@@ -2387,8 +2503,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
       await stoDel('ww_ranked_queue/'+myKey);
       if(cancelled)return;
       cancelled=true;
-      setFoundMsg('Gegner gefunden!');
-      var md2=queue.mode;
+      setFoundMsg(t('foundOpponent'));
       setTimeout(function(){onStart(lobbyCode,'A',md2,oppK,opp.rating);},700);
     },2000);
     return function(){cancelled=true;clearInterval(tick);clearInterval(poll);};
@@ -2419,34 +2534,34 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {wr}%</div>
         {!modeEnabled?(
           <div style={{padding:'12px',borderRadius:10,background:dk?'#334155':'#f1f5f9',
-            textAlign:'center',fontSize:12,fontWeight:700,color:muted,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><LockIcon size={12} color={muted}/> Vom Admin deaktiviert</div>
+            textAlign:'center',fontSize:12,fontWeight:700,color:muted,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><LockIcon size={12} color={muted}/> {t('rankedDisabled')}</div>
         ):!queue?(
           <button onClick={function(){joinQueue(mode);}} style={{
             width:'100%',padding:'13px',borderRadius:11,border:'none',cursor:'pointer',
             background:'linear-gradient(135deg,'+tier.color+','+tier.color+'aa)',
             color:'#fff',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
             boxShadow:'0 4px 12px '+tier.color+'44',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-            <SwordsIcon size={16} color="#fff"/> Ranked spielen
+            <SwordsIcon size={16} color="#fff"/> {t('rankedPlay')}
           </button>
         ):inQueue?(
           <div>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,justifyContent:'center'}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:tier.color,animation:'pulse 1s ease-in-out infinite'}}/>
               <span style={{fontSize:13,fontWeight:700,color:tier.color}}>
-                {foundMsg?foundMsg:('Suche... '+elapsed+'s · ±'+range+' ELO')}
+                {foundMsg?foundMsg:(t('rankedSearching')+' '+elapsed+'s · \u00b1'+range+' ELO')}
               </span>
             </div>
             <button onClick={leaveQueue} style={{width:'100%',padding:'10px',borderRadius:10,
               background:'transparent',border:'1.5px solid '+border,color:muted,cursor:'pointer',
               fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              Abbrechen
+              {t('cancel')}
             </button>
           </div>
         ):(
           <button disabled style={{width:'100%',padding:'13px',borderRadius:11,border:'none',
             background:dk?'#334155':'#e2e8f0',color:muted,fontWeight:700,fontSize:13,
             fontFamily:'system-ui,-apple-system,sans-serif',cursor:'default'}}>
-            Anderer Modus aktiv
+            {t('rankedOtherActive')}
           </button>
         )}
       </div>
@@ -2468,23 +2583,23 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
           <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><SwordsIcon size={13} color={muted}/> RANKED</div>
-          <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>Ranglistenspiele</div>
-          <div style={{fontSize:12,color:muted,marginTop:6}}>ELO startet bei 1000 · Zwei getrennte Modi, je 3 Min</div>
+          <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>{t('rankedTitle')}</div>
+          <div style={{fontSize:12,color:muted,marginTop:6}}>{t('rankedSubtitle')}</div>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
             <div style={{fontSize:28,marginBottom:8,display:'flex',justifyContent:'center'}}><LockIcon size={28} color={muted}/></div>
-            <div style={{fontSize:14,fontWeight:700,color:txt,marginBottom:4}}>Konto erforderlich</div>
-            <div style={{fontSize:12,color:muted}}>Melde dich an um Ranked zu spielen</div>
+            <div style={{fontSize:14,fontWeight:700,color:txt,marginBottom:4}}>{t('rankedAccountRequired')}</div>
+            <div style={{fontSize:12,color:muted}}>{t('rankedLoginHint')}</div>
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            {renderCard('classic','Classic Race · 3 Min',<ModeGlyph kind="clock" size={12} color={muted}/>)}
-            {renderCard('duel','Duell · 3 Min',<SwordsIcon size={12} color={muted}/>)}
+            {renderCard('classic',t('rankedClassicCard'),<ModeGlyph kind="clock" size={12} color={muted}/>)}
+            {renderCard('duel',t('rankedDuelCard'),<SwordsIcon size={12} color={muted}/>)}
             <div style={{padding:'12px 14px',borderRadius:12,
               background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
               border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6,display:'flex',alignItems:'center',gap:6}}>
-              <LightbulbIcon size={13} color={muted}/> Zwei getrennte Wertungen: Classic Race (Standard) und vertikales Duell. Matchmaking: ±50 ELO → ±100 nach 15s → ±200 nach 30s.
+              <LightbulbIcon size={13} color={muted}/> {t('rankedInfoText')}
             </div>
           </div>
         )}
@@ -2760,7 +2875,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
             fontFamily:'system-ui,-apple-system,sans-serif'}}>
             <div style={{textAlign:'left'}}>
               <div style={{fontSize:13,fontWeight:800,color:txt}}>
-                {account.profilePublic===false?'Profil ist privat':'Profil ist öffentlich'}
+                {account.profilePublic===false?t('profilePrivate'):t('profilePublic')}
               </div>
               <div style={{fontSize:11,color:muted,marginTop:2}}>
                 {account.profilePublic===false?'Niemand sieht deine Stats im Spiel':'Andere sehen deine Stats im Spiel'}
@@ -2923,13 +3038,13 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:28,marginBottom:6}}>🏆</div>
-          <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>Rangliste</div>
-          <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>Ranked ELO · Classic &amp; Duell</div>
+          <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{t('leaderboardTitle')}</div>
+          <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>{t('leaderboardSubtitle')}</div>
         </div>
         {/* Mode-Tabs */}
         <div style={{display:'flex',gap:8,marginBottom:16,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)',
           borderRadius:12,padding:4}}>
-          {[['classic','🏎 Classic Race'],['duel','⚔ Duell']].map(([m,lbl])=>(
+          {[['classic','\u{1F3CE} '+t('classic').toUpperCase()],['duel','\u2694 '+t('duel').toUpperCase()]].map(([m,lbl])=>(
             <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:'9px 4px',borderRadius:9,
               background:mode===m?card:'transparent',border:'none',cursor:'pointer',
               fontSize:13,fontWeight:800,color:mode===m?txt:muted,
@@ -2942,14 +3057,14 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         {/* Liste */}
         {loading?(
           <div style={{textAlign:'center',padding:'40px 0',color:muted,fontSize:14,fontWeight:600}}>
-            Lade Rangliste…
+            {t('leaderboardLoading')}
           </div>
         ):entries.length===0?(
           <div style={{textAlign:'center',padding:'40px 16px',background:card,borderRadius:16,
             border:'1.5px solid '+border}}>
             <div style={{fontSize:36,marginBottom:10}}>🏁</div>
-            <div style={{fontSize:15,fontWeight:800,color:txt,marginBottom:4}}>Noch keine Einträge</div>
-            <div style={{fontSize:12,color:muted}}>Spiel ein Ranked-Match um hier zu erscheinen!</div>
+            <div style={{fontSize:15,fontWeight:800,color:txt,marginBottom:4}}>{t('noEntriesYet')}</div>
+            <div style={{fontSize:12,color:muted}}>{t('playRankedToAppear')}</div>
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -3013,12 +3128,12 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
             background:'transparent',border:'1.5px solid '+border,color:muted,fontSize:13,fontWeight:700,
             cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif',
             display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-            ↻ Aktualisieren
+            ↻ {t('refresh')}
           </button>
         )}
         {/* Hinweis */}
         <div style={{textAlign:'center',marginTop:12,fontSize:11,color:muted,fontWeight:600}}>
-          Nur Spieler mit min. 1 Ranked-Spiel erscheinen hier
+          {t('rankedMinOneGame')}
         </div>
       </div>
     </div>
@@ -3123,13 +3238,13 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
             {specCount>0&&<span style={{fontSize:11,fontWeight:800,color:'#ef4444',opacity:0.7}}>· 👁 {specCount}</span>}
           </div>
           {gone?(
-            <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')||'Spiel beendet'}</div>
+            <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')}</div>
           ):gs&&gs.winner?(
             <div style={{fontSize:16,fontWeight:900,color:gs.winner==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/> {t('winner')||'Gewonnen'}!</div>
+              <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/> {t('winner')}!</div>
           ):gs?(
             <div style={{fontSize:13,fontWeight:700,color:gs.turn==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/> {t('turn')||'am Zug'}</div>
+              <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/> {t('turn')}</div>
           ):null}
         </div>
         {/* Brett */}
@@ -3176,7 +3291,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
           background:card,border:'1.5px solid '+border,
           boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:1,color:muted,textAlign:'center',marginBottom:10,textTransform:'uppercase'}}>
-            👁 Als Zuschauer reagieren
+            {'\uD83D\uDC41'} {t('spectatorReact')}
           </div>
           <div style={{display:'flex',gap:8,justifyContent:'center'}}>
             {SPEC_EMOTES.map(type=>(
@@ -3485,7 +3600,7 @@ function App(){
       }
     }catch(e){}
   },[]);
-  const t=k=>(I18N[lang]&&I18N[lang][k])||I18N.en[k]||k;
+  const t=k=>(I18N[lang]&&I18N[lang][k])||(I18N_EXT[lang]&&I18N_EXT[lang][k])||I18N.en[k]||(I18N_EXT.en&&I18N_EXT.en[k])||k;
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
   // Admin: Config speichern (schreibt global, alle Clients übernehmen live)
   const saveAdminCfg=(cfg)=>{const merged=mergeAdminCfg(cfg);setAdminCfg(merged);stoSet(ADMIN_CFG_KEY,merged);};
@@ -4852,7 +4967,7 @@ function App(){
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
           <div style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:1.2}}>{t('modeLabel')}</div>
           <div style={{fontSize:12,fontWeight:800,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {selectedMap==='duel'?'Duell':'Klassisch'} · {modeLabel} · {gameBarr} <BrickMini size={11}/>
+            {selectedMap==='duel'?t('duel'):t('classic')} · {modeLabel} · {gameBarr} <BrickMini size={11}/>
           </div>
         </div>
         <span style={{fontSize:14,color:'var(--subtle)'}}>›</span>
@@ -4867,7 +4982,7 @@ function App(){
               icon={<SwordsIcon size={19} color="#fff"/>}
               iconBg="rgba(255,255,255,0.18)"
               title="Ranked"
-              desc="Ranglistenspiele · ELO"
+              desc={t('rankedMenuDesc')}
               off={!adminCfg.features.ranked}
               onClick={()=>{setNavDir('fwd');setScreen('ranked');}}
               right={account&&account.stats&&account.stats.ranked?(()=>{
@@ -4887,8 +5002,8 @@ function App(){
           <MenuItem
             icon={<span style={{fontSize:18,lineHeight:1}}>🏆</span>}
             iconBg="linear-gradient(135deg,#f59e0b,#d97706)"
-            title="Rangliste"
-            desc="Alle Ranked-Spieler · Classic &amp; Duell"
+            title={t('leaderboardTitle')}
+            desc={t('leaderboardDesc')}
             onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}/>
         )}
 
@@ -4897,17 +5012,17 @@ function App(){
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
             {(adminCfg.features.online||isAdmin())&&<MenuItem
               icon={<GlobeIcon size={19}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
-              title={t('createPublicLobby')} desc="Gegen zufällige Spieler"
+              title={t('createPublicLobby')} desc={t('vsRandomDesc')}
               off={!adminCfg.features.online}
               onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
             {(adminCfg.features.friend||isAdmin())&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
-              title={t('friendPlay')} desc="Mit privatem Code"
+              title={t('friendPlay')} desc={t('friendDesc')}
               off={!adminCfg.features.friend}
               onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
             {(adminCfg.features.twovtwo||isAdmin())&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#ef4444,#3b82f6)"
-              title="2 vs 2" desc="Team-Modus (Beta)"
+              title="2 vs 2" desc={t('teamModeDesc')}
               off={!adminCfg.features.twovtwo}
               onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
           </MenuSection>
@@ -4915,15 +5030,15 @@ function App(){
 
         {/* ÜBEN & OFFLINE */}
         {(adminCfg.features.bots||adminCfg.features.local||isAdmin())&&(
-          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>Üben &amp; Offline</span>}>
+          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>{t('practiceOffline')}</span>}>
             {(adminCfg.features.bots||isAdmin())&&<MenuItem
               icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
-              title={t('vsBot')} desc="Gegen den Computer"
+              title={t('vsBot')} desc={t('vsBotDesc')}
               off={!adminCfg.features.bots}
               onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
             {(adminCfg.features.local||isAdmin())&&<MenuItem
               icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
-              title={t('localPlay')} desc="2 Spieler, ein Gerät"
+              title={t('localPlay')} desc={t('localDesc')}
               off={!adminCfg.features.local}
               onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
           </MenuSection>
@@ -5199,7 +5314,7 @@ function App(){
         <button onClick={goBack} style={backChevron}>‹</button>
         <div style={{width:'100%',maxWidth:340}}>
           <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
-            title={t('mode')} sub="Timer, Barrikaden & Spezial-Modi"/>
+            title={t('mode')} sub={t('modeConfigSub')}/>
 
           {/* Aktive Auswahl */}
           {(gameTimeMode!=='none'||chaosMode||dropMode||hammerMode||selectedMap==='duel')&&(
@@ -5207,7 +5322,7 @@ function App(){
               {selectedMap==='duel'&&(
                 <div style={{padding:'4px 10px',borderRadius:11,fontSize:11,fontWeight:800,
                   background:'rgba(139,92,246,0.15)',color:'#8b5cf6',display:'flex',alignItems:'center',gap:5}}>
-                  <span>⚔</span><span>Duell</span>
+                  <span>⚔</span><span>{t('duel')}</span>
                 </div>
               )}
               {gameTimeMode.indexOf('classic-')===0&&(
@@ -5276,7 +5391,7 @@ function App(){
                   <polyline points="31,25 31,12" stroke="#3b82f6" strokeWidth="1.2" opacity="0.45" strokeDasharray="2,2"/>
                 </svg>
               </div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>Klassisch</div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>{t('classic')}</div>
             </button>
             <button onClick={()=>setSelectedMap('duel')} style={{
               flex:1,padding:'10px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
@@ -5295,18 +5410,18 @@ function App(){
                   <polygon points="14,14 22,14 18,10" fill="currentColor" opacity="0.7"/>
                 </svg>
               </div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>Duell</div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>{t('duel')}</div>
             </button>
           </div>
           {selectedMap==='duel'&&(
             <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:8,paddingLeft:2,lineHeight:1.5}}>
-              ↕ Spieler starten gegenüber: Einer oben, einer unten
+              {t('duelDesc')}
             </div>
           )}
           {/* Duell-Feldgröße */}
           {selectedMap==='duel'&&(
             <div style={{marginBottom:14}}>
-              <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label="DUELL-FELDGRÖSSE"/>
+              <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label={t('duelFieldSize')}/>
               <div style={{display:'flex',gap:8}}>
                 {(adminCfg.features.duelBlitz||isAdmin())&&(
                   <button onClick={()=>setDuelSize('blitz')} style={{
@@ -5315,8 +5430,8 @@ function App(){
                     color:duelSize==='blitz'?'#fff':'var(--text)',
                     border:'1.5px solid '+(duelSize==='blitz'?'#8b5cf6':'var(--border)'),
                     fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
-                    <div style={{fontSize:13,fontWeight:900}}>⚡ Blitz-Duell</div>
-                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>7 × 7 · schnell</div>
+                    <div style={{fontSize:13,fontWeight:900}}>⚡ {t('duelBlitzName')}</div>
+                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>7 × 7 · {t('duelBlitzSpeed')}</div>
                   </button>
                 )}
                 {(adminCfg.features.duelStandard||isAdmin())&&(
@@ -5327,7 +5442,7 @@ function App(){
                     border:'1.5px solid '+(duelSize==='standard'?'#8b5cf6':'var(--border)'),
                     fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
                     <div style={{fontSize:13,fontWeight:900}}>🛡 Standard</div>
-                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>9 × 9 · taktisch</div>
+                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>9 × 9 · {t('duelTactical')}</div>
                   </button>
                 )}
               </div>
@@ -5347,7 +5462,7 @@ function App(){
           {/* Blitz */}
           {(adminCfg.features.blitz||isAdmin())&&(
           <div style={{opacity:adminCfg.features.blitz?1:0.45,position:'relative'}}>
-            {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
+            {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>{t('featureOff')}</div>}
             <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
               <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime5)&&!isAdmin()}/>
@@ -5567,7 +5682,7 @@ function App(){
       <button onClick={goBack} style={backChevron}>‹</button>
       <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
         <ScreenHead icon={<BotIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
-          title={t('chooseDifficulty')} sub="Gegen den Computer"/>
+          title={t('chooseDifficulty')} sub={t('vsBotDesc')}/>
         <div style={{display:'flex',flexDirection:'column',gap:9}}>
           {[
             {k:'easy',color:'#16a34a',bg:'linear-gradient(135deg,#16a34a,#15803d)'},
@@ -5727,7 +5842,7 @@ function App(){
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:l.map==='duel'?'rgba(139,92,246,0.15)':'rgba(59,130,246,0.12)',
                             color:l.map==='duel'?'#8b5cf6':'#3b82f6'}}>
-                            {l.map==='duel'?'⚔ Duell':'🗺 Klassisch'}
+                            {l.map==='duel'?('\u2694 '+t('duel')):('\uD83D\uDDFA '+t('classic'))}
                           </div>
                         )}
                         {isClassic&&(
@@ -5835,12 +5950,12 @@ function App(){
           <div style={{marginTop:14,padding:'10px 12px',borderRadius:11,
             background:selectedMap==='duel'?'rgba(139,92,246,0.1)':'rgba(59,130,246,0.08)',
             border:'1.5px solid '+(selectedMap==='duel'?'rgba(139,92,246,0.3)':'rgba(59,130,246,0.25)')}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:1,color:'var(--subtle)',marginBottom:5}}>DIESE LOBBY</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:1,color:'var(--subtle)',marginBottom:5}}>{t('thisLobby')}</div>
             <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
               <span style={{padding:'3px 8px',borderRadius:8,fontSize:10,fontWeight:800,
                 background:selectedMap==='duel'?'rgba(139,92,246,0.2)':'rgba(59,130,246,0.16)',
                 color:selectedMap==='duel'?'#8b5cf6':'#3b82f6'}}>
-                {selectedMap==='duel'?'⚔ Duell':'🗺 Klassisch'}
+                {selectedMap==='duel'?('\u2694 '+t('duel')):('\uD83D\uDDFA '+t('classic'))}
               </span>
               <span style={{fontSize:11,fontWeight:700,color:'var(--muted)'}}>
                 {gameTimeMode==='none'?t('noTimer')
@@ -6099,7 +6214,7 @@ function App(){
             {canAddFriend&&(
               <MenuItem icon={<PeopleIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#8b5cf6,#6d28d9)"
-                title="Freund hinzufügen" desc="Gegner als Freund hinzufügen"
+                title={t('addFriendTitle')} desc={t('addFriendDesc')}
                 onClick={async()=>{
                   await sendFriendRequestByKey(account.key,oppAccountKey);
                   setAddFriendSent(true);
@@ -6217,7 +6332,7 @@ function App(){
       )}
 
       {/* Score cards */}
-      {oppProfileModal&&<OppProfileModal data={oppProfileModal} onClose={()=>setOppProfileModal(null)} darkMode={darkMode}/>}
+      {oppProfileModal&&<OppProfileModal data={oppProfileModal} onClose={()=>setOppProfileModal(null)} darkMode={darkMode} t={t}/>}
       <div style={{display:'flex',gap:8,marginBottom:10,width:'100%',maxWidth:360}}>
         {['A','B'].map(p=>{
           const active=turn===p&&!winner;
@@ -7343,7 +7458,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
     </div>
   );
 }
-function OppProfileModal({data,onClose,darkMode}){
+function OppProfileModal({data,onClose,darkMode,t}){
   const dk=darkMode;
   const card=dk?'#161e33':'#fff';
   const txt=dk?'#f1f5f9':'#0f172a';
@@ -7381,7 +7496,7 @@ function OppProfileModal({data,onClose,darkMode}){
             {/* Stats Grid */}
             {data.stats&&(
               <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
-                {[['Siege',data.stats.wins||0,'#16a34a'],['Siege-%',Math.round(((data.stats.wins||0)/Math.max(data.stats.games||1,1))*100)+'%','#8b5cf6'],['Serie',data.stats.bestStreak||0,'#f59e0b']].map(([l,v,c])=>(
+                {[[t('statWins'),data.stats.wins||0,'#16a34a'],[t('statWinRate'),Math.round(((data.stats.wins||0)/Math.max(data.stats.games||1,1))*100)+'%','#8b5cf6'],[t('statStreak'),data.stats.bestStreak||0,'#f59e0b']].map(([l,v,c])=>(
                   <div key={l} style={{background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:12,padding:'10px 8px',textAlign:'center'}}>
                     <div style={{fontSize:18,fontWeight:900,color:c}}>{v}</div>
                     <div style={{fontSize:9,color:muted,fontWeight:700,letterSpacing:0.5,textTransform:'uppercase',marginTop:2}}>{l}</div>
@@ -7392,7 +7507,7 @@ function OppProfileModal({data,onClose,darkMode}){
             {/* Ranked */}
             {data.ranked&&(
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                {[['classic','#8b5cf6','CLASSIC'],['duel','#f59e0b','DUELL']].map(([mode,col,lbl])=>{
+                {[['classic','#8b5cf6',t('duelModeClassic')],['duel','#f59e0b',t('duelModeDuel')]].map(([mode,col,lbl])=>{
                   const r=data.ranked[mode]||{rating:1000,wins:0,losses:0};
                   return(
                     <div key={mode} style={{background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:12,padding:'10px',textAlign:'center'}}>
@@ -7408,7 +7523,7 @@ function OppProfileModal({data,onClose,darkMode}){
         )}
         <button onClick={onClose} style={{width:'100%',marginTop:18,padding:'12px',borderRadius:12,
           background:'transparent',border:'1.5px solid '+border,color:muted,fontSize:14,fontWeight:700,
-          cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>Schließen</button>
+          cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('close')}</button>
       </div>
     </div>
   );
@@ -7693,7 +7808,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     if(data.status!=='waiting'){setJoinError('Lobby bereits gestartet');return;}
     const ps=data.players||{};
     const pCount=Object.keys(ps).length;
-    if(pCount>=4&&!ps[uid]){setJoinError('Lobby voll (max. 4 Spieler)');return;}
+    if(pCount>=4&&!ps[uid]){setJoinError(t('lobbyFull4'));return;}
     const aCount=Object.values(ps).filter(p=>p.team==='A').length;
     const bCount=Object.values(ps).filter(p=>p.team==='B').length;
     const initTeam=aCount<=bCount?'A':'B';
@@ -7998,7 +8113,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:'0 2px 12px rgba(99,102,241,0.3)',
               display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-              <GlobeIcon size={16}/>Online-Lobby (4 Spieler)
+              <GlobeIcon size={16}/>{t('onlineLobby4')}
             </button>
             <button onClick={()=>{
               setIsOnline(false);setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
@@ -8048,12 +8163,12 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               <button onClick={refreshLobbies} disabled={listLoading} style={{padding:'4px 10px',borderRadius:8,
                 background:'var(--bg)',border:'1.5px solid var(--border)',cursor:listLoading?'wait':'pointer',
                 fontSize:11,fontWeight:700,color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                {listLoading?'…':'↻ Aktualisieren'}
+                {listLoading?'…':('↻ '+t('refresh'))}
               </button>
             </div>
             {openLobbies.length===0?(
               <div style={{textAlign:'center',padding:'14px 0',fontSize:12,color:'var(--subtle)',fontWeight:500}}>
-                {listLoading?'Lade...':'Keine offenen Lobbys – erstelle eine!'}
+                {listLoading?t('loading'):t('noLobbiesCreate')}
               </div>
             ):(
               <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:180,overflowY:'auto'}}>
@@ -8097,7 +8212,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               color:lobbyLoading||joinInput.length!==4?'var(--subtle)':'white',
               border:'none',borderRadius:10,cursor:lobbyLoading||joinInput.length!==4?'not-allowed':'pointer',
               fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lobbyLoading?'Suche...':'Beitreten →'}
+              {lobbyLoading?t('joiningGame'):t('joinSuffix')}
             </button>
             {joinError?<div style={{marginTop:10,fontSize:12,color:'#ef4444',fontWeight:600,textAlign:'center'}}>{joinError}</div>:null}
           </div>
@@ -8220,7 +8335,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
           {/* Status + Start */}
           <div style={{background:'var(--card)',borderRadius:14,padding:'12px 16px',border:'1.5px solid var(--border)',marginBottom:10,boxShadow:'var(--shadow-soft)'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-              <div style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>Spieler: {total}/4</div>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{t('playersLabel')}: {total}/4</div>
               <div style={{display:'flex',gap:4}}>
                 {[0,1,2,3].map(i=>(
                   <div key={i} style={{width:10,height:10,borderRadius:'50%',
@@ -8233,11 +8348,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                 background:'#16a34a',color:'white',border:'none',borderRadius:10,
                 cursor:'pointer',fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:'0 2px 10px rgba(22,163,74,0.35)'}}>
-                🚀 Spiel starten
+                🚀 {t('startGame')}
               </button>
             ):(
               <div style={{textAlign:'center',fontSize:12,fontWeight:600,color:'var(--subtle)',padding:'8px 0'}}>
-                {isHost?(aPlayers.length===2&&bPlayers.length===2?'Bereit!':'Warte auf Spieler...'):'Warte auf Host...'}
+                {isHost?(aPlayers.length===2&&bPlayers.length===2?t('readyState'):t('waitingPlayers4')):t('waitingHost4')}
               </div>
             )}
           </div>
@@ -8245,7 +8360,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
           <button onClick={leaveLobby} style={{width:'100%',padding:'10px',background:'transparent',
             border:'1.5px solid var(--border)',borderRadius:10,cursor:'pointer',
             color:'var(--subtle)',fontWeight:600,fontSize:13,
-            fontFamily:'system-ui,-apple-system,sans-serif'}}>Verlassen</button>
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('leave')}</button>
         </div>
       </div>
     );
@@ -8362,25 +8477,25 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               <div style={{fontSize:21,fontWeight:900,color:col,letterSpacing:-0.5,marginBottom:4}}>Team {teamName(winner)} {t('wins')}</div>
               {isOnline?(
                 <>
-                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Wie weiter?</div>
+                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>{t('whatsNext')}</div>
                   <button onClick={voteRematch} disabled={iVoted||present<4} style={{width:'100%',padding:'13px',marginBottom:8,
                     background:iVoted?'rgba(22,163,74,0.15)':(present<4?'var(--border)':'#16a34a'),
                     color:iVoted?'#16a34a':(present<4?'var(--subtle)':'white'),
                     border:iVoted?'1.5px solid #16a34a':'none',borderRadius:12,
                     cursor:iVoted||present<4?'default':'pointer',fontWeight:800,fontSize:15,
                     fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    {iVoted?'✓ Bereit · warte ('+voteCount+'/'+present+')':(present<4?'Revanche (4 Spieler nötig)':'🔁 Revanche '+voteCount+'/'+present)}
+                    {iVoted?('\u2713 '+t('rematchReady')+' ('+voteCount+'/'+present+')'):(present<4?t('rematchNeed4'):('\uD83D\uDD01 '+t('rematch2v2')+' '+voteCount+'/'+present))}
                   </button>
                   <div style={{display:'flex',gap:8}}>
                     <button onClick={backToLobbyFromGame} style={{flex:1,padding:'11px',
                       background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:12,
                       cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                      Lobby
+                      {t('lobby')}
                     </button>
                     <button onClick={exitFromGame} style={{flex:1,padding:'11px',
                       background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',borderRadius:12,
                       cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                      Menü
+                      {t('menu')}
                     </button>
                   </div>
                   {iVoted&&present===4&&<div style={{fontSize:10,color:'var(--subtle)',marginTop:10,fontWeight:500}}>Startet wenn alle bereit sind · anderes Team beginnt</div>}
