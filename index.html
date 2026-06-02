@@ -3207,7 +3207,15 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
     if(!lobbyId||!window.db)return;
     // Spielstand live verfolgen
     const gRef=window.db.ref('barricade_game_'+lobbyId);
-    const gCb=gRef.on('value',snap=>{const g=snap.val();if(!g){setGone(true);return;}setGs(g);});
+    const gCb=gRef.on('value',snap=>{
+      const raw=snap.val();
+      if(!raw){setGone(true);return;}
+      let g;
+      try{g=typeof raw==='string'?JSON.parse(raw):raw;}catch{return;}
+      // Brett-Größe ans aktuelle Spiel anpassen (Duell vs Race)
+      if(g.map){applyBoardSize(g.map,g.duelSize||'standard');}
+      setGs(g);
+    });
     // Anwesenheit registrieren
     const sRef=window.db.ref('ww_spec/'+lobbyId+'/'+myKey);
     sRef.set({ts:Date.now(),name:myName});
@@ -3294,10 +3302,14 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
             <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')}</div>
           ):gs&&gs.winner?(
             <div style={{fontSize:16,fontWeight:900,color:gs.winner==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/> {t('winner')}!</div>
+              <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/>
+              {gs.winner==='A'?(gs.nameA||t('red')):(gs.nameB||t('blue'))} {t('wins')}
+            </div>
           ):gs?(
             <div style={{fontSize:13,fontWeight:700,color:gs.turn==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/> {t('turn')}</div>
+              <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/>
+              {gs.turn==='A'?(gs.nameA||t('red')):(gs.nameB||t('blue'))} {t('turn')}
+            </div>
           ):null}
         </div>
         {/* Brett */}
@@ -3307,16 +3319,26 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)'}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:3,
               background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:5}}/>
+            {gs&&gs.map==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
+              background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:5}}/>}
             {cells}{wallEls}
             {gs&&<Piece pos={pA} col="#ef4444" border="#7f1d1d"/>}
             {gs&&<Piece pos={pB} col="#3b82f6" border="#1e3a5f"/>}
           </div>
         </div>
-        {/* Barrikaden-Info */}
+        {/* Barrikaden-Info mit Spielernamen */}
         {gs&&gs.barrLeft&&(
           <div style={{display:'flex',justifyContent:'space-between',marginTop:8,padding:'0 4px'}}>
-            <div style={{fontSize:12,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><div style={{width:9,height:9,borderRadius:'50%',background:'#ef4444'}}/> {gs.barrLeft.A||0} <BrickMini size={12}/></div>
-            <div style={{fontSize:12,color:'#3b82f6',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><BrickMini size={12}/> {gs.barrLeft.B||0} <div style={{width:9,height:9,borderRadius:'50%',background:'#3b82f6'}}/></div>
+            <div style={{fontSize:12,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:4}}>
+              <div style={{width:9,height:9,borderRadius:'50%',background:'#ef4444'}}/>
+              <span style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{gs.nameA||t('red')}</span>
+              <BrickMini size={12}/>{gs.barrLeft.A||0}
+            </div>
+            <div style={{fontSize:12,color:'#3b82f6',fontWeight:700,display:'flex',alignItems:'center',gap:4}}>
+              {gs.barrLeft.B||0}<BrickMini size={12}/>
+              <span style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{gs.nameB||t('blue')}</span>
+              <div style={{width:9,height:9,borderRadius:'50%',background:'#3b82f6'}}/>
+            </div>
           </div>
         )}
         {/* Andere Zuschauer-Emotes */}
@@ -3439,7 +3461,7 @@ function App(){
       const all=snap.val()||{};const now=Date.now();
       let on=0,ig=0;
       Object.values(all).forEach(p=>{
-        if(p&&p.online&&(now-p.lastSeen<90000)){on++;if(p.inGame)ig++;}
+        if(p&&p.online&&(now-p.lastSeen<50000)){on++;if(p.inGame)ig++;}
       });
       setGlobalStats({online:on,inGame:ig});
     });
@@ -3491,7 +3513,7 @@ function App(){
     const poll=async()=>{
       if(cancelled)return;
       const inv=await stoGet(INVITE_KEY(account.key));
-      if(inv&&!cancelled&&Date.now()-inv.ts<90000)setPendingInvite(inv);
+      if(inv&&!cancelled&&Date.now()-inv.ts<60000)setPendingInvite(inv);
       else if(!cancelled)setPendingInvite(null);
     };
     poll();const iv=setInterval(poll,1500);
