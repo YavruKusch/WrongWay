@@ -2484,11 +2484,11 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
         <div style={{marginBottom:14}}>
           <Lbl v="Privatsphäre"/>
           <button onClick={async()=>{
-            const newVal=account.profilePublic===false;
-            const updated={...account,profilePublic:newVal};
-            setAccount(updated);
-            try{localStorage.setItem('ww_acc',JSON.stringify(updated));}catch{}
-            await saveAccountProfile(account.key,{profilePublic:newVal});
+            const nowPublic=account.profilePublic!==false; // aktuell öffentlich?
+            const newPublic=!nowPublic; // umschalten
+            const updated={...account,profilePublic:newPublic};
+            onUpdate(updated); // App-State + localStorage via App-Effekt
+            await saveAccountProfile(account.key,{profilePublic:newPublic});
           }} style={{width:'100%',padding:'13px 16px',borderRadius:12,background:card,
             border:'1.5px solid '+border,cursor:'pointer',
             display:'flex',alignItems:'center',justifyContent:'space-between',
@@ -2498,10 +2498,10 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
                 {account.profilePublic===false?'Profil ist privat':'Profil ist öffentlich'}
               </div>
               <div style={{fontSize:11,color:muted,marginTop:2}}>
-                {account.profilePublic===false?'Niemand sieht deine Stats':'Andere sehen deine Stats im Spiel'}
+                {account.profilePublic===false?'Niemand sieht deine Stats im Spiel':'Andere sehen deine Stats im Spiel'}
               </div>
             </div>
-            {/* Toggle */}
+            {/* Toggle-Switch */}
             <div style={{width:44,height:26,borderRadius:13,flexShrink:0,
               background:account.profilePublic===false?'#64748b':'#8b5cf6',
               transition:'background 0.2s',position:'relative'}}>
@@ -2613,17 +2613,54 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     </div>
   );
 }
-function SpectatorScreen({lobbyId,t,darkMode,goBack}){
+function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const[gs,setGs]=React.useState(null);
   const[gone,setGone]=React.useState(false);
-  const SC=Math.min(Math.floor((Math.min(window.innerWidth,440)-48)/COLS),Math.floor((window.innerHeight*0.62)/ROWS));
+  const[specCount,setSpecCount]=React.useState(0);
+  const[myEmote,setMyEmote]=React.useState(null); // {type,id} — zuletzt gesendetes Emote
+  const[otherEmotes,setOtherEmotes]=React.useState([]); // von anderen Zuschauern
+  const SC=Math.min(Math.floor((Math.min(window.innerWidth,440)-48)/COLS),Math.floor((window.innerHeight*0.55)/ROWS));
   const SW=Math.max(4,Math.round(SC*0.2));
+  const myKey=account?account.key:SESSION;
+  const myName=account?account.name:'👁';
   React.useEffect(()=>{
     if(!lobbyId||!window.db)return;
-    const ref=window.db.ref('barricade_game_'+lobbyId);
-    const cb=ref.on('value',snap=>{const g=snap.val();if(!g){setGone(true);return;}setGs(g);});
-    return()=>ref.off('value',cb);
+    // Spielstand live verfolgen
+    const gRef=window.db.ref('barricade_game_'+lobbyId);
+    const gCb=gRef.on('value',snap=>{const g=snap.val();if(!g){setGone(true);return;}setGs(g);});
+    // Anwesenheit registrieren
+    const sRef=window.db.ref('ww_spec/'+lobbyId+'/'+myKey);
+    sRef.set({ts:Date.now(),name:myName});
+    sRef.onDisconnect().remove();
+    // Zuschauer-Anzahl live
+    const scRef=window.db.ref('ww_spec/'+lobbyId);
+    const scCb=scRef.on('value',snap=>{const v=snap.val();setSpecCount(v?Object.keys(v).length:0);});
+    // Andere Zuschauer-Emotes empfangen
+    const eRef=window.db.ref('ww_spec_emote/'+lobbyId);
+    const initTs=Date.now();
+    const eCb=eRef.on('value',snap=>{
+      const v=snap.val();
+      if(!v||!v.type||!v.ts||v.ts<initTs-300||v.from===myKey)return;
+      const id=v.ts+Math.random();
+      setOtherEmotes(prev=>[...prev.slice(-3),{type:v.type,id,name:v.name||'👁'}]);
+      setTimeout(()=>setOtherEmotes(prev=>prev.filter(e=>e.id!==id)),3000);
+    });
+    return()=>{
+      gRef.off('value',gCb);
+      scRef.off('value',scCb);
+      eRef.off('value',eCb);
+      sRef.remove();
+    };
   },[lobbyId]);
+
+  const sendEmote=type=>{
+    if(!lobbyId||!window.db)return;
+    const id=Date.now();
+    window.db.ref('ww_spec_emote/'+lobbyId).set({type,ts:id,from:myKey,name:myName});
+    setMyEmote({type,id});
+    setTimeout(()=>setMyEmote(m=>m&&m.id===id?null:m),2500);
+  };
+
   const dk=darkMode;
   const card=dk?'#1e293b':'#fff';
   const border=dk?'#334155':'#e2e8f0';
@@ -2653,6 +2690,8 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
       boxShadow:'0 2px 8px '+col+'55',
       transition:'left 0.25s cubic-bezier(0.34,1.56,0.64,1),top 0.25s cubic-bezier(0.34,1.56,0.64,1)'}}/>
   );
+  const SPEC_EMOTES=['laugh','cry','angry','confused'];
+  const EMOTE_EMOJI={laugh:'😂',cry:'😢',angry:'😡',confused:'🤔'};
   return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
       paddingTop:'calc(env(safe-area-inset-top) + 20px)',paddingBottom:24,
@@ -2663,11 +2702,13 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
         zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
       <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:440,padding:'0 16px'}}>
-        <div style={{textAlign:'center',marginBottom:12,paddingTop:48}}>
+        {/* Header */}
+        <div style={{textAlign:'center',marginBottom:10,paddingTop:48}}>
           <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 12px',
-            borderRadius:20,background:'rgba(239,68,68,0.12)',marginBottom:8}}>
+            borderRadius:20,background:'rgba(239,68,68,0.12)',marginBottom:6}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:'#ef4444',animation:'pulse 1.2s ease-in-out infinite'}}/>
             <span style={{fontSize:11,fontWeight:800,color:'#ef4444',letterSpacing:1}}>LIVE</span>
+            {specCount>0&&<span style={{fontSize:11,fontWeight:800,color:'#ef4444',opacity:0.7}}>· 👁 {specCount}</span>}
           </div>
           {gone?(
             <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')||'Spiel beendet'}</div>
@@ -2679,7 +2720,8 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
               <div style={{width:10,height:10,borderRadius:'50%',background:gs.turn==='A'?'#ef4444':'#3b82f6'}}/> {t('turn')||'am Zug'}</div>
           ):null}
         </div>
-        <div style={{display:'flex',justifyContent:'center'}}>
+        {/* Brett */}
+        <div style={{display:'flex',justifyContent:'center',position:'relative'}}>
           <div style={{position:'relative',width:COLS*SC,height:ROWS*SC,
             borderRadius:10,overflow:'hidden',border:'1.5px solid '+border,
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)'}}>
@@ -2690,12 +2732,54 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack}){
             {gs&&<Piece pos={pB} col="#3b82f6" border="#1e3a5f"/>}
           </div>
         </div>
+        {/* Barrikaden-Info */}
         {gs&&gs.barrLeft&&(
-          <div style={{display:'flex',justifyContent:'space-between',marginTop:10,padding:'0 4px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginTop:8,padding:'0 4px'}}>
             <div style={{fontSize:12,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><div style={{width:9,height:9,borderRadius:'50%',background:'#ef4444'}}/> {gs.barrLeft.A||0} <BrickMini size={12}/></div>
             <div style={{fontSize:12,color:'#3b82f6',fontWeight:700,display:'flex',alignItems:'center',gap:4}}><BrickMini size={12}/> {gs.barrLeft.B||0} <div style={{width:9,height:9,borderRadius:'50%',background:'#3b82f6'}}/></div>
           </div>
         )}
+        {/* Andere Zuschauer-Emotes */}
+        {otherEmotes.length>0&&(
+          <div style={{display:'flex',gap:6,marginTop:8,flexWrap:'wrap',justifyContent:'center'}}>
+            {otherEmotes.map(e=>(
+              <div key={e.id} style={{display:'inline-flex',alignItems:'center',gap:4,
+                padding:'4px 10px',borderRadius:12,
+                background:'rgba(139,92,246,0.12)',border:'1px solid rgba(139,92,246,0.2)',
+                animation:'fadeSlideUp 0.25s ease-out both',fontSize:11,color:txt,fontWeight:700}}>
+                <span style={{fontSize:9,color:muted}}>👁</span>
+                <span style={{fontSize:18}}>{EMOTE_EMOJI[e.type]||'👋'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Eigenes gesendetes Emote */}
+        {myEmote&&(
+          <div style={{textAlign:'center',marginTop:8}}>
+            <span style={{fontSize:24,animation:'trophy-pop 0.3s ease-out both'}}>{EMOTE_EMOJI[myEmote.type]}</span>
+          </div>
+        )}
+        {/* Emote-Picker */}
+        <div style={{marginTop:14,padding:'12px',borderRadius:16,
+          background:card,border:'1.5px solid '+border,
+          boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:1,color:muted,textAlign:'center',marginBottom:10,textTransform:'uppercase'}}>
+            👁 Als Zuschauer reagieren
+          </div>
+          <div style={{display:'flex',gap:8,justifyContent:'center'}}>
+            {SPEC_EMOTES.map(type=>(
+              <button key={type} onClick={()=>sendEmote(type)} style={{
+                width:52,height:52,borderRadius:16,border:'1.5px solid '+border,
+                background:myEmote&&myEmote.type===type?'rgba(139,92,246,0.15)':card,
+                cursor:'pointer',fontSize:24,display:'flex',alignItems:'center',justifyContent:'center',
+                fontFamily:'system-ui,-apple-system,sans-serif',
+                boxShadow:myEmote&&myEmote.type===type?'0 0 0 2px #8b5cf6':'none',
+                transition:'all 0.15s'}}>
+                {EMOTE_EMOJI[type]}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -2941,7 +3025,9 @@ function App(){
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
-  const[oppProfileModal,setOppProfileModal]=useState(null); // {name,stats,ranked,profilePublic,loading}
+  const[oppProfileModal,setOppProfileModal]=useState(null);
+  const[spectatorCount,setSpectatorCount]=useState(0);
+  const[specEmotes,setSpecEmotes]=useState([]); // [{type,id,from}] - Zuschauer-Emotes // {name,stats,ranked,profilePublic,loading}
   const[addFriendSent,setAddFriendSent]=useState(false);
   const[winEmoji,setWinEmoji]=useState('');
   const[danceSpeed,setDanceSpeed]=useState('slow');
@@ -3645,7 +3731,27 @@ function App(){
     return()=>ref.off('value',cb);
   },[gameMode,lobbyId,screen,onlineRole]);
 
-  // ── Heartbeat: Anwesenheit prüfen, 15s Timeout = automatischer Verlust ──
+  // ── Zuschauer-Anzahl (Live) ──
+  useEffect(()=>{
+    if(gameMode!=='online'||!lobbyId||screen!=='game')return;
+    if(!window.db)return;
+    const ref=window.db.ref('ww_spec/'+lobbyId);
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();
+      setSpectatorCount(v?Object.keys(v).length:0);
+    });
+    // Spec-Emotes von Zuschauern empfangen
+    const eRef=window.db.ref('ww_spec_emote/'+lobbyId);
+    const initTs=Date.now();
+    const eCb=eRef.on('value',snap=>{
+      const v=snap.val();
+      if(!v||!v.type||!v.ts||v.ts<initTs-500)return;
+      const id=v.ts+Math.random();
+      setSpecEmotes(prev=>[...prev.slice(-4),{type:v.type,id,from:v.from||'👁'}]);
+      setTimeout(()=>setSpecEmotes(prev=>prev.filter(e=>e.id!==id)),3000);
+    });
+    return()=>{ref.off('value',cb);eRef.off('value',eCb);};
+  },[gameMode,lobbyId,screen]);
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
     const myRef=window.db.ref(`barricade_hb_${lobbyId}/${onlineRole}`);
@@ -4879,7 +4985,7 @@ function App(){
   }
   // ── SPECTATE ─────────────────────────────────────────────
   if(screen==='spectate'){
-    return <SpectatorScreen lobbyId={spectateId} t={t} darkMode={darkMode} goBack={goBack}/>;
+    return <SpectatorScreen lobbyId={spectateId} t={t} darkMode={darkMode} goBack={goBack} account={account}/>;
   }
 
   // ── AUTH (Login / Register) ─────────────────────────────
@@ -5618,14 +5724,25 @@ function App(){
           const active=turn===p&&!winner;
           const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
           const canTapProfile=isOpp&&oppAccountKey&&!winner;
+          const eyeCol=p==='A'?'#ef4444':'#3b82f6';
           return(
             <div key={p} onClick={canTapProfile?openOppProfile:undefined}
-              style={{flex:1,padding:'9px 13px',borderRadius:13,
+              style={{flex:1,padding:'9px 13px',borderRadius:13,position:'relative',
               background:active?PC[p]:'var(--score-bg)',
               border:`1.5px solid ${active?PC[p]:'var(--score-border)'}`,
               boxShadow:active?`0 4px 16px ${PC[p]}40`:'var(--shadow-soft)',
               transition:'all 0.2s',display:'flex',alignItems:'center',gap:9,
               cursor:canTapProfile?'pointer':'default'}}>
+              {/* Zuschauer-Auge-Badge */}
+              {spectatorCount>0&&gameMode==='online'&&(
+                <div style={{position:'absolute',top:-8,right:6,
+                  display:'flex',alignItems:'center',gap:2,
+                  background:eyeCol,borderRadius:10,padding:'2px 6px',
+                  boxShadow:'0 2px 8px '+eyeCol+'60',zIndex:5}}>
+                  <span style={{fontSize:9}}>👁</span>
+                  <span style={{fontSize:10,fontWeight:900,color:'#fff'}}>{spectatorCount}</span>
+                </div>
+              )}
               <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 background:active?'rgba(255,255,255,0.22)':'var(--bg)',
@@ -5661,6 +5778,22 @@ function App(){
           );
         })}
       </div>
+      {/* Zuschauer-Emotes — erscheinen AUSSERHALB des Bretts, kleiner, kein Ton */}
+      {specEmotes.length>0&&(
+        <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap',justifyContent:'center',
+          width:'100%',maxWidth:360,minHeight:30}}>
+          {specEmotes.map(e=>(
+            <div key={e.id} style={{display:'inline-flex',alignItems:'center',gap:4,
+              padding:'4px 9px',borderRadius:12,
+              background:'rgba(139,92,246,0.12)',border:'1px solid rgba(139,92,246,0.25)',
+              animation:'fadeSlideUp 0.25s ease-out both',fontSize:11,fontWeight:700,
+              color:'var(--text)'}}>
+              <span style={{fontSize:9,opacity:0.6}}>👁</span>
+              <EmoteChar color="#8b5cf6" dark="#6d28d9" type={e.type} size={20}/>
+            </div>
+          ))}
+        </div>
+      )}
 
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
