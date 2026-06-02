@@ -1763,6 +1763,36 @@ function applyMoves(moveList,step,map){
   }
   return{pA,pB,walls};
 }
+function applyMovesWithOwner(moveList,step,map){
+  const sp=startPos(map||'classic');
+  let pA={...sp.A},pB={...sp.B};
+  const walls=new Set();
+  const wallOwner={};
+  for(let i=0;i<Math.min(step,moveList.length);i++){
+    const m=moveList[i];
+    if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
+    else if(m.type==='break'){walls.delete(m.k);delete wallOwner[m.k];}
+    else{walls.add(m.k);wallOwner[m.k]=m.p||null;}
+  }
+  return{pA,pB,walls,wallOwner};
+}
+// ── Replay-Archiv (localStorage, max 10) ──────────────────
+const REPLAY_HIST_KEY='ww_replay_hist';
+function saveReplayToHistory(entry){
+  try{
+    const raw=localStorage.getItem(REPLAY_HIST_KEY);
+    let list=raw?JSON.parse(raw):[];
+    list.unshift(entry);
+    if(list.length>10)list=list.slice(0,10);
+    localStorage.setItem(REPLAY_HIST_KEY,JSON.stringify(list));
+  }catch(e){}
+}
+function loadReplayHistory(){
+  try{
+    const raw=localStorage.getItem(REPLAY_HIST_KEY);
+    return raw?JSON.parse(raw):[];
+  }catch(e){return[];}
+}
 
 // ── Firebase storage ────────────────────────────────────────
 const randId=n=>Array.from({length:n},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
@@ -3649,6 +3679,7 @@ function App(){
   const[previewKey,setPreviewKey]=useState(null);
   const[snapPos,setSnapPos]=useState(null);
   const[replayStep,setReplayStep]=useState(0);
+  const[replayHistEntry,setReplayHistEntry]=useState(null);
   const[rematchA,setRematchA]=useState(false);
   const[rematchB,setRematchB]=useState(false);
   const[rematchDeclined,setRematchDeclined]=useState(null);
@@ -3713,6 +3744,23 @@ function App(){
   const triggerWin=(p,skipAnim)=>{
     winSound(p);
     setWinner(p);
+    // Replay in History speichern
+    try{
+      const s=S.current;
+      if(s.moveHist&&s.moveHist.length>0){
+        const pA=s.playerNames&&s.playerNames.A?s.playerNames.A:null;
+        const pB=s.playerNames&&s.playerNames.B?s.playerNames.B:null;
+        saveReplayToHistory({
+          ts:Date.now(),
+          winner:p,
+          moveHist:s.moveHist,
+          map:s.selectedMap||'classic',
+          duelSize:s.duelSize||'standard',
+          nameA:pA,nameB:pB,
+          gameMode:s.gameMode||'local'
+        });
+      }
+    }catch(e){}
     if(S.current.gameMode==='online'){
       const acc=accRef.current;
       const presKey=acc?acc.key:GUEST_ID;
@@ -3785,7 +3833,7 @@ function App(){
   const myTurn=gameMode==='online'?turn===onlineRole:true;
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
-  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu'};
+  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
   const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards';
@@ -4579,12 +4627,13 @@ function App(){
   const lastReplayStep=useRef(0);
   useEffect(()=>{
     if(screen!=='replay'){lastReplayStep.current=replayStep;return;}
+    const rMoves=replayHistEntry?replayHistEntry.moveHist:moveHist;
     if(replayStep>lastReplayStep.current){
-      const m=moveHist[replayStep-1];
+      const m=rMoves[replayStep-1];
       if(m)playSound(m.type==='move'?'move':'wall');
     }
     lastReplayStep.current=replayStep;
-  },[replayStep,screen,moveHist]);
+  },[replayStep,screen,moveHist,replayHistEntry]);
 
   // ── Valid moves ──
   const getValidMoves=(pos,opp,w)=>{
@@ -5006,6 +5055,14 @@ function App(){
             desc={t('leaderboardDesc')}
             onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}/>
         )}
+
+        {/* REPLAYS */}
+        <MenuItem
+          icon={<ReplayIcon size={19} color="#fff"/>}
+          iconBg="linear-gradient(135deg,#475569,#334155)"
+          title="Replays"
+          desc="Letzte 10 Spiele ansehen"
+          onClick={()=>{setNavDir('fwd');setScreen('replayHistory');}}/>
 
         {/* ONLINE SPIELEN */}
         {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
@@ -5601,6 +5658,19 @@ function App(){
     return <SpectatorScreen lobbyId={spectateId} t={t} darkMode={darkMode} goBack={goBack} account={account}/>;
   }
 
+  // ── REPLAY HISTORY ───────────────────────────────────────
+  if(screen==='replayHistory'){
+    return <ReplayHistoryScreen t={t} darkMode={darkMode}
+      goBack={()=>{setNavDir('back');setScreen('menu');}}
+      onWatch={function(entry){
+        applyBoardSize(entry.map||'classic',entry.duelSize||'standard');
+        setReplayHistEntry(entry);
+        setReplayStep(0);
+        setNavDir('fwd');
+        setScreen('replay');
+      }}/>;
+  }
+
   // ── AUTH (Login / Register) ─────────────────────────────
   if(screen==='auth'){
     const inputStyle={width:'100%',padding:'13px 14px',borderRadius:11,border:'1.5px solid var(--border)',
@@ -6042,10 +6112,17 @@ function App(){
 
   // ── REPLAY ──────────────────────────────────────────────
   if(screen==='replay'){
-    applyBoardSize(selectedMap,duelSize);
-    const rs=applyMoves(moveHist,replayStep,selectedMap);
-    const curMove=moveHist[replayStep];
-    const progress=moveHist.length>0?Math.round((replayStep/moveHist.length)*100):0;
+    const rEntry=replayHistEntry;
+    const rMoves=rEntry?rEntry.moveHist:moveHist;
+    const rMap=rEntry?rEntry.map:selectedMap;
+    const rSize=rEntry?rEntry.duelSize:duelSize;
+    applyBoardSize(rMap,rSize);
+    const rs=applyMovesWithOwner(rMoves,replayStep,rMap);
+    const curMove=rMoves[replayStep];
+    const progress=rMoves.length>0?Math.round((replayStep/rMoves.length)*100):0;
+    const rNameA=rEntry&&rEntry.nameA?rEntry.nameA:pname('A');
+    const rNameB=rEntry&&rEntry.nameB?rEntry.nameB:pname('B');
+    const rPname=p=>p==='A'?rNameA:rNameB;
     return (
       <div style={{...sCont,paddingBottom:80,paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
         {/* Header */}
@@ -6064,7 +6141,7 @@ function App(){
             borderRadius:20,padding:'4px 12px',boxShadow:'var(--shadow-soft)'}}>
             <ReplayIcon size={12}/>
             <span style={{fontSize:12,fontWeight:800,color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>
-              {replayStep}<span style={{color:'var(--subtle)'}}>/{moveHist.length}</span>
+              {replayStep}<span style={{color:'var(--subtle)'}}>/{rMoves.length}</span>
             </span>
           </div>
         </div>
@@ -6074,25 +6151,42 @@ function App(){
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?'⬆ '+t('goalLabel')+' (Rot)':t('goalLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{rMap==='duel'?'>> '+t('goalLabel')+' (Rot)':t('goalLabel')}</div>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
-          {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>(
+          {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){return(
             <div key={r+'-'+c} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
-              background:r===0?'var(--goal)':r===ROWS-1?(selectedMap==='duel'?'var(--goal)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
+              background:r===0?'var(--goal)':r===ROWS-1?(rMap==='duel'?'var(--goal)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
               border:'1px solid var(--cell-line)',boxSizing:'border-box'}}>
               {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
-              {selectedMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
+              {rMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
             </div>
-          )))}
-          {[...rs.walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} steel={isSteelWall(k)}/>)}
-          {['A','B'].map(p=>{const pos=p==='A'?rs.pA:rs.pB;const sz=30,off=(CELL-sz)/2;return(
+          );})})}
+          {[...rs.walls].map(function(k){
+            var owner=rs.wallOwner[k];
+            var wallColor=owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
+            var wallOpacity=owner?0.75:1;
+            return <Wall key={k} wkey={k} color={wallColor} opacity={wallOpacity} steel={isSteelWall(k)}/>;
+          })}
+          {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=30,off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
               transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none'}}>
               <Piece color={PC[p]} dark={PD[p]}/>
             </div>
           );})}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,color:selectedMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{selectedMap==='duel'?'⬇ '+t('goalLabel')+' (Blau)':t('startLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,color:rMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:rMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{rMap==='duel'?'<< '+t('goalLabel')+' (Blau)':t('startLabel')}</div>
+
+        {/* Legende Wandfarben */}
+        <div style={{display:'flex',gap:12,marginBottom:12,alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{width:18,height:5,borderRadius:3,background:'#ef4444',opacity:0.75}}/>
+            <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameA}</span>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{width:18,height:5,borderRadius:3,background:'#3b82f6',opacity:0.75}}/>
+            <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameB}</span>
+          </div>
+        </div>
 
         {/* Current move info */}
         {curMove&&(
@@ -6100,29 +6194,32 @@ function App(){
             background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:12,
             boxShadow:'var(--shadow-soft)'}}>
             <div style={{width:10,height:10,borderRadius:'50%',background:PC[curMove.p],flexShrink:0}}/>
-            <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{pname(curMove.p)}</span>
-            <span style={{fontSize:12,color:'var(--subtle)'}}>—</span>
+            <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{rPname(curMove.p)}</span>
+            <span style={{fontSize:12,color:'var(--subtle)'}}>-</span>
             <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>{curMove.type==='move'?t('step'):t('wallPlaced')}</span>
           </div>
         )}
 
         {/* Navigation */}
         <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:16}}>
-          <button onClick={()=>setReplayStep(s=>Math.max(0,s-1))} disabled={replayStep===0}
+          <button onClick={function(){setReplayStep(function(s){return Math.max(0,s-1);});}} disabled={replayStep===0}
             style={{flex:1,padding:'12px',borderRadius:12,border:'1.5px solid var(--border)',
               background:'var(--card)',color:replayStep===0?'var(--subtle)':'var(--text)',
               fontSize:18,cursor:replayStep===0?'not-allowed':'pointer',
               opacity:replayStep===0?0.4:1,fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:'var(--shadow-soft)'}}>◀</button>
-          <button onClick={()=>setReplayStep(s=>Math.min(moveHist.length,s+1))} disabled={replayStep>=moveHist.length}
+              boxShadow:'var(--shadow-soft)'}}>|◀</button>
+          <button onClick={function(){setReplayStep(function(s){return Math.min(rMoves.length,s+1);});}} disabled={replayStep>=rMoves.length}
             style={{flex:1,padding:'12px',borderRadius:12,border:'none',
-              background:replayStep>=moveHist.length?'var(--border)':'linear-gradient(135deg,#3b82f6,#8b5cf6)',
-              color:'white',fontSize:18,cursor:replayStep>=moveHist.length?'not-allowed':'pointer',
-              opacity:replayStep>=moveHist.length?0.4:1,fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:replayStep>=moveHist.length?'none':'0 3px 10px rgba(59,130,246,0.3)'}}>▶</button>
+              background:replayStep>=rMoves.length?'var(--border)':'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+              color:'white',fontSize:18,cursor:replayStep>=rMoves.length?'not-allowed':'pointer',
+              opacity:replayStep>=rMoves.length?0.4:1,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:replayStep>=rMoves.length?'none':'0 3px 10px rgba(59,130,246,0.3)'}}>▶|</button>
         </div>
 
-        <button onClick={()=>setScreen('end')} style={{
+        <button onClick={function(){
+          setReplayHistEntry(null);
+          setScreen(rEntry?'replayHistory':'end');
+        }} style={{
           padding:'11px 28px',borderRadius:12,background:'var(--card)',
           border:'1.5px solid var(--border)',color:'var(--text)',cursor:'pointer',
           fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif',
@@ -6918,6 +7015,78 @@ function EmoteChar({color,dark,type}){
   );
 }
 
+function ReplayHistoryScreen({t,darkMode,goBack,onWatch}){
+  const[list,setList]=useState([]);
+  useEffect(()=>{setList(loadReplayHistory());},[]);
+  const dk=darkMode;
+  const card=dk?'#1e293b':'#fff';
+  const border=dk?'#334155':'#e2e8f0';
+  const txt=dk?'#f1f5f9':'#0f172a';
+  const muted=dk?'#94a3b8':'#64748b';
+  const fmt=ts=>{
+    const d=new Date(ts);
+    const pad=n=>String(n).padStart(2,'0');
+    return pad(d.getDate())+'.'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  };
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
+      padding:'0 16px 40px',paddingTop:'calc(env(safe-area-inset-top) + 20px)',
+      background:'transparent',position:'relative',zIndex:1,
+      animation:'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards'}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
+        width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
+        cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
+        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:txt,fontWeight:700}}>‹</button>
+      <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+        <div style={{textAlign:'center',marginBottom:20}}>
+          <div style={{fontSize:21,fontWeight:900,color:txt,letterSpacing:-0.5,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            <ReplayIcon size={20} color={txt}/> Replays
+          </div>
+          <div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>Letzte 10 Spiele</div>
+        </div>
+        {list.length===0?(
+          <div style={{textAlign:'center',padding:'36px 16px',color:muted,fontSize:14,fontWeight:600}}>
+            Noch keine Spiele gespeichert.
+          </div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:9}}>
+            {list.map(function(entry,i){
+              var wc=entry.winner==='A'?'#ef4444':'#3b82f6';
+              var na=entry.nameA||'Rot';
+              var nb=entry.nameB||'Blau';
+              var wname=entry.winner==='A'?na:nb;
+              var mapLabel=entry.map==='duel'?'\u2694 Duell':'\uD83D\uDDFA Classic';
+              return(
+                <button key={i} onClick={function(){onWatch(entry);}}
+                  style={{width:'100%',padding:'14px 16px',background:card,border:'1.5px solid '+border,
+                    borderRadius:14,cursor:'pointer',textAlign:'left',
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    boxShadow:'0 2px 8px rgba(0,0,0,0.05)',
+                    borderLeft:'4px solid '+wc,
+                    display:'flex',alignItems:'center',gap:12}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                      <div style={{width:8,height:8,borderRadius:'50%',background:wc,flexShrink:0}}/>
+                      <span style={{fontSize:13,fontWeight:800,color:txt}}>{wname} gewinnt</span>
+                      <span style={{fontSize:9,fontWeight:700,color:muted,marginLeft:'auto'}}>{mapLabel}</span>
+                    </div>
+                    <div style={{fontSize:11,color:muted,fontWeight:600}}>
+                      {na} vs {nb} · {entry.moveHist?entry.moveHist.length:0} Züge
+                    </div>
+                    <div style={{fontSize:10,color:muted,fontWeight:500,marginTop:3}}>{fmt(entry.ts)}</div>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',color:muted,fontSize:18}}>›</div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function WinnerPerson({color,dark,speed,dance}){
   const cfg=DANCES[dance]||DANCES.robot;
   const dur=speed==='fast'?cfg.fast:cfg.slow;
