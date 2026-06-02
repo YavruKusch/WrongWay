@@ -711,7 +711,8 @@ en:{
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
   onlineLobby4:'Online Lobby (4 players)',playersLabel:'Players',
   replayHistSub:'Last 10 games',replayEmpty:'No games saved yet.',
-  rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move'
+  rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move',
+  whatsappInvite:'Play Wrong Way with me! Code: '
 },
 de:{
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
@@ -741,7 +742,8 @@ de:{
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
   onlineLobby4:'Online-Lobby (4 Spieler)',playersLabel:'Spieler',
   replayHistSub:'Letzte 10 Spiele',replayEmpty:'Noch keine Spiele gespeichert.',
-  rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen'
+  rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen',
+  whatsappInvite:'Spiel mit mir Wrong Way! Code: '
 },
 tr:{
   gameOver:'Oyun bitti',winner:'Kazand\u0131',turn:'s\u0131rada',
@@ -771,7 +773,8 @@ tr:{
   duelModeClassic:'RACE',duelModeDuel:'D\u00dcELLO',
   onlineLobby4:'\u00c7evrimiçi Lobi (4 oyuncu)',playersLabel:'Oyuncular',
   replayHistSub:'Son 10 oyun',replayEmpty:'Henüz kayıtlı oyun yok.',
-  rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle'
+  rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle',
+  whatsappInvite:'Benimle Wrong Way oyna! Kod: '
 },
 fr:{
   gameOver:'Partie termin\u00e9e',winner:'Gagnant',turn:'\u00e0 jouer',
@@ -801,7 +804,8 @@ fr:{
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
   onlineLobby4:'Salon en ligne (4 joueurs)',playersLabel:'Joueurs',
   replayHistSub:'10 dernières parties',replayEmpty:'Aucune partie sauvegardée.',
-  rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup'
+  rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup',
+  whatsappInvite:'Joue à Wrong Way avec moi ! Code : '
 }
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
@@ -2497,10 +2501,15 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
     const myKey=account.key;
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
     await stoSet('ww_ranked_queue/'+myKey,{mode:mode,rating:r,name:account.name,ts:Date.now()});
+    // Automatisch aus Queue entfernen wenn Browser/Tab geschlossen wird
+    try{window.db.ref('ww_ranked_queue/'+myKey).onDisconnect().remove();}catch(e){}
     setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
   };
   const leaveQueue=async function(){
-    if(account)await stoDel('ww_ranked_queue/'+account.key);
+    if(account){
+      await stoDel('ww_ranked_queue/'+account.key);
+      try{window.db.ref('ww_ranked_queue/'+account.key).onDisconnect().cancel();}catch(e){}
+    }
     setQueue(null);setElapsed(0);setFoundMsg('');
   };
 
@@ -2523,7 +2532,9 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         return;
       }
       var all=await stoGet('ww_ranked_queue')||{};
-      var others=Object.keys(all).filter(function(k){return k!==myKey&&all[k].mode===queue.mode&&!all[k].lobbyCode;});
+      var now2=Date.now();
+      // Stale Einträge ignorieren (älter als 3 Min = Browser wohl weg)
+      var others=Object.keys(all).filter(function(k){return k!==myKey&&all[k].mode===queue.mode&&!all[k].lobbyCode&&(now2-(all[k].ts||0))<180000;});
       if(!others.length)return;
       var isHost=others.every(function(k){return myEntry.ts<=all[k].ts;});
       if(!isHost)return;
@@ -2541,10 +2552,12 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
       var oppEntry=Object.assign({},opp,{lobbyCode:lobbyCode,oppKey:myKey,oppRating:myR});
       await stoSet('ww_ranked_queue/'+oppK,oppEntry);
       await stoDel('ww_ranked_queue/'+myKey);
+      try{window.db.ref('ww_ranked_queue/'+myKey).onDisconnect().cancel();}catch(e){}
       if(cancelled)return;
       cancelled=true;
       setFoundMsg(t('foundOpponent'));
-      setTimeout(function(){onStart(lobbyCode,'A',md2,oppK,opp.rating);},700);
+      var qMode=queue.mode;
+      setTimeout(function(){onStart(lobbyCode,'A',qMode,oppK,opp.rating);},700);
     },2000);
     return function(){cancelled=true;clearInterval(tick);clearInterval(poll);};
   },[queue]);
@@ -3437,7 +3450,7 @@ function App(){
     const key=account?account.key:GUEST_ID;
     const name=getDisplayName(account);
     setPresence(key,true,name);
-    const iv=setInterval(()=>setPresence(key,true,name),25000);
+    const iv=setInterval(()=>setPresence(key,true,name),15000);
     return()=>{clearInterval(iv);setPresence(key,false,name);};
   },[account]);
   // HOST: sobald friend-Lobby existiert, auf Guest warten
@@ -4313,7 +4326,11 @@ function App(){
         if(ds!==S.current.duelSize)setDuelSize(ds);}
       if(newMoves.length>oldLen){
         const last=newMoves[newMoves.length-1];
-        if(last&&last.p!==S.current.onlineRole)playSound(last.type==='move'?'move':'wall');
+        if(last&&last.p!==S.current.onlineRole){
+          if(last.type==='move')playSound('move');
+          else if(last.type==='wall'||last.type==='break')playSound(last.type==='break'?'break':'wall');
+          // emote-Typ: kein Sound hier, wird via barricade_emote empfangen
+        }
       }
       setPA(gs.pA);setPB(gs.pB);setWalls(new Set(gs.walls||[]));
       setBarrLeft(gs.barrLeft);setTurn(gs.turn);setMoveHist(newMoves);
@@ -6125,7 +6142,7 @@ function App(){
   if(screen==='waiting'){
     const baseUrl=(typeof window!=='undefined'&&window.location)?(window.location.origin+window.location.pathname):'https://yavrukusch.github.io/WrongWay/';
     const shareUrl=baseUrl+'?join='+(privateCode||'');
-    const waMsg=encodeURIComponent('Spiel mit mir Wrong Way! Code: '+(privateCode||'')+' · '+shareUrl);
+    const waMsg=encodeURIComponent((t('whatsappInvite')||'Play Wrong Way with me! Code: ')+(privateCode||'')+' · '+shareUrl);
     return(
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 30px)',background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
