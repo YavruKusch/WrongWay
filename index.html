@@ -1757,6 +1757,7 @@ function applyMoves(moveList,step,map){
   const walls=new Set();
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
+    if(m.type==='emote')continue;
     if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
     else if(m.type==='break')walls.delete(m.k);
     else walls.add(m.k);
@@ -1770,6 +1771,7 @@ function applyMovesWithOwner(moveList,step,map){
   const wallOwner={};
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
+    if(m.type==='emote')continue;
     if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
     else if(m.type==='break'){walls.delete(m.k);delete wallOwner[m.k];}
     else{walls.add(m.k);wallOwner[m.k]=m.p||null;}
@@ -3823,6 +3825,8 @@ function App(){
     setEmoteCooldown(true);
     setEmotePicker(false);
     showEmote(me,type);
+    // Emote in moveHist aufzeichnen für Replay
+    setMoveHist(prev=>[...prev,{type:'emote',p:me,emote:type}]);
     // Online: an Gegner senden
     if(gameMode==='online'&&lobbyId){
       window.db.ref(`barricade_emote_${lobbyId}/${me}`).set(JSON.stringify({type,ts:Date.now()}));
@@ -6159,8 +6163,27 @@ function App(){
     const rNameA=rEntry&&rEntry.nameA?rEntry.nameA:pname('A');
     const rNameB=rEntry&&rEntry.nameB?rEntry.nameB:pname('B');
     const rPname=p=>p==='A'?rNameA:rNameB;
+    const rWinner=rEntry?rEntry.winner:winner;
+    const isEnd=replayStep>=rMoves.length;
+    // Emote aus aktuellem Move
+    const curEmote=curMove&&curMove.type==='emote'?curMove:null;
+    // Emote aus vorherigem Move (bleibt kurz sichtbar)
+    const prevMove=replayStep>0?rMoves[replayStep-1]:null;
+    const prevEmote=prevMove&&prevMove.type==='emote'?prevMove:null;
+    const activeEmote=curEmote||prevEmote||null;
     return (
       <div style={{...sCont,paddingBottom:80,paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
+        {/* Gewinner-Tanz am Ende */}
+        {isEnd&&rWinner&&(
+          <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+            zIndex:500,pointerEvents:'none',background:'rgba(0,0,0,0.15)'}}>
+            <Confetti color={PC[rWinner]}/>
+            <div style={{animation:'person-grow 0.3s ease-out both'}}>
+              <WinnerPerson color={PC[rWinner]} dark={PD[rWinner]} speed={danceSpeed} dance={danceStyle}/>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:10}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -6200,8 +6223,7 @@ function App(){
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
             var wallColor=owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
-            var wallOpacity=owner?0.75:1;
-            return <Wall key={k} wkey={k} color={wallColor} opacity={wallOpacity} steel={isSteelWall(k)}/>;
+            return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner?PC[owner]:null}/>;
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=30,off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
@@ -6209,17 +6231,26 @@ function App(){
               <Piece color={PC[p]} dark={PD[p]}/>
             </div>
           );})}
+          {/* Emote-Anzeige über Spieler */}
+          {activeEmote&&(
+            <div key={replayStep+'e'} style={{position:'absolute',
+              left:(activeEmote.p==='A'?rs.pA.c:rs.pB.c)*CELL+CELL/2-28,
+              top:(activeEmote.p==='A'?rs.pA.r:rs.pB.r)*CELL-52,
+              zIndex:30,pointerEvents:'none',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+              <EmoteHead color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote} size={40}/>
+            </div>
+          )}
         </div>
         <div style={{fontSize:9,letterSpacing:3,color:rMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:rMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{rMap==='duel'?'<< '+t('goalLabel')+' (Blau)':t('startLabel')}</div>
 
         {/* Legende Wandfarben */}
         <div style={{display:'flex',gap:12,marginBottom:12,alignItems:'center'}}>
           <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:18,height:5,borderRadius:3,background:'#ef4444',opacity:0.75}}/>
+            <div style={{width:18,height:5,borderRadius:3,background:'#ef4444'}}/>
             <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameA}</span>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:18,height:5,borderRadius:3,background:'#3b82f6',opacity:0.75}}/>
+            <div style={{width:18,height:5,borderRadius:3,background:'#3b82f6'}}/>
             <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameB}</span>
           </div>
         </div>
@@ -6232,7 +6263,16 @@ function App(){
             <div style={{width:10,height:10,borderRadius:'50%',background:PC[curMove.p],flexShrink:0}}/>
             <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{rPname(curMove.p)}</span>
             <span style={{fontSize:12,color:'var(--subtle)'}}>-</span>
-            <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>{curMove.type==='move'?t('step'):t('wallPlaced')}</span>
+            <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>
+              {curMove.type==='move'?t('step'):curMove.type==='emote'?('Emote'):t('wallPlaced')}
+            </span>
+          </div>
+        )}
+        {isEnd&&rWinner&&(
+          <div style={{padding:'8px 16px',borderRadius:12,background:PC[rWinner]+'22',
+            border:'1.5px solid '+PC[rWinner]+'55',fontSize:13,fontWeight:800,
+            color:PC[rWinner],textAlign:'center',marginBottom:12}}>
+            {rPname(rWinner)} {t('wins')}
           </div>
         )}
 
@@ -7416,24 +7456,29 @@ function ClipboardIcon({size,color}){
     <rect x="8" y="3" width="9" height="12" rx="2"/><path d="M5 7 V19 a2 2 0 0 0 2 2 H14"/>
   </svg>;
 }
-function Wall({wkey,color,opacity,animate,golden,steel}){
+function Wall({wkey,color,opacity,animate,golden,steel,steelColor}){
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
   const enterAnim=isH?'wall-enter-h':'wall-enter-v';
   if(steel){
-    const metalBg=isH
-      ?'linear-gradient(180deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)'
-      :'linear-gradient(90deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)';
+    // Mit Spielerfarbe: farbiger Stahl-Look, sonst klassisch metallisch
+    const metalBg=steelColor
+      ?(isH
+        ?'linear-gradient(180deg,'+steelColor+'cc 0%,'+steelColor+' 50%,'+steelColor+'99 100%)'
+        :'linear-gradient(90deg,'+steelColor+'cc 0%,'+steelColor+' 50%,'+steelColor+'99 100%)')
+      :(isH
+        ?'linear-gradient(180deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)'
+        :'linear-gradient(90deg,#eef2f6 0%,#c2ccd8 16%,#94a0af 48%,#5d6878 80%,#3a4250 100%)');
     const bolts=isH
       ?[{left:5,top:p.height/2-2},{left:p.width/2-2,top:p.height/2-2},{left:p.width-9,top:p.height/2-2}]
       :[{left:p.width/2-2,top:5},{left:p.width/2-2,top:p.height/2-2},{left:p.width/2-2,top:p.height-9}];
     return <div style={{position:'absolute',...p,background:metalBg,borderRadius:2,zIndex:10,
-      pointerEvents:'none',opacity,transformOrigin:'center center',
-      boxShadow:'inset 0 0 0 1px rgba(30,41,59,0.5),inset 0 1px 1px rgba(255,255,255,0.5),0 2px 5px rgba(0,0,0,0.4)',
+      pointerEvents:'none',opacity:opacity!==undefined?opacity:1,transformOrigin:'center center',
+      boxShadow:steelColor?('0 0 0 1px '+steelColor+'88,0 2px 8px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.35)'):('inset 0 0 0 1px rgba(30,41,59,0.5),inset 0 1px 1px rgba(255,255,255,0.5),0 2px 5px rgba(0,0,0,0.4)'),
       animation:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}>
       {bolts.map((b,i)=><span key={i} style={{position:'absolute',left:b.left,top:b.top,
         width:4,height:4,borderRadius:'50%',
-        background:'radial-gradient(circle at 35% 30%,#f8fafc 0%,#9aa6b4 55%,#334155 100%)',
+        background:steelColor?'rgba(255,255,255,0.7)':'radial-gradient(circle at 35% 30%,#f8fafc 0%,#9aa6b4 55%,#334155 100%)',
         boxShadow:'inset 0 0 0 0.5px rgba(0,0,0,0.45)'}}/>)}
     </div>;
   }
@@ -7443,8 +7488,8 @@ function Wall({wkey,color,opacity,animate,golden,steel}){
     :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
   return <div style={{position:'absolute',...p,
     background:golden?goldenBg:color,
-    borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity,
-    boxShadow:golden?'none':opacity===1?'0 2px 6px rgba(0,0,0,0.22)':'none',
+    borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity:opacity!==undefined?opacity:1,
+    boxShadow:golden?'none':'0 2px 8px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.15)',
     transformOrigin:'center center',
     animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
 }
