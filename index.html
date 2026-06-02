@@ -3851,6 +3851,9 @@ function App(){
       if(newGN<oldGN)return;
       if(newGN===oldGN&&newMoveCount<oldMoveCount)return;
       lastOnlineTs.current=gs.lastUpdated||Date.now();
+      // Ein empfangener Spielzustand vom Gegner ist ein sicheres Lebenszeichen:
+      // Gegner-Timeout-Timer zurücksetzen (verhindert Fehl-Disconnect bei aktivem Spiel).
+      oppLastSeenRef.current=Date.now();
 
       // Timer-Modus aus Spielzustand uebernehmen (beide Spieler sehen dieselbe Minutenanzahl)
       if(gs.tm!==undefined&&gs.tm!==S.current.gameTimeMode){
@@ -4019,7 +4022,11 @@ function App(){
     const ref=window.db.ref(`barricade_hb_${lobbyId}/${oppRole}`);
     const cb=ref.on('value',snap=>{
       const v=snap.val();
-      if(v&&v>0)oppLastSeenRef.current=v;
+      // WICHTIG: lokale Empfangszeit speichern, NICHT den fremden Zeitstempel.
+      // Sonst verfälscht eine Uhren-Differenz zwischen den Geräten (Clock-Skew) die Berechnung
+      // und ein anwesender Gegner wird fälschlich als "weg" erkannt.
+      // v===0 = Gegner hat onDisconnect ausgelöst (Verbindung weg) → nicht updaten, Timer-Grace greift.
+      if(v&&v>0)oppLastSeenRef.current=Date.now();
     });
     return()=>ref.off('value',cb);
   },[gameMode,lobbyId,screen,winner,onlineRole]);
@@ -4040,15 +4047,15 @@ function App(){
       const last=oppLastSeenRef.current;
       if(!last)return;
       const elapsed=nowT-last;
-      if(elapsed>15000){
+      if(elapsed>20000){
         const winP=onlineRole;
         const s=S.current;
         if(s.winner)return;
         doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem});
         setOppCountdown(null);
         triggerWin(winP,true);
-      }else if(elapsed>5000){
-        setOppCountdown(Math.ceil((15000-elapsed)/1000));
+      }else if(elapsed>8000){
+        setOppCountdown(Math.ceil((20000-elapsed)/1000));
       }else{
         setOppCountdown(null);
       }
