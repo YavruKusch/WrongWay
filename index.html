@@ -2613,6 +2613,153 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     </div>
   );
 }
+function LeaderboardScreen({t,darkMode,goBack,account}){
+  const[mode,setMode]=React.useState('classic');
+  const[entries,setEntries]=React.useState([]);
+  const[loading,setLoading]=React.useState(true);
+  const dk=darkMode;
+  const bg=dk?'#0a1020':'#f8f9fa';
+  const card=dk?'#161e33':'#ffffff';
+  const txt=dk?'#f1f5f9':'#0f172a';
+  const muted=dk?'#64748b':'#94a3b8';
+  const border=dk?'#252d44':'#e2e8f0';
+  const gold='#f59e0b',silver='#94a3b8',bronze='#b45309';
+
+  const load=async()=>{
+    setLoading(true);
+    try{
+      if(!window.db){setLoading(false);return;}
+      const snap=await window.db.ref('ww_leaderboard').once('value');
+      const data=snap.val()||{};
+      const list=Object.entries(data)
+        .map(([key,v])=>({key,name:v.name||'?',color:v.color||'#8b5cf6',classic:v.classic,duel:v.duel}))
+        .filter(e=>e[mode]&&e[mode].rating);
+      list.sort((a,b)=>(b[mode]&&b[mode].rating||0)-(a[mode]&&a[mode].rating||0));
+      setEntries(list);
+    }catch(e){console.warn('Leaderboard load error',e);}
+    setLoading(false);
+  };
+  React.useEffect(()=>{load();},[mode]);
+
+  const MEDAL=['🥇','🥈','🥉'];
+  const myKey=account?account.key:null;
+
+  return(
+    <div style={{minHeight:'100vh',minHeight:'100dvh',background:'transparent',
+      display:'flex',flexDirection:'column',alignItems:'center',position:'relative',
+      paddingTop:'calc(env(safe-area-inset-top)+60px)',paddingBottom:32}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={goBack} style={{position:'fixed',left:'calc(10px + env(safe-area-inset-left,0px))',
+        top:'calc(env(safe-area-inset-top)+14px)',zIndex:300,width:40,height:40,borderRadius:12,
+        display:'flex',alignItems:'center',justifyContent:'center',background:card,
+        border:'1.5px solid '+border,color:txt,fontSize:24,fontWeight:800,cursor:'pointer',
+        boxShadow:'0 2px 8px rgba(0,0,0,0.1)',fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
+      <div style={{width:'100%',maxWidth:380,padding:'0 14px',position:'relative',zIndex:1}}>
+        {/* Header */}
+        <div style={{textAlign:'center',marginBottom:20}}>
+          <div style={{fontSize:28,marginBottom:6}}>🏆</div>
+          <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>Rangliste</div>
+          <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>Ranked ELO · Classic &amp; Duell</div>
+        </div>
+        {/* Mode-Tabs */}
+        <div style={{display:'flex',gap:8,marginBottom:16,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)',
+          borderRadius:12,padding:4}}>
+          {[['classic','🏎 Classic Race'],['duel','⚔ Duell']].map(([m,lbl])=>(
+            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:'9px 4px',borderRadius:9,
+              background:mode===m?card:'transparent',border:'none',cursor:'pointer',
+              fontSize:13,fontWeight:800,color:mode===m?txt:muted,
+              boxShadow:mode===m?'0 2px 8px rgba(0,0,0,0.08)':'none',
+              transition:'all 0.18s',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        {/* Liste */}
+        {loading?(
+          <div style={{textAlign:'center',padding:'40px 0',color:muted,fontSize:14,fontWeight:600}}>
+            Lade Rangliste…
+          </div>
+        ):entries.length===0?(
+          <div style={{textAlign:'center',padding:'40px 16px',background:card,borderRadius:16,
+            border:'1.5px solid '+border}}>
+            <div style={{fontSize:36,marginBottom:10}}>🏁</div>
+            <div style={{fontSize:15,fontWeight:800,color:txt,marginBottom:4}}>Noch keine Einträge</div>
+            <div style={{fontSize:12,color:muted}}>Spiel ein Ranked-Match um hier zu erscheinen!</div>
+          </div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {entries.map((e,i)=>{
+              const r=e[mode]||{rating:1000,wins:0,losses:0};
+              const tier=rankTier(r.rating);
+              const isMe=e.key===myKey;
+              const top3=i<3;
+              return(
+                <div key={e.key} style={{display:'flex',alignItems:'center',gap:10,
+                  padding:'10px 14px',borderRadius:14,
+                  background:isMe?(dk?'rgba(139,92,246,0.18)':'rgba(139,92,246,0.08)'):card,
+                  border:`1.5px solid ${isMe?'#8b5cf6':(top3&&i===0?'rgba(245,158,11,0.4)':border)}`,
+                  boxShadow:isMe?'0 0 0 2px #8b5cf620':'none',
+                  position:'relative',overflow:'hidden'}}>
+                  {/* Rang-Position */}
+                  <div style={{width:28,textAlign:'center',flexShrink:0}}>
+                    {top3?(
+                      <span style={{fontSize:20}}>{MEDAL[i]}</span>
+                    ):(
+                      <span style={{fontSize:13,fontWeight:800,color:muted}}>#{i+1}</span>
+                    )}
+                  </div>
+                  {/* Avatar */}
+                  <div style={{width:38,height:38,borderRadius:'50%',flexShrink:0,
+                    background:e.color||'#8b5cf6',display:'flex',alignItems:'center',
+                    justifyContent:'center',
+                    boxShadow:`0 2px 8px ${e.color||'#8b5cf6'}55`}}>
+                    <span style={{fontSize:16,fontWeight:900,color:'#fff'}}>{(e.name||'?').slice(0,1).toUpperCase()}</span>
+                  </div>
+                  {/* Name + Stats */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:800,color:txt,display:'flex',alignItems:'center',gap:5,
+                      whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                      {e.name}
+                      {isMe&&<span style={{fontSize:9,fontWeight:900,background:'#8b5cf6',color:'#fff',
+                        padding:'1px 5px',borderRadius:6,letterSpacing:0.5}}>DU</span>}
+                    </div>
+                    <div style={{fontSize:11,color:muted,fontWeight:600,display:'flex',alignItems:'center',gap:6,marginTop:1}}>
+                      <span style={{color:i===0?gold:i===1?silver:i===2?bronze:muted}}>{tier.icon} {tier.label}</span>
+                      <span>·</span>
+                      <span>{r.wins||0}S {r.losses||0}N</span>
+                    </div>
+                  </div>
+                  {/* ELO */}
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{fontSize:20,fontWeight:900,letterSpacing:-0.5,
+                      color:i===0?gold:i===1?silver:i===2?bronze:(isMe?'#8b5cf6':txt)}}>
+                      {r.rating}
+                    </div>
+                    <div style={{fontSize:9,color:muted,fontWeight:700,letterSpacing:0.5}}>ELO</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {/* Refresh */}
+        {!loading&&(
+          <button onClick={load} style={{width:'100%',marginTop:14,padding:'12px',borderRadius:12,
+            background:'transparent',border:'1.5px solid '+border,color:muted,fontSize:13,fontWeight:700,
+            cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+            ↻ Aktualisieren
+          </button>
+        )}
+        {/* Hinweis */}
+        <div style={{textAlign:'center',marginTop:12,fontSize:11,color:muted,fontWeight:600}}>
+          Nur Spieler mit min. 1 Ranked-Spiel erscheinen hier
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const[gs,setGs]=React.useState(null);
   const[gone,setGone]=React.useState(false);
@@ -3199,6 +3346,13 @@ function App(){
           rs.rating=elo.newRating;rs.games=(rs.games||0)+1;
           if(won)rs.wins=(rs.wins||0)+1;else rs.losses=(rs.losses||0)+1;
           rk[rm]=rs;newStats.ranked=rk;
+          // Rangliste aktualisieren
+          if(window.db){
+            window.db.ref('ww_leaderboard/'+acc.key).update({
+              name:acc.name,color:acc.color||'#8b5cf6',
+              [rm]:{rating:rs.rating,wins:rs.wins,losses:rs.losses}
+            });
+          }
         }
         const newAcc=Object.assign({},acc,{stats:newStats});
         setAccount(newAcc);
@@ -3246,7 +3400,7 @@ function App(){
   const myTurn=gameMode==='online'?turn===onlineRole:true;
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
-  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu'};
+  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
   const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards';
@@ -4434,6 +4588,16 @@ function App(){
           </div>
         )}
 
+        {/* RANGLISTE */}
+        {(adminCfg.features.ranked||isAdmin())&&(
+          <MenuItem
+            icon={<span style={{fontSize:18,lineHeight:1}}>🏆</span>}
+            iconBg="linear-gradient(135deg,#f59e0b,#d97706)"
+            title="Rangliste"
+            desc="Alle Ranked-Spieler · Classic &amp; Duell"
+            onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}/>
+        )}
+
         {/* ONLINE SPIELEN */}
         {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
@@ -4970,6 +5134,10 @@ function App(){
   }
 
   // ── RANKED ──────────────────────────────────────────────
+  if(screen==='leaderboard'){
+    return <LeaderboardScreen t={t} darkMode={darkMode} goBack={goBack} account={account}/>;
+  }
+
   if(screen==='ranked'){
     return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
       onStart={doStartRanked} features={adminCfg.features}/>;
