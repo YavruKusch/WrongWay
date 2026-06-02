@@ -1273,6 +1273,197 @@ function aiDuel(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,hu
   return advance();
 }
 
+// ── Duell-KI v2: klare Abstufung (Normal solide, Hard nahezu unschlagbar) ──
+// Misst wie stark ein einzelner Gegnerzug den eigenen Weg verzoegern koennte (klein = robuster).
+function worstWallDelay(target,walls,goal,pA,pB,goalA,goalB){
+  const base=duelDist(target,walls,goal);
+  if(base===Infinity)return 99;
+  const cands=wallCandidates(target,walls,4,goal);
+  let worst=0;
+  for(const k of cands){
+    const nw=tryWall(k,walls,pA,pB,goalA,goalB);
+    if(!nw)continue;
+    const nd=duelDist(target,nw,goal);
+    if(nd===Infinity)continue;
+    const delay=nd-base;
+    if(delay>worst)worst=delay;
+  }
+  return worst;
+}
+// Anzahl kanten-disjunkter Wege zum Ziel (mehr = schwerer mit einer Mauer zu kappen).
+function aiDisjoint(start,goal,walls,cap){
+  try{return disjointPaths2(start,goal,walls,ROWS,COLS,cap);}catch(_){return 1;}
+}
+
+// Duell-Normal: 1-Zug-Vorausschau, blockt optimal gewaehlt & rueckt klug vor.
+// Deutlich ueber Easy (optimale Mauerwahl statt zufaellig), klar unter Hard (kein Minimax).
+function aiDuelNormal(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  const initMoves=getMovesFrom(aiPos,humanPos,walls);
+  for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
+  if(chaosItem){const d=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);if(d)return{type:'move',pos:d};}
+  const aiPath=bfsPath(aiPos,walls,aiGoal),humPath=bfsPath(humanPos,walls,humGoal);
+  if(!aiPath)return{type:'move',pos:initMoves[0]||aiPos};
+  const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
+  const advance=()=>{const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};};
+  if(chaosItem){const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr,aiGoal);if(pick)return{type:'move',pos:pick};}
+  const block=aiBarr>0?duelBestWall(aiPos,humanPos,walls,aiGoal,humGoal):null;
+  // Gegner fuehrt oder gleichauf -> aggressiv blocken
+  if(block&&humD<=aiD&&block.humDelay>=1&&block.aiCost<=1){
+    const p=humD<aiD?0.85:0.55;
+    if(Math.random()<p)return{type:'barricade',key:block.key,walls:block.walls};
+  }
+  // KI fuehrt -> nur sehr effiziente Mauern setzen
+  if(block&&block.humDelay>=2&&block.aiCost<=0&&Math.random()<0.4){
+    return{type:'barricade',key:block.key,walls:block.walls};
+  }
+  return advance();
+}
+
+// Duell-Hard: Minimax (Alpha-Beta, Tiefe 3) + Pfad-Robustheit.
+// Sichert den eigenen Weg ab (schwer blockierbar) und blockt den Gegner vorausschauend.
+function aiDuelHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  const initMoves=getMovesFrom(aiPos,humanPos,walls);
+  for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
+  if(chaosItem){const direct=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);if(direct)return{type:'move',pos:direct};}
+  const recent=recentAi||[];
+  const aiFwdDown=aiGoal>aiPos.r;
+  const aiPathInit=bfsPath(aiPos,walls,aiGoal);
+  const humPathInit=bfsPath(humanPos,walls,humGoal);
+
+  // Endspiel-Sprint: klar in Front & sehr kurzer Pfad -> direkt durchlaufen.
+  if(aiPathInit&&aiPathInit.length>1){
+    const aiDI=aiPathInit.length-1;
+    const humDI=humPathInit?humPathInit.length-1:999;
+    if((aiBarr<=0&&!chaosItem)||(aiDI<=2&&humDI>aiDI)){
+      const m=moveTowardGoal(aiPos,humanPos,walls,aiPathInit);
+      if(m)return{type:'move',pos:m};
+    }
+  }
+
+  const t0=Date.now();
+  const TIME=700;
+
+  const evalState=(ap,hp,w,ab,hb)=>{
+    const apath=bfsPath(ap,w,aiGoal),hpath=bfsPath(hp,w,humGoal);
+    if(!apath)return-99999;
+    if(!hpath)return 99999;
+    if(ap.r===aiGoal)return 50000;
+    if(hp.r===humGoal)return-50000;
+    const aiD=apath.length-1,humD=hpath.length-1;
+    return(humD-aiD)*28 - aiD*4 + humD*1.0 + (ab-hb)*5;
+  };
+
+  const genActions=(ap,hp,w,ab,hb,forAi,maxWalls)=>{
+    const me=forAi?ap:hp;
+    const opp=forAi?hp:ap;
+    const myBarr=forAi?ab:hb;
+    const meGoal=forAi?aiGoal:humGoal;
+    const oppGoal=forAi?humGoal:aiGoal;
+    const acts=[];
+    const myPath=bfsPath(me,w,meGoal);
+    const moves=getMovesFrom(me,opp,w);
+    for(const m of moves){
+      let pri=0;
+      if(myPath&&myPath.length>1&&myPath[1].r===m.r&&myPath[1].c===m.c)pri=30;
+      if(meGoal>me.r?m.r>me.r:m.r<me.r)pri+=8;
+      acts.push({type:'move',pos:m,_p:pri});
+    }
+    if(myBarr>0){
+      const cands=wallCandidates(opp,w,6,oppGoal);
+      const oldOppPath=bfsPath(opp,w,oppGoal);
+      const oldOppD=oldOppPath?oldOppPath.length-1:0;
+      const myOldD=myPath?myPath.length-1:0;
+      const scored=[];
+      for(const k of cands){
+        const next=tryWall(k,w,ap,hp,aiGoal,humGoal);
+        if(!next)continue;
+        const np=bfsPath(opp,next,oppGoal);
+        if(!np)continue;
+        const myNew=bfsPath(me,next,meGoal);
+        if(!myNew)continue;
+        const gain=((np.length-1)-oldOppD)-((myNew.length-1)-myOldD);
+        if(gain<=0)continue;
+        scored.push({next,gain});
+      }
+      scored.sort((a,b)=>b.gain-a.gain);
+      const lim=Math.min(maxWalls,scored.length);
+      for(let i=0;i<lim;i++)acts.push({type:'barricade',walls:scored[i].next,_p:scored[i].gain*8});
+    }
+    acts.sort((a,b)=>b._p-a._p);
+    return acts;
+  };
+
+  const search=(ap,hp,w,ab,hb,depth,maximizing,alpha,beta)=>{
+    if(ap.r===aiGoal)return 50000-depth;
+    if(hp.r===humGoal)return-50000+depth;
+    if(depth===0||Date.now()-t0>TIME)return evalState(ap,hp,w,ab,hb);
+    const maxW=depth>=2?4:3;
+    const acts=genActions(ap,hp,w,ab,hb,maximizing,maxW);
+    if(acts.length===0)return evalState(ap,hp,w,ab,hb);
+    if(maximizing){
+      let best=-Infinity;
+      for(const a of acts){
+        const s=a.type==='move'
+          ?search(a.pos,hp,w,ab,hb,depth-1,false,alpha,beta)
+          :search(ap,hp,a.walls,ab-1,hb,depth-1,false,alpha,beta);
+        if(s>best)best=s;
+        if(best>alpha)alpha=best;
+        if(beta<=alpha)break;
+      }
+      return best;
+    }
+    let best=Infinity;
+    for(const a of acts){
+      const s=a.type==='move'
+        ?search(ap,a.pos,w,ab,hb,depth-1,true,alpha,beta)
+        :search(ap,hp,a.walls,ab,hb-1,depth-1,true,alpha,beta);
+      if(s<best)best=s;
+      if(best<beta)beta=best;
+      if(beta<=alpha)break;
+    }
+    return best;
+  };
+
+  let bestScore=-Infinity,bestAction=null;
+  const myActs=genActions(aiPos,humanPos,walls,aiBarr,humBarr,true,8);
+  for(const a of myActs){
+    let s=a.type==='move'
+      ?search(a.pos,humanPos,walls,aiBarr,humBarr,3,false,-Infinity,Infinity)
+      :search(aiPos,humanPos,a.walls,aiBarr-1,humBarr,3,false,-Infinity,Infinity);
+    // Resultierender Zustand fuer Robustheits-Bewertung (eigenen Weg schuetzen)
+    const rPos=a.type==='move'?a.pos:aiPos;
+    const rW=a.type==='move'?walls:a.walls;
+    const worst=worstWallDelay(rPos,rW,aiGoal,rPos,humanPos,aiGoal,humGoal);
+    s-=worst*9;                                  // schwer blockierbarer Weg = besser
+    s+=aiDisjoint(rPos,aiGoal,rW,3)*6;           // mehr Ausweichrouten = besser
+    if(a.type==='move'){
+      if(aiPathInit&&aiPathInit.length>1&&aiPathInit[1].r===a.pos.r&&aiPathInit[1].c===a.pos.c)s+=20;
+      if(aiFwdDown?a.pos.r>aiPos.r:a.pos.r<aiPos.r)s+=6;
+      else if(aiFwdDown?a.pos.r<aiPos.r:a.pos.r>aiPos.r)s-=4;
+      if(chaosItem){
+        const oldD=Math.abs(aiPos.r-chaosItem.r)+Math.abs(aiPos.c-chaosItem.c);
+        const newD=Math.abs(a.pos.r-chaosItem.r)+Math.abs(a.pos.c-chaosItem.c);
+        if(newD<oldD&&newD<=4)s+=(5-newD)*4;
+        if(newD===0)s+=30;
+      }
+      if(recent.length>=2){
+        for(let i=1;i<Math.min(recent.length,5);i++){
+          if(recent[i].r===a.pos.r&&recent[i].c===a.pos.c){s-=(6-i)*12;break;}
+        }
+      }
+    }
+    if(s>bestScore){bestScore=s;bestAction=a;}
+  }
+  if(!bestAction){
+    if(aiPathInit&&aiPathInit.length>1)return{type:'move',pos:aiPathInit[1]};
+    const fm=getMovesFrom(aiPos,humanPos,walls);
+    if(fm.length)return{type:'move',pos:fm[0]};
+    return null;
+  }
+  if(bestAction.type==='move')return{type:'move',pos:bestAction.pos};
+  return{type:'barricade',walls:bestAction.walls};
+}
+
 function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal=0,humGoal=0){
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
   // Sofortiger Sieg hat absolute Priorität (eigene Zielreihe erreichen)
@@ -3761,7 +3952,9 @@ function App(){
         _hamCtx=st.hammerMode?buildHamCtx(hms,hh,a,b):null;
         // Duell-Modus: dedizierte aggressive/strategische KI (A*-Distanz, Blocken/Vordrang)
         if(mp==='duel'&&aiDifficulty==='hard'){
-          d=aiDuel(b,a,w,bl.B,bl.A,recentAi,chaosItem,aiGoal,humGoal);
+          d=aiDuelHard(b,a,w,bl.B,bl.A,recentAi,chaosItem,aiGoal,humGoal);
+        }else if(mp==='duel'&&aiDifficulty==='normal'){
+          d=aiDuelNormal(b,a,w,bl.B,bl.A,recentAi,chaosItem,aiGoal,humGoal);
         }else{
           d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem,aiGoal,humGoal);
         }
