@@ -3781,14 +3781,17 @@ function App(){
   // Globale Admin-Config live laden (alle Clients)
   useEffect(()=>{
     if(!window.db)return;
+    // Fallback: nach 3 Sekunden trotzdem öffnen
+    const timeout=setTimeout(()=>setAdminCfgReady(true),3000);
     const ref=window.db.ref(ADMIN_CFG_KEY);
     const cb=ref.on('value',snap=>{
+      clearTimeout(timeout);
       const v=snap.val();
       if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
       else setAdminCfg(DEFAULT_ADMIN_CFG);
       setAdminCfgReady(true);
     });
-    return ()=>ref.off('value',cb);
+    return ()=>{clearTimeout(timeout);ref.off('value',cb);};
   },[]);
 
   // URL ?join=CODE → automatisch zum Freund-Beitritt
@@ -5122,14 +5125,31 @@ function App(){
 
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
-    // Config noch nicht geladen — kurz warten um Flash zu vermeiden
+    // Config noch nicht geladen — Ladescreen
     if(!adminCfgReady){
       return(
-        <div style={{...sPage,background:'var(--bg)',justifyContent:'center',alignItems:'center'}}>
-          <MenuBG dark={darkMode}/>
-          <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
-            <BrickWallIcon size={48} light/>
-            <div style={{fontSize:13,fontWeight:700,color:'var(--subtle)'}}>{t('loading')}</div>
+        <div style={{position:'fixed',inset:0,background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,zIndex:9999}}>
+          <div style={{
+            width:80,height:80,borderRadius:20,
+            background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:'0 8px 32px rgba(139,92,246,0.4)',
+            animation:'pulse 1.5s ease-in-out infinite'}}>
+            <BrickWallIcon size={44} light/>
+          </div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:26,fontWeight:900,letterSpacing:-1,color:'var(--text)'}}>Wrong Way</div>
+            <div style={{fontSize:12,fontWeight:600,color:'var(--subtle)',marginTop:4,fontStyle:'italic'}}>Don't be mad</div>
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:8}}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{
+                width:8,height:8,borderRadius:'50%',
+                background:'#8b5cf6',
+                animation:'pulse 1.2s ease-in-out infinite',
+                animationDelay:(i*0.2)+'s',
+                opacity:0.7}}/>
+            ))}
           </div>
         </div>
       );
