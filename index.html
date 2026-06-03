@@ -6774,10 +6774,18 @@ function App(){
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div style={{fontSize:9,letterSpacing:3,
-          color:rMap==='duel'?'#ef4444':'#16a34a',
-          fontWeight:700,textTransform:'uppercase',marginBottom:2}}>
-          {rMap==='duel'?'>> '+t('goalLabel')+' ('+pname('A')+')':t('goalLabel')}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,width:COLS*CELL}}>
+          {rMap==='duel'?(
+            <>
+              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,transparent,${PC['A']})`}}/>
+              <div style={{fontSize:10,fontWeight:800,color:PC['A'],display:'flex',alignItems:'center',gap:3}}>
+                <span style={{fontSize:14}}>▲</span><span>{pname('A')}</span>
+              </div>
+              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,${PC['A']},transparent)`}}/>
+            </>
+          ):(
+            <div style={{flex:1,height:2,borderRadius:2,background:'#16a34a',opacity:0.4}}/>
+          )}
         </div>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
           {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){return(
@@ -6811,10 +6819,18 @@ function App(){
             </div>
           )}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,
-          color:rMap==='duel'?'#3b82f6':'var(--subtle)',
-          fontWeight:rMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>
-          {rMap==='duel'?'<< '+t('goalLabel')+' ('+pname('B')+')':t('startLabel')}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:14,width:COLS*CELL}}>
+          {rMap==='duel'?(
+            <>
+              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,transparent,${PC['B']})`}}/>
+              <div style={{fontSize:10,fontWeight:800,color:PC['B'],display:'flex',alignItems:'center',gap:3}}>
+                <span style={{fontSize:14}}>▼</span><span>{pname('B')}</span>
+              </div>
+              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,${PC['B']},transparent)`}}/>
+            </>
+          ):(
+            <div style={{flex:1,height:2,borderRadius:2,background:'var(--subtle)',opacity:0.2}}/>
+          )}
         </div>
 
         {/* Legende Wandfarben */}
@@ -7188,10 +7204,22 @@ function App(){
 
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
-      <div style={{fontSize:9,letterSpacing:3,
-        color:selectedMap==='duel'?'#ef4444':'#16a34a',
-        fontWeight:700,textTransform:'uppercase',marginBottom:2}}>
-        {selectedMap==='duel'?('>> '+t('goalLabel')+' '+pname('A')):t('goalLabel')}
+      {/* Goal-Richtungsanzeige oben */}
+      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,width:COLS*CELL}}>
+        {selectedMap==='duel'?(
+          <>
+            <div style={{flex:1,height:3,borderRadius:2,
+              background:`linear-gradient(90deg,transparent,${PC['A']})`}}/>
+            <div style={{fontSize:10,fontWeight:800,color:PC['A'],letterSpacing:1,display:'flex',alignItems:'center',gap:3}}>
+              <span style={{fontSize:14,lineHeight:1}}>▲</span>
+              <span>{pname('A')}</span>
+            </div>
+            <div style={{flex:1,height:3,borderRadius:2,
+              background:`linear-gradient(90deg,${PC['A']},transparent)`}}/>
+          </>
+        ):(
+          <div style={{flex:1,height:2,borderRadius:2,background:'#16a34a',opacity:0.4}}/>
+        )}
       </div>
 
       {/* Grid */}
@@ -7206,8 +7234,8 @@ function App(){
           const duel=selectedMap==='duel';
           const isGoal=r===0,isStart=r===ROWS-1;
           let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
-          if(isGoal)bg=duel?'rgba(239,68,68,0.13)':'var(--goal)';
-          if(isStart)bg=duel?'rgba(59,130,246,0.13)':'var(--start)';
+          if(isGoal)bg='var(--goal)';
+          if(isStart)bg=duel?'var(--goal)':'var(--start)';
           return(
             <div key={r+'-'+c} data-r={r} data-c={c} onClick={()=>handleCellClick(r,c)}
               style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
@@ -7215,10 +7243,10 @@ function App(){
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
               {isGoal&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
-                background:duel?'linear-gradient(90deg,#ef4444,#f87171)':'linear-gradient(90deg,#16a34a,#22c55e)',
+                background:'linear-gradient(90deg,#16a34a,#22c55e)',
                 pointerEvents:'none'}}/>}
               {isStart&&duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
-                background:'linear-gradient(90deg,#3b82f6,#60a5fa)',pointerEvents:'none'}}/>}
+                background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
               {isStart&&!duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'var(--border)',pointerEvents:'none'}}/>}
               {vDot&&!isA&&!isB&&<div style={{width:10,height:10,borderRadius:'50%',background:color,opacity:0.32,pointerEvents:'none'}}/>}
             </div>
@@ -7271,10 +7299,22 @@ function App(){
         );
       })()}
 
-      <div style={{fontSize:9,letterSpacing:3,
-        color:selectedMap==='duel'?'#3b82f6':'var(--subtle)',
-        fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2}}>
-        {selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?('>> '+t('goalLabel')+' '+pname('A')):('<< '+t('goalLabel')+' '+pname('B'))):t('startLabel')}
+      {/* Goal-Richtungsanzeige unten */}
+      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,width:COLS*CELL}}>
+        {selectedMap==='duel'?(
+          <>
+            <div style={{flex:1,height:3,borderRadius:2,
+              background:`linear-gradient(90deg,transparent,${PC['B']})`}}/>
+            <div style={{fontSize:10,fontWeight:800,color:PC['B'],letterSpacing:1,display:'flex',alignItems:'center',gap:3}}>
+              <span style={{fontSize:14,lineHeight:1}}>▼</span>
+              <span>{pname('B')}</span>
+            </div>
+            <div style={{flex:1,height:3,borderRadius:2,
+              background:`linear-gradient(90deg,${PC['B']},transparent)`}}/>
+          </>
+        ):(
+          <div style={{flex:1,height:2,borderRadius:2,background:'var(--subtle)',opacity:0.2}}/>
+        )}
       </div>
 
       {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
@@ -8575,6 +8615,8 @@ const sPage={height:'100dvh',minHeight:'100dvh',background:'var(--bg)',overflowY
 const sCont={height:'100dvh',minHeight:'100dvh',overflowY:'auto',overscrollBehavior:'none',WebkitOverflowScrolling:'touch',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
   touchAction:'pan-y'};
+// Stretch-Helper damit kein weißer Bereich beim Scrollen sichtbar wird
+const scrollStretch={minHeight:'calc(100dvh + 1px)',display:'flex',flexDirection:'column',alignItems:'center',width:'100%'};
 const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
   boxShadow:'var(--shadow-card)',border:'1.5px solid var(--border)'};
 const sBack={background:'none',border:'none',cursor:'pointer',fontSize:13,color:'var(--subtle)',
