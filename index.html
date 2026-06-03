@@ -533,8 +533,20 @@ const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
 const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
-// Admin-Gate: ?admin=wrongway schaltet das Admin-Panel frei (Passwort hier anpassbar)
-function isAdmin(){try{return new URLSearchParams(window.location.search).get('admin')==='elifseray';}catch(e){return false;}}
+// Admin-Gate: Passwort wird als SHA-256 Hash verglichen, nie im Klartext gespeichert
+const ADMIN_HASH="d368f5db7669d1fd75264c840ca016f384083996b5bd9007894dbafe96d3f0b1";
+let _adminUnlocked=false;
+(async function(){
+  try{
+    const param=new URLSearchParams(window.location.search).get("admin");
+    if(!param)return;
+    const enc=new TextEncoder().encode(param);
+    const buf=await crypto.subtle.digest("SHA-256",enc);
+    const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    if(hash===ADMIN_HASH)_adminUnlocked=true;
+  }catch(e){}
+})();
+function isAdmin(){return _adminUnlocked;}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
 const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:true,duelStandard:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
