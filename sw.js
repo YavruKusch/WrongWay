@@ -1,5 +1,5 @@
-// Wrong Way PWA Service Worker - minimal caching
-const CACHE = 'wrongway-v3';
+// Wrong Way PWA Service Worker
+const CACHE = 'wrongway-v4';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -14,6 +14,12 @@ self.addEventListener('activate', e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => {
+        // Alle offenen Tabs über das Update informieren
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({type:'SW_UPDATED'}));
+        });
+      })
   );
 });
 
