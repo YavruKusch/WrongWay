@@ -16,6 +16,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/WrongWay/icon-192.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html{height:100%;overflow:hidden;}
+  body{height:100%;overflow:hidden;overscroll-behavior:none;}
   a{color:inherit;text-decoration:none;pointer-events:none;}
   :not(input):not(textarea){-webkit-touch-callout:none;}
   :root{
@@ -8339,9 +8341,9 @@ function GBtn({onClick,children,dark,blue,outline}){
 const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',color:dis?'var(--subtle)':'white',
   border:'none',borderRadius:10,cursor:dis?'not-allowed':'pointer',fontWeight:700,fontSize:16,
   fontFamily:'system-ui,-apple-system,sans-serif'});
-const sPage={minHeight:'100vh',minHeight:'100dvh',background:'transparent',display:'flex',flexDirection:'column',
+const sPage={height:'100dvh',background:'transparent',overflowY:'auto',overscrollBehavior:'contain',WebkitOverflowScrolling:'touch',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'center',padding:'24px',fontFamily:'system-ui,-apple-system,sans-serif'};
-const sCont={minHeight:'100vh',minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',
+const sCont={height:'100dvh',overflowY:'auto',overscrollBehavior:'contain',WebkitOverflowScrolling:'touch',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
   touchAction:'pan-y',WebkitOverflowScrolling:'touch'};
 const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
