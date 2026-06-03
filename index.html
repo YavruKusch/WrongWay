@@ -17,17 +17,19 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html{
-    height:100%;overflow:hidden;
+    min-height:100%;
     background-color:#f8f9fa;
     background-image:linear-gradient(rgba(15,23,42,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,0.04) 1px,transparent 1px);
     background-size:40px 40px;
+    background-attachment:fixed;
   }
   html.dark{
     background-color:#0f172a;
     background-image:linear-gradient(rgba(148,163,184,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.06) 1px,transparent 1px);
     background-size:40px 40px;
+    background-attachment:fixed;
   }
-  body{height:100%;overflow:hidden;overscroll-behavior:none;background:transparent;}
+  body{min-height:100%;overscroll-behavior:none;background:transparent;}
   body.dark{background:transparent;}
   a{color:inherit;text-decoration:none;pointer-events:none;}
   :not(input):not(textarea){-webkit-touch-callout:none;}
@@ -8694,9 +8696,9 @@ function GBtn({onClick,children,dark,blue,outline}){
 const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',color:dis?'var(--subtle)':'white',
   border:'none',borderRadius:10,cursor:dis?'not-allowed':'pointer',fontWeight:700,fontSize:16,
   fontFamily:'system-ui,-apple-system,sans-serif'});
-const sPage={height:'100dvh',minHeight:'100dvh',background:'transparent',overflowY:'auto',overscrollBehavior:'none',WebkitOverflowScrolling:'touch',display:'flex',flexDirection:'column',
+const sPage={minHeight:'100dvh',background:'transparent',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'center',padding:'24px',fontFamily:'system-ui,-apple-system,sans-serif'};
-const sCont={height:'100dvh',minHeight:'100dvh',overflowY:'auto',overscrollBehavior:'none',WebkitOverflowScrolling:'touch',background:'var(--bg)',display:'flex',flexDirection:'column',
+const sCont={minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
   touchAction:'pan-y'};
 // Stretch-Helper damit kein weißer Bereich beim Scrollen sichtbar wird
