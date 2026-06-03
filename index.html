@@ -3825,31 +3825,7 @@ function App(){
 
   // Lobby/Spiel-Konfiguration
   const[gameBarr,setGameBarr]=useState(10);
-  // Nach Config-Load: ungültige Spielmodi zurücksetzen
-  useEffect(()=>{
-    if(!adminCfgReady)return;
-    const f=adminCfg.features;
-    // Zeitmode prüfen
-    setGameTimeMode(prev=>{
-      if(prev==='classic-3'&&!f.classicTime3)return 'none';
-      if(prev==='classic-5'&&!f.classicTime5)return 'none';
-      if(prev==='classic-8'&&!f.classicTime8)return 'none';
-      if(prev==='blitz-5'&&!f.blitzTime5)return 'none';
-      if(prev==='blitz-8'&&!f.blitzTime8)return 'none';
-      if(prev==='blitz-10'&&!f.blitzTime10)return 'none';
-      return prev;
-    });
-    // Chaos/Drop/Hammer prüfen
-    if(!f.chaos)setChaosMode(false);
-    if(!f.drop)setDropMode(false);
-    if(!f.hammer)setHammerMode(false);
-    // Duell-Größe prüfen
-    setDuelSize(prev=>{
-      if(prev==='blitz'&&!f.duelBlitz)return 'standard';
-      if(prev==='standard'&&!f.duelStandard)return 'blitz';
-      return prev;
-    });
-  },[adminCfgReady]);
+  const[gameTimeMode,setGameTimeMode]=useState('none');
   const[chaosMode,setChaosMode]=useState(false);
   const[chaosItem,setChaosItem]=useState(null);
   const chaosSpawnRef=useRef(15);
@@ -3868,6 +3844,28 @@ function App(){
   // Anti-Stall-Wächter für Bot: bestDist = bisher kleinste BFS-Distanz zum Ziel, stall = Züge ohne Fortschritt
   const aiProgRef=useRef({best:Infinity,stall:0});
   const[goldenWalls,setGoldenWalls]=useState(new Set());
+  // Mode-Validierung nach Config-Load: ungültige Spielmodi zurücksetzen
+  useEffect(()=>{
+    if(!adminCfgReady)return;
+    const f=adminCfg.features;
+    setGameTimeMode(prev=>{
+      if(prev==='classic-3'&&!f.classicTime3)return 'none';
+      if(prev==='classic-5'&&!f.classicTime5)return 'none';
+      if(prev==='classic-8'&&!f.classicTime8)return 'none';
+      if(prev==='blitz-5'&&!f.blitzTime5)return 'none';
+      if(prev==='blitz-8'&&!f.blitzTime8)return 'none';
+      if(prev==='blitz-10'&&!f.blitzTime10)return 'none';
+      return prev;
+    });
+    if(!f.chaos)setChaosMode(false);
+    if(!f.drop)setDropMode(false);
+    if(!f.hammer)setHammerMode(false);
+    setDuelSize(prev=>{
+      if(prev==='blitz'&&!f.duelBlitz)return 'standard';
+      if(prev==='standard'&&!f.duelStandard)return 'blitz';
+      return prev;
+    });
+  },[adminCfgReady]);
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
