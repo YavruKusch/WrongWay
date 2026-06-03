@@ -5859,11 +5859,18 @@ function App(){
       }}/>;
   }
 
-  const doGoogleSignIn=async()=>{
-    try{
-      const provider=new firebase.auth.GoogleAuthProvider();
-      await firebase.auth().signInWithRedirect(provider);
-    }catch(e){setAuthErr('Google Login fehlgeschlagen');}
+  const doGoogleSignIn=()=>{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).then(async result=>{
+      if(result&&result.user){
+        const prof=await googleLoginOrCreate(result.user);
+        setAccount(prof);setNavDir('back');setScreen('menu');
+      }
+    }).catch(e=>{
+      if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
+        setAuthErr('Google Login fehlgeschlagen');
+      }
+    });
   };
   // ── AUTH (Login / Register) ─────────────────────────────
   if(screen==='auth'){
