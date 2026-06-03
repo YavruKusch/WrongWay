@@ -451,6 +451,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 
 <script>
   firebase.initializeApp({
@@ -463,6 +464,8 @@
     appId: "1:252603563986:web:705bc3ffcbb9d8ced2d20b"
   });
   window.db = firebase.database();
+  // Anonymen Auth-Ausweis holen (Voraussetzung für Firebase Security Rules)
+  firebase.auth().signInAnonymously().catch(function(e){console.warn('Auth',e);});
   // Fehler sichtbar anzeigen (kein DevTools nötig)
   window.onerror = function(msg,src,line){
     var m=document.getElementById('loader-msg');
