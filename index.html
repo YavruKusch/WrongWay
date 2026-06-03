@@ -5436,9 +5436,12 @@ function App(){
         {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
             {(adminCfg.features.online||isAdmin())&&<MenuItem
-              icon={<GlobeIcon size={19}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
+              icon={<GlobeIcon size={19} color="#fff"/>}
+              iconBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               title={t('playOnline')||'Spielen'} desc={t('createLobby')+' · '+t('joinExisting')}
               off={!adminCfg.features.online}
+              highlight
+              highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
             {(adminCfg.features.friend||isAdmin())&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
