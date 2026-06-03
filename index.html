@@ -6,14 +6,14 @@
 <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
 <title>Wrong Way: Don't be mad</title>
 <!-- PWA -->
-<link rel="manifest" href="/WrongWay/manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#3b82f6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Wrong Way">
-<link rel="apple-touch-icon" href="/WrongWay/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/WrongWay/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html{height:100%;overflow:hidden;background:#f8f9fa;}
@@ -481,7 +481,7 @@
   firebase.auth().signInAnonymously().catch(function(e){console.warn('Auth',e);});
   // PWA Service Worker
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/WrongWay/sw.js').catch(function(e){console.warn('SW',e);});
+    navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW',e);});
   }
   // Fehler sichtbar anzeigen (kein DevTools nötig)
   window.onerror = function(msg,src,line){
