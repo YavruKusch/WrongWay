@@ -482,6 +482,12 @@
   // PWA Service Worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW',e);});
+    // Update-Benachrichtigung vom SW empfangen
+    navigator.serviceWorker.addEventListener('message',function(event){
+      if(event.data&&event.data.type==='SW_UPDATED'){
+        window._swUpdated=true;
+      }
+    });
   }
   // Fehler sichtbar anzeigen (kein DevTools nötig)
   window.onerror = function(msg,src,line){
@@ -3513,6 +3519,7 @@ function App(){
   const[account,setAccount]=useState(null);
   const[pendingGoogleUser,setPendingGoogleUser]=useState(null);
   const[showPrivacy,setShowPrivacy]=useState(false);
+  const[updateAvailable,setUpdateAvailable]=useState(false);
   const[adminTaps,setAdminTaps]=useState(0);
   const[showAdminUnlock,setShowAdminUnlock]=useState(false);
   const[adminUnlockPw,setAdminUnlockPw]=useState('');
@@ -3860,6 +3867,13 @@ function App(){
   // Anti-Stall-Wächter für Bot: bestDist = bisher kleinste BFS-Distanz zum Ziel, stall = Züge ohne Fortschritt
   const aiProgRef=useRef({best:Infinity,stall:0});
   const[goldenWalls,setGoldenWalls]=useState(new Set());
+  // SW Update prüfen
+  useEffect(()=>{
+    const interval=setInterval(()=>{
+      if(window._swUpdated){setUpdateAvailable(true);window._swUpdated=false;}
+    },1000);
+    return()=>clearInterval(interval);
+  },[]);
   // Mode-Validierung nach Config-Load: ungültige Spielmodi zurücksetzen
   useEffect(()=>{
     if(!adminCfgReady)return;
@@ -5702,6 +5716,26 @@ function App(){
             }} style={{width:'100%',padding:'12px',marginTop:12,borderRadius:10,background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
               Entsperren
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Update-Banner */}
+      {updateAvailable&&(
+        <div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 8px)',left:'50%',
+          transform:'translateX(-50%)',zIndex:500,
+          background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',
+          borderRadius:20,padding:'10px 18px',
+          display:'flex',alignItems:'center',gap:10,
+          boxShadow:'0 4px 20px rgba(139,92,246,0.4)',
+          cursor:'pointer',maxWidth:320,width:'calc(100% - 32px)'}
+        } onClick={()=>window.location.reload()}>
+          <div style={{fontSize:13,fontWeight:700,color:'white',flex:1}}>
+            Neue Version verfuegbar
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.85)',
+            background:'rgba(255,255,255,0.2)',borderRadius:10,padding:'3px 8px'}}>
+            Aktualisieren
           </div>
         </div>
       )}
