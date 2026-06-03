@@ -1400,6 +1400,7 @@ function duelBestWall(aiPos,humPos,walls,aiGoal,humGoal){
   return best;
 }
 function aiDuel(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  const recent=recentAi||[];
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
   // 1) Sofortiger Sieg
   for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
@@ -1411,7 +1412,16 @@ function aiDuel(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,hu
   if(!aiPath)return{type:'move',pos:initMoves[0]||aiPos};
   const aiD=aiPath.length-1;
   const humD=humPath?humPath.length-1:999;
-  const advance=()=>{const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};};
+  const advance=()=>{
+    const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);
+    if(m){
+      const wasRecent=recent.slice(0,4).some(p=>p.r===m.r&&p.c===m.c);
+      if(!wasRecent)return{type:'move',pos:m};
+      const alt=initMoves.filter(mv=>!recent.slice(0,4).some(p=>p.r===mv.r&&p.c===mv.c));
+      if(alt.length>0)return{type:'move',pos:alt[0]};
+    }
+    return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};
+  };
 
   // 2) Gegner führt (humD < aiD): aggressiv blocken (70%)
   if(humD<aiD&&aiBarr>0){
@@ -3227,6 +3237,45 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
+
+            {/* PODIUM für Top 3 */}
+            {entries.length>=3&&(
+              <div style={{display:'flex',alignItems:'flex-end',justifyContent:'center',gap:6,marginBottom:20,padding:'0 8px'}}>
+                {[1,0,2].map(idx=>{
+                  const e=entries[idx];
+                  if(!e)return null;
+                  const r=e[mode]||{rating:1000};
+                  const heights=[90,120,70];
+                  const podiumColors=['rgba(148,163,184,0.3)','rgba(245,158,11,0.3)','rgba(180,83,9,0.3)'];
+                  const borderColors=[silver,gold,bronze];
+                  const labels=['🥈','🥇','🥉'];
+                  const podiumIdx=[1,0,2];
+                  const h=heights[podiumIdx.indexOf(idx)];
+                  const pc=podiumColors[podiumIdx.indexOf(idx)];
+                  const bc=borderColors[podiumIdx.indexOf(idx)];
+                  return(
+                    <div key={e.key} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                      <div style={{width:44,height:44,borderRadius:'50%',background:e.color||'#8b5cf6',
+                        border:'2.5px solid '+bc,display:'flex',alignItems:'center',justifyContent:'center',
+                        boxShadow:`0 4px 16px ${e.color||'#8b5cf6'}60`,flexShrink:0}}>
+                        <span style={{fontSize:18,fontWeight:900,color:'#fff'}}>{(e.name||'?').slice(0,1).toUpperCase()}</span>
+                      </div>
+                      <div style={{fontSize:10,fontWeight:800,color:txt,textAlign:'center',
+                        maxWidth:70,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.name}</div>
+                      <div style={{fontSize:12,fontWeight:900,color:bc}}>{r.rating}</div>
+                      <div style={{width:'100%',height:h,background:pc,
+                        border:'1.5px solid '+bc,borderBottom:'none',
+                        borderRadius:'8px 8px 0 0',
+                        display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:8}}>
+                        <span style={{fontSize:20}}>{labels[podiumIdx.indexOf(idx)]}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Vollständige Liste */}
             {entries.map((e,i)=>{
               const r=e[mode]||{rating:1000,wins:0,losses:0};
               const tier=rankTier(r.rating);
