@@ -469,7 +469,7 @@
 <script>
   firebase.initializeApp({
     apiKey: "AIzaSyB-OeDqCwwwDegxvupHoCyf9RaC7MiCB_8",
-    authDomain: "wrong-way-don-t-be-mad.firebaseapp.com",
+    authDomain: "wrongway.app",
     databaseURL: "https://wrong-way-don-t-be-mad-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "wrong-way-don-t-be-mad",
     storageBucket: "wrong-way-don-t-be-mad.firebasestorage.app",
@@ -5192,7 +5192,7 @@ function App(){
       :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' '+t('perTurn')
       :t('noTimer');
     return(
-    <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,
+    <div style={{...sPage,background:'var(--bg)',position:'relative',zIndex:1,
       animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'none'}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
@@ -8456,11 +8456,11 @@ function GBtn({onClick,children,dark,blue,outline}){
 const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',color:dis?'var(--subtle)':'white',
   border:'none',borderRadius:10,cursor:dis?'not-allowed':'pointer',fontWeight:700,fontSize:16,
   fontFamily:'system-ui,-apple-system,sans-serif'});
-const sPage={height:'100dvh',background:'transparent',overflowY:'auto',overscrollBehavior:'contain',WebkitOverflowScrolling:'touch',display:'flex',flexDirection:'column',
+const sPage={height:'100dvh',minHeight:'100dvh',background:'var(--bg)',overflowY:'auto',overscrollBehavior:'none',WebkitOverflowScrolling:'touch',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'center',padding:'24px',fontFamily:'system-ui,-apple-system,sans-serif'};
-const sCont={height:'100dvh',overflowY:'auto',overscrollBehavior:'contain',WebkitOverflowScrolling:'touch',background:'var(--bg)',display:'flex',flexDirection:'column',
+const sCont={height:'100dvh',minHeight:'100dvh',overflowY:'auto',overscrollBehavior:'none',WebkitOverflowScrolling:'touch',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
-  touchAction:'pan-y',WebkitOverflowScrolling:'touch'};
+  touchAction:'pan-y'};
 const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
   boxShadow:'var(--shadow-card)',border:'1.5px solid var(--border)'};
 const sBack={background:'none',border:'none',cursor:'pointer',fontSize:13,color:'var(--subtle)',
