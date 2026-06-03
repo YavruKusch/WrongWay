@@ -4007,27 +4007,72 @@ function App(){
         // Ranked ELO
         if(S.current.isRanked&&S.current.rankedMode){
           const rm=S.current.rankedMode;
-          const elo=calculateElo(S.current.rankedMyRating,S.current.rankedOppRating,won);
-          const rk=Object.assign({},newStats.ranked||freshRankedStats());
-          const rs=Object.assign({},rk[rm]||{rating:1000,wins:0,losses:0,games:0});
-          rs.rating=elo.newRating;rs.games=(rs.games||0)+1;
-          if(won)rs.wins=(rs.wins||0)+1;else rs.losses=(rs.losses||0)+1;
-          rk[rm]=rs;newStats.ranked=rk;
-          setEloChange({change:elo.change,newRating:elo.newRating,won});
-          // Rangliste aktualisieren
+          const myRole=S.current.onlineRole;
+          const oppRole=myRole==='A'?'B':'A';
+          const confirmKey='ww_ranked_confirm/'+(S.current.lobbyId||'x')+'_'+(S.current.gameNum||0);
+          // Eigenes Ergebnis schreiben
           if(window.db){
-            window.db.ref('ww_leaderboard/'+acc.key).update({
-              name:acc.name,color:acc.color||'#8b5cf6',
-              [rm]:{rating:rs.rating,wins:rs.wins,losses:rs.losses}
+            window.db.ref(confirmKey+'/'+myRole).set(JSON.stringify({
+              winner:p,role:myRole,mode:rm,ts:Date.now()
+            }));
+          }
+          // ELO-Berechnung als Funktion
+          const applyElo=()=>{
+            const elo=calculateElo(S.current.rankedMyRating,S.current.rankedOppRating,won);
+            const rk=Object.assign({},newStats.ranked||freshRankedStats());
+            const rs=Object.assign({},rk[rm]||{rating:1000,wins:0,losses:0,games:0});
+            rs.rating=elo.newRating;rs.games=(rs.games||0)+1;
+            if(won)rs.wins=(rs.wins||0)+1;else rs.losses=(rs.losses||0)+1;
+            rk[rm]=rs;newStats.ranked=rk;
+            setEloChange({change:elo.change,newRating:elo.newRating,won});
+            if(window.db){
+              window.db.ref('ww_leaderboard/'+acc.key).update({
+                name:acc.name,color:acc.color||'#8b5cf6',
+                [rm]:{rating:rs.rating,wins:rs.wins,losses:rs.losses}
+              });
+            }
+            const newAcc2=Object.assign({},acc,{stats:newStats});
+            setAccount(newAcc2);
+            saveAccountProfile(acc.key,{stats:newStats});
+          };
+          // Auf Bestätigung des Gegners warten (max 12 Sekunden)
+          let confirmed=false;
+          const fallbackTimer=setTimeout(()=>{
+            if(!confirmed){confirmed=true;applyElo();} // Timeout: Gegner hat nicht bestätigt
+          },12000);
+          if(window.db){
+            window.db.ref(confirmKey).on('value',snap=>{
+              if(confirmed)return;
+              const d=snap.val();
+              if(!d||!d[myRole]||!d[oppRole])return;
+              try{
+                const mine=JSON.parse(d[myRole]);
+                const opp=JSON.parse(d[oppRole]);
+                if(mine.winner===opp.winner){
+                  confirmed=true;
+                  clearTimeout(fallbackTimer);
+                  window.db.ref(confirmKey).off('value');
+                  applyElo(); // Beide einig → ELO anwenden
+                }else{
+                  // Mismatch → Betrug erkannt, kein ELO
+                  confirmed=true;
+                  clearTimeout(fallbackTimer);
+                  window.db.ref(confirmKey).off('value');
+                  window.db.ref('ww_flags/'+acc.key).push({
+                    type:'elo_mismatch',lobbyId:S.current.lobbyId,
+                    ts:Date.now(),mine:mine.winner,opp:opp.winner
+                  });
+                }
+              }catch(e){}
             });
           }
+        } else {
+          const newAcc=Object.assign({},acc,{stats:newStats});
+          setAccount(newAcc);
+          saveAccountProfile(acc.key,{stats:newStats});
         }
-        const newAcc=Object.assign({},acc,{stats:newStats});
-        setAccount(newAcc);
-        saveAccountProfile(acc.key,{stats:newStats});
       }
-    }
-    if(skipAnim){setScreen('end');return;}
+    }{setScreen('end');return;}
     const styles=['robot','twerk'];
     setDanceStyle(styles[Math.floor(Math.random()*styles.length)]);
     setDanceSpeed(Math.random()<0.5?'fast':'slow');
@@ -5742,11 +5787,10 @@ function App(){
 
       {/* Datenschutz-Link */}
       <button onClick={()=>setShowPrivacy(true)} style={{
-        position:'fixed',bottom:'calc(env(safe-area-inset-bottom) + 8px)',left:'50%',
-        transform:'translateX(-50%)',background:'none',border:'none',
+        background:'none',border:'none',
         color:'var(--subtle)',cursor:'pointer',fontSize:11,fontWeight:600,
-        fontFamily:'system-ui,-apple-system,sans-serif',opacity:0.7,zIndex:50,
-        padding:'6px 12px'}}>
+        fontFamily:'system-ui,-apple-system,sans-serif',opacity:0.7,
+        padding:'8px 12px',marginTop:8,marginBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
         Datenschutz
       </button>
 
@@ -6730,14 +6774,20 @@ function App(){
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{rMap==='duel'?'>> '+t('goalLabel')+' (Rot)':t('goalLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,
+          color:rMap==='duel'?'#ef4444':'#16a34a',
+          fontWeight:700,textTransform:'uppercase',marginBottom:2}}>
+          {rMap==='duel'?'>> '+t('goalLabel')+' ('+pname('A')+')':t('goalLabel')}
+        </div>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
           {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){return(
             <div key={r+'-'+c} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
-              background:r===0?'var(--goal)':r===ROWS-1?(rMap==='duel'?'var(--goal)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
+              background:r===0?(rMap==='duel'?'rgba(239,68,68,0.13)':'var(--goal)'):r===ROWS-1?(rMap==='duel'?'rgba(59,130,246,0.13)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
               border:'1px solid var(--cell-line)',boxSizing:'border-box'}}>
-              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
-              {rMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
+              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
+                background:rMap==='duel'?'linear-gradient(90deg,#ef4444,#f87171)':'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
+              {rMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
+                background:'linear-gradient(90deg,#3b82f6,#60a5fa)'}}/>}
             </div>
           );})})}
           {[...rs.walls].map(function(k){
@@ -6761,7 +6811,11 @@ function App(){
             </div>
           )}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,color:rMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:rMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>{rMap==='duel'?'<< '+t('goalLabel')+' (Blau)':t('startLabel')}</div>
+        <div style={{fontSize:9,letterSpacing:3,
+          color:rMap==='duel'?'#3b82f6':'var(--subtle)',
+          fontWeight:rMap==='duel'?700:600,textTransform:'uppercase',marginTop:2,marginBottom:14}}>
+          {rMap==='duel'?'<< '+t('goalLabel')+' ('+pname('B')+')':t('startLabel')}
+        </div>
 
         {/* Legende Wandfarben */}
         <div style={{display:'flex',gap:12,marginBottom:12,alignItems:'center'}}>
@@ -6840,24 +6894,40 @@ function App(){
         {/* Winner Card */}
         <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
           <div style={{borderRadius:22,overflow:'hidden',
-            boxShadow:winner?`0 12px 40px ${PC[winner]}40`:'0 8px 24px rgba(0,0,0,0.12)',
-            marginBottom:16}}>
-            {/* Top color stripe */}
-            <div style={{height:6,background:winner?`linear-gradient(90deg,${PC[winner]},${PC[winner]}88)`:'var(--border)'}}/>
-            <div style={{background:'var(--card)',padding:'24px 20px',textAlign:'center'}}>
-              <div style={{marginBottom:12,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}>
-                {winner&&isLoss?<SadIcon size={52}/>:<TrophyIcon size={52}/>}
+            boxShadow:winner?`0 16px 48px ${PC[winner]}50,0 4px 16px rgba(0,0,0,0.15)`:'0 8px 24px rgba(0,0,0,0.12)',
+            marginBottom:16,
+            border:winner?`1.5px solid ${PC[winner]}30`:'1.5px solid var(--border)'}}>
+            {/* Animated top stripe */}
+            <div style={{height:8,background:winner?`linear-gradient(90deg,${PC[winner]},${PC[winner]}99,${PC[winner]}cc,${PC[winner]})`:'var(--border)',
+              backgroundSize:'200% 100%',animation:winner?'rankGlow 2s ease infinite':'none'}}/>
+            <div style={{background:isLoss?'var(--bg)':'var(--card)',padding:'28px 20px',textAlign:'center'}}>
+              {/* Icon */}
+              <div style={{marginBottom:14,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',
+                filter:winner&&!isLoss?`drop-shadow(0 4px 16px ${PC[winner]}80)`:'none'}}>
+                {winner&&isLoss?<SadIcon size={56}/>:<TrophyIcon size={56}/>}
               </div>
-              <div style={{fontSize:26,fontWeight:900,letterSpacing:-0.8,lineHeight:1.1,
+              {/* Result text */}
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,textTransform:'uppercase',
+                color:winner?PC[winner]:'var(--subtle)',marginBottom:6,opacity:0.7}}>
+                {winner?(isLoss?t('lossLabel')||'NIEDERLAGE':'SIEG'):'AUFGEGEBEN'}
+              </div>
+              <div style={{fontSize:28,fontWeight:900,letterSpacing:-1,lineHeight:1.1,
                 color:winner?PC[winner]:'var(--text)',marginBottom:4}}>
                 {winner?pname(winner):t('givenUp')}
               </div>
-              <div style={{fontSize:14,fontWeight:700,color:'var(--subtle)',marginBottom:gaveUp?8:0}}>
-                {winner?t('wins'):''}
+              <div style={{fontSize:13,fontWeight:600,color:'var(--subtle)',marginBottom:gaveUp?10:0}}>
+                {winner&&!isLoss?t('wins'):''}
+                {winner&&isLoss?(t('lossSubtitle')||'hat gewonnen'):''}
               </div>
+              {/* Move count */}
+              {moveHist&&moveHist.length>0&&(
+                <div style={{fontSize:11,fontWeight:600,color:'var(--subtle)',marginTop:6,opacity:0.6}}>
+                  {moveHist.filter(m=>m.type!=='emote').length} {t('movesPlayed')||'Züge'}
+                </div>
+              )}
               {gaveUp&&(
                 <div style={{fontSize:12,fontWeight:700,color:'#ef4444',
-                  background:'rgba(239,68,68,0.09)',padding:'5px 12px',borderRadius:10,display:'inline-block'}}>
+                  background:'rgba(239,68,68,0.09)',padding:'5px 12px',borderRadius:10,display:'inline-block',marginTop:6}}>
                   {pname(gaveUp)} {t('lostGiveUp')}
                 </div>
               )}
@@ -7118,7 +7188,11 @@ function App(){
 
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{selectedMap==='duel'?('>> '+t('goalLabel')+' '+pname('A')):t('goalLabel')}</div>
+      <div style={{fontSize:9,letterSpacing:3,
+        color:selectedMap==='duel'?'#ef4444':'#16a34a',
+        fontWeight:700,textTransform:'uppercase',marginBottom:2}}>
+        {selectedMap==='duel'?('>> '+t('goalLabel')+' '+pname('A')):t('goalLabel')}
+      </div>
 
       {/* Grid */}
       {(()=>{
@@ -7132,15 +7206,19 @@ function App(){
           const duel=selectedMap==='duel';
           const isGoal=r===0,isStart=r===ROWS-1;
           let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
-          if(isGoal)bg='var(--goal)';if(isStart)bg=duel?'var(--goal)':'var(--start)';
+          if(isGoal)bg=duel?'rgba(239,68,68,0.13)':'var(--goal)';
+          if(isStart)bg=duel?'rgba(59,130,246,0.13)':'var(--start)';
           return(
             <div key={r+'-'+c} data-r={r} data-c={c} onClick={()=>handleCellClick(r,c)}
               style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
                 background:bg,border:'1px solid var(--cell-line)',
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
-              {isGoal&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
-              {isStart&&duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
+              {isGoal&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
+                background:duel?'linear-gradient(90deg,#ef4444,#f87171)':'linear-gradient(90deg,#16a34a,#22c55e)',
+                pointerEvents:'none'}}/>}
+              {isStart&&duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
+                background:'linear-gradient(90deg,#3b82f6,#60a5fa)',pointerEvents:'none'}}/>}
               {isStart&&!duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'var(--border)',pointerEvents:'none'}}/>}
               {vDot&&!isA&&!isB&&<div style={{width:10,height:10,borderRadius:'50%',background:color,opacity:0.32,pointerEvents:'none'}}/>}
             </div>
@@ -7193,7 +7271,9 @@ function App(){
         );
       })()}
 
-      <div style={{fontSize:9,letterSpacing:3,color:selectedMap==='duel'?'#16a34a':'var(--subtle)',fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2}}>
+      <div style={{fontSize:9,letterSpacing:3,
+        color:selectedMap==='duel'?'#3b82f6':'var(--subtle)',
+        fontWeight:selectedMap==='duel'?700:600,textTransform:'uppercase',marginTop:2}}>
         {selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?('>> '+t('goalLabel')+' '+pname('A')):('<< '+t('goalLabel')+' '+pname('B'))):t('startLabel')}
       </div>
 
