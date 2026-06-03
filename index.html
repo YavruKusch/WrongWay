@@ -5470,7 +5470,7 @@ function App(){
 
       <div style={{width:280,position:'relative',zIndex:1}}>
         {/* RANKED — prominent */}
-        {(adminCfg.features.ranked||isAdmin())&&(
+        {(adminCfg.features.ranked)&&(
           <div style={{marginBottom:18}}>
             <MenuItem
               highlight pulse
@@ -5494,7 +5494,7 @@ function App(){
         )}
 
         {/* RANGLISTE */}
-        {(adminCfg.features.ranked||isAdmin())&&(
+        {(adminCfg.features.ranked)&&(
           <MenuItem
             icon={<span style={{fontSize:18,lineHeight:1}}>🏆</span>}
             iconBg="linear-gradient(135deg,#f59e0b,#d97706)"
@@ -5504,9 +5504,9 @@ function App(){
         )}
 
         {/* ONLINE SPIELEN */}
-        {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo||isAdmin())&&(
+        {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo)&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
-            {(adminCfg.features.online||isAdmin())&&<MenuItem
+            {(adminCfg.features.online)&&<MenuItem
               icon={<GlobeIcon size={19} color="#fff"/>}
               iconBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               title={t('playOnline')||'Spielen'} desc={t('createLobby')+' · '+t('joinExisting')}
@@ -5514,12 +5514,12 @@ function App(){
               highlight
               highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
-            {(adminCfg.features.friend||isAdmin())&&<MenuItem
+            {(adminCfg.features.friend)&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
               title={t('friendPlay')} desc={t('friendDesc')}
               off={!adminCfg.features.friend}
               onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
-            {(adminCfg.features.twovtwo||isAdmin())&&<MenuItem
+            {(adminCfg.features.twovtwo)&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#ef4444,#3b82f6)"
               title="2 vs 2" desc={t('teamModeDesc')}
               off={!adminCfg.features.twovtwo}
@@ -5528,14 +5528,14 @@ function App(){
         )}
 
         {/* ÜBEN & OFFLINE */}
-        {(adminCfg.features.bots||adminCfg.features.local||isAdmin())&&(
+        {(adminCfg.features.bots||adminCfg.features.local)&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>{t('practiceOffline')}</span>}>
-            {(adminCfg.features.bots||isAdmin())&&<MenuItem
+            {(adminCfg.features.bots)&&<MenuItem
               icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
               title={t('vsBot')} desc={t('vsBotDesc')}
               off={!adminCfg.features.bots}
               onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
-            {(adminCfg.features.local||isAdmin())&&<MenuItem
+            {(adminCfg.features.local)&&<MenuItem
               icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
               title={t('localPlay')} desc={t('localDesc')}
               off={!adminCfg.features.local}
@@ -6060,7 +6060,7 @@ function App(){
             <div style={{marginBottom:14}}>
               <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label={t('duelFieldSize')}/>
               <div style={{display:'flex',gap:8}}>
-                {(adminCfg.features.duelBlitz||isAdmin())&&(
+                {(adminCfg.features.duelBlitz)&&(
                   <button onClick={()=>setDuelSize('blitz')} style={{
                     flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
                     background:duelSize==='blitz'?'#8b5cf6':'var(--card)',
@@ -6071,7 +6071,7 @@ function App(){
                     <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>7 × 7 · {t('duelBlitzSpeed')}</div>
                   </button>
                 )}
-                {(adminCfg.features.duelStandard||isAdmin())&&(
+                {(adminCfg.features.duelStandard)&&(
                   <button onClick={()=>setDuelSize('standard')} style={{
                     flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
                     background:duelSize==='standard'?'#8b5cf6':'var(--card)',
@@ -6097,7 +6097,7 @@ function App(){
           </div>
 
           {/* Blitz */}
-          {(adminCfg.features.blitz||isAdmin())&&(
+          {(adminCfg.features.blitz)&&(
           <div style={{opacity:adminCfg.features.blitz?1:0.45,position:'relative'}}>
             {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>{t('featureOff')}</div>}
             <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
@@ -6111,12 +6111,12 @@ function App(){
           )}
 
           {/* Chaos */}
-          {(adminCfg.features.chaos||adminCfg.features.drop||isAdmin())&&(
+          {(adminCfg.features.chaos||adminCfg.features.drop)&&(
           <div style={{position:'relative'}}>
             {(!adminCfg.features.chaos&&!adminCfg.features.drop)&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
             <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
             <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
-              {(adminCfg.features.chaos||isAdmin())&&(
+              {(adminCfg.features.chaos)&&(
               <button onClick={()=>setChaosMode(c=>!c)} style={{
                 flex:1,padding:'11px 7px',opacity:adminCfg.features.chaos?1:0.45,
                 position:'relative',
@@ -6136,7 +6136,7 @@ function App(){
                 </div>
               </button>
               )}
-              {(adminCfg.features.drop||isAdmin())&&(
+              {(adminCfg.features.drop)&&(
               <div style={{flex:1,padding:'11px 7px',display:'flex',flexDirection:'column',opacity:adminCfg.features.drop?1:0.45,
                 position:'relative',
                 background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
@@ -6157,7 +6157,7 @@ function App(){
           </div>
           )}
 
-          {(adminCfg.features.hammer||isAdmin())&&(
+          {(adminCfg.features.hammer)&&(
           <div style={{marginTop:8,opacity:adminCfg.features.hammer?1:0.45,position:'relative'}}>
             {!adminCfg.features.hammer&&<div style={{position:'absolute',top:-4,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
             <button onClick={()=>adminCfg.features.hammer&&setHammerMode(h=>!h)} style={{
