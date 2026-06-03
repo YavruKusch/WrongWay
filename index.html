@@ -3745,6 +3745,7 @@ function App(){
     if(!joinCancelledRef.current){setNavDir('back');setScreen('friends');}
   };
   const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG);
+  const[adminCfgReady,setAdminCfgReady]=useState(false);
   const[showAdmin,setShowAdmin]=useState(false);
   const[showTutorial,setShowTutorial]=useState(false);
   const[tutStep,setTutStep]=useState(0);
@@ -3785,6 +3786,7 @@ function App(){
       const v=snap.val();
       if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
       else setAdminCfg(DEFAULT_ADMIN_CFG);
+      setAdminCfgReady(true);
     });
     return ()=>ref.off('value',cb);
   },[]);
@@ -3820,7 +3822,31 @@ function App(){
 
   // Lobby/Spiel-Konfiguration
   const[gameBarr,setGameBarr]=useState(10);
-  const[gameTimeMode,setGameTimeMode]=useState('none'); // 'none' | 'classic-3/5/8' | 'blitz-5/8/10'
+  // Nach Config-Load: ungültige Spielmodi zurücksetzen
+  useEffect(()=>{
+    if(!adminCfgReady)return;
+    const f=adminCfg.features;
+    // Zeitmode prüfen
+    setGameTimeMode(prev=>{
+      if(prev==='classic-3'&&!f.classicTime3)return 'none';
+      if(prev==='classic-5'&&!f.classicTime5)return 'none';
+      if(prev==='classic-8'&&!f.classicTime8)return 'none';
+      if(prev==='blitz-5'&&!f.blitzTime5)return 'none';
+      if(prev==='blitz-8'&&!f.blitzTime8)return 'none';
+      if(prev==='blitz-10'&&!f.blitzTime10)return 'none';
+      return prev;
+    });
+    // Chaos/Drop/Hammer prüfen
+    if(!f.chaos)setChaosMode(false);
+    if(!f.drop)setDropMode(false);
+    if(!f.hammer)setHammerMode(false);
+    // Duell-Größe prüfen
+    setDuelSize(prev=>{
+      if(prev==='blitz'&&!f.duelBlitz)return 'standard';
+      if(prev==='standard'&&!f.duelStandard)return 'blitz';
+      return prev;
+    });
+  },[adminCfgReady]);
   const[chaosMode,setChaosMode]=useState(false);
   const[chaosItem,setChaosItem]=useState(null);
   const chaosSpawnRef=useRef(15);
@@ -5096,6 +5122,18 @@ function App(){
 
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
+    // Config noch nicht geladen — kurz warten um Flash zu vermeiden
+    if(!adminCfgReady){
+      return(
+        <div style={{...sPage,background:'var(--bg)',justifyContent:'center',alignItems:'center'}}>
+          <MenuBG dark={darkMode}/>
+          <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
+            <BrickWallIcon size={48} light/>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--subtle)'}}>{t('loading')}</div>
+          </div>
+        </div>
+      );
+    }
     if(adminCfg.maintenance&&!isAdmin()){
       return(
         <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,justifyContent:'center'}}>
