@@ -3448,22 +3448,22 @@ function App(){
   accRef.current=account;
   // Auto-Login aus localStorage + Google Redirect Result prüfen
   useEffect(()=>{
-    // Google Redirect: nach Google-Login zurück zur App
-    try{
-      firebase.auth().getRedirectResult().then(async result=>{
-        if(result&&result.user){
-          const prof=await googleLoginOrCreate(result.user);
-          setAccount(prof);setNavDir('back');setScreen('menu');
-        }
-      }).catch(e=>console.warn('Google redirect',e));
-    }catch(e){}
-    // Bestehender localStorage Auto-Login
+    // localStorage Auto-Login (Passwort-Accounts + gespeicherte Google-Accounts)
     let saved=null;
     try{const s=localStorage.getItem('ww_account');if(s)saved=JSON.parse(s);}catch(e){}
     if(saved&&saved.key){
       setAccount(saved);
       fetchAccount(saved.key).then(fresh=>{if(fresh)setAccount({...fresh,isGoogle:saved.isGoogle||false});});
     }
+    // Google Auth: onAuthStateChanged ist auf iOS zuverlässiger als getRedirectResult
+    const unsub=firebase.auth().onAuthStateChanged(async firebaseUser=>{
+      if(!firebaseUser||firebaseUser.isAnonymous)return;
+      // Passwort-Account bereits eingeloggt? Nicht überschreiben.
+      try{const s=localStorage.getItem('ww_account');const p=s?JSON.parse(s):null;if(p&&p.key&&!p.isGoogle)return;}catch(e){}
+      const prof=await googleLoginOrCreate(firebaseUser);
+      setAccount(prof);
+    });
+    return()=>unsub();
   },[]);
   // Account-Änderungen lokal persistieren ("eingeloggt bleiben")
   useEffect(()=>{
