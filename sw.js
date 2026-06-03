@@ -1,10 +1,10 @@
 // Wrong Way PWA Service Worker - minimal caching
-const CACHE = 'wrongway-v2';
+const CACHE = 'wrongway-v3';
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(['/WrongWay/', '/WrongWay/index.html']))
+      .then(c => c.addAll(['/', '/index.html']))
       .then(() => self.skipWaiting())
   );
 });
@@ -19,9 +19,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-  // Alles außer dem eigenen index.html direkt vom Netz laden
-  if (!url.includes('yavrukusch.github.io/WrongWay')) return;
-  // Nur HTML aus Cache, alles andere live
+  if (!url.includes('wrongway.app')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
@@ -29,6 +27,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
       })
-      .catch(() => caches.match('/WrongWay/index.html'))
+      .catch(() => caches.match('/index.html'))
   );
 });
