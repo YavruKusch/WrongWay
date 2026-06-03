@@ -6256,24 +6256,27 @@ function App(){
 
   const doGoogleSignIn=()=>{
     const provider=new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).then(async result=>{
-      if(result&&result.user){
-        const existing=await getGoogleProfile(result.user);
+    firebase.auth().signInWithRedirect(provider).catch(e=>{
+      setAuthErr('Google Login fehlgeschlagen');
+    });
+  };
+  // Google Redirect Result verarbeiten
+  useEffect(()=>{
+    if(!firebase||!firebase.auth)return;
+    firebase.auth().getRedirectResult().then(function(result){
+      if(!result||!result.user)return;
+      return getGoogleProfile(result.user).then(function(existing){
         if(existing){
           setAccount(existing);setNavDir('back');setScreen('menu');
         }else{
-          // Neuer Google-User → Benutzernamen wählen
           setPendingGoogleUser(result.user);
           const suggested=(result.user.displayName||'').replace(/\s+/g,'_').slice(0,16);
           setGoogleName(suggested);
+          setScreen('auth');
         }
-      }
-    }).catch(e=>{
-      if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
-        setAuthErr('Google Login fehlgeschlagen');
-      }
-    });
-  };
+      });
+    }).catch(function(e){console.warn('redirect result',e);});
+  },[]);
   const doGoogleConfirmName=async()=>{
     if(googleNameBusy||!pendingGoogleUser)return;
     setGoogleNameBusy(true);setGoogleNameErr('');
