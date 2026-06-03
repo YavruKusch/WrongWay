@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
 <title>Wrong Way: Don't be mad</title>
+<!-- PWA -->
+<link rel="manifest" href="/WrongWay/manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wrong Way">
+<link rel="apple-touch-icon" href="/WrongWay/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/WrongWay/icon-192.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   a{color:inherit;text-decoration:none;pointer-events:none;}
@@ -466,6 +475,10 @@
   window.db = firebase.database();
   // Anonymen Auth-Ausweis holen (Voraussetzung für Firebase Security Rules)
   firebase.auth().signInAnonymously().catch(function(e){console.warn('Auth',e);});
+  // PWA Service Worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/WrongWay/sw.js').catch(function(e){console.warn('SW',e);});
+  }
   // Fehler sichtbar anzeigen (kein DevTools nötig)
   window.onerror = function(msg,src,line){
     var m=document.getElementById('loader-msg');
