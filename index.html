@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
 <title>Wrong Way: Don't be mad</title>
 <!-- PWA -->
@@ -593,7 +596,7 @@ let _adminUnlocked=false;
 function isAdmin(){return _adminUnlocked;}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:true,friend:true,bots:true,local:true,twovtwo:true,chaos:true,drop:true,hammer:true,blitz:true,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:true,duelStandard:true,ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
