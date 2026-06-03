@@ -1840,6 +1840,17 @@ async function stoSet(k,v){
 async function stoDel(k){
   try{await window.db.ref(k).remove();}catch(e){console.error('FB DEL fail',k,e);}
 }
+// Atomisches Multi-Path Update — entweder alles oder nichts (kritisch für Account-Integrität)
+async function stoMultiUpdate(updates){
+  try{
+    const mapped={};
+    for(const key of Object.keys(updates)){
+      mapped[key]=updates[key]===null?null:JSON.stringify(updates[key]);
+    }
+    await window.db.ref().update(mapped);
+    return true;
+  }catch(e){console.error('FB MULTI fail',e);window.lastFbError=e.message;return false;}
+}
 async function stoGetChildren(k){
   try{
     const snap=await window.db.ref(k).once('value');
@@ -1870,6 +1881,26 @@ function calculateElo(myRating,oppRating,won){
   const K=32,exp=1/(1+Math.pow(10,(oppRating-myRating)/400));
   const change=Math.round(K*((won?1:0)-exp));
   return{newRating:Math.max(100,myRating+change),change:change};
+}
+async function changeGoogleAccountName(gKey,oldName,newName){
+  const newNameKey=normUser(newName);
+  const oldNameKey=normUser(oldName);
+  if(newNameKey.length<3)return{err:'tooShort'};
+  if(!/^[a-z0-9_]+$/.test(newNameKey))return{err:'badChars'};
+  if(newNameKey===oldNameKey)return{err:'sameName'};
+  const existing=await stoGet(PROFILE_KEY(newNameKey));
+  if(existing)return{err:'taken'};
+  const prof=await stoGet(PROFILE_KEY(gKey));
+  if(!prof)return{err:'notFound'};
+  const updated=Object.assign({},prof,{name:newName.trim(),isGoogle:true,lastNameChange:Date.now()});
+  // Atomisch: Profil + alte Reservierung löschen + neue Reservierung — alles in einem Schritt
+  const ok=await stoMultiUpdate({
+    [PROFILE_KEY(gKey)]:updated,
+    [PROFILE_KEY(oldNameKey)]:null,
+    [PROFILE_KEY(newNameKey)]:{googleKey:gKey,name:newName.trim(),reserved:true}
+  });
+  if(!ok)return{err:'network'};
+  return{prof:Object.assign({},updated,{key:gKey,isGoogle:true})};
 }
 async function changeAccountName(oldKey,newName){
   const newKey=normUser(newName);
@@ -1933,8 +1964,16 @@ async function loginAccount(name,pw){
 async function getGoogleProfile(googleUser){
   const key='g_'+googleUser.uid.slice(0,20);
   const prof=await stoGet(PROFILE_KEY(key));
-  if(prof)return{...prof,key,isGoogle:true};
-  return null;
+  if(!prof)return null;
+  // Sicherheits-Check: gespeicherte UID muss zur Firebase-Auth passen
+  if(prof.googleUid&&prof.googleUid!==googleUser.uid)return null;
+  // Profil-Reparatur: fehlende Pflichtfelder ergänzen
+  if(!prof.stats||!prof.name){
+    const repaired=Object.assign({name:'Player',color:AVATAR_COLORS[0],stats:freshAccountStats()},prof,{googleUid:googleUser.uid,isGoogle:true});
+    await stoSet(PROFILE_KEY(key),repaired);
+    return{...repaired,key,isGoogle:true};
+  }
+  return{...prof,key,isGoogle:true};
 }
 async function createGoogleProfile(googleUser,name,color){
   const nameKey=normUser(name);
@@ -1943,9 +1982,16 @@ async function createGoogleProfile(googleUser,name,color){
   const existing=await stoGet(PROFILE_KEY(nameKey));
   if(existing)return{err:'taken'};
   const gKey='g_'+googleUser.uid.slice(0,20);
-  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],googleUid:googleUser.uid,created:Date.now(),stats:freshAccountStats()};
-  await stoSet(PROFILE_KEY(gKey),prof);
-  await stoSet(PROFILE_KEY(nameKey),{googleKey:gKey,name:name.trim()});
+  // Race-Condition-Schutz: Account bereits erstellt?
+  const alreadyExists=await stoGet(PROFILE_KEY(gKey));
+  if(alreadyExists)return{prof:{...alreadyExists,key:gKey,isGoogle:true}};
+  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],googleUid:googleUser.uid,isGoogle:true,created:Date.now(),stats:freshAccountStats()};
+  // Atomisch: Profil + Namens-Reservierung in einem Schritt
+  const ok=await stoMultiUpdate({
+    [PROFILE_KEY(gKey)]:prof,
+    [PROFILE_KEY(nameKey)]:{googleKey:gKey,name:name.trim(),reserved:true}
+  });
+  if(!ok)return{err:'network'};
   return{prof:{...prof,key:gKey,isGoogle:true}};
 }
 async function fetchAccount(key){
@@ -2830,7 +2876,9 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
   const doNC=async()=>{
     if(ncBusy||!ncInput.trim())return;
     setNcBusy(true);setNcErr('');
-    const res=await changeAccountName(account.key,ncInput.trim());
+    const res=account.isGoogle
+      ?await changeGoogleAccountName(account.key,account.name,ncInput.trim())
+      :await changeAccountName(account.key,ncInput.trim());
     setNcBusy(false);
     if(res.err){setNcErr(t('auth_'+(res.err==='sameName'?'wrongPw':res.err))||res.err);
       if(res.err==='sameName')setNcErr(t('nameChangeSame')||'Das ist dein aktueller Name');return;}
@@ -2911,8 +2959,8 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
           )}
         </div>
 
-        {/* Passwort ändern */}
-        <div style={{marginBottom:14}}>
+        {/* Passwort ändern – nur für Passwort-Accounts */}
+        {!account.isGoogle&&<div style={{marginBottom:14}}>
           {!showPW?(
             <button onClick={()=>setShowPW(true)} style={{
               width:'100%',padding:'11px 14px',borderRadius:11,background:card,
@@ -2946,7 +2994,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Privatsphäre */}
         <div style={{marginBottom:14}}>
