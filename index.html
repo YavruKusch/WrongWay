@@ -1939,7 +1939,8 @@ async function sendFriendRequestByKey(fromKey,toKey){
   if(!target)return{err:'friends_notFound'};
   const myList=await stoGet(FLIST_KEY(fromKey))||[];
   if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
-  const existing=await stoGet(FR_KEY(fromKey)+'/'+toKey);
+  // Prüfen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
+  const existing=await stoGet(FR_KEY(toKey)+'/'+fromKey);
   if(existing)return{err:'friends_alreadySent'};
   await stoSet(FR_KEY(toKey)+'/'+fromKey,{from:fromKey,ts:Date.now()});
   return{ok:true};
@@ -1952,7 +1953,8 @@ async function sendFriendRequest(fromKey,toName){
   if(!target)return{err:'friends_notFound'};
   const myList=await stoGet(FLIST_KEY(fromKey))||[];
   if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
-  const existing=await stoGet(FR_KEY(fromKey)+'/'+toKey);
+  // Prüfen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
+  const existing=await stoGet(FR_KEY(toKey)+'/'+fromKey);
   if(existing)return{err:'friends_alreadySent'};
   await stoSet(FR_KEY(toKey)+'/'+fromKey,{from:fromKey,ts:Date.now()});
   return{ok:true};
@@ -3603,12 +3605,16 @@ function App(){
       }
     }catch(e){}
     setLobbyId(code);setOnlineRole('B');setPrivateCode(null);
+    joinCancelledRef.current=false;
     setNavDir('fwd');setScreen('waiting');
     // Auf initialen Spielstand des Einladenden warten (wie beim öffentlichen Beitritt)
     for(let i=0;i<60;i++){
+      if(joinCancelledRef.current)return;
       await new Promise(r=>setTimeout(r,500));
+      if(joinCancelledRef.current)return;
       const gs=await stoGet('barricade_game_'+code);
       if(gs){
+        if(joinCancelledRef.current)return;
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
@@ -3616,7 +3622,7 @@ function App(){
         initGame('online','B',code,false,gs.tm,false,gmap,gs.duelSize||'standard');return;
       }
     }
-    setNavDir('back');setScreen('friends');
+    if(!joinCancelledRef.current){setNavDir('back');setScreen('friends');}
   };
   const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG);
   const[showAdmin,setShowAdmin]=useState(false);
@@ -3788,7 +3794,11 @@ function App(){
     return false;
   };
   const winSound=w=>{ if(!isOwnLoss(w)) playSound('win'); };
+  const winnerFiredRef=useRef(false);
+
   const triggerWin=(p,skipAnim)=>{
+    if(winnerFiredRef.current||S.current.winner)return; // Race-safe Guard (synchron + state-basiert)
+    winnerFiredRef.current=true;
     winSound(p);
     setWinner(p);
     // Replay in History speichern
@@ -3815,7 +3825,7 @@ function App(){
       if(acc){
         const won=p===S.current.onlineRole;
         const tm=S.current.gameTimeMode||'';
-        const modeKey=tm.indexOf('blitz-')===0?'blitz':'classic';
+        const modeKey=tm.indexOf('blitz-')===0?'blitz':tm.indexOf('classic-')===0?'classic-timer':'classic';
         const newStats=applyMatchResult(acc.stats||freshAccountStats(),won,modeKey);
         // Ranked ELO
         if(S.current.isRanked&&S.current.rankedMode){
@@ -3928,6 +3938,7 @@ function App(){
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
     setEloChange(null);
+    winnerFiredRef.current=false;
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
     setHammerHeld({A:false,B:false});
@@ -4068,41 +4079,53 @@ function App(){
     if(!isTimerMode(gameTimeMode))return;
     const isBlitz=gameTimeMode.indexOf('blitz-')===0;
     const iv=setInterval(()=>{
-      // Zug-Zeit runterzählen
+      if(S.current.winner||S.current.screen!=='game')return;
+      let turnExpired=false;
       setTurnTimeLeft(tt=>{
         if(tt<=0)return 0;
         const nt=tt-1;
         if(nt<=0){
           if(isBlitz){
-            // Blitz: aktueller Spieler wird übersprungen, anderer ist dran
+            // Guard: turn könnte sich seit Interval-Erstellung geändert haben
+            if(S.current.turn!==turn)return getTurnTime(gameTimeMode);
             const newTurn=turn==='A'?'B':'A';
             setTurn(newTurn);
             if(gameMode==='online'){
               const s=S.current;
-              doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:newTurn,winner:null,moves:s.moveHist,chaosItem:s.chaosItem});
+              // Nur das Gerät des aktuellen Spielers synct den Turn-Skip
+              if(s.onlineRole===turn||s.onlineRole==='A'){
+                doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:newTurn,winner:null,moves:s.moveHist,chaosItem:s.chaosItem});
+              }
             }
             return getTurnTime(gameTimeMode);
           }
-          // Classic: aktueller Spieler verliert
-          const other=turn==='A'?'B':'A';
-          setWinner(other);
+          turnExpired=true;
           return 0;
         }
         return nt;
       });
+      // Classic: Zug-Zeit abgelaufen → Gegner gewinnt (außerhalb des State-Setters)
+      if(turnExpired&&!S.current.winner){
+        const other=turn==='A'?'B':'A';
+        triggerWin(other);
+      }
       // Gesamt-Zeit nur für Classic runterzählen
       if(!isBlitz){
+        let totalExpired=false;
         setTimeLeft(tl=>{
           const cur=tl[turn];
           if(cur<=0)return tl;
           const next=cur-1;
           if(next<=0){
-            const other=turn==='A'?'B':'A';
-            setWinner(other);
+            totalExpired=true;
             return{...tl,[turn]:0};
           }
           return{...tl,[turn]:next};
         });
+        if(totalExpired&&!S.current.winner){
+          const other=turn==='A'?'B':'A';
+          triggerWin(other);
+        }
       }
     },1000);
     return()=>clearInterval(iv);
@@ -4285,6 +4308,7 @@ function App(){
         setWinner(null);setCelebrating(false);setGaveUp(null);
         setRematchA(false);setRematchB(false);setRematchDeclined(null);
         setGameNum(newGN);setEloChange(null);
+        winnerFiredRef.current=false;
         setGiveUpArmed(false);setFlash('');
         // Map aus Online-State übernehmen
         if(gs.map){setSelectedMap(gs.map);CUR_MAP=gs.map;}
@@ -4330,6 +4354,10 @@ function App(){
           hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},
           tm:S.current.gameTimeMode,
           map:nextMap,duelSize:nextSize,
+          // Spielernamen aus vorheriger Runde erhalten
+          nameA:S.current.playerNames&&S.current.playerNames.A?S.current.playerNames.A:'',
+          nameB:S.current.playerNames&&S.current.playerNames.B?S.current.playerNames.B:'',
+          accountKeyA:accRef.current?accRef.current.key:null,
           lastUpdated:Date.now()
         };
         stoSet(`barricade_game_${lobbyId}`,ngs);
@@ -4512,6 +4540,7 @@ function App(){
   // ── Lobby polling ──
   useEffect(()=>{
     if(screen!=='waiting'&&screen!=='online')return;
+    let gameStarted=false;
     const poll=async()=>{
       const list=await stoGet('barricade_lobby_list');
       const now=Date.now();
@@ -4519,16 +4548,15 @@ function App(){
       const fresh=all.filter(l=>now-l.ts<15000);
       const stale=all.filter(l=>now-l.ts>=15000);
       setLobbyList(fresh);
-      // Stale-Einträge aus Firebase entfernen, damit andere Clients sie auch nicht mehr sehen
       if(stale.length>0){
         await stoSet('barricade_lobby_list',fresh);
-        for(const l of stale){
-          await stoDel(`barricade_lobby_${l.id}`);
-        }
+        for(const l of stale){await stoDel(`barricade_lobby_${l.id}`);}
       }
+      if(gameStarted)return;
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
         if(lobby&&lobby.guestId){
+          gameStarted=true;
           const nameA=lobby.hostName||getDisplayName(account);
           const nameB=lobby.guestName||'';
           const accountKeyA=lobby.hostAccountKey||null;
@@ -4610,13 +4638,17 @@ function App(){
     const text=msg.slice(0,140);
     const now=Date.now();
     const key='barricade_chat_'+lobbyId;
-    const cur=await stoGet(key)||[];
-    // Spam-Schutz: max 1 Nachricht pro Sekunde
-    const myLast=cur.filter(m=>m.u===onlineRole).slice(-1)[0];
-    if(myLast&&now-myLast.ts<1000){setChatInput('');return;}
-    const next=[...cur,{u:onlineRole,m:text,ts:now}].slice(-30);
-    await stoSet(key,next);
     setChatInput('');
+    try{
+      await window.db.ref(key).transaction(val=>{
+        let cur=[];
+        if(val){try{cur=JSON.parse(val)||[];}catch(e){cur=[];}}
+        // Spam-Schutz: max 1 Nachricht pro Sekunde
+        const myLast=cur.filter(m=>m.u===onlineRole).slice(-1)[0];
+        if(myLast&&now-myLast.ts<1000)return val; // Abort transaction
+        return JSON.stringify([...cur,{u:onlineRole,m:text,ts:now}].slice(-30));
+      });
+    }catch(e){console.error('chat send fail',e);}
   };
 
   // ── Create lobby ──
@@ -4645,7 +4677,10 @@ function App(){
     await stoSet('barricade_lobby_list',list.filter(l=>l.id!==id));
   };
 
+  const joinCancelledRef=useRef(false);
+
   const joinLobby=async(id)=>{
+    joinCancelledRef.current=false;
     const lobby=await stoGet(`barricade_lobby_${id}`);
     if(!lobby||lobby.guestId){setFlash(t('lobbyFull'));return;}
     // Host-Settings übernehmen
@@ -4657,18 +4692,25 @@ function App(){
     if(lobby.hd!==undefined)setHammerDrops(lobby.hd);
     if(lobby.map!==undefined)setSelectedMap(lobby.map);
     await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,guestName:getDisplayName(account),guestAccountKey:account?account.key:null,ts:Date.now()});
+    // Race-Condition-Check: sicherstellen dass wir wirklich eingetragen sind
+    const verify=await stoGet(`barricade_lobby_${id}`);
+    if(!verify||verify.guestId!==SESSION){setFlash(t('lobbyFull'));return;}
+    if(joinCancelledRef.current)return;
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
-    for(let i=0;i<40;i++){
+    for(let i=0;i<60;i++){
+      if(joinCancelledRef.current)return;
       await new Promise(r=>setTimeout(r,500));
+      if(joinCancelledRef.current)return;
       const gs=await stoGet(`barricade_game_${id}`);
       if(gs){
+        if(joinCancelledRef.current)return;
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
         initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap,lobby.duelSize||'standard');return;
       }
     }
-    setFlash(t('hostNotResponding'));setScreen('online');
+    if(!joinCancelledRef.current){setFlash(t('hostNotResponding'));setScreen('online');}
   };
 
   const joinByCode=async()=>{
@@ -6212,7 +6254,21 @@ function App(){
         <div style={{fontSize:12,color:'var(--subtle)',marginBottom:22,textAlign:'center'}}>
           {onlineRole==='A'?t('shareCode'):t('waitingStart')}
         </div>
-        <button onClick={async()=>{await cleanupLobby(lobbyId);setScreen('menu');setLobbyId(null);setPrivateCode(null);}} style={sBack}>{t('cancel')}</button>
+        <button onClick={async()=>{
+          joinCancelledRef.current=true;
+          if(onlineRole==='A'){
+            await cleanupLobby(lobbyId);
+          }else{
+            // Guest: nur guestId entfernen, Host-Lobby bleibt bestehen
+            try{
+              const lob=await stoGet(`barricade_lobby_${lobbyId}`);
+              if(lob&&lob.guestId===SESSION){
+                await stoSet(`barricade_lobby_${lobbyId}`,{...lob,guestId:null,guestName:'',guestAccountKey:null});
+              }
+            }catch(e){}
+          }
+          setScreen('menu');setLobbyId(null);setPrivateCode(null);
+        }} style={sBack}>{t('cancel')}</button>
       </div>
     </div>
     );
