@@ -3779,19 +3779,35 @@ function App(){
   },[darkMode]);
 
   // Globale Admin-Config live laden (alle Clients)
+  // Erst auf Anonymous Auth warten, dann Config laden
   useEffect(()=>{
     if(!window.db)return;
-    // Fallback: nach 3 Sekunden trotzdem öffnen
-    const timeout=setTimeout(()=>setAdminCfgReady(true),3000);
-    const ref=window.db.ref(ADMIN_CFG_KEY);
-    const cb=ref.on('value',snap=>{
+    let ref=null;
+    let cb=null;
+    // Fallback nach 8 Sekunden
+    const timeout=setTimeout(()=>setAdminCfgReady(true),8000);
+    const unsub=firebase.auth().onAuthStateChanged(firebaseUser=>{
+      if(!firebaseUser)return;
       clearTimeout(timeout);
-      const v=snap.val();
-      if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
-      else setAdminCfg(DEFAULT_ADMIN_CFG);
-      setAdminCfgReady(true);
+      ref=window.db.ref(ADMIN_CFG_KEY);
+      // Einmalig laden für schnellen Start
+      ref.once('value',snap=>{
+        const v=snap.val();
+        if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
+        else setAdminCfg(DEFAULT_ADMIN_CFG);
+        setAdminCfgReady(true);
+        // Danach live updates
+        cb=ref.on('value',snap2=>{
+          const v2=snap2.val();
+          if(v2){try{setAdminCfg(mergeAdminCfg(JSON.parse(v2)));}catch(e){}}
+        });
+      });
     });
-    return ()=>{clearTimeout(timeout);ref.off('value',cb);};
+    return ()=>{
+      clearTimeout(timeout);
+      unsub();
+      if(ref&&cb)ref.off('value',cb);
+    };
   },[]);
 
   // URL ?join=CODE → automatisch zum Freund-Beitritt
