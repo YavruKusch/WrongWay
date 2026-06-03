@@ -3495,6 +3495,7 @@ function App(){
   // ── Account / Login ──
   const[account,setAccount]=useState(null);
   const[pendingGoogleUser,setPendingGoogleUser]=useState(null);
+  const[showPrivacy,setShowPrivacy]=useState(false);
   const[googleName,setGoogleName]=useState('');
   const[googleColor,setGoogleColor]=useState(AVATAR_COLORS[0]);
   const[googleNameErr,setGoogleNameErr]=useState('');
@@ -5570,6 +5571,55 @@ function App(){
       )}
       {showTutorial&&<TutorialModal t={t} darkMode={darkMode} step={tutStep} setStep={setTutStep} onClose={closeTutorial}/>}
       {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
+
+      {/* Datenschutz-Link */}
+      <button onClick={()=>setShowPrivacy(true)} style={{
+        position:'fixed',bottom:'calc(env(safe-area-inset-bottom) + 8px)',left:'50%',
+        transform:'translateX(-50%)',background:'none',border:'none',
+        color:'var(--subtle)',cursor:'pointer',fontSize:11,fontWeight:600,
+        fontFamily:'system-ui,-apple-system,sans-serif',opacity:0.7,zIndex:50,
+        padding:'6px 12px'}}>
+        Datenschutz
+      </button>
+
+      {/* Datenschutz-Modal */}
+      {showPrivacy&&(
+        <div onClick={()=>setShowPrivacy(false)} style={{position:'fixed',inset:0,
+          background:'rgba(0,0,0,0.6)',zIndex:2000,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:0}}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            background:'var(--card)',borderRadius:'20px 20px 0 0',
+            width:'100%',maxWidth:520,maxHeight:'85vh',
+            display:'flex',flexDirection:'column',
+            boxShadow:'0 -8px 40px rgba(0,0,0,0.3)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'16px 20px 12px',borderBottom:'1.5px solid var(--border)',flexShrink:0}}>
+              <div style={{fontSize:16,fontWeight:900,color:'var(--text)'}}>Datenschutzerklaerung</div>
+              <button onClick={()=>setShowPrivacy(false)} style={{background:'none',border:'none',
+                fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>x</button>
+            </div>
+            <div style={{overflowY:'auto',padding:'16px 20px 32px',WebkitOverflowScrolling:'touch'}}>
+              <div style={{fontSize:12,color:'var(--subtle)',fontWeight:700,marginBottom:12}}>Stand: {new Date().getFullYear()} - Hueseyin Tunay - Memseyinps4@gmail.com</div>
+
+              {[
+                ['1. Datenschutz auf einen Blick','Personenbezogene Daten sind alle Daten, mit denen Sie persoenlich identifiziert werden koennen. Sie haben das Recht auf Auskunft, Berichtigung und Loeschung Ihrer Daten. Bei Fragen: Memseyinps4@gmail.com'],
+                ['2. Hosting','Diese Website wird gehostet von: GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA. Die Datenverarbeitung erfolgt zur fehlerfreien Bereitstellung des Angebots (Art. 6 Abs. 1 lit. f DSGVO).'],
+                ['3. Datenbankdienste (Firebase)','Wir nutzen Google Firebase Realtime Database zur Speicherung von Spielerdaten (Benutzername, verschluesseltes Passwort, Spielstatistiken, ELO-Wertung). Anbieter: Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland. Daten werden auf EU-Servern (europe-west1) gespeichert. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Datenschutzerklaerung Google: https://policies.google.com/privacy'],
+                ['4. Google-Anmeldung','Sie koennen sich mit Ihrem Google-Konto anmelden (Firebase Authentication). Dabei werden Name und E-Mail-Adresse von Google uebermittelt und als Spielerprofil gespeichert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch bewusstes Antippen des "Mit Google anmelden"-Buttons).'],
+                ['5. Registrierung','Bei der Erstellung eines Kontos werden Benutzername und Passwort-Hash gespeichert. Kein Klartext-Passwort wird gespeichert. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.'],
+                ['6. Speicherdauer','Daten bleiben gespeichert bis das Konto geloescht wird oder Sie uns per E-Mail zur Loeschung auffordern: Memseyinps4@gmail.com'],
+                ['7. SSL-Verschluesselung','Diese Seite nutzt HTTPS/SSL-Verschluesselung. Eine verschluesselte Verbindung erkennen Sie am Schloss-Symbol in der Browserzeile.'],
+                ['8. Ihre Rechte','Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Loeschung (Art. 17), Einschraenkung (Art. 18) und Datenportabilitaet (Art. 20). Beschwerden koennen Sie bei der zustaendigen Datenschutzbehoerde einreichen. Kontakt: Memseyinps4@gmail.com'],
+                ['Quelle','Erstellt mit Unterstuetzung von e-recht24.de']
+              ].map(function(s){return(
+                <div key={s[0]} style={{marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:5}}>{s[0]}</div>
+                  <div style={{fontSize:12,color:'var(--subtle)',lineHeight:1.6,fontWeight:500}}>{s[1]}</div>
+                </div>
+              );})}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     );
   }
