@@ -5213,39 +5213,9 @@ function App(){
         <div onClick={()=>{
           const next=adminTaps+1;
           setAdminTaps(next);
-          if(next>=5){setAdminTaps(0);setShowAdminUnlock(true);setAdminUnlockPw('');setAdminUnlockErr(false);}
+          if(next>=10){setAdminTaps(0);setShowAdminUnlock(true);setAdminUnlockPw('');setAdminUnlockErr(false);}
         }} style={{fontSize:30,fontWeight:900,letterSpacing:-1.6,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
         <div style={{fontSize:12,fontWeight:600,letterSpacing:0.5,color:'var(--subtle)',marginTop:7,fontStyle:'italic'}}>{t('subtitle')}</div>
-
-        {showAdminUnlock&&(
-          <div onClick={()=>setShowAdminUnlock(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:3000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-            <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,padding:22,width:'100%',maxWidth:300,boxShadow:'0 8px 40px rgba(0,0,0,0.35)'}}>
-              <div style={{fontSize:14,fontWeight:800,color:'var(--text)',marginBottom:14,textAlign:'center'}}>Admin-Zugang</div>
-              <input value={adminUnlockPw} onChange={e=>setAdminUnlockPw(e.target.value)} type="password"
-                placeholder="Passwort" autoFocus
-                onKeyDown={async e=>{
-                  if(e.key==='Enter'){
-                    const enc=new TextEncoder().encode(adminUnlockPw);
-                    const buf=await crypto.subtle.digest('SHA-256',enc);
-                    const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-                    if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setShowAdmin(true);}
-                    else{setAdminUnlockErr(true);}
-                  }
-                }}
-                style={{width:'100%',padding:'12px',borderRadius:10,border:adminUnlockErr?'1.5px solid #ef4444':'1.5px solid var(--border)',fontSize:15,outline:'none',background:'var(--bg)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box'}}/>
-              {adminUnlockErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginTop:6,textAlign:'center'}}>Falsches Passwort</div>}
-              <button onClick={async()=>{
-                const enc=new TextEncoder().encode(adminUnlockPw);
-                const buf=await crypto.subtle.digest('SHA-256',enc);
-                const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-                if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setShowAdmin(true);}
-                else{setAdminUnlockErr(true);}
-              }} style={{width:'100%',padding:'12px',marginTop:12,borderRadius:10,background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                Entsperren
-              </button>
-            </div>
-          </div>
-        )}
         {/* Dynamischer Unter-Slogan */}
         <div style={{
           marginTop:10,
@@ -5626,6 +5596,36 @@ function App(){
       )}
       {showTutorial&&<TutorialModal t={t} darkMode={darkMode} step={tutStep} setStep={setTutStep} onClose={closeTutorial}/>}
       {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
+
+      {showAdminUnlock&&(
+        <div onClick={()=>{setShowAdminUnlock(false);setAdminUnlockPw('');setAdminUnlockErr(false);}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,padding:22,width:'100%',maxWidth:300,boxShadow:'0 8px 40px rgba(0,0,0,0.35)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'var(--text)',marginBottom:14,textAlign:'center'}}>Admin-Zugang</div>
+            <input value={adminUnlockPw} onChange={e=>{setAdminUnlockPw(e.target.value);setAdminUnlockErr(false);}} type="password"
+              placeholder="Passwort"
+              onKeyDown={async e=>{
+                if(e.key==='Enter'){
+                  const enc=new TextEncoder().encode(adminUnlockPw);
+                  const buf=await crypto.subtle.digest('SHA-256',enc);
+                  const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+                  if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setAdminUnlockPw('');setShowAdmin(true);}
+                  else{setAdminUnlockErr(true);}
+                }
+              }}
+              style={{width:'100%',padding:'12px',borderRadius:10,border:adminUnlockErr?'1.5px solid #ef4444':'1.5px solid var(--border)',fontSize:15,outline:'none',background:'var(--bg)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box'}}/>
+            {adminUnlockErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginTop:6,textAlign:'center'}}>Falsches Passwort</div>}
+            <button onClick={async()=>{
+              const enc=new TextEncoder().encode(adminUnlockPw);
+              const buf=await crypto.subtle.digest('SHA-256',enc);
+              const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+              if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setAdminUnlockPw('');setShowAdmin(true);}
+              else{setAdminUnlockErr(true);}
+            }} style={{width:'100%',padding:'12px',marginTop:12,borderRadius:10,background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              Entsperren
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Datenschutz-Link */}
       <button onClick={()=>setShowPrivacy(true)} style={{
