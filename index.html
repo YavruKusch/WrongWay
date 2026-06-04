@@ -752,6 +752,9 @@ en:{
   pwResetSent:'Reset email sent \u2014 check your inbox.',pwResetErr:'Could not send reset email.',
   auth_emailTaken:'Email already registered',auth_emailInvalid:'Invalid email address',
   auth_wrongLogin:'Wrong email or password',auth_needEmail:'Enter your email first',auth_authDisabled:'Email login not enabled yet',
+  auth_notVerified:'Email not yet confirmed \u2014 check your inbox (and spam).',
+  auth_verifyRequired:'Registration successful! Please confirm your email, then log in.',
+  verifySent:'Verification email sent!',resendVerification:'Resend verification email',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -788,6 +791,9 @@ de:{
   pwResetSent:'E-Mail zum Zur\u00fccksetzen gesendet \u2014 schau in dein Postfach.',pwResetErr:'E-Mail konnte nicht gesendet werden.',
   auth_emailTaken:'E-Mail bereits registriert',auth_emailInvalid:'Ung\u00fcltige E-Mail-Adresse',
   auth_wrongLogin:'Falsche E-Mail oder Passwort',auth_needEmail:'Zuerst E-Mail eingeben',auth_authDisabled:'E-Mail-Login noch nicht aktiviert',
+  auth_notVerified:'E-Mail noch nicht best\u00e4tigt \u2014 schau ins Postfach (auch Spam).',
+  auth_verifyRequired:'Registrierung erfolgreich! Bitte best\u00e4tige deine E-Mail, dann anmelden.',
+  verifySent:'Best\u00e4tigungsmail gesendet!',resendVerification:'Best\u00e4tigungsmail nochmal senden',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -2031,7 +2037,11 @@ async function adminResetAllRanked(){
     [USERNAME_KEY(key)]:{uid:uid,name:name.trim()}
   });
   if(!ok)return{err:'network'};
-  return{prof:{...prof,key:uid}};
+  // Bestaetigunsmail senden und sofort abmelden
+  // (Login erst moeglich nachdem E-Mail bestaetigt wurde)
+  try{await cred.user.sendEmailVerification();}catch(e){}
+  try{await firebase.auth().signOut();}catch(e){}
+  return{err:'verifyRequired'};
 }
 async function loginAccount(email,pw){
   const em=(email||'').trim();
@@ -2045,6 +2055,12 @@ async function loginAccount(email,pw){
     return{err:'wrongLogin'};
   }
   const uid=cred.user.uid;
+  // E-Mail muss bestaetigt sein
+  if(!cred.user.emailVerified){
+    try{await cred.user.sendEmailVerification();}catch(e){}
+    try{await firebase.auth().signOut();}catch(e){}
+    return{err:'notVerified'};
+  }
   let prof=await stoGet(PROFILE_KEY(uid));
   if(!prof){
     // Auth-Konto ohne Profil (z.B. abgebrochene Registrierung) -> minimal anlegen
@@ -3635,6 +3651,7 @@ function App(){
   const[authMode,setAuthMode]=useState('login'); // 'login' | 'register'
   const[authName,setAuthName]=useState('');
   const[authEmail,setAuthEmail]=useState('');
+  const[showResend,setShowResend]=useState(false);
   const[authPw,setAuthPw]=useState('');
   const[authColor,setAuthColor]=useState(AVATAR_COLORS[0]);
   const[authErr,setAuthErr]=useState('');
@@ -3667,13 +3684,15 @@ function App(){
   },[account]);
   const doAuth=async()=>{
     if(authBusy)return;
-    setAuthErr('');setAuthBusy(true);
+    setAuthErr('');setAuthBusy(true);setShowResend(false);
     const fn=authMode==='register'?registerAccount(authEmail,authName,authPw,authColor):loginAccount(authEmail,authPw);
     const res=await fn;
     setAuthBusy(false);
+    if(res.err==='verifyRequired'){setAuthErr(t('auth_verifyRequired'));return;}
+    if(res.err==='notVerified'){setAuthErr(t('auth_notVerified'));setShowResend(true);return;}
     if(res.err){setAuthErr(t('auth_'+res.err));return;}
     setAccount(res.prof);
-    setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');
+    setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');setShowResend(false);
     setNavDir('back');setScreen('menu');
   };
   const doForgotPw=async()=>{
@@ -3681,6 +3700,16 @@ function App(){
     if(!em){setAuthErr(t('auth_needEmail'));return;}
     try{await firebase.auth().sendPasswordResetEmail(em);setAuthErr(t('pwResetSent'));}
     catch(e){setAuthErr(t('pwResetErr'));}
+  };
+  const doResendVerification=async()=>{
+    const em=(authEmail||'').trim();
+    if(!em||!authPw)return;
+    try{
+      const cred=await firebase.auth().signInWithEmailAndPassword(em,authPw);
+      try{await cred.user.sendEmailVerification();}catch(e){}
+      try{await firebase.auth().signOut();}catch(e){}
+      setAuthErr(t('verifySent'));setShowResend(false);
+    }catch(e){setAuthErr(t('auth_wrongLogin'));}
   };
   const doLogout=()=>{
     try{firebase.auth().signOut();}catch(e){}
@@ -6365,7 +6394,17 @@ function App(){
             </div>
           )}
 
-          {authErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginTop:12,textAlign:'center'}}>{authErr}</div>}
+          {authErr&&<div style={{color: authErr===t('auth_verifyRequired')||authErr===t('verifySent')?'#16a34a':'#ef4444',fontSize:12,fontWeight:600,marginTop:12,textAlign:'center',lineHeight:1.5}}>{authErr}</div>}
+
+          {showResend&&(
+            <button onClick={doResendVerification} style={{
+              width:'100%',padding:'10px',marginTop:8,borderRadius:10,
+              background:'rgba(245,158,11,0.1)',border:'1.5px solid rgba(245,158,11,0.4)',
+              color:'#d97706',cursor:'pointer',fontSize:12,fontWeight:700,
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {t('resendVerification')}
+            </button>
+          )}
 
           <button onClick={doAuth} disabled={authBusy} style={{
             width:'100%',padding:'14px',marginTop:18,borderRadius:12,
