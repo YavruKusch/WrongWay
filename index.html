@@ -755,6 +755,7 @@ en:{
   auth_notVerified:'Email not yet confirmed \u2014 check your inbox (and spam).',
   auth_verifyRequired:'Registration successful! Please confirm your email, then log in.',
   verifySent:'Verification email sent!',resendVerification:'Resend verification email',
+  auth_tooManyAttempts:'Too many attempts \u2014 please wait a few minutes.',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -794,6 +795,7 @@ de:{
   auth_notVerified:'E-Mail noch nicht best\u00e4tigt \u2014 schau ins Postfach (auch Spam).',
   auth_verifyRequired:'Registrierung erfolgreich! Bitte best\u00e4tige deine E-Mail, dann anmelden.',
   verifySent:'Best\u00e4tigungsmail gesendet!',resendVerification:'Best\u00e4tigungsmail nochmal senden',
+  auth_tooManyAttempts:'Zu viele Versuche \u2014 bitte einige Minuten warten.',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -2033,6 +2035,7 @@ async function adminResetAllRanked(){
     if(c==='auth/invalid-email')return{err:'emailInvalid'};
     if(c==='auth/weak-password')return{err:'pwShort'};
     if(c==='auth/operation-not-allowed')return{err:'authDisabled'};
+    if(c==='auth/too-many-requests')return{err:'tooManyAttempts'};
     return{err:'network'};
   }
   const uid=cred.user.uid;
@@ -2057,6 +2060,7 @@ async function loginAccount(email,pw){
     const c=e&&e.code?e.code:'';
     if(c==='auth/invalid-email')return{err:'emailInvalid'};
     if(c==='auth/operation-not-allowed')return{err:'authDisabled'};
+    if(c==='auth/too-many-requests')return{err:'tooManyAttempts'};
     return{err:'wrongLogin'};
   }
   const uid=cred.user.uid;
