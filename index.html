@@ -2044,7 +2044,11 @@ async function adminResetAllRanked(){
   const prof={name:name.trim(),color:color||AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
   // Profil schreiben
   const ok=await stoSet(PROFILE_KEY(uid),prof);
-  if(!ok)return{err:'network'};
+  if(!ok){
+    const dbg=window.lastFbError||'unbekannt';
+    try{await firebase.auth().signOut();}catch(e){}
+    return{err:'dbg_'+dbg};
+  }
   // Namens-Reservierung schreiben (separat, toleriert Fehler)
   await stoSet(USERNAME_KEY(key),{uid:uid,name:name.trim()});
   // Bestaetigunsmail senden und abmelden (Login erst nach Bestaetigung moeglich)
@@ -3704,6 +3708,7 @@ function App(){
       setAuthBusy(false);setAuthErr(t('auth_network'));return;
     }
     setAuthBusy(false);
+    if(res.err && res.err.slice(0,4)==='dbg_'){setAuthErr('DB: '+res.err.slice(4));return;}
     if(res.err==='verifyRequired'){
       setAuthErr(t('auth_verifyRequired'));
       setAuthMode('login');
