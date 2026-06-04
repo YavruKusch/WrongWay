@@ -133,6 +133,7 @@
     0%{transform:translate(0,0) rotate(0deg);opacity:1;}
     100%{transform:translate(var(--dx),var(--dy)) rotate(var(--dr));opacity:0;}
   }
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   @keyframes piece-pulse{
     0%,100%{transform:scale(0.9);opacity:0.5;}
     50%{transform:scale(1.55);opacity:0;}
@@ -757,6 +758,7 @@ en:{
   verifySent:'Verification email sent!',resendVerification:'Resend verification email',
   auth_tooManyAttempts:'Too many attempts \u2014 please wait a few minutes.',
   serverFull:'Server full (100/100 players)',serverFullSub:'Play against the bot in the meantime',serverFullBtn:'Play vs Bot',serverOffline:'No connection to server',
+  reconnectingOwn:'Restoring connection...',reconnectingOwnSub:'The game continues once you are back online',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -798,6 +800,7 @@ de:{
   verifySent:'Best\u00e4tigungsmail gesendet!',resendVerification:'Best\u00e4tigungsmail nochmal senden',
   auth_tooManyAttempts:'Zu viele Versuche \u2014 bitte einige Minuten warten.',
   serverFull:'Server voll (100/100 Spieler)',serverFullSub:'Spiel in der Zwischenzeit gegen den Bot',serverFullBtn:'Gegen Bot spielen',serverOffline:'Keine Verbindung zum Server',
+  reconnectingOwn:'Verbindung wird wiederhergestellt...',reconnectingOwnSub:'Das Spiel l\u00e4uft weiter sobald du wieder online bist',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -2975,6 +2978,49 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
   const[pwNew,setPwNew]=React.useState('');
   const[pwConf,setPwConf]=React.useState('');
   const[pwErr,setPwErr]=React.useState('');
+  const[showDeleteAccount,setShowDeleteAccount]=React.useState(false);
+  const[deletePw,setDeletePw]=React.useState('');
+  const[deleteErr,setDeleteErr]=React.useState('');
+  const[deleteBusy,setDeleteBusy]=React.useState(false);
+  const doDeleteAccount=async()=>{
+    setDeleteBusy(true);setDeleteErr('');
+    const user=firebase.auth().currentUser;
+    if(!user){setDeleteBusy(false);setDeleteErr(t('auth_notFound')||'Fehler');return;}
+    try{
+      // Reauth (E-Mail oder Google)
+      if(account.isGoogle){
+        const prov=new firebase.auth.GoogleAuthProvider();
+        await user.reauthenticateWithPopup(prov);
+      }else{
+        const cred=firebase.auth.EmailAuthProvider.credential(user.email,deletePw);
+        await user.reauthenticateWithCredential(cred);
+      }
+      // Alle Nutzer-Daten loeschen
+      const uid=user.uid;
+      const nameKey=normUser(account.name||'');
+      const dels={};
+      dels[PROFILE_KEY(uid)]=null;
+      dels[USERNAME_KEY(nameKey)]=null;
+      dels['ww_leaderboard/'+uid]=null;
+      dels['ww_presence/'+uid]=null;
+      dels['ww_friends/'+uid]=null;
+      dels['ww_freq/'+uid]=null;
+      dels['ww_invites/'+uid]=null;
+      dels['ww_ranked_queue/'+uid]=null;
+      dels['ww_ranked_confirm/'+uid]=null;
+      try{await window.db.ref().update(dels);}catch(e){}
+      // Firebase Auth Konto loeschen
+      await user.delete();
+      // Abmelden + State leeren
+      onLogout();
+    }catch(e){
+      const c=e&&e.code?e.code:'';
+      if(c==='auth/wrong-password'||c==='auth/invalid-credential')setDeleteErr(t('auth_wrongLogin')||'Falsches Passwort');
+      else if(c==='auth/requires-recent-login')setDeleteErr('Bitte erneut anmelden und direkt loeschen');
+      else setDeleteErr(t('auth_network')||'Fehler');
+      setDeleteBusy(false);
+    }
+  };
   const[pwOk,setPwOk]=React.useState(false);
   const[pwBusy,setPwBusy]=React.useState(false);
 
@@ -3239,6 +3285,49 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
             {resetDone?('✓ '+t('resetStatsDone')):t('resetStatsUsed')}
           </div>
         )}
+
+        {/* Konto loeschen */}
+        <div style={{marginBottom:14,marginTop:4}}>
+          {!showDeleteAccount?(
+            <button onClick={()=>setShowDeleteAccount(true)} style={{
+              width:'100%',padding:'12px',borderRadius:11,background:'transparent',
+              border:'1.5px solid rgba(239,68,68,0.35)',color:'#ef4444',cursor:'pointer',
+              fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrashIcon size={15} color="#ef4444"/>Konto l\u00f6schen</span>
+            </button>
+          ):(
+            <div style={{background:'rgba(239,68,68,0.07)',borderRadius:12,
+              border:'1.5px solid rgba(239,68,68,0.4)',padding:'16px'}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+                <WarningIcon size={15} color="#ef4444"/> Konto unwiderruflich l\u00f6schen
+              </div>
+              <div style={{fontSize:12,color:muted,marginBottom:12,lineHeight:1.5}}>
+                Alle Daten, Stats und Ranglisten-Eintr\u00e4ge werden gel\u00f6scht. Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.
+              </div>
+              {!account.isGoogle&&(
+                <input value={deletePw} onChange={e=>setDeletePw(e.target.value)}
+                  placeholder="Aktuelles Passwort zur Best\u00e4tigung"
+                  type="password" maxLength={64}
+                  style={{...inpSt,marginBottom:10}}/>
+              )}
+              {deleteErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginBottom:8}}>{deleteErr}</div>}
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={doDeleteAccount} disabled={deleteBusy} style={{
+                  flex:1,padding:'11px',borderRadius:9,background:'#ef4444',
+                  color:'#fff',border:'none',cursor:deleteBusy?'default':'pointer',
+                  fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {deleteBusy?'…':'Endg\u00fcltig l\u00f6schen'}
+                </button>
+                <button onClick={()=>{setShowDeleteAccount(false);setDeletePw('');setDeleteErr('');}} style={{
+                  padding:'11px 14px',borderRadius:9,background:'transparent',
+                  border:'1.5px solid '+border,color:muted,cursor:'pointer',
+                  fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {t('cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Logout */}
         <button onClick={onLogout} style={{
@@ -3773,11 +3862,21 @@ function App(){
   },[]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
   useEffect(()=>{
-    const key=account?account.key:GUEST_ID;
+    var authU=firebase.auth().currentUser;
+    const key=account?account.key:(authU?authU.uid:GUEST_ID);
     const name=getDisplayName(account);
     setPresence(key,true,name);
-    const iv=setInterval(()=>setPresence(key,true,name),15000);
-    return()=>{clearInterval(iv);setPresence(key,false,name);};
+    const iv=setInterval(()=>{
+      var u=firebase.auth().currentUser;
+      const k=account?account.key:(u?u.uid:GUEST_ID);
+      setPresence(k,true,getDisplayName(account));
+    },15000);
+    return()=>{
+      clearInterval(iv);
+      var u=firebase.auth().currentUser;
+      const k=account?account.key:(u?u.uid:GUEST_ID);
+      setPresence(k,false,getDisplayName(account));
+    };
   },[account]);
   // HOST: sobald friend-Lobby existiert, auf Guest warten
   useEffect(()=>{
@@ -4290,7 +4389,7 @@ function App(){
   const myTurn=gameMode==='online'?turn===onlineRole:true;
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
-  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu'};
+  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
   const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards';
@@ -5678,10 +5777,12 @@ function App(){
                   {[
                     {icon:'⚙', label:t('options'), sub:'Design, Sprache, Vibration', tab:'settings'},
                     {icon:<ReplayIcon size={18} color="var(--text)"/>, label:'Replays', sub:t('replayHistSub')||'Replays', tab:'replays'},
-                    {icon:<BookIcon size={18} color="var(--text)"/>, label:t('tutHelp'), sub:'So funktioniert\'s', tab:'howto'}
+                    {icon:<BookIcon size={18} color="var(--text)"/>, label:t('tutHelp'), sub:'So funktioniert\'s', tab:'howto'},
+                    {icon:'§', label:'Impressum & AGB', sub:'Datenschutz · Rechtliches', tab:'legal'}
                   ].map(function(it){return(
                     <button key={it.tab} onClick={()=>it.tab==='replays'?
                       (setShowOptions(false),setOptionsTab('main'),setNavDir('fwd'),setScreen('replayHistory')):
+                      it.tab==='legal'?(setShowOptions(false),setOptionsTab('main'),setNavDir('fwd'),setScreen('legal')):
                       (it.tab==='howto'?(setOptionsTab('main'),setShowOptions(false),openTutorial()):setOptionsTab(it.tab))
                     } style={{width:'100%',padding:'14px 14px',borderRadius:13,
                       background:'var(--bg)',border:'1.5px solid var(--border)',
@@ -6354,6 +6455,56 @@ function App(){
         setNavDir('fwd');
         setScreen('replay');
       }}/>;
+  }
+
+  if(screen==='legal'){
+    const card={background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:14,padding:'16px',marginBottom:12};
+    const h2={fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:0.3};
+    const p={fontSize:12,color:'var(--subtle)',lineHeight:1.6,margin:'0 0 6px 0'};
+    return (
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top)+20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1,overflowY:'auto'}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={goBack} style={backChevron}>{'<'}</button>
+        <div style={{width:'100%',maxWidth:340,padding:'0 0 40px',position:'relative',zIndex:1}}>
+
+          <div style={{textAlign:'center',marginBottom:20,paddingTop:8}}>
+            <div style={{fontSize:18,fontWeight:900,color:'var(--text)'}}>Wrong Way</div>
+            <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginTop:2}}>Rechtliches / Legal</div>
+          </div>
+
+          <div style={card}>
+            <div style={h2}>Impressum</div>
+            <p style={p}>Angaben gem. {'\u00a7'}5 DDG</p>
+            <p style={p}><b>Betreiber:</b> [Name wird ergaenzt]</p>
+            <p style={p}><b>Anschrift:</b> [Adresse wird ergaenzt]</p>
+            <p style={p}><b>Kontakt:</b> <a href="mailto:wrongway.app@gmail.com" style={{color:'#3b82f6',textDecoration:'none'}}>wrongway.app@gmail.com</a></p>
+            <p style={{...p,marginTop:8,fontSize:11}}>EU-Streitschlichtung: Die EU-Kommission stellt eine Plattform zur Online-Streitbeilegung bereit: <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" style={{color:'#3b82f6'}}>ec.europa.eu/consumers/odr</a></p>
+          </div>
+
+          <div style={card}>
+            <div style={h2}>Nutzungsbedingungen (AGB)</div>
+            <p style={p}><b>1. Geltungsbereich</b> Diese Nutzungsbedingungen gelten fuer die Nutzung des Browser-Spiels Wrong Way: Don't be mad unter wrongway.app.</p>
+            <p style={p}><b>2. Nutzung</b> Das Spiel darf nur fuer private, nicht-kommerzielle Zwecke genutzt werden. Cheating, Manipulation oder Missbrauch des Systems fuehrt zur Sperrung des Kontos.</p>
+            <p style={p}><b>3. Konten</b> Spieler sind verantwortlich fuer die Sicherheit ihres Kontos. Mit einer echten E-Mail-Adresse zu registrieren ist Pflicht.</p>
+            <p style={p}><b>4. Inhalte</b> Beleidigende Benutzernamen oder Inhalte sind verboten und werden entfernt.</p>
+            <p style={p}><b>5. Haftung</b> Der Betreiber haftet nicht fuer Datenverlust durch technische Probleme oder Serverausfaelle.</p>
+            <p style={p}><b>6. {'\u00c4'}nderungen</b> Diese Bedingungen koennen jederzeit geaendert werden. Die weitere Nutzung gilt als Zustimmung.</p>
+          </div>
+
+          <div style={card}>
+            <div style={h2}>Datenschutz</div>
+            <p style={p}>Es werden E-Mail-Adresse, Benutzername und Spielstatistiken gespeichert. Passwörter werden ausschliesslich von Firebase Authentication (Google) serverseitig verwaltet und sind nie im Klartext gespeichert.</p>
+            <p style={p}>Daten werden nicht an Dritte verkauft. Firebase-Dienste unterliegen Googles Datenschutzbestimmungen.</p>
+            <p style={p}>Recht auf Loeschung: Konto kann in den Einstellungen geloescht werden. Anfragen an: <a href="mailto:wrongway.app@gmail.com" style={{color:'#3b82f6',textDecoration:'none'}}>wrongway.app@gmail.com</a></p>
+            <p style={{...p,fontSize:11,marginTop:8}}>Fuer EU-Nutzer gilt die DSGVO. Fuer tuerkische Nutzer gilt das KVKK.</p>
+          </div>
+
+          <div style={{textAlign:'center',marginTop:8}}>
+            <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>{'\u00a9'} 2025 Wrong Way · wrongway.app</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const doGoogleSignIn=()=>{
@@ -7564,6 +7715,22 @@ function App(){
           <div style={{background:'rgba(239,68,68,0.45)',color:'white',padding:'4px 10px',borderRadius:12,fontSize:11,fontWeight:800,letterSpacing:0.5,backdropFilter:'blur(6px)',display:'flex',alignItems:'center',gap:5}}>
             <ModeGlyph kind="clock" size={11} color="#ffffff"/>
             <span style={{fontVariantNumeric:'tabular-nums'}}>{turnTimeLeft}s</span>
+          </div>
+        </div>
+      )}
+
+      {/* Eigener Reconnect-Overlay: wenn EIGENE Verbindung weg */}
+      {!serverOnline&&gameMode==='online'&&!winner&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(8px)',
+          WebkitBackdropFilter:'blur(8px)',zIndex:600,display:'flex',flexDirection:'column',
+          alignItems:'center',justifyContent:'center',gap:16,padding:24}}>
+          <div style={{width:44,height:44,borderRadius:'50%',border:'4px solid rgba(255,255,255,0.15)',
+            borderTop:'4px solid #3b82f6',animation:'spin 0.9s linear infinite'}}/>
+          <div style={{color:'#fff',fontSize:15,fontWeight:800,textAlign:'center',letterSpacing:0.2}}>
+            {t('reconnectingOwn')||'Verbindung wird wiederhergestellt...'}
+          </div>
+          <div style={{color:'rgba(255,255,255,0.5)',fontSize:11,fontWeight:600,textAlign:'center'}}>
+            {t('reconnectingOwnSub')||'Das Spiel laeuft weiter sobald du wieder online bist'}
           </div>
         </div>
       )}
