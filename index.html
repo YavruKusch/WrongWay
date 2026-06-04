@@ -2998,20 +2998,23 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
         const cred=firebase.auth.EmailAuthProvider.credential(user.email,deletePw);
         await user.reauthenticateWithCredential(cred);
       }
-      // Alle Nutzer-Daten loeschen
+      // Alle Nutzer-Daten einzeln loeschen (einzeln damit ein Fehler nicht alles blockiert)
       const uid=user.uid;
       const nameKey=normUser(account.name||'');
-      const dels={};
-      dels[PROFILE_KEY(uid)]=null;
-      dels[USERNAME_KEY(nameKey)]=null;
-      dels['ww_leaderboard/'+uid]=null;
-      dels['ww_presence/'+uid]=null;
-      dels['ww_friends/'+uid]=null;
-      dels['ww_freq/'+uid]=null;
-      dels['ww_invites/'+uid]=null;
-      dels['ww_ranked_queue/'+uid]=null;
-      dels['ww_ranked_confirm/'+uid]=null;
-      try{await window.db.ref().update(dels);}catch(e){}
+      const paths=[
+        PROFILE_KEY(uid),
+        USERNAME_KEY(nameKey),
+        'ww_leaderboard/'+uid,
+        'ww_presence/'+uid,
+        'ww_friends/'+uid,
+        'ww_freq/'+uid,
+        'ww_invites/'+uid,
+        'ww_ranked_queue/'+uid,
+        'ww_ranked_confirm/'+uid
+      ];
+      await Promise.all(paths.map(function(p){
+        return window.db.ref(p).remove().catch(function(){});
+      }));
       // Firebase Auth Konto loeschen
       await user.delete();
       // Abmelden + State leeren
