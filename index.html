@@ -2039,13 +2039,14 @@ async function adminResetAllRanked(){
     return{err:'network'};
   }
   const uid=cred.user.uid;
+  // Auth-Token explizit abwarten, damit RTDB-Verbindung den neuen Token kennt
+  try{await cred.user.getIdToken(true);}catch(e){}
   const prof={name:name.trim(),color:color||AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
-  // Atomisch: Profil + Namens-Reservierung
-  const ok=await stoMultiUpdate({
-    [PROFILE_KEY(uid)]:prof,
-    [USERNAME_KEY(key)]:{uid:uid,name:name.trim()}
-  });
+  // Profil schreiben
+  const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok)return{err:'network'};
+  // Namens-Reservierung schreiben (separat, toleriert Fehler)
+  await stoSet(USERNAME_KEY(key),{uid:uid,name:name.trim()});
   // Bestaetigunsmail senden und abmelden (Login erst nach Bestaetigung moeglich)
   await sendVerificationEmail(cred.user);
   try{await firebase.auth().signOut();}catch(e){}
