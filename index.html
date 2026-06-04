@@ -490,6 +490,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-check-compat.js"></script>
 
 <script>
   firebase.initializeApp({
@@ -501,6 +502,8 @@
     messagingSenderId: "252603563986",
     appId: "1:252603563986:web:705bc3ffcbb9d8ced2d20b"
   });
+  // App Check: blockiert API-Zugriffe von ausserhalb der App (reCAPTCHA v3)
+  firebase.appCheck().activate('6LfixwwtAAAAAIT9EyO_TNX_oNh6rY-fODqhkgqO',true);
   window.db = firebase.database();
   // Nur anonym anmelden, wenn KEIN echter Nutzer angemeldet ist
   // (sonst wuerde die gespeicherte Konto-Sitzung bei jedem Laden ueberschrieben)
