@@ -2043,9 +2043,8 @@ async function adminResetAllRanked(){
     [USERNAME_KEY(key)]:{uid:uid,name:name.trim()}
   });
   if(!ok)return{err:'network'};
-  // Bestaetigunsmail senden und sofort abmelden
-  // (Login erst moeglich nachdem E-Mail bestaetigt wurde)
-  sendVerificationEmail(cred.user);
+  // Bestaetigunsmail senden und abmelden (Login erst nach Bestaetigung moeglich)
+  await sendVerificationEmail(cred.user);
   try{await firebase.auth().signOut();}catch(e){}
   return{err:'verifyRequired'};
 }
@@ -2063,7 +2062,7 @@ async function loginAccount(email,pw){
   const uid=cred.user.uid;
   // E-Mail muss bestaetigt sein
   if(!cred.user.emailVerified){
-    sendVerificationEmail(cred.user);
+    await sendVerificationEmail(cred.user);
     try{await firebase.auth().signOut();}catch(e){}
     return{err:'notVerified'};
   }
@@ -3691,8 +3690,14 @@ function App(){
   const doAuth=async()=>{
     if(authBusy)return;
     setAuthErr('');setAuthBusy(true);setShowResend(false);
-    const fn=authMode==='register'?registerAccount(authEmail,authName,authPw,authColor):loginAccount(authEmail,authPw);
-    const res=await fn;
+    let res;
+    try{
+      res=authMode==='register'
+        ?await registerAccount(authEmail,authName,authPw,authColor)
+        :await loginAccount(authEmail,authPw);
+    }catch(e){
+      setAuthBusy(false);setAuthErr(t('auth_network'));return;
+    }
     setAuthBusy(false);
     if(res.err==='verifyRequired'){
       setAuthErr(t('auth_verifyRequired'));
