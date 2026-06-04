@@ -756,6 +756,7 @@ en:{
   auth_verifyRequired:'Registration successful! Please confirm your email, then log in.',
   verifySent:'Verification email sent!',resendVerification:'Resend verification email',
   auth_tooManyAttempts:'Too many attempts \u2014 please wait a few minutes.',
+  serverFull:'Server full (100/100 players)',serverFullSub:'Play against the bot in the meantime',serverFullBtn:'Play vs Bot',serverOffline:'No connection to server',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -796,6 +797,7 @@ de:{
   auth_verifyRequired:'Registrierung erfolgreich! Bitte best\u00e4tige deine E-Mail, dann anmelden.',
   verifySent:'Best\u00e4tigungsmail gesendet!',resendVerification:'Best\u00e4tigungsmail nochmal senden',
   auth_tooManyAttempts:'Zu viele Versuche \u2014 bitte einige Minuten warten.',
+  serverFull:'Server voll (100/100 Spieler)',serverFullSub:'Spiel in der Zwischenzeit gegen den Bot',serverFullBtn:'Gegen Bot spielen',serverOffline:'Keine Verbindung zum Server',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -3642,6 +3644,14 @@ function App(){
   const[oppAccountKey,setOppAccountKey]=useState(null);
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
+  const[serverOnline,setServerOnline]=useState(true);
+  // Firebase Verbindungsstatus ueberwachen
+  useEffect(()=>{
+    const ref=window.db.ref('.info/connected');
+    const handler=snap=>setServerOnline(snap.val()===true);
+    ref.on('value',handler);
+    return()=>ref.off('value',handler);
+  },[]);
   const[codeInput,setCodeInput]=useState('');
   const[privateCode,setPrivateCode]=useState(null);
   const[lang,setLang]=useState(getInitialLang());
@@ -5600,11 +5610,11 @@ function App(){
 
         {/* ONLINE SPIELEN */}
         {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo)&&(
-          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}</span>}>
+          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
             {(adminCfg.features.online)&&<MenuItem
               icon={<GlobeIcon size={19} color="#fff"/>}
               iconBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
-              title={t('playOnline')||'Spielen'} desc={t('createLobby')+' · '+t('joinExisting')}
+              title={t('playOnline')||'Spielen'} desc={serverOnline?(t('createLobby')+' · '+t('joinExisting')):t('serverFull')}
               off={!adminCfg.features.online}
               highlight
               highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
@@ -6625,6 +6635,29 @@ function App(){
         {/* Header */}
         <ScreenHead icon={<GlobeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
           title={t('playOnline')} sub={t('vsRandomDesc')}/>
+
+        {/* Server-Status-Banner */}
+        {!serverOnline&&(
+          <div style={{width:'100%',background:'rgba(239,68,68,0.10)',border:'1.5px solid rgba(239,68,68,0.3)',
+            borderRadius:14,padding:'14px 16px',marginBottom:16,textAlign:'center'}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4}}>
+              {navigator.onLine?t('serverFull'):t('serverOffline')}
+            </div>
+            {navigator.onLine&&(
+              <>
+                <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginBottom:12}}>
+                  {t('serverFullSub')}
+                </div>
+                <button onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} style={{
+                  padding:'10px 24px',borderRadius:10,border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
+                  background:'linear-gradient(135deg,#8b5cf6,#6366f1)',color:'#fff',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {t('serverFullBtn')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Create section */}
         <div style={{width:'100%',marginBottom:16}}>
