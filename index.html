@@ -4317,26 +4317,22 @@ function App(){
   const winSound=w=>{ if(!isOwnLoss(w)) playSound('win'); };
   const winnerFiredRef=useRef(false);
 
-  const triggerWin=(p,skipAnim)=>{
-    if(winnerFiredRef.current||S.current.winner)return; // Race-safe Guard (synchron + state-basiert)
+  const triggerWin=(p,skipAnim,finalMoveHist)=>{
+    if(winnerFiredRef.current||S.current.winner)return;
     winnerFiredRef.current=true;
     winSound(p);
     setWinner(p);
     setSeriesScore(prev=>({A:prev.A+(p==='A'?1:0),B:prev.B+(p==='B'?1:0)}));
-    // Replay in History speichern
     try{
       const s=S.current;
-      if(s.moveHist&&s.moveHist.length>0){
+      const mh=finalMoveHist||s.moveHist;
+      if(mh&&mh.length>0){
         const pA=s.playerNames&&s.playerNames.A?s.playerNames.A:null;
         const pB=s.playerNames&&s.playerNames.B?s.playerNames.B:null;
         saveReplayToHistory({
-          ts:Date.now(),
-          winner:p,
-          moveHist:s.moveHist,
-          map:s.selectedMap||'classic',
-          duelSize:s.duelSize||'standard',
-          nameA:pA,nameB:pB,
-          gameMode:s.gameMode||'local'
+          ts:Date.now(),winner:p,moveHist:mh,
+          map:s.selectedMap||'classic',duelSize:s.duelSize||'standard',
+          nameA:pA,nameB:pB,gameMode:s.gameMode||'local'
         });
       }
     }catch(e){}
@@ -4821,7 +4817,7 @@ function App(){
           }
           moves.push({type:'move',p:'B',r:d.pos.r,c:d.pos.c});
           setWalls(w);setMoveHist(moves);setHammerHeld(nextHeld);
-          if(d.pos.r===aiGoal){setAiThinking(false);triggerWin('B');return;}
+          if(d.pos.r===aiGoal){setAiThinking(false);triggerWin('B',false,moves);return;}
         }else{
           playSound('wall');setWalls(d.walls);setBarrLeft(p=>({...p,B:p.B-1}));
           const nk=[...d.walls].find(k=>!w.has(k));
@@ -5391,7 +5387,7 @@ function App(){
     const newTurn=turn==='A'?'B':'A';
     if(r===goalRowOf(turn,selectedMap)){
       doSync({pA:isA?np:S.current.pA,pB:isA?S.current.pB:np,walls,barrLeft:newBl,turn:newTurn,winner:turn,moves:nm,chaosItem:nextChaos,hammers:nextHammers,hammerHeld:nextHeld,hammerUsed:nextUsed});
-      triggerWin(turn);
+      triggerWin(turn,false,nm);
       return;
     }
     setTurn(newTurn);setFlash('');
