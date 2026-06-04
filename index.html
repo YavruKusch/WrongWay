@@ -501,8 +501,11 @@
     appId: "1:252603563986:web:705bc3ffcbb9d8ced2d20b"
   });
   window.db = firebase.database();
-  // Anonymen Auth-Ausweis holen (Voraussetzung für Firebase Security Rules)
-  firebase.auth().signInAnonymously().catch(function(e){console.warn('Auth',e);});
+  // Nur anonym anmelden, wenn KEIN echter Nutzer angemeldet ist
+  // (sonst wuerde die gespeicherte Konto-Sitzung bei jedem Laden ueberschrieben)
+  firebase.auth().onAuthStateChanged(function(u){
+    if(!u){ firebase.auth().signInAnonymously().catch(function(e){console.warn('AnonAuth',e);}); }
+  });
   // PWA Service Worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW',e);});
@@ -745,6 +748,10 @@ const I18N={
 // ── Erweiterte i18n-Keys (alle neuen UI-Strings, viersprachig) ──
 const I18N_EXT={
 en:{
+  email:'Email',emailPh:'you@example.com',forgotPw:'Forgot password?',
+  pwResetSent:'Reset email sent \u2014 check your inbox.',pwResetErr:'Could not send reset email.',
+  auth_emailTaken:'Email already registered',auth_emailInvalid:'Invalid email address',
+  auth_wrongLogin:'Wrong email or password',auth_needEmail:'Enter your email first',auth_authDisabled:'Email login not enabled yet',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -777,6 +784,10 @@ en:{
   whatsappInvite:'Play Wrong Way with me! Code: '
 },
 de:{
+  email:'E-Mail',emailPh:'du@beispiel.de',forgotPw:'Passwort vergessen?',
+  pwResetSent:'E-Mail zum Zur\u00fccksetzen gesendet \u2014 schau in dein Postfach.',pwResetErr:'E-Mail konnte nicht gesendet werden.',
+  auth_emailTaken:'E-Mail bereits registriert',auth_emailInvalid:'Ung\u00fcltige E-Mail-Adresse',
+  auth_wrongLogin:'Falsche E-Mail oder Passwort',auth_needEmail:'Zuerst E-Mail eingeben',auth_authDisabled:'E-Mail-Login noch nicht aktiviert',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -1921,6 +1932,8 @@ async function stoGetChildren(k){
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
+// Index: Benutzername (kleingeschrieben) -> { uid, name }. Fuer Eindeutigkeit + Freunde-Suche per Name.
+const USERNAME_KEY=n=>'ww_usernames/'+normUser(n);
 function normUser(u){return (u||'').trim().toLowerCase();}
 async function hashPw(pw){
   try{
@@ -1939,49 +1952,46 @@ function calculateElo(myRating,oppRating,won){
   const change=Math.round(K*((won?1:0)-exp));
   return{newRating:Math.max(100,myRating+change),change:change};
 }
-async function changeGoogleAccountName(gKey,oldName,newName){
-  const newNameKey=normUser(newName);
-  const oldNameKey=normUser(oldName);
-  if(newNameKey.length<3)return{err:'tooShort'};
-  if(!/^[a-z0-9_]+$/.test(newNameKey))return{err:'badChars'};
-  if(newNameKey===oldNameKey)return{err:'sameName'};
-  const existing=await stoGet(PROFILE_KEY(newNameKey));
-  if(existing)return{err:'taken'};
-  const prof=await stoGet(PROFILE_KEY(gKey));
-  if(!prof)return{err:'notFound'};
-  const updated=Object.assign({},prof,{name:newName.trim(),isGoogle:true,lastNameChange:Date.now()});
-  // Atomisch: Profil + alte Reservierung löschen + neue Reservierung — alles in einem Schritt
-  const ok=await stoMultiUpdate({
-    [PROFILE_KEY(gKey)]:updated,
-    [PROFILE_KEY(oldNameKey)]:null,
-    [PROFILE_KEY(newNameKey)]:{googleKey:gKey,name:newName.trim(),reserved:true}
-  });
-  if(!ok)return{err:'network'};
-  return{prof:Object.assign({},updated,{key:gKey,isGoogle:true})};
+async function changeGoogleAccountName(uid,oldName,newName){
+  // Vereinheitlicht: Konten sind jetzt alle per uid indexiert
+  return changeAccountName(uid,newName);
 }
-async function changeAccountName(oldKey,newName){
+async function changeAccountName(uid,newName){
   const newKey=normUser(newName);
   if(newKey.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(newKey))return{err:'badChars'};
-  if(newKey===oldKey)return{err:'sameName'};
-  const existing=await stoGet(PROFILE_KEY(newKey));
-  if(existing)return{err:'taken'};
-  const prof=await stoGet(PROFILE_KEY(oldKey));
+  const prof=await stoGet(PROFILE_KEY(uid));
   if(!prof)return{err:'notFound'};
+  if(normUser(prof.name)===newKey)return{err:'sameName'};
+  const existing=await stoGet(USERNAME_KEY(newKey));
+  if(existing&&existing.uid!==uid)return{err:'taken'};
+  const oldKey=normUser(prof.name);
   const updated=Object.assign({},prof,{name:newName.trim(),lastNameChange:Date.now()});
-  const ok=await stoSet(PROFILE_KEY(newKey),updated);
+  // Atomisch: Profil aktualisieren + alte Reservierung loeschen + neue setzen
+  const ok=await stoMultiUpdate({
+    [PROFILE_KEY(uid)]:updated,
+    [USERNAME_KEY(oldKey)]:null,
+    [USERNAME_KEY(newKey)]:{uid:uid,name:newName.trim()}
+  });
   if(!ok)return{err:'network'};
-  await stoDel(PROFILE_KEY(oldKey));
-  return{prof:Object.assign({},updated,{key:newKey})};
+  return{prof:Object.assign({},updated,{key:uid,isGoogle:prof.isGoogle||false})};
 }
 async function changeAccountPassword(key,oldPw,newPw,confirmPw){
   if(!newPw||newPw.length<6)return{err:'pwTooShort'};
   if(newPw!==confirmPw)return{err:'pwNoMatch'};
-  const prof=await stoGet(PROFILE_KEY(key));
-  if(!prof)return{err:'notFound'};
-  if(prof.pw!==await hashPw(oldPw))return{err:'wrongPw'};
-  await stoSet(PROFILE_KEY(key),Object.assign({},prof,{pw:await hashPw(newPw)}));
-  return{ok:true};
+  const user=firebase.auth().currentUser;
+  if(!user||!user.email)return{err:'notFound'};
+  try{
+    // Erneute Bestaetigung mit altem Passwort (Firebase verlangt das fuer sensible Aenderungen)
+    const credential=firebase.auth.EmailAuthProvider.credential(user.email,oldPw);
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPw);
+    return{ok:true};
+  }catch(e){
+    const c=e&&e.code?e.code:'';
+    if(c==='auth/weak-password')return{err:'pwTooShort'};
+    return{err:'wrongPw'};
+  }
 }
 async function adminResetAllRanked(){
   const all=await stoGet('ww_profiles');
@@ -1992,64 +2002,87 @@ async function adminResetAllRanked(){
     await stoSet(PROFILE_KEY(k),Object.assign({},p,{stats:Object.assign({},p.stats||{},{ranked:freshRankedStats()})}));
   }));
   return keys.length;
-}async function registerAccount(name,pw,color){
+}async function registerAccount(email,name,pw,color){
   const key=normUser(name);
   if(key.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(key))return{err:'badChars'};
   if((pw||'').length<6)return{err:'pwShort'};
-  try{
-    const rd=JSON.parse(localStorage.getItem('ww_reg_limit')||'{"ts":[]}');
-    const now=Date.now();const fresh=(rd.ts||[]).filter(t=>now-t<86400000);
-    if(fresh.length>=3)return{err:'rateLimit'};
-    localStorage.setItem('ww_reg_limit',JSON.stringify({ts:[...fresh,now]}));
-  }catch(e){}
-  const existing=await stoGet(PROFILE_KEY(key));
-  if(existing)return{err:'taken'};
-  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],pw:await hashPw(pw),created:Date.now(),stats:freshAccountStats()};
-  const ok=await stoSet(PROFILE_KEY(key),prof);
+  const em=(email||'').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return{err:'emailInvalid'};
+  // Benutzername noch frei?
+  const taken=await stoGet(USERNAME_KEY(key));
+  if(taken)return{err:'taken'};
+  // Firebase Auth Konto anlegen (Passwort wird serverseitig gehasht, verlaesst nie den Server)
+  let cred;
+  try{cred=await firebase.auth().createUserWithEmailAndPassword(em,pw);}
+  catch(e){
+    const c=e&&e.code?e.code:'';
+    if(c==='auth/email-already-in-use')return{err:'emailTaken'};
+    if(c==='auth/invalid-email')return{err:'emailInvalid'};
+    if(c==='auth/weak-password')return{err:'pwShort'};
+    if(c==='auth/operation-not-allowed')return{err:'authDisabled'};
+    return{err:'network'};
+  }
+  const uid=cred.user.uid;
+  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
+  // Atomisch: Profil + Namens-Reservierung
+  const ok=await stoMultiUpdate({
+    [PROFILE_KEY(uid)]:prof,
+    [USERNAME_KEY(key)]:{uid:uid,name:name.trim()}
+  });
   if(!ok)return{err:'network'};
-  return{prof:{...prof,key}};
+  return{prof:{...prof,key:uid}};
 }
-async function loginAccount(name,pw){
-  const key=normUser(name);
-  if(!key)return{err:'notFound'};
-  const prof=await stoGet(PROFILE_KEY(key));
-  if(!prof)return{err:'notFound'};
-  if(prof.pw!==await hashPw(pw))return{err:'wrongPw'};
-  return{prof:{...prof,key}};
+async function loginAccount(email,pw){
+  const em=(email||'').trim();
+  if(!em)return{err:'wrongLogin'};
+  let cred;
+  try{cred=await firebase.auth().signInWithEmailAndPassword(em,pw);}
+  catch(e){
+    const c=e&&e.code?e.code:'';
+    if(c==='auth/invalid-email')return{err:'emailInvalid'};
+    if(c==='auth/operation-not-allowed')return{err:'authDisabled'};
+    return{err:'wrongLogin'};
+  }
+  const uid=cred.user.uid;
+  let prof=await stoGet(PROFILE_KEY(uid));
+  if(!prof){
+    // Auth-Konto ohne Profil (z.B. abgebrochene Registrierung) -> minimal anlegen
+    prof={name:'Player',color:AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
+    await stoSet(PROFILE_KEY(uid),prof);
+  }
+  return{prof:{...prof,key:uid}};
 }
 async function getGoogleProfile(googleUser){
-  const key='g_'+googleUser.uid.slice(0,20);
-  const prof=await stoGet(PROFILE_KEY(key));
+  const uid=googleUser.uid;
+  const prof=await stoGet(PROFILE_KEY(uid));
   if(!prof)return null;
-  // Sicherheits-Check: gespeicherte UID muss zur Firebase-Auth passen
-  if(prof.googleUid&&prof.googleUid!==googleUser.uid)return null;
-  // Profil-Reparatur: fehlende Pflichtfelder ergänzen
+  // Profil-Reparatur: fehlende Pflichtfelder ergaenzen
   if(!prof.stats||!prof.name){
-    const repaired=Object.assign({name:'Player',color:AVATAR_COLORS[0],stats:freshAccountStats()},prof,{googleUid:googleUser.uid,isGoogle:true});
-    await stoSet(PROFILE_KEY(key),repaired);
-    return{...repaired,key,isGoogle:true};
+    const repaired=Object.assign({name:'Player',color:AVATAR_COLORS[0],stats:freshAccountStats()},prof,{isGoogle:true});
+    await stoSet(PROFILE_KEY(uid),repaired);
+    return{...repaired,key:uid,isGoogle:true};
   }
-  return{...prof,key,isGoogle:true};
+  return{...prof,key:uid,isGoogle:true};
 }
 async function createGoogleProfile(googleUser,name,color){
   const nameKey=normUser(name);
   if(nameKey.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(nameKey))return{err:'badChars'};
-  const existing=await stoGet(PROFILE_KEY(nameKey));
-  if(existing)return{err:'taken'};
-  const gKey='g_'+googleUser.uid.slice(0,20);
-  // Race-Condition-Schutz: Account bereits erstellt?
-  const alreadyExists=await stoGet(PROFILE_KEY(gKey));
-  if(alreadyExists)return{prof:{...alreadyExists,key:gKey,isGoogle:true}};
-  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],googleUid:googleUser.uid,isGoogle:true,created:Date.now(),stats:freshAccountStats()};
-  // Atomisch: Profil + Namens-Reservierung in einem Schritt
+  const uid=googleUser.uid;
+  // Race-Condition-Schutz: Profil bereits vorhanden?
+  const alreadyExists=await stoGet(PROFILE_KEY(uid));
+  if(alreadyExists)return{prof:{...alreadyExists,key:uid,isGoogle:true}};
+  const existing=await stoGet(USERNAME_KEY(nameKey));
+  if(existing&&existing.uid!==uid)return{err:'taken'};
+  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],isGoogle:true,created:Date.now(),stats:freshAccountStats()};
+  // Atomisch: Profil + Namens-Reservierung
   const ok=await stoMultiUpdate({
-    [PROFILE_KEY(gKey)]:prof,
-    [PROFILE_KEY(nameKey)]:{googleKey:gKey,name:name.trim(),reserved:true}
+    [PROFILE_KEY(uid)]:prof,
+    [USERNAME_KEY(nameKey)]:{uid:uid,name:name.trim()}
   });
   if(!ok)return{err:'network'};
-  return{prof:{...prof,key:gKey,isGoogle:true}};
+  return{prof:{...prof,key:uid,isGoogle:true}};
 }
 async function fetchAccount(key){
   const prof=await stoGet(PROFILE_KEY(key));
@@ -2082,14 +2115,13 @@ async function sendFriendRequestByKey(fromKey,toKey){
   return{ok:true};
 }
 async function sendFriendRequest(fromKey,toName){
-  const toKey=normUser(toName);
+  const rec=await stoGet(USERNAME_KEY(toName));
+  const toKey=rec&&rec.uid?rec.uid:null;
   if(!toKey)return{err:'friends_notFound'};
   if(toKey===fromKey)return{err:'friends_self'};
-  const target=await stoGet(PROFILE_KEY(toKey));
-  if(!target)return{err:'friends_notFound'};
   const myList=await stoGet(FLIST_KEY(fromKey))||[];
   if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
-  // Prüfen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
+  // Pruefen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
   const existing=await stoGet(FR_KEY(toKey)+'/'+fromKey);
   if(existing)return{err:'friends_alreadySent'};
   await stoSet(FR_KEY(toKey)+'/'+fromKey,{from:fromKey,ts:Date.now()});
@@ -3025,7 +3057,6 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
               fontFamily:'system-ui,-apple-system,sans-serif',
               display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{display:'flex',alignItems:'center',gap:6}}><LockIcon size={15} color="currentColor"/> {t('pwChange')}</span>
-              <span style={{fontSize:11,color:muted}}>SHA-256</span>
             </button>
           ):(
             <div style={{background:card,borderRadius:12,border:'1.5px solid '+border,padding:'14px'}}>
@@ -3603,27 +3634,27 @@ function App(){
   const[googleNameBusy,setGoogleNameBusy]=useState(false);
   const[authMode,setAuthMode]=useState('login'); // 'login' | 'register'
   const[authName,setAuthName]=useState('');
+  const[authEmail,setAuthEmail]=useState('');
   const[authPw,setAuthPw]=useState('');
   const[authColor,setAuthColor]=useState(AVATAR_COLORS[0]);
   const[authErr,setAuthErr]=useState('');
   const[authBusy,setAuthBusy]=useState(false);
   const accRef=useRef(null);
   accRef.current=account;
-  // Auto-Login aus localStorage + Google Redirect Result prüfen
+  // Auto-Login: Firebase Auth ist die Quelle der Wahrheit, localStorage nur fuer Sofort-Anzeige
   useEffect(()=>{
-    // localStorage Auto-Login (Passwort-Accounts + gespeicherte Google-Accounts)
+    // Sofort-Anzeige aus localStorage (wird gleich von Firebase bestaetigt/ueberschrieben)
     let saved=null;
     try{const s=localStorage.getItem('ww_account');if(s)saved=JSON.parse(s);}catch(e){}
-    if(saved&&saved.key){
-      setAccount(saved);
-      fetchAccount(saved.key).then(fresh=>{if(fresh)setAccount({...fresh,isGoogle:saved.isGoogle||false});});
-    }
-    // Google Auth Listener (für Auto-Login bei Rückkehr)
+    if(saved&&saved.key)setAccount(saved);
+    // Echter Auto-Login ueber die Firebase-Sitzung (gilt fuer E-Mail UND Google)
     const unsub=firebase.auth().onAuthStateChanged(async firebaseUser=>{
       if(!firebaseUser||firebaseUser.isAnonymous)return;
-      try{const s=localStorage.getItem("ww_account");const p=s?JSON.parse(s):null;if(p&&p.key&&!p.isGoogle)return;}catch(e){}
-      const prof=await getGoogleProfile(firebaseUser);
-      if(prof)setAccount(prof);
+      const uid=firebaseUser.uid;
+      const isG=(firebaseUser.providerData||[]).some(p=>p&&p.providerId==='google.com');
+      const prof=await stoGet(PROFILE_KEY(uid));
+      if(prof&&prof.name)setAccount({...prof,key:uid,isGoogle:isG});
+      // Kein Profil + Google = Erstanmeldung -> Namenswahl laeuft ueber den Google-Button
     });
     return()=>unsub();
   },[]);
@@ -3637,16 +3668,22 @@ function App(){
   const doAuth=async()=>{
     if(authBusy)return;
     setAuthErr('');setAuthBusy(true);
-    const fn=authMode==='register'?registerAccount(authName,authPw,authColor):loginAccount(authName,authPw);
+    const fn=authMode==='register'?registerAccount(authEmail,authName,authPw,authColor):loginAccount(authEmail,authPw);
     const res=await fn;
     setAuthBusy(false);
     if(res.err){setAuthErr(t('auth_'+res.err));return;}
     setAccount(res.prof);
-    setAuthName('');setAuthPw('');setAuthErr('');
+    setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');
     setNavDir('back');setScreen('menu');
   };
+  const doForgotPw=async()=>{
+    const em=(authEmail||'').trim();
+    if(!em){setAuthErr(t('auth_needEmail'));return;}
+    try{await firebase.auth().sendPasswordResetEmail(em);setAuthErr(t('pwResetSent'));}
+    catch(e){setAuthErr(t('pwResetErr'));}
+  };
   const doLogout=()=>{
-    if(account&&account.isGoogle){try{firebase.auth().signOut();}catch(e){}}
+    try{firebase.auth().signOut();}catch(e){}
     setAccount(null);setShowOptions(false);setNavDir('back');setScreen('menu');
   };
   // ── Presence / Friends / Invite ──────────────────────────
@@ -6305,9 +6342,13 @@ function App(){
             <div style={{fontSize:12,color:'var(--subtle)',fontWeight:500,marginTop:6}}>{t('loginToTrack')}</div>
           </div>
 
-          <input value={authName} onChange={e=>setAuthName(e.target.value)} placeholder={t('username')} maxLength={16}
-            autoCapitalize="off" autoCorrect="off" style={inputStyle}/>
-          <input value={authPw} onChange={e=>setAuthPw(e.target.value)} placeholder={t('password')} type="password" maxLength={32}
+          {authMode==='register'&&(
+            <input value={authName} onChange={e=>setAuthName(e.target.value)} placeholder={t('username')} maxLength={16}
+              autoCapitalize="off" autoCorrect="off" style={inputStyle}/>
+          )}
+          <input value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder={t('email')} type="email"
+            autoCapitalize="off" autoCorrect="off" inputMode="email" style={authMode==='register'?{...inputStyle,marginTop:10}:inputStyle}/>
+          <input value={authPw} onChange={e=>setAuthPw(e.target.value)} placeholder={t('password')} type="password" maxLength={64}
             onKeyDown={e=>{if(e.key==='Enter')doAuth();}} style={{...inputStyle,marginTop:10}}/>
 
           {authMode==='register'&&(
@@ -6342,6 +6383,14 @@ function App(){
             {authMode==='register'?t('haveAccount'):t('needAccount')}
           </button>
 
+          {authMode==='login'&&(
+            <button onClick={doForgotPw} style={{
+              width:'100%',padding:'4px',marginTop:2,background:'none',border:'none',
+              color:'var(--subtle)',cursor:'pointer',fontSize:12,fontWeight:600,
+              fontFamily:'system-ui,-apple-system,sans-serif',textDecoration:'underline'}}>
+              {t('forgotPw')}
+            </button>
+          )}
           <div style={{display:'flex',alignItems:'center',gap:10,margin:'14px 0 4px'}}>
             <div style={{flex:1,height:1,background:'var(--border)'}}/>
             <span style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5}}>{t('googleOr').toUpperCase()}</span>
