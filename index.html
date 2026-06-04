@@ -4864,6 +4864,8 @@ function App(){
         setTimeLeft({A:classicSecs,B:classicSecs});
         // Chat leeren
         setChatMsgs([]);setChatInput('');
+        // Spielernamen aktualisieren
+        if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setScreen('game');
         return;
       }
@@ -4878,7 +4880,8 @@ function App(){
 
       // Beide wollen Rematch → Spieler A (im aktuellen Spiel) erstellt neue Runde
       if(rA&&rB&&!rD&&S.current.onlineRole==='A'&&S.current.winner){
-        const swap=Math.random()<0.5;
+        // Rollen tauschen immer beim Rematch (vorhersehbar: Runde 1 unten = Runde 2 oben)
+        const swap=true;
         const prevMoves=S.current.moveHist||[];
         const prevStarter=prevMoves.length>0&&prevMoves[0].p?prevMoves[0].p:'A';
         // Fair: derjenige der letztes Mal NICHT angefangen hat, beginnt jetzt
@@ -4900,9 +4903,13 @@ function App(){
           hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},
           tm:S.current.gameTimeMode,
           map:nextMap,duelSize:nextSize,
-          // Spielernamen aus vorheriger Runde erhalten
-          nameA:S.current.playerNames&&S.current.playerNames.A?S.current.playerNames.A:'',
-          nameB:S.current.playerNames&&S.current.playerNames.B?S.current.playerNames.B:'',
+          // Spielernamen aus vorheriger Runde erhalten — beim Rollentausch ebenfalls tauschen
+          nameA:swap
+            ?(S.current.playerNames&&S.current.playerNames.B?S.current.playerNames.B:'')
+            :(S.current.playerNames&&S.current.playerNames.A?S.current.playerNames.A:''),
+          nameB:swap
+            ?(S.current.playerNames&&S.current.playerNames.A?S.current.playerNames.A:'')
+            :(S.current.playerNames&&S.current.playerNames.B?S.current.playerNames.B:''),
           accountKeyA:accRef.current?accRef.current.key:null,
           lastUpdated:Date.now()
         };
@@ -5391,7 +5398,7 @@ function App(){
   useEffect(()=>{
     if(!dragging)return;
     const OFFSET=90;
-    const boardFlip=S.current.gameMode==='online'&&S.current.onlineRole==='B';
+    const boardFlip=S.current.gameMode==='online'&&S.current.onlineRole==='B'&&S.current.selectedMap==='duel';
     const getRel=(x,y)=>{if(!gridRef.current)return null;const rect=gridRef.current.getBoundingClientRect();let rx=x-rect.left,ry=y-rect.top;if(boardFlip)ry=ROWS*CELL-ry;return{x:rx,y:ry};};
     const onMove=(x,y)=>{
       setGhostPos({x,y});
@@ -5447,7 +5454,7 @@ function App(){
   useEffect(()=>{
     if(!hammerDrag)return;
     const OFFSET=90;
-    const boardFlip=S.current.gameMode==='online'&&S.current.onlineRole==='B';
+    const boardFlip=S.current.gameMode==='online'&&S.current.onlineRole==='B'&&S.current.selectedMap==='duel';
     const findWall=(x,y)=>{
       if(!gridRef.current)return null;
       const rect=gridRef.current.getBoundingClientRect();
@@ -7667,7 +7674,7 @@ function App(){
 
       {/* Grid */}
       {(()=>{
-        const boardFlip=gameMode==='online'&&onlineRole==='B';
+        const boardFlip=gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel';
         return(
       <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'auto',...sGrid,
         transform:boardFlip?'scaleY(-1)':'none'}}>
