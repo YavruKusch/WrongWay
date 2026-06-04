@@ -1948,6 +1948,7 @@ async function stoGetChildren(k){
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
+const USERNAME_KEY=n=>'ww_usernames/'+normUser(n);
 // Index: Benutzername (kleingeschrieben) -> { uid, name }. Fuer Eindeutigkeit + Freunde-Suche per Name.
 const VERIFY_SETTINGS={url:'https://wrongway.app',handleCodeInApp:false};
 async function sendVerificationEmail(user){
