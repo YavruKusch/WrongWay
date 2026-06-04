@@ -3688,7 +3688,12 @@ function App(){
     const fn=authMode==='register'?registerAccount(authEmail,authName,authPw,authColor):loginAccount(authEmail,authPw);
     const res=await fn;
     setAuthBusy(false);
-    if(res.err==='verifyRequired'){setAuthErr(t('auth_verifyRequired'));return;}
+    if(res.err==='verifyRequired'){
+      setAuthErr(t('auth_verifyRequired'));
+      setAuthMode('login');
+      setAuthName('');setAuthPw('');
+      return;
+    }
     if(res.err==='notVerified'){setAuthErr(t('auth_notVerified'));setShowResend(true);return;}
     if(res.err){setAuthErr(t('auth_'+res.err));return;}
     setAccount(res.prof);
