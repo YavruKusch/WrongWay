@@ -2114,13 +2114,16 @@ async function createGoogleProfile(googleUser,name,color){
   if(alreadyExists)return{prof:{...alreadyExists,key:uid,isGoogle:true}};
   const existing=await stoGet(USERNAME_KEY(nameKey));
   if(existing&&existing.uid!==uid)return{err:'taken'};
-  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],isGoogle:true,created:Date.now(),stats:freshAccountStats()};
-  // Atomisch: Profil + Namens-Reservierung
-  const ok=await stoMultiUpdate({
-    [PROFILE_KEY(uid)]:prof,
-    [USERNAME_KEY(nameKey)]:{uid:uid,name:name.trim()}
+  // Warten bis RTDB-Token nach Google-Login aktuell ist
+  await new Promise(function(resolve){
+    var unsub=firebase.auth().onAuthStateChanged(function(u){
+      if(u&&u.uid===uid&&!u.isAnonymous){unsub();resolve();}
+    });
   });
+  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],isGoogle:true,created:Date.now(),stats:freshAccountStats()};
+  const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok)return{err:'network'};
+  await stoSet(USERNAME_KEY(nameKey),{uid:uid,name:name.trim()});
   return{prof:{...prof,key:uid,isGoogle:true}};
 }
 async function fetchAccount(key){
@@ -2990,15 +2993,13 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     const user=firebase.auth().currentUser;
     if(!user){setDeleteBusy(false);setDeleteErr(t('auth_notFound')||'Fehler');return;}
     try{
-      // Reauth (E-Mail oder Google)
-      if(account.isGoogle){
-        const prov=new firebase.auth.GoogleAuthProvider();
-        await user.reauthenticateWithPopup(prov);
-      }else{
-        const cred=firebase.auth.EmailAuthProvider.credential(user.email,deletePw);
+      // Reauth: Google-Konten direkt loeschen (kein Passwort), E-Mail-Konten mit Passwort
+      if(!account.isGoogle){
+        const pwVal=(deletePw.split('||')[0]||'').trim();
+        const cred=firebase.auth.EmailAuthProvider.credential(user.email,pwVal);
         await user.reauthenticateWithCredential(cred);
       }
-      // Alle Nutzer-Daten einzeln loeschen (einzeln damit ein Fehler nicht alles blockiert)
+      // Alle Nutzer-Daten einzeln loeschen
       const uid=user.uid;
       const nameKey=normUser(account.name||'');
       const paths=[
@@ -3015,15 +3016,15 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
       await Promise.all(paths.map(function(p){
         return window.db.ref(p).remove().catch(function(){});
       }));
-      // Firebase Auth Konto loeschen
-      await user.delete();
-      // Abmelden + State leeren
+      // Firebase Auth Konto loeschen (frische Referenz)
+      await firebase.auth().currentUser.delete();
       onLogout();
     }catch(e){
       const c=e&&e.code?e.code:'';
       if(c==='auth/wrong-password'||c==='auth/invalid-credential')setDeleteErr(t('auth_wrongLogin')||'Falsches Passwort');
-      else if(c==='auth/requires-recent-login')setDeleteErr('Bitte erneut anmelden und direkt loeschen');
-      else setDeleteErr(t('auth_network')||'Fehler');
+      else if(c==='auth/requires-recent-login')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
+      else if(c==='auth/popup-blocked'||c==='auth/popup-closed-by-user')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
+      else setDeleteErr(t('auth_network')||'Fehler beim Loeschen');
       setDeleteBusy(false);
     }
   };
@@ -3099,6 +3100,37 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
           <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{account.name}</div>
           <div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>{t('accountHint')}</div>
         </div>
+
+        {/* Konto-Übersicht */}
+        {(function(){
+          var authUser=firebase.auth().currentUser;
+          var email=authUser?authUser.email:'';
+          return (
+            <div style={{background:card,border:'1.5px solid '+border,borderRadius:14,padding:'14px 16px',marginBottom:14}}>
+              <div style={{fontSize:10,color:muted,fontWeight:700,letterSpacing:1,marginBottom:10}}>KONTO-DATEN</div>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:12,color:muted,fontWeight:600}}>Benutzername</span>
+                  <span style={{fontSize:13,fontWeight:800,color:txt}}>{account.name}</span>
+                </div>
+                {email&&(
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{fontSize:12,color:muted,fontWeight:600}}>E-Mail</span>
+                    <span style={{fontSize:12,fontWeight:700,color:txt,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{email}</span>
+                  </div>
+                )}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:12,color:muted,fontWeight:600}}>Passwort</span>
+                  <span style={{fontSize:13,fontWeight:700,color:txt,letterSpacing:2}}>{account.isGoogle?'Google-Konto':'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}</span>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:12,color:muted,fontWeight:600}}>Farbe</span>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:account.color,boxShadow:'0 2px 6px '+account.color+'88'}}/>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Namensänderung */}
         <div style={{marginBottom:14}}>
@@ -3304,24 +3336,36 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
           ):(
             <div style={{background:'rgba(239,68,68,0.07)',borderRadius:12,
               border:'1.5px solid rgba(239,68,68,0.4)',padding:'16px'}}>
-              <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
                 <WarningIcon size={15} color="#ef4444"/> Konto unwiderruflich l\u00f6schen
               </div>
               <div style={{fontSize:12,color:muted,marginBottom:12,lineHeight:1.5}}>
-                Alle Daten, Stats und Ranglisten-Eintr\u00e4ge werden gel\u00f6scht. Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.
+                Alle Daten, Stats und Ranglisten-Eintr\u00e4ge werden permanent gel\u00f6scht. Zur Best\u00e4tigung bitte <b style={{color:txt}}>L\u00d6SCHEN</b> eintippen.
               </div>
+              <input value={deletePw.split('||')[1]||''} onChange={e=>{
+                var conf=e.target.value;
+                var pw=deletePw.split('||')[0]||'';
+                setDeletePw(pw+'||'+conf);
+              }} placeholder="L\u00d6SCHEN" autoCapitalize="characters" autoCorrect="off"
+                style={{...inpSt,marginBottom:10,textTransform:'uppercase',letterSpacing:2,fontWeight:800}}/>
               {!account.isGoogle&&(
-                <input value={deletePw} onChange={e=>setDeletePw(e.target.value)}
-                  placeholder="Aktuelles Passwort zur Best\u00e4tigung"
+                <input value={deletePw.split('||')[0]||''} onChange={e=>{
+                  var conf=deletePw.split('||')[1]||'';
+                  setDeletePw(e.target.value+'||'+conf);
+                }} placeholder="Aktuelles Passwort"
                   type="password" maxLength={64}
                   style={{...inpSt,marginBottom:10}}/>
               )}
               {deleteErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginBottom:8}}>{deleteErr}</div>}
               <div style={{display:'flex',gap:8}}>
-                <button onClick={doDeleteAccount} disabled={deleteBusy} style={{
-                  flex:1,padding:'11px',borderRadius:9,background:'#ef4444',
-                  color:'#fff',border:'none',cursor:deleteBusy?'default':'pointer',
-                  fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                <button onClick={doDeleteAccount}
+                  disabled={deleteBusy||(deletePw.split('||')[1]||'').toUpperCase()!=='LÖSCHEN'&&(deletePw.split('||')[1]||'').toUpperCase()!=='L\u00d6SCHEN'}
+                  style={{
+                    flex:1,padding:'11px',borderRadius:9,
+                    background:(deletePw.split('||')[1]||'').toUpperCase()==='L\u00d6SCHEN'&&!deleteBusy?'#ef4444':'rgba(239,68,68,0.3)',
+                    color:'#fff',border:'none',
+                    cursor:(deletePw.split('||')[1]||'').toUpperCase()==='L\u00d6SCHEN'&&!deleteBusy?'pointer':'default',
+                    fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
                   {deleteBusy?'…':'Endg\u00fcltig l\u00f6schen'}
                 </button>
                 <button onClick={()=>{setShowDeleteAccount(false);setDeletePw('');setDeleteErr('');}} style={{
