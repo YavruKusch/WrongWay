@@ -2986,6 +2986,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
   const[pwErr,setPwErr]=React.useState('');
   const[showDeleteAccount,setShowDeleteAccount]=React.useState(false);
   const[deletePw,setDeletePw]=React.useState('');
+  const[deleteConfirm,setDeleteConfirm]=React.useState('');
   const[deleteErr,setDeleteErr]=React.useState('');
   const[deleteBusy,setDeleteBusy]=React.useState(false);
   const doDeleteAccount=async()=>{
@@ -2995,7 +2996,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     try{
       // Reauth: Google-Konten direkt loeschen (kein Passwort), E-Mail-Konten mit Passwort
       if(!account.isGoogle){
-        const pwVal=(deletePw.split('||')[0]||'').trim();
+        const pwVal=deletePw.trim();
         const cred=firebase.auth.EmailAuthProvider.credential(user.email,pwVal);
         await user.reauthenticateWithCredential(cred);
       }
@@ -3024,7 +3025,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
       if(c==='auth/wrong-password'||c==='auth/invalid-credential')setDeleteErr(t('auth_wrongLogin')||'Falsches Passwort');
       else if(c==='auth/requires-recent-login')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
       else if(c==='auth/popup-blocked'||c==='auth/popup-closed-by-user')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
-      else setDeleteErr(t('auth_network')||'Fehler beim Loeschen');
+      else setDeleteErr('Fehler: '+(c||e.message||'unbekannt'));
       setDeleteBusy(false);
     }
   };
@@ -3337,38 +3338,36 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
             <div style={{background:'rgba(239,68,68,0.07)',borderRadius:12,
               border:'1.5px solid rgba(239,68,68,0.4)',padding:'16px'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-                <WarningIcon size={15} color="#ef4444"/> Konto unwiderruflich l\u00f6schen
+                <WarningIcon size={15} color="#ef4444"/>
+                {'Konto unwiderruflich l\u00f6schen'}
               </div>
               <div style={{fontSize:12,color:muted,marginBottom:12,lineHeight:1.5}}>
-                Alle Daten, Stats und Ranglisten-Eintr\u00e4ge werden permanent gel\u00f6scht. Zur Best\u00e4tigung bitte <b style={{color:txt}}>L\u00d6SCHEN</b> eintippen.
+                {'Alle Daten und Stats werden permanent gel\u00f6scht. Tippe zur Best\u00e4tigung '}
+                <b style={{color:txt}}>{'L\u00d6SCHEN'}</b>
+                {' ein.'}
               </div>
-              <input value={deletePw.split('||')[1]||''} onChange={e=>{
-                var conf=e.target.value;
-                var pw=deletePw.split('||')[0]||'';
-                setDeletePw(pw+'||'+conf);
-              }} placeholder="L\u00d6SCHEN" autoCapitalize="characters" autoCorrect="off"
+              <input value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)}
+                placeholder={'L\u00d6SCHEN'} autoCapitalize="characters" autoCorrect="off"
                 style={{...inpSt,marginBottom:10,textTransform:'uppercase',letterSpacing:2,fontWeight:800}}/>
               {!account.isGoogle&&(
-                <input value={deletePw.split('||')[0]||''} onChange={e=>{
-                  var conf=deletePw.split('||')[1]||'';
-                  setDeletePw(e.target.value+'||'+conf);
-                }} placeholder="Aktuelles Passwort"
+                <input value={deletePw} onChange={e=>setDeletePw(e.target.value)}
+                  placeholder="Aktuelles Passwort"
                   type="password" maxLength={64}
                   style={{...inpSt,marginBottom:10}}/>
               )}
               {deleteErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginBottom:8}}>{deleteErr}</div>}
               <div style={{display:'flex',gap:8}}>
                 <button onClick={doDeleteAccount}
-                  disabled={deleteBusy||(deletePw.split('||')[1]||'').toUpperCase()!=='LÖSCHEN'&&(deletePw.split('||')[1]||'').toUpperCase()!=='L\u00d6SCHEN'}
+                  disabled={deleteBusy||deleteConfirm.toUpperCase()!==('L\u00d6SCHEN')}
                   style={{
                     flex:1,padding:'11px',borderRadius:9,
-                    background:(deletePw.split('||')[1]||'').toUpperCase()==='L\u00d6SCHEN'&&!deleteBusy?'#ef4444':'rgba(239,68,68,0.3)',
+                    background:deleteConfirm.toUpperCase()===('L\u00d6SCHEN')&&!deleteBusy?'#ef4444':'rgba(239,68,68,0.3)',
                     color:'#fff',border:'none',
-                    cursor:(deletePw.split('||')[1]||'').toUpperCase()==='L\u00d6SCHEN'&&!deleteBusy?'pointer':'default',
+                    cursor:deleteConfirm.toUpperCase()===('L\u00d6SCHEN')&&!deleteBusy?'pointer':'default',
                     fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  {deleteBusy?'…':'Endg\u00fcltig l\u00f6schen'}
+                  {deleteBusy?'…':('Endg\u00fcltig l\u00f6schen')}
                 </button>
-                <button onClick={()=>{setShowDeleteAccount(false);setDeletePw('');setDeleteErr('');}} style={{
+                <button onClick={()=>{setShowDeleteAccount(false);setDeletePw('');setDeleteConfirm('');setDeleteErr('');}} style={{
                   padding:'11px 14px',borderRadius:9,background:'transparent',
                   border:'1.5px solid '+border,color:muted,cursor:'pointer',
                   fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
