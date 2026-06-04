@@ -1939,7 +1939,13 @@ async function stoGetChildren(k){
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
 // Index: Benutzername (kleingeschrieben) -> { uid, name }. Fuer Eindeutigkeit + Freunde-Suche per Name.
-const USERNAME_KEY=n=>'ww_usernames/'+normUser(n);
+const VERIFY_SETTINGS={url:'https://wrongway.app',handleCodeInApp:false};
+async function sendVerificationEmail(user){
+  // Versuche mit kurzem Redirect auf wrongway.app (braucht autorisierte Domain in Firebase-Konsole)
+  try{await user.sendEmailVerification(VERIFY_SETTINGS);return;}catch(e){}
+  // Fallback: Standard-Link ohne Redirect
+  try{await user.sendEmailVerification();}catch(e){}
+}
 function normUser(u){return (u||'').trim().toLowerCase();}
 async function hashPw(pw){
   try{
@@ -2039,7 +2045,7 @@ async function adminResetAllRanked(){
   if(!ok)return{err:'network'};
   // Bestaetigunsmail senden und sofort abmelden
   // (Login erst moeglich nachdem E-Mail bestaetigt wurde)
-  try{await cred.user.sendEmailVerification();}catch(e){}
+  sendVerificationEmail(cred.user);
   try{await firebase.auth().signOut();}catch(e){}
   return{err:'verifyRequired'};
 }
@@ -2057,7 +2063,7 @@ async function loginAccount(email,pw){
   const uid=cred.user.uid;
   // E-Mail muss bestaetigt sein
   if(!cred.user.emailVerified){
-    try{await cred.user.sendEmailVerification();}catch(e){}
+    sendVerificationEmail(cred.user);
     try{await firebase.auth().signOut();}catch(e){}
     return{err:'notVerified'};
   }
@@ -3711,7 +3717,7 @@ function App(){
     if(!em||!authPw)return;
     try{
       const cred=await firebase.auth().signInWithEmailAndPassword(em,authPw);
-      try{await cred.user.sendEmailVerification();}catch(e){}
+      sendVerificationEmail(cred.user);
       try{await firebase.auth().signOut();}catch(e){}
       setAuthErr(t('verifySent'));setShowResend(false);
     }catch(e){setAuthErr(t('auth_wrongLogin'));}
