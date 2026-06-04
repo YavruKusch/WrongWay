@@ -5396,9 +5396,9 @@ function App(){
     const onMove=(x,y)=>{
       setGhostPos({x,y});
       const rect=gridRef.current?gridRef.current.getBoundingClientRect():null;
-      const inZone=rect&&y<=rect.bottom+20;
+      const inZone=rect&&y<=rect.bottom+40;
       const rel=getRel(x,y-OFFSET);
-      if(inZone&&rel&&rel.x>=0&&rel.x<=COLS*CELL&&rel.y>=0&&rel.y<=ROWS*CELL){
+      if(inZone&&rel&&rel.x>=-10&&rel.x<=COLS*CELL+10&&rel.y>=-10&&rel.y<=ROWS*CELL+20){
         const key=snapWall(rel.x,rel.y,dragging.orient);
         setPreviewKey(key);
         const wp=wallPos(key);
@@ -5413,7 +5413,7 @@ function App(){
           setDragging(null);setPreviewKey(null);setSnapPos(null);return;
         }
         const rel=getRel(x,y-OFFSET);
-        if(rel&&rel.x>=0&&rel.x<=COLS*CELL&&rel.y>=0&&rel.y<=ROWS*CELL){
+        if(rel&&rel.x>=-10&&rel.x<=COLS*CELL+10&&rel.y>=-10&&rel.y<=ROWS*CELL+20){
           const key=snapWall(rel.x,rel.y,dragging.orient);
           const{walls:w,pA:a,pB:b,barrLeft:bl,turn:t,moveHist:mh}=S.current;
           if(bl[t]>0){
