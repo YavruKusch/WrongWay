@@ -4411,7 +4411,8 @@ function App(){
           saveAccountProfile(acc.key,{stats:newStats});
         }
       }
-    }{setScreen('end');return;}
+    }
+    if(skipAnim){setScreen('end');return;}
     const styles=['robot','twerk'];
     setDanceStyle(styles[Math.floor(Math.random()*styles.length)]);
     setDanceSpeed(Math.random()<0.5?'fast':'slow');
