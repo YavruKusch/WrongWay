@@ -7155,14 +7155,14 @@ function App(){
             </div>
 
             {/* WhatsApp Share */}
-            <a href={`https://wa.me/?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+            <button onClick={()=>{window.open('https://wa.me/?text='+waMsg,'_blank');}}
               style={{width:'100%',padding:'12px 14px',background:'#25D366',color:'white',
                 border:'none',borderRadius:12,fontWeight:800,cursor:'pointer',fontSize:13,
-                textDecoration:'none',textAlign:'center',display:'block',
+                textAlign:'center',display:'block',
                 boxShadow:'0 4px 12px rgba(37,211,102,0.32)',
                 fontFamily:'system-ui,-apple-system,sans-serif',marginBottom:20}}>
               <span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={15} color="#fff"/>{t('shareWhatsApp')}</span>
-            </a>
+            </button>
           </>
         )}
         <div style={{fontSize:12,color:'var(--subtle)',marginBottom:22,textAlign:'center'}}>
