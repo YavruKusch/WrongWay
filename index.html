@@ -2889,7 +2889,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
@@ -3136,7 +3136,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         {/* Avatar */}
@@ -3469,7 +3469,7 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         top:'calc(env(safe-area-inset-top)+14px)',zIndex:300,width:40,height:40,borderRadius:12,
         display:'flex',alignItems:'center',justifyContent:'center',background:card,
         border:'1.5px solid '+border,color:txt,fontSize:24,fontWeight:800,cursor:'pointer',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.1)',fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.1)',fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{width:'100%',maxWidth:380,padding:'0 14px',position:'relative',zIndex:1}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:20}}>
@@ -3710,7 +3710,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}>‹</button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:440,padding:'0 16px'}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:10,paddingTop:48}}>
@@ -5864,7 +5864,7 @@ function App(){
               borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
               {optionsTab!=='main'&&(
                 <button onClick={()=>setOptionsTab('main')} style={{background:'none',border:'none',cursor:'pointer',
-                  color:'var(--subtle)',fontSize:20,padding:0,marginRight:8,display:'flex',alignItems:'center'}}>‹</button>
+                  color:'var(--subtle)',fontSize:20,padding:0,marginRight:8,display:'flex',alignItems:'center'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
               )}
               <div style={{fontSize:15,fontWeight:900,color:'var(--text)',flex:1}}>
                 {optionsTab==='main'?'Menu':optionsTab==='settings'?t('options'):optionsTab==='replays'?'Replays':t('tutHelp')}
@@ -6258,7 +6258,7 @@ function App(){
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
         <MapAura map={selectedMap} dark={darkMode}/>
-        <button onClick={goBack} style={backChevron}>‹</button>
+        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
         <div style={{width:'100%',maxWidth:340}}>
           <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
             title={t('mode')} sub={t('modeConfigSub')}/>
@@ -6647,7 +6647,7 @@ function App(){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={goBack} style={backChevron}>‹</button>
+        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
         <div style={{width:'100%',maxWidth:330,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{width:64,height:64,borderRadius:'50%',margin:'0 auto 12px',
@@ -6813,7 +6813,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}>‹</button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
         <ScreenHead icon={<BotIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
           title={t('chooseDifficulty')} sub={t('vsBotDesc')}/>
@@ -6838,7 +6838,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}>‹</button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{width:'100%',maxWidth:300,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <ScreenHead icon={<PeopleIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
           title={t('friendPlay')} sub={t('friendDesc')}/>
@@ -6884,7 +6884,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}>‹</button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
         {/* Header */}
@@ -7657,48 +7657,51 @@ function App(){
             <div key={p} onClick={canTapProfile?openOppProfile:undefined}
               style={{flex:1,padding:'9px 13px',borderRadius:13,position:'relative',
               background:active?PC[p]:'var(--score-bg)',
-              border:`1.5px solid ${active?PC[p]:'var(--score-border)'}`,
-              boxShadow:active?`0 4px 16px ${PC[p]}40`:'var(--shadow-soft)',
-              transition:'all 0.2s',display:'flex',alignItems:'center',gap:9,
-              cursor:canTapProfile?'pointer':'default'}}>
-              {/* Zuschauer-Auge-Badge */}
+              border:`1.5px solid ${active?'transparent':'var(--score-border)'}`,
+              boxShadow:active?`0 5px 0 rgba(0,0,0,0.18),0 8px 24px ${PC[p]}55`:'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+              transition:'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',display:'flex',alignItems:'center',gap:9,
+              cursor:canTapProfile?'pointer':'default',overflow:'hidden'}}>
+              {active&&<div style={{position:'absolute',top:0,left:0,right:0,height:'45%',
+                background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',
+                borderRadius:'15px 15px 0 0',pointerEvents:'none'}}/>}
               {spectatorCount>0&&gameMode==='online'&&(
-                <div style={{position:'absolute',top:-8,right:6,
+                <div style={{position:'absolute',top:-7,right:6,
                   display:'flex',alignItems:'center',gap:2,
-                  background:eyeCol,borderRadius:10,padding:'2px 6px',
+                  background:eyeCol,borderRadius:10,padding:'2px 5px',
                   boxShadow:'0 2px 8px '+eyeCol+'60',zIndex:5}}>
-                  <span style={{fontSize:9}}>👁</span>
+                  <EyeIcon size={9} color="#fff"/>
                   <span style={{fontSize:10,fontWeight:900,color:'#fff'}}>{spectatorCount}</span>
                 </div>
               )}
-              <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,
+              <div style={{width:28,height:28,borderRadius:'50%',flexShrink:0,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 background:active?'rgba(255,255,255,0.22)':'var(--bg)',
-                border:active?'1.5px solid rgba(255,255,255,0.5)':`1.5px solid ${PC[p]}40`}}>
-                <div style={{width:13,height:13,borderRadius:'50%',
+                border:active?'1.5px solid rgba(255,255,255,0.5)':`1.5px solid ${PC[p]}40`,
+                boxShadow:active?'0 2px 6px rgba(0,0,0,0.12)':'none'}}>
+                <div style={{width:14,height:14,borderRadius:'50%',
                   background:active?'#fff':PC[p],
                   border:active?'none':`2px solid ${PD[p]}`}}/>
               </div>
               <div style={{minWidth:0,flex:1}}>
                 <div style={{fontSize:10,fontWeight:800,letterSpacing:0.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                  color:active?'rgba(255,255,255,0.8)':'var(--subtle)'}}>
-                  {pname(p)}{canTapProfile?<span style={{opacity:0.6,marginLeft:4,fontSize:9}}>↗</span>:null}
+                  color:active?'rgba(255,255,255,0.82)':'var(--subtle)'}}>
+                  {pname(p)}{canTapProfile?<span style={{opacity:0.5,marginLeft:3,fontSize:9}}>↗</span>:null}
                 </div>
-                <div style={{fontSize:12.5,fontWeight:800,display:'flex',alignItems:'center',gap:4,marginTop:1,
+                <div style={{fontSize:13,fontWeight:900,display:'flex',alignItems:'center',gap:4,marginTop:1,
                   color:active?'white':'var(--text)'}}>
                   <BrickMini size={12}/>{barrLeft[p]}
                 </div>
               </div>
               {gameTimeMode&&gameTimeMode.indexOf('classic-')===0&&(
-                <div style={{fontSize:13,fontWeight:800,letterSpacing:0.5,flexShrink:0,
+                <div style={{fontSize:13,fontWeight:900,letterSpacing:0.3,flexShrink:0,
                   fontVariantNumeric:'tabular-nums',
                   color:active?'white':(timeLeft[p]<=30?'#ef4444':'var(--text)')}}>
                   {Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}
                 </div>
               )}
               {active&&!winner&&!(gameTimeMode&&gameTimeMode.indexOf('classic-')===0)&&(
-                <div style={{flexShrink:0,fontSize:8.5,letterSpacing:0.4,textAlign:'right',
-                  color:'rgba(255,255,255,0.8)',fontWeight:700,textTransform:'uppercase'}}>
+                <div style={{flexShrink:0,fontSize:8,letterSpacing:0.8,textAlign:'right',
+                  color:'rgba(255,255,255,0.82)',fontWeight:800,textTransform:'uppercase',lineHeight:1.2}}>
                   {isOnlineWait&&p===turn?t('statusWait'):aiThinking&&p==='B'?t('statusThink'):t('statusTurn')}
                 </div>
               )}
@@ -7716,7 +7719,7 @@ function App(){
               background:'rgba(139,92,246,0.12)',border:'1px solid rgba(139,92,246,0.25)',
               animation:'fadeSlideUp 0.25s ease-out both',fontSize:11,fontWeight:700,
               color:'var(--text)'}}>
-              <span style={{fontSize:9,opacity:0.6}}>👁</span>
+              <EyeIcon size={9} color="var(--subtle)"/>
               <EmoteChar color="#8b5cf6" dark="#6d28d9" type={e.type} size={20}/>
             </div>
           ))}
@@ -8316,7 +8319,7 @@ function ReplayHistoryScreen({t,darkMode,goBack,onWatch}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:txt,fontWeight:700}}>‹</button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:txt,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:21,fontWeight:900,color:txt,letterSpacing:-0.5,
@@ -8792,7 +8795,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:text2,fontWeight:700}}>‹</button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:text2,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:18}}>
@@ -9178,10 +9181,10 @@ const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
 const sBack={background:'none',border:'none',cursor:'pointer',fontSize:13,color:'var(--subtle)',
   fontWeight:600,padding:'8px 0',fontFamily:'system-ui,-apple-system,sans-serif',marginTop:8};
 const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 0px))',top:'calc(env(safe-area-inset-top) + 14px)',zIndex:300,
-  width:40,height:40,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',
+  height:36,paddingLeft:10,paddingRight:14,borderRadius:18,display:'flex',alignItems:'center',justifyContent:'center',gap:4,
   background:'var(--card)',border:'1.5px solid var(--border)',color:'var(--text)',
-  fontSize:24,fontWeight:800,lineHeight:1,cursor:'pointer',paddingBottom:3,
-  boxShadow:'var(--shadow-soft)',fontFamily:'system-ui,-apple-system,sans-serif'};
+  fontSize:13,fontWeight:800,lineHeight:1,cursor:'pointer',
+  boxShadow:'0 3px 0 rgba(0,0,0,0.08),0 2px 8px rgba(0,0,0,0.06)',fontFamily:'system-ui,-apple-system,sans-serif'};
 
 // ── 2v2 (Beta) – eigenständige Komponente mit Online-Lobby ──
 function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
@@ -9559,7 +9562,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={onExit} style={backChevron}>‹</button>
+        <button onClick={onExit} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
         <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:18}}>
             <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}>
@@ -9617,7 +9620,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={()=>setSub('config')} style={backChevron}>‹</button>
+        <button onClick={()=>setSub('config')} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
         <div style={{width:'100%',maxWidth:320,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>Online 2 vs 2</div>
@@ -9745,7 +9748,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={leaveLobby} style={backChevron}>‹</button>
+        <button onClick={leaveLobby} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
         <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
 
           {/* Code + Teilen */}
@@ -9847,7 +9850,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   return(
     <div style={{...sCont,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}>‹</button>
+      <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
 
       {/* Team-Status */}
       <div style={{display:'flex',gap:8,marginBottom:8,marginTop:6,position:'relative',zIndex:1,width:Math.min(COLS2*CELL2,window.innerWidth-16),maxWidth:'96vw'}}>
