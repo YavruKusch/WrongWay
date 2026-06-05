@@ -65,7 +65,7 @@
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;background:transparent;}
   input,button{-webkit-appearance:none;font-family:inherit;}
-  button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);}
+  button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);touch-action:manipulation;}
   button:active{transform:scale(0.94);}
   .mi-btn{transition:transform 0.11s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.11s ease !important;}
   .mi-btn:active{transform:translateY(4px) scale(0.985) !important;box-shadow:0 0px 4px rgba(0,0,0,0.10) !important;}
@@ -153,6 +153,62 @@
   @keyframes debris-fly{
     0%{transform:translate(0,0) rotate(0deg);opacity:1;}
     100%{transform:translate(var(--dx),var(--dy)) rotate(var(--dr));opacity:0;}
+  }
+  @keyframes intro-bg-in{
+    0%{opacity:0;backdrop-filter:blur(0px);}
+    100%{opacity:1;backdrop-filter:blur(10px);}
+  }
+  @keyframes intro-card-left{
+    0%{transform:translateX(-130%) rotate(-6deg);opacity:0;}
+    55%{transform:translateX(4%) rotate(-6deg);opacity:1;}
+    78%{transform:translateX(-2%) rotate(0deg);}
+    100%{transform:translateX(0) rotate(0deg);opacity:1;}
+  }
+  @keyframes intro-card-right{
+    0%{transform:translateX(130%) rotate(6deg);opacity:0;}
+    55%{transform:translateX(-4%) rotate(6deg);opacity:1;}
+    78%{transform:translateX(2%) rotate(0deg);}
+    100%{transform:translateX(0) rotate(0deg);opacity:1;}
+  }
+  @keyframes intro-vs{
+    0%{transform:scale(0) rotate(-220deg);opacity:0;}
+    50%{transform:scale(1.45) rotate(12deg);opacity:1;}
+    68%{transform:scale(0.85) rotate(-6deg);}
+    84%{transform:scale(1.1) rotate(3deg);}
+    100%{transform:scale(1) rotate(0deg);opacity:1;}
+  }
+  @keyframes intro-flash{
+    0%{opacity:0;}
+    8%{opacity:0.9;}
+    100%{opacity:0;}
+  }
+  @keyframes intro-streak{
+    0%{transform:translateX(-100%) skewX(-20deg);opacity:0;}
+    40%{opacity:0.7;}
+    100%{transform:translateX(220%) skewX(-20deg);opacity:0;}
+  }
+  @keyframes intro-label{
+    0%{transform:translateY(26px) scale(0.9);opacity:0;}
+    100%{transform:translateY(0) scale(1);opacity:1;}
+  }
+  @keyframes intro-out{
+    0%{opacity:1;transform:scale(1);}
+    100%{opacity:0;transform:scale(1.08);}
+  }
+  @keyframes intro-ring{
+    0%{transform:scale(0.4);opacity:0.8;}
+    100%{transform:scale(2.2);opacity:0;}
+  }
+  @keyframes intro-avatar-pop{
+    0%{transform:scale(0);}
+    60%{transform:scale(1.2);}
+    100%{transform:scale(1);}
+  }
+  @keyframes intro-go{
+    0%{transform:scale(2.4);opacity:0;}
+    40%{transform:scale(1);opacity:1;}
+    70%{transform:scale(1);opacity:1;}
+    100%{transform:scale(0.6);opacity:0;}
   }
   @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   @keyframes piece-pulse{
@@ -669,7 +725,7 @@ const I18N={
     chooseDifficulty:'Choose difficulty',easy:'Easy',normal:'Normal',hard:'Hard',
     easyDesc:'Casual game',normalDesc:'Balanced challenge',hardDesc:'For experienced players',
     playOnline:'Play Online',publicLobby:'+ Public Lobby',privateLobby:'Private Lobby',joinWithCode:'JOIN WITH CODE',join:'Join',
-    lobbyFull:'Lobby full or not found!',codeNotFound:'Code not found!',hostNotResponding:'Host not responding.',
+    lobbyFull:'Lobby is full!',lobbyGone:'Lobby no longer available.',codeNotFound:'Code not found!',hostNotResponding:'Host not responding.',
     firebaseError:'Firebase error: ',checkRules:' — Check database rules!',openLobbies:'OPEN LOBBIES',lobby:'Lobby',joinSuffix:'Join →',back:'← Back',
     waitingOpponent:'Waiting for opponent...',connecting:'Connecting...',shareCode:'Share the code with your opponent',
     waitingStart:'Waiting for game to start...',cancel:'Cancel',codePrefix:'Code: ',
@@ -695,7 +751,7 @@ const I18N={
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
     playOnline:'Online spielen',publicLobby:'+ Öffentliche Lobby',privateLobby:'Private Lobby',joinWithCode:'MIT CODE BEITRETEN',join:'Beitreten',
-    lobbyFull:'Lobby voll oder nicht gefunden!',codeNotFound:'Code nicht gefunden!',hostNotResponding:'Host antwortet nicht.',
+    lobbyFull:'Lobby ist voll!',lobbyGone:'Lobby nicht mehr verfügbar.',codeNotFound:'Code nicht gefunden!',hostNotResponding:'Host antwortet nicht.',
     firebaseError:'Firebase-Fehler: ',checkRules:' — Datenbank-Regeln prüfen!',openLobbies:'OFFENE LOBBYS',lobby:'Lobby',joinSuffix:'Beitreten →',back:'← Zurück',
     waitingOpponent:'Warte auf Gegner...',connecting:'Verbinde...',shareCode:'Teile den Code mit deinem Gegner',
     waitingStart:'Warte auf Spielstart...',cancel:'Abbrechen',codePrefix:'Code: ',
@@ -721,7 +777,7 @@ const I18N={
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
     playOnline:'Çevrimiçi Oyna',publicLobby:'+ Genel Lobi',privateLobby:'Özel Lobi',joinWithCode:'KODLA KATIL',join:'Katıl',
-    lobbyFull:'Lobi dolu veya bulunamadı!',codeNotFound:'Kod bulunamadı!',hostNotResponding:'Sunucu yanıt vermiyor.',
+    lobbyFull:'Lobi dolu!',lobbyGone:'Lobi artık mevcut değil.',codeNotFound:'Kod bulunamadı!',hostNotResponding:'Sunucu yanıt vermiyor.',
     firebaseError:'Firebase hatası: ',checkRules:' — Veritabanı kurallarını kontrol et!',openLobbies:'AÇIK LOBİLER',lobby:'Lobi',joinSuffix:'Katıl →',back:'← Geri',
     waitingOpponent:'Rakip bekleniyor...',connecting:'Bağlanıyor...',shareCode:'Kodu rakibinle paylaş',
     waitingStart:'Oyun başlatılıyor...',cancel:'İptal',codePrefix:'Kod: ',
@@ -747,7 +803,7 @@ const I18N={
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
     playOnline:'Jouer en ligne',publicLobby:'+ Salon public',privateLobby:'Salon privé',joinWithCode:'REJOINDRE AVEC CODE',join:'Rejoindre',
-    lobbyFull:'Salon plein ou introuvable!',codeNotFound:'Code introuvable!',hostNotResponding:"L'hôte ne répond pas.",
+    lobbyFull:'Salon plein!',lobbyGone:'Salon non disponible.',codeNotFound:'Code introuvable!',hostNotResponding:"L'hôte ne répond pas.",
     firebaseError:'Erreur Firebase: ',checkRules:' — Vérifie les règles de la base!',openLobbies:'SALONS OUVERTS',lobby:'Salon',joinSuffix:'Rejoindre →',back:'← Retour',
     waitingOpponent:"En attente d'un adversaire...",connecting:'Connexion...',shareCode:'Partage le code avec ton adversaire',
     waitingStart:'En attente du début...',cancel:'Annuler',codePrefix:'Code: ',
@@ -4235,6 +4291,10 @@ function App(){
   // Anti-Stall-Wächter für Bot: bestDist = bisher kleinste BFS-Distanz zum Ziel, stall = Züge ohne Fortschritt
   const aiProgRef=useRef({best:Infinity,stall:0});
   const[goldenWalls,setGoldenWalls]=useState(new Set());
+  // Match-Opening-Animation (Clash-Royale-Style). null = aus. Sperrt das Brett bis fertig (gibt Online-Sync Zeit).
+  const[matchIntro,setMatchIntro]=useState(null);
+  const introKeyRef=useRef('');
+  const introTimerRef=useRef(null);
   // SW Update prüfen
   useEffect(()=>{
     const interval=setInterval(()=>{
@@ -4484,7 +4544,7 @@ function App(){
   };
 
   const myTurn=gameMode==='online'?turn===onlineRole:true;
-  const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game';
+  const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game'&&!matchIntro;
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
@@ -4493,7 +4553,11 @@ function App(){
   useEffect(()=>{
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
-    const ts=e=>{const tt=e.touches[0];if(tt.clientX<40){active=true;sx=tt.clientX;sy=tt.clientY;}};
+    const ts=e=>{const tt=e.touches[0];
+      // Swipe nicht starten wenn der Finger auf einem Button/Eingabefeld liegt —
+      // sonst "schluckt" die Geste den ersten Klick (besonders beim Zurueck-Button links).
+      if(e.target&&e.target.closest&&e.target.closest('button,[role="button"],input,textarea,a'))return;
+      if(tt.clientX<40){active=true;sx=tt.clientX;sy=tt.clientY;}};
     const te=e=>{if(!active)return;active=false;const tt=e.changedTouches[0];const dx=tt.clientX-sx,dy=Math.abs(tt.clientY-sy);if(dx>70&&dy<55){triggerHaptic();goBack();}};
     document.addEventListener('touchstart',ts,{passive:true});
     document.addEventListener('touchend',te,{passive:true});
@@ -4668,6 +4732,23 @@ function App(){
       dropNextRef.current=moveHist.length+3; // kein fairer Drop möglich → bald erneut
     }
   },[moveHist.length,dropMode,winner,screen,pA,pB,walls,gameMode,onlineRole,isRanked]);
+
+  // ── Match-Opening-Animation triggern (nur Online; einmal pro Lobby+Runde) ──
+  // Sperrt das Brett ~2.7s → gibt dem Online-State Zeit sich zu synchronisieren,
+  // bevor der Spieler ziehen kann (verhindert "Zug setzt sich zurueck" beim Start).
+  useEffect(()=>{
+    if(gameMode!=='online'||screen!=='game'||winner)return;
+    const key=(lobbyId||'')+'#'+gameNum;
+    if(introKeyRef.current===key)return;
+    introKeyRef.current=key;
+    setMatchIntro({ts:Date.now()});
+    if(introTimerRef.current)clearTimeout(introTimerRef.current);
+    introTimerRef.current=setTimeout(()=>setMatchIntro(null),2700);
+  },[gameMode,screen,gameNum,lobbyId,winner]);
+  // Beim Verlassen des Spiels Intro sicher zuruecksetzen
+  useEffect(()=>{
+    if(screen!=='game'){if(introTimerRef.current)clearTimeout(introTimerRef.current);setMatchIntro(null);introKeyRef.current='';}
+  },[screen]);
 
   useEffect(()=>{
     if(screen!=='game')return;
@@ -5151,12 +5232,16 @@ function App(){
       const list=await stoGet('barricade_lobby_list');
       const now=Date.now();
       const all=list||[];
-      const fresh=all.filter(l=>now-l.ts<15000);
-      const stale=all.filter(l=>now-l.ts>=15000);
+      // Anzeige: Lobbys bis 20s (etwas Toleranz fuer langsame Heartbeats).
+      // Loeschen erst ab 45s — sonst verschwinden Lobbys von Hosts deren Timer
+      // im Hintergrund pausiert war, und Gaeste sehen "nicht gefunden".
+      const fresh=all.filter(l=>now-l.ts<20000);
+      const dead=all.filter(l=>now-l.ts>=45000);
       setLobbyList(fresh);
-      if(stale.length>0){
-        await stoSet('barricade_lobby_list',fresh);
-        for(const l of stale){await stoDel(`barricade_lobby_${l.id}`);}
+      if(dead.length>0){
+        const keep=all.filter(l=>now-l.ts<45000);
+        await stoSet('barricade_lobby_list',keep);
+        for(const l of dead){await stoDel(`barricade_lobby_${l.id}`);}
       }
       if(gameStarted)return;
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
@@ -5299,24 +5384,36 @@ function App(){
     joinCancelledRef.current=false;
     // Atomarer Beitritt via Transaction — verhindert dass der Host-Heartbeat
     // den gerade gesetzten guestId wieder ueberschreibt (Ursache fuer "Lobby voll").
-    let lobby=null;
-    try{
-      const res=await window.db.ref(`barricade_lobby_${id}`).transaction(cur=>{
-        if(cur===null)return cur; // Lobby existiert nicht → nicht neu anlegen
-        let obj;try{obj=JSON.parse(cur);}catch(e){return cur;}
-        if(obj.guestId)return; // schon besetzt → Transaction abbrechen
-        obj.guestId=SESSION;
-        obj.guestName=getDisplayName(account);
-        obj.guestAccountKey=account?account.key:null;
-        obj.ts=Date.now();
-        return JSON.stringify(obj);
-      });
-      if(res&&res.committed&&res.snapshot&&res.snapshot.val()){
-        try{lobby=JSON.parse(res.snapshot.val());}catch(e){lobby=null;}
-        if(lobby&&lobby.guestId!==SESSION)lobby=null;
-      }
-    }catch(e){lobby=null;}
-    if(!lobby){setFlash(t('lobbyFull'));return;}
+    // Gibt {lobby} bei Erfolg, sonst {reason:'gone'|'full'} zurueck.
+    const tryJoin=async()=>{
+      let out={reason:'gone'};
+      try{
+        const res=await window.db.ref(`barricade_lobby_${id}`).transaction(cur=>{
+          if(cur===null){out={reason:'gone'};return cur;} // existiert nicht
+          let obj;try{obj=JSON.parse(cur);}catch(e){out={reason:'gone'};return cur;}
+          if(obj.guestId){out={reason:'full'};return;} // besetzt → abbrechen
+          obj.guestId=SESSION;
+          obj.guestName=getDisplayName(account);
+          obj.guestAccountKey=account?account.key:null;
+          obj.ts=Date.now();
+          return JSON.stringify(obj);
+        });
+        if(res&&res.committed&&res.snapshot&&res.snapshot.val()){
+          let lb=null;try{lb=JSON.parse(res.snapshot.val());}catch(e){lb=null;}
+          if(lb&&lb.guestId===SESSION)out={lobby:lb};
+        }
+      }catch(e){out={reason:'gone'};}
+      return out;
+    };
+    let r=await tryJoin();
+    // "not found" ist oft nur ein kurzer Cache-Glitch → einmal kurz warten und erneut.
+    if(r.reason==='gone'){
+      await new Promise(res=>setTimeout(res,350));
+      if(joinCancelledRef.current)return;
+      r=await tryJoin();
+    }
+    const lobby=r.lobby||null;
+    if(!lobby){setFlash(r.reason==='full'?t('lobbyFull'):(t('lobbyGone')||t('lobbyFull')));return;}
     // Host-Settings übernehmen
     if(lobby.tm!==undefined)setGameTimeMode(lobby.tm);
     if(lobby.ch!==undefined)setChaosMode(!!lobby.ch);
@@ -5340,7 +5437,18 @@ function App(){
         initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap,lobby.duelSize||'standard',gs.turn);return;
       }
     }
-    if(!joinCancelledRef.current){setFlash(t('hostNotResponding'));setScreen('online');}
+    if(!joinCancelledRef.current){
+      setFlash(t('hostNotResponding'));setScreen('online');
+      // Platz wieder freigeben, sonst bleibt die Lobby fuer alle "voll".
+      try{
+        await window.db.ref(`barricade_lobby_${id}`).transaction(cur=>{
+          if(cur===null)return cur;
+          let obj;try{obj=JSON.parse(cur);}catch(e){return cur;}
+          if(obj.guestId===SESSION){obj.guestId=null;obj.guestName=null;obj.guestAccountKey=null;return JSON.stringify(obj);}
+          return; // anderer Gast ist drin → nichts tun
+        });
+      }catch(e){}
+    }
   };
 
   const joinByCode=async()=>{
@@ -5395,7 +5503,7 @@ function App(){
   const other=turn==='A'?pB:pA;
 
   const handleCellClick=(r,c)=>{
-    if(winner||aiThinking||dragging||!myTurn||screen!=='game')return;
+    if(winner||aiThinking||dragging||!myTurn||screen!=='game'||matchIntro)return;
     // Sicherheits-Check für Online+Blitz: sicherstellen dass es noch der eigene Zug ist
     if(gameMode==='online'&&S.current.turn!==onlineRole)return;
     if(!getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c))return;
@@ -5453,7 +5561,7 @@ function App(){
   };
 
   const validDot=(r,c)=>{
-    if(winner||aiThinking||dragging||!myTurn||screen!=='game')return false;
+    if(winner||aiThinking||dragging||!myTurn||screen!=='game'||matchIntro)return false;
     return getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c);
   };
 
@@ -7624,8 +7732,107 @@ function App(){
 
   // ── GAME ─────────────────────────────────────────────────
   const isOnlineWait=gameMode==='online'&&!myTurn&&!winner;
+  // Werte fuer das Match-Opening (vor dem return berechnet, kein IIFE im JSX)
+  const introMyRole=gameMode==='online'?onlineRole:'A';
+  const introOppRole=introMyRole==='A'?'B':'A';
+  const introMapLbl=selectedMap==='duel'?t('duel'):t('classic');
+  const introTimeLbl=gameTimeMode==='classic-3'?'3 '+t('minLabel')
+    :gameTimeMode==='classic-5'?'5 '+t('minLabel')
+    :gameTimeMode==='classic-8'?'8 '+t('minLabel')
+    :gameTimeMode==='blitz-5'?'5'+t('secLabel')+' / '+t('perTurn')
+    :gameTimeMode==='blitz-8'?'8'+t('secLabel')+' / '+t('perTurn')
+    :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' / '+t('perTurn')
+    :'';
   return (
     <div style={{...sCont,paddingBottom:'calc(100px + env(safe-area-inset-bottom, 0px))'}}>
+
+      {/* ── Match-Opening (Clash-Royale-Style) ── */}
+      {matchIntro&&(
+        <div style={{position:'fixed',inset:0,zIndex:2000,overflow:'hidden',
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          animation:'intro-out 0.45s cubic-bezier(0.7,0,0.84,0) 2.25s forwards'}}>
+          {/* Hintergrund */}
+          <div style={{position:'absolute',inset:0,background:'radial-gradient(circle at 50% 50%,#1e293b 0%,#0a0f1d 75%)',
+            animation:'intro-bg-in 0.35s ease-out both'}}/>
+          {/* Gegner-Banner (oben) */}
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',overflow:'hidden',
+            display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:46,
+            background:`linear-gradient(160deg,${PC[introOppRole]}40 0%,${PC[introOppRole]}10 60%,transparent 100%)`,
+            borderBottom:`2px solid ${PC[introOppRole]}55`,
+            animation:'intro-card-left 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
+            <div style={{position:'absolute',top:'30%',left:'-30%',width:'80%',height:60,
+              background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)',
+              animation:'intro-streak 1.1s ease-out 0.5s'}}/>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:12,position:'relative'}}>
+              <div style={{position:'relative'}}>
+                <div style={{position:'absolute',inset:-6,borderRadius:'50%',border:`3px solid ${PC[introOppRole]}`,
+                  animation:'intro-ring 0.9s ease-out 0.55s'}}/>
+                <div style={{width:74,height:74,borderRadius:'50%',background:PC[introOppRole],
+                  border:'4px solid rgba(255,255,255,0.85)',boxShadow:`0 8px 30px ${PC[introOppRole]}90`,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  animation:'intro-avatar-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.45s both'}}>
+                  <div style={{width:34,height:34,borderRadius:'50%',background:'#fff',opacity:0.92,
+                    border:`3px solid ${PD[introOppRole]}`}}/>
+                </div>
+              </div>
+              <div style={{fontSize:20,fontWeight:900,color:'#fff',letterSpacing:-0.4,maxWidth:240,
+                textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                textShadow:'0 2px 12px rgba(0,0,0,0.6)'}}>{pname(introOppRole)}</div>
+            </div>
+          </div>
+          {/* Eigenes Banner (unten) */}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'50%',overflow:'hidden',
+            display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:46,
+            background:`linear-gradient(20deg,${PC[introMyRole]}40 0%,${PC[introMyRole]}10 60%,transparent 100%)`,
+            borderTop:`2px solid ${PC[introMyRole]}55`,
+            animation:'intro-card-right 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
+            <div style={{position:'absolute',bottom:'30%',right:'-30%',width:'80%',height:60,
+              background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)',
+              animation:'intro-streak 1.1s ease-out 0.5s'}}/>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:12,position:'relative'}}>
+              <div style={{fontSize:20,fontWeight:900,color:'#fff',letterSpacing:-0.4,maxWidth:240,
+                textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                textShadow:'0 2px 12px rgba(0,0,0,0.6)',display:'flex',alignItems:'center',gap:8}}>
+                {pname(introMyRole)}
+                {gameMode==='online'&&<span style={{fontSize:10,fontWeight:900,letterSpacing:0.5,
+                  background:PC[introMyRole],color:'#fff',padding:'3px 8px',borderRadius:8,
+                  boxShadow:`0 2px 8px ${PC[introMyRole]}80`}}>{t('you').toUpperCase()}</span>}
+              </div>
+              <div style={{position:'relative'}}>
+                <div style={{position:'absolute',inset:-6,borderRadius:'50%',border:`3px solid ${PC[introMyRole]}`,
+                  animation:'intro-ring 0.9s ease-out 0.55s'}}/>
+                <div style={{width:74,height:74,borderRadius:'50%',background:PC[introMyRole],
+                  border:'4px solid rgba(255,255,255,0.85)',boxShadow:`0 8px 30px ${PC[introMyRole]}90`,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  animation:'intro-avatar-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.45s both'}}>
+                  <div style={{width:34,height:34,borderRadius:'50%',background:'#fff',opacity:0.92,
+                    border:`3px solid ${PD[introMyRole]}`}}/>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* VS in der Mitte */}
+          <div style={{position:'relative',zIndex:3,display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+            <div style={{fontSize:62,fontWeight:900,fontStyle:'italic',letterSpacing:-3,lineHeight:1,
+              background:'linear-gradient(180deg,#fff 0%,#cbd5e1 100%)',WebkitBackgroundClip:'text',
+              WebkitTextFillColor:'transparent',backgroundClip:'text',
+              filter:'drop-shadow(0 4px 16px rgba(255,255,255,0.35))',
+              animation:'intro-vs 0.75s cubic-bezier(0.34,1.56,0.64,1) 0.4s both'}}>VS</div>
+            {/* Modus-Label */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5,
+              animation:'intro-label 0.5s ease-out 0.95s both'}}>
+              <div style={{fontSize:14,fontWeight:900,letterSpacing:2,color:'#fff',textTransform:'uppercase',
+                padding:'7px 18px',borderRadius:20,background:'rgba(255,255,255,0.12)',
+                border:'1.5px solid rgba(255,255,255,0.25)',backdropFilter:'blur(4px)'}}>{introMapLbl}</div>
+              {introTimeLbl&&<div style={{fontSize:11,fontWeight:700,letterSpacing:1,color:'rgba(255,255,255,0.7)',textTransform:'uppercase'}}>{introTimeLbl}</div>}
+            </div>
+          </div>
+          {/* Flash */}
+          <div style={{position:'absolute',inset:0,background:'#fff',pointerEvents:'none',
+            animation:'intro-flash 0.7s ease-out 0.35s both'}}/>
+        </div>
+      )}
+
 
       {/* Ghost */}
       {dragging&&(
