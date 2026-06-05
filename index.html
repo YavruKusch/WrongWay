@@ -524,7 +524,7 @@
     appId: "1:252603563986:web:705bc3ffcbb9d8ced2d20b"
   });
   // App Check: blockiert API-Zugriffe von ausserhalb der App (reCAPTCHA v3)
-  firebase.appCheck().activate('6LfixwwtAAAAAIT9EyO_TNX_oNh6rY-fODqhkgqO',true);
+  firebase.appCheck().activate('6LfzbQ4tAAAAALkEJweXE1necdPz_xoMu3tkHhV_',true);
   window.db = firebase.database();
   // Nur anonym anmelden, wenn KEIN echter Nutzer angemeldet ist
   // (sonst wuerde die gespeicherte Konto-Sitzung bei jedem Laden ueberschrieben)
@@ -4144,9 +4144,8 @@ function App(){
   const[danceStyle,setDanceStyle]=useState('robot');
   const[lobbyCfgPrivate,setLobbyCfgPrivate]=useState(false);
   const[lobbyCfgMode,setLobbyCfgMode]=useState('classic');
-  const[selectedMap,setSelectedMap]=useState(()=>{try{return localStorage.getItem('ww_map')||'duel';}catch{return 'duel';}});
+  const[selectedMap,setSelectedMap]=useState('duel');
   const[duelSize,setDuelSize]=useState(()=>{try{return localStorage.getItem('ww_duelsize')||'standard';}catch{return 'standard';}});
-  useEffect(()=>{try{localStorage.setItem('ww_map',selectedMap);}catch{}},[selectedMap]);
   useEffect(()=>{try{localStorage.setItem('ww_duelsize',duelSize);}catch{}},[duelSize]);
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
@@ -5762,43 +5761,33 @@ function App(){
       </div>
 
       {/* Modus-Konfigurations-Button */}
-      <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} className="mi-btn mi-btn-hl" style={{
-        width:280,padding:'14px 16px',marginBottom:20,position:'relative',zIndex:1,
-        background:selectedMap==='duel'
-          ?'linear-gradient(135deg,#7c3aed,#8b5cf6,#6d28d9)'
-          :'linear-gradient(135deg,#2563eb,#8b5cf6,#ef4444)',
-        border:'none',borderRadius:18,
-        cursor:'pointer',display:'flex',alignItems:'center',gap:13,overflow:'hidden',
-        boxShadow:selectedMap==='duel'
-          ?'0 5px 0 rgba(0,0,0,0.22),0 10px 32px rgba(109,40,217,0.38)'
-          :'0 5px 0 rgba(0,0,0,0.22),0 10px 32px rgba(139,92,246,0.35)',
-        fontFamily:'system-ui,-apple-system,sans-serif',
-        transition:'background 0.5s ease'}}>
-        <div style={{position:'absolute',top:0,left:0,right:0,height:'52%',
-          background:'linear-gradient(180deg,rgba(255,255,255,0.16),transparent)',
-          borderRadius:'18px 18px 0 0',pointerEvents:'none'}}/>
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.1) 50%,transparent 62%)',
-          backgroundSize:'200% 100%',animation:'shimmer 3s ease-in-out infinite',pointerEvents:'none'}}/>
-        <div style={{width:42,height:42,borderRadius:13,background:'rgba(255,255,255,0.2)',
+      <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} className="mi-btn" style={{
+        width:280,padding:'12px 14px',marginBottom:20,position:'relative',zIndex:1,
+        background:'var(--card)',
+        border:'1.5px solid var(--border)',
+        borderLeft:selectedMap==='duel'?'4px solid #8b5cf6':'4px solid #3b82f6',
+        borderRadius:16,cursor:'pointer',display:'flex',alignItems:'center',gap:12,
+        boxShadow:'0 4px 0 rgba(0,0,0,0.08),0 2px 10px rgba(0,0,0,0.06)',
+        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+        <div style={{width:40,height:40,borderRadius:12,
+          background:selectedMap==='duel'
+            ?'linear-gradient(135deg,#7c3aed,#8b5cf6)'
+            :'linear-gradient(135deg,#2563eb,#3b82f6)',
           display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
-          boxShadow:'0 2px 8px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.25)'}}>
-          <MazeIcon size={22}/>
+          boxShadow:'0 2px 8px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.2)'}}>
+          <MazeIcon size={20}/>
         </div>
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
-          <div style={{fontSize:9,fontWeight:800,letterSpacing:2,color:'rgba(255,255,255,0.7)',textTransform:'uppercase',marginBottom:3}}>{t('modeLabel')}</div>
-          <div style={{fontSize:16,fontWeight:900,color:'#fff',letterSpacing:-0.4,lineHeight:1.1}}>
+          <div style={{fontSize:9,fontWeight:800,letterSpacing:1.8,color:'var(--subtle)',textTransform:'uppercase',marginBottom:2}}>{t('modeLabel')}</div>
+          <div style={{fontSize:14,fontWeight:900,color:'var(--text)',letterSpacing:-0.3,lineHeight:1.1}}>
             {selectedMap==='duel'?t('duel'):t('classic')}
+            <span style={{fontSize:11,fontWeight:700,color:'var(--subtle)',marginLeft:6,letterSpacing:0}}>{modeLabel}</span>
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.72)',marginTop:3}}>
-            {modeLabel} · {gameBarr} {t('barricadesLabel').toLowerCase()}
-          </div>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,flexShrink:0}}>
-          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.65)',
-            background:'rgba(255,255,255,0.15)',padding:'4px 10px',borderRadius:10,whiteSpace:'nowrap'}}>
-            {t('mode')} ›
+          <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',marginTop:2}}>
+            {gameBarr} {t('barricadesLabel').toLowerCase()}
           </div>
         </div>
+        <span style={{fontSize:16,color:'var(--subtle)',fontWeight:700}}>›</span>
       </button>
 
       <div style={{width:280,position:'relative',zIndex:1}}>
@@ -6337,36 +6326,6 @@ function App(){
             <div style={{width:3,height:11,borderRadius:2,background:'var(--subtle)',opacity:0.5}}/> SPIELFELD
           </div>
           <div style={{display:'flex',gap:8,marginBottom:4}}>
-            <button onClick={()=>setSelectedMap('classic')} className="mi-btn" style={{
-              flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
-              background:selectedMap==='classic'
-                ?'linear-gradient(135deg,#2563eb,#8b5cf6)'
-                :'var(--card)',
-              color:selectedMap==='classic'?'#fff':'var(--text)',
-              border:'1.5px solid '+(selectedMap==='classic'?'transparent':'var(--border)'),
-              fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:selectedMap==='classic'
-                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(37,99,235,0.3)'
-                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
-              transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
-              {selectedMap==='classic'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
-              <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
-                <svg width="44" height="34" viewBox="0 0 44 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="2" width="40" height="30" rx="3" fill="currentColor" opacity="0.08"/>
-                  <rect x="2" y="2" width="40" height="5" rx="3" fill="#16a34a" opacity="0.8"/>
-                  {[8,14,20,26].map(y=><line key={y} x1="2" y1={y} x2="42" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
-                  {[9,17,25,34].map(x=><line key={x} x1={x} y1="7" x2={x} y2="32" stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
-                  <rect x="9" y="13.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
-                  <rect x="25" y="19.5" width="10" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
-                  <circle cx="13" cy="29" r="4" fill={selectedMap==='classic'?'#fff':'#ef4444'} opacity="0.9"/>
-                  <circle cx="31" cy="29" r="4" fill={selectedMap==='classic'?'rgba(255,255,255,0.6)':'#3b82f6'} opacity="0.9"/>
-                  <polyline points="13,24 13,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#ef4444'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
-                  <polyline points="31,24 31,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#3b82f6'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
-                </svg>
-              </div>
-              <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('classic')}</div>
-              <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>{t('classicDesc')||'Race to top'}</div>
-            </button>
             <button onClick={()=>setSelectedMap('duel')} className="mi-btn" style={{
               flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
               background:selectedMap==='duel'
@@ -6398,6 +6357,36 @@ function App(){
               </div>
               <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('duel')}</div>
               <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>1v1 Arena</div>
+            </button>
+            <button onClick={()=>setSelectedMap('classic')} className="mi-btn" style={{
+              flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
+              background:selectedMap==='classic'
+                ?'linear-gradient(135deg,#2563eb,#8b5cf6)'
+                :'var(--card)',
+              color:selectedMap==='classic'?'#fff':'var(--text)',
+              border:'1.5px solid '+(selectedMap==='classic'?'transparent':'var(--border)'),
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:selectedMap==='classic'
+                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(37,99,235,0.3)'
+                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+              transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
+              {selectedMap==='classic'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
+              <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
+                <svg width="44" height="34" viewBox="0 0 44 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="40" height="30" rx="3" fill="currentColor" opacity="0.08"/>
+                  <rect x="2" y="2" width="40" height="5" rx="3" fill="#16a34a" opacity="0.8"/>
+                  {[8,14,20,26].map(y=><line key={y} x1="2" y1={y} x2="42" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
+                  {[9,17,25,34].map(x=><line key={x} x1={x} y1="7" x2={x} y2="32" stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
+                  <rect x="9" y="13.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
+                  <rect x="25" y="19.5" width="10" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
+                  <circle cx="13" cy="29" r="4" fill={selectedMap==='classic'?'#fff':'#ef4444'} opacity="0.9"/>
+                  <circle cx="31" cy="29" r="4" fill={selectedMap==='classic'?'rgba(255,255,255,0.6)':'#3b82f6'} opacity="0.9"/>
+                  <polyline points="13,24 13,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#ef4444'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
+                  <polyline points="31,24 31,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#3b82f6'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
+                </svg>
+              </div>
+              <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('classic')}</div>
+              <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>{t('classicDesc')||'Race to top'}</div>
             </button>
           </div>
           {selectedMap==='duel'&&(
