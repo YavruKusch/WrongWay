@@ -586,7 +586,7 @@ function startPos(map){
   return{A:{r:ROWS-1,c:2},B:{r:ROWS-1,c:6}};
 }
 // Aktiver Map-Typ der laufenden 1v1-Runde (für isSteelWall etc.), wird bei Spielstart gesetzt
-let CUR_MAP='classic';
+let CUR_MAP='duel';
 // Zielreihe je Spieler und Map. Klassisch: beide nach oben (0). Duell: A→0 (oben), B→ROWS-1 (unten).
 function goalRowOf(player,map){
   if(map==='duel')return player==='B'?ROWS-1:0;
@@ -813,7 +813,8 @@ en:{
   onlineLobby4:'Online Lobby (4 players)',playersLabel:'Players',
   replayHistSub:'Last 10 games',replayEmpty:'No games saved yet.',
   rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move',
-  whatsappInvite:'Play Wrong Way with me! Code: '
+  whatsappInvite:'Play Wrong Way with me! Code: ',
+  lossLabel:'DEFEAT',lossSubtitle:'has won',movesPlayed:'moves',maintenanceTitle:'Maintenance',victoryLabel:'VICTORY',giveUpLabel:'GIVEN UP'
 },
 de:{
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
@@ -855,7 +856,8 @@ de:{
   onlineLobby4:'Online-Lobby (4 Spieler)',playersLabel:'Spieler',
   replayHistSub:'Letzte 10 Spiele',replayEmpty:'Noch keine Spiele gespeichert.',
   rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen',
-  whatsappInvite:'Spiel mit mir Wrong Way! Code: '
+  whatsappInvite:'Spiel mit mir Wrong Way! Code: ',
+  lossLabel:'NIEDERLAGE',lossSubtitle:'hat gewonnen',movesPlayed:'Z\u00fcge',maintenanceTitle:'Wartung',victoryLabel:'SIEG',giveUpLabel:'AUFGEGEBEN'
 },
 tr:{
   viewProfile:'Profili g\u00f6r',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
@@ -897,7 +899,8 @@ tr:{
   onlineLobby4:'\u00c7evrimiçi Lobi (4 oyuncu)',playersLabel:'Oyuncular',
   replayHistSub:'Son 10 oyun',replayEmpty:'Henüz kayıtlı oyun yok.',
   rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle',
-  whatsappInvite:'Benimle Wrong Way oyna! Kod: '
+  whatsappInvite:'Benimle Wrong Way oyna! Kod: ',
+  lossLabel:'YENILDIN',lossSubtitle:'kazand\u0131',movesPlayed:'hamle',maintenanceTitle:'Bak\u0131m',victoryLabel:'ZAFER',giveUpLabel:'PES ETTI'
 },
 fr:{
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
@@ -939,7 +942,8 @@ fr:{
   onlineLobby4:'Salon en ligne (4 joueurs)',playersLabel:'Joueurs',
   replayHistSub:'10 dernières parties',replayEmpty:'Aucune partie sauvegardée.',
   rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup',
-  whatsappInvite:'Joue à Wrong Way avec moi ! Code : '
+  whatsappInvite:'Joue \u00e0 Wrong Way avec moi ! Code : ',
+  lossLabel:'D\u00c9FAITE',lossSubtitle:'a gagn\u00e9',movesPlayed:'coups',maintenanceTitle:'Maintenance',victoryLabel:'VICTOIRE',giveUpLabel:'ABANDONN\u00c9'
 }
 };
 function getInitialLang(){try{const s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch{}return 'en';}
@@ -2889,7 +2893,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
         top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
@@ -3136,7 +3140,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         {/* Avatar */}
@@ -3469,7 +3473,7 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         top:'calc(env(safe-area-inset-top)+14px)',zIndex:300,width:40,height:40,borderRadius:12,
         display:'flex',alignItems:'center',justifyContent:'center',background:card,
         border:'1.5px solid '+border,color:txt,fontSize:24,fontWeight:800,cursor:'pointer',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.1)',fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.1)',fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{width:'100%',maxWidth:380,padding:'0 14px',position:'relative',zIndex:1}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:20}}>
@@ -3710,7 +3714,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:440,padding:'0 16px'}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:10,paddingTop:48}}>
@@ -4140,7 +4144,7 @@ function App(){
   const[danceStyle,setDanceStyle]=useState('robot');
   const[lobbyCfgPrivate,setLobbyCfgPrivate]=useState(false);
   const[lobbyCfgMode,setLobbyCfgMode]=useState('classic');
-  const[selectedMap,setSelectedMap]=useState(()=>{try{return localStorage.getItem('ww_map')||'classic';}catch{return 'classic';}});
+  const[selectedMap,setSelectedMap]=useState(()=>{try{return localStorage.getItem('ww_map')||'duel';}catch{return 'duel';}});
   const[duelSize,setDuelSize]=useState(()=>{try{return localStorage.getItem('ww_duelsize')||'standard';}catch{return 'standard';}});
   useEffect(()=>{try{localStorage.setItem('ww_map',selectedMap);}catch{}},[selectedMap]);
   useEffect(()=>{try{localStorage.setItem('ww_duelsize',duelSize);}catch{}},[duelSize]);
@@ -5611,7 +5615,7 @@ function App(){
           <div style={{width:56,height:56,borderRadius:18,background:'linear-gradient(135deg,#64748b,#475569)',
             display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px',
             boxShadow:'0 6px 20px rgba(0,0,0,0.2)'}}><ShieldSmIcon size={28} color="#fff"/></div>
-            <div style={{fontSize:20,fontWeight:900,letterSpacing:-0.5,color:'var(--text)',marginBottom:8}}>Wartung</div>
+            <div style={{fontSize:20,fontWeight:900,letterSpacing:-0.5,color:'var(--text)',marginBottom:8}}>{t('maintenanceTitle')}</div>
             <div style={{fontSize:13,color:'var(--subtle)',fontWeight:500,lineHeight:1.6}}>
               {adminCfg.announce?adminCfg.announce:'Das Spiel ist gerade nicht verfügbar. Bitte versuche es später nochmal.'}
             </div>
@@ -5758,22 +5762,43 @@ function App(){
       </div>
 
       {/* Modus-Konfigurations-Button */}
-      <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} className="mi-btn" style={{
-        width:280,padding:'11px 14px',marginBottom:18,position:'relative',zIndex:1,
-        background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:16,
-        cursor:'pointer',display:'flex',alignItems:'center',gap:12,
-        boxShadow:'0 4px 0 rgba(0,0,0,0.08),0 2px 8px rgba(0,0,0,0.05)',
-        fontFamily:'system-ui,-apple-system,sans-serif'}}>
-        <div style={{width:36,height:36,borderRadius:10,
-          background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',
-          display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><MazeIcon size={20}/></div>
+      <button onClick={()=>{setNavDir('fwd');setScreen('modeConfig');}} className="mi-btn mi-btn-hl" style={{
+        width:280,padding:'14px 16px',marginBottom:20,position:'relative',zIndex:1,
+        background:selectedMap==='duel'
+          ?'linear-gradient(135deg,#7c3aed,#8b5cf6,#6d28d9)'
+          :'linear-gradient(135deg,#2563eb,#8b5cf6,#ef4444)',
+        border:'none',borderRadius:18,
+        cursor:'pointer',display:'flex',alignItems:'center',gap:13,overflow:'hidden',
+        boxShadow:selectedMap==='duel'
+          ?'0 5px 0 rgba(0,0,0,0.22),0 10px 32px rgba(109,40,217,0.38)'
+          :'0 5px 0 rgba(0,0,0,0.22),0 10px 32px rgba(139,92,246,0.35)',
+        fontFamily:'system-ui,-apple-system,sans-serif',
+        transition:'background 0.5s ease'}}>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:'52%',
+          background:'linear-gradient(180deg,rgba(255,255,255,0.16),transparent)',
+          borderRadius:'18px 18px 0 0',pointerEvents:'none'}}/>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.1) 50%,transparent 62%)',
+          backgroundSize:'200% 100%',animation:'shimmer 3s ease-in-out infinite',pointerEvents:'none'}}/>
+        <div style={{width:42,height:42,borderRadius:13,background:'rgba(255,255,255,0.2)',
+          display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
+          boxShadow:'0 2px 8px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.25)'}}>
+          <MazeIcon size={22}/>
+        </div>
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
-          <div style={{fontSize:10,fontWeight:800,color:'var(--subtle)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>{t('modeLabel')}</div>
-          <div style={{fontSize:13,fontWeight:800,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {selectedMap==='duel'?t('duel'):t('classic')} · {modeLabel} · {gameBarr} <BrickMini size={11}/>
+          <div style={{fontSize:9,fontWeight:800,letterSpacing:2,color:'rgba(255,255,255,0.7)',textTransform:'uppercase',marginBottom:3}}>{t('modeLabel')}</div>
+          <div style={{fontSize:16,fontWeight:900,color:'#fff',letterSpacing:-0.4,lineHeight:1.1}}>
+            {selectedMap==='duel'?t('duel'):t('classic')}
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.72)',marginTop:3}}>
+            {modeLabel} · {gameBarr} {t('barricadesLabel').toLowerCase()}
           </div>
         </div>
-        <span style={{fontSize:14,color:'var(--subtle)'}}>›</span>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2,flexShrink:0}}>
+          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.65)',
+            background:'rgba(255,255,255,0.15)',padding:'4px 10px',borderRadius:10,whiteSpace:'nowrap'}}>
+            {t('mode')} ›
+          </div>
+        </div>
       </button>
 
       <div style={{width:280,position:'relative',zIndex:1}}>
@@ -5864,7 +5889,7 @@ function App(){
               borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
               {optionsTab!=='main'&&(
                 <button onClick={()=>setOptionsTab('main')} style={{background:'none',border:'none',cursor:'pointer',
-                  color:'var(--subtle)',fontSize:20,padding:0,marginRight:8,display:'flex',alignItems:'center'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+                  color:'var(--subtle)',fontSize:20,padding:0,marginRight:8,display:'flex',alignItems:'center'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
               )}
               <div style={{fontSize:15,fontWeight:900,color:'var(--text)',flex:1}}>
                 {optionsTab==='main'?'Menu':optionsTab==='settings'?t('options'):optionsTab==='replays'?'Replays':t('tutHelp')}
@@ -6250,15 +6275,17 @@ function App(){
       );
     };
     const SectionHeader=({label,icon})=>(
-      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:14,marginBottom:8,paddingLeft:2,display:'flex',alignItems:'center',gap:5}}>
-        {icon}{label}
+      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:800,letterSpacing:1.5,marginTop:16,marginBottom:9,paddingLeft:2,display:'flex',alignItems:'center',gap:6}}>
+        <div style={{width:3,height:11,borderRadius:2,background:'var(--subtle)',opacity:0.5,flexShrink:0}}/>
+        {icon&&<span style={{opacity:0.7}}>{icon}</span>}
+        {label}
       </div>
     );
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
         <MapAura map={selectedMap} dark={darkMode}/>
-        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
         <div style={{width:'100%',maxWidth:340}}>
           <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
             title={t('mode')} sub={t('modeConfigSub')}/>
@@ -6306,58 +6333,71 @@ function App(){
           )}
 
           {/* ── Spielfeld ── */}
-          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginTop:6,marginBottom:8,paddingLeft:2,display:'flex',alignItems:'center',gap:5}}>
-            <span>🗺</span> SPIELFELD
+          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:800,letterSpacing:1.5,marginTop:6,marginBottom:10,paddingLeft:2,display:'flex',alignItems:'center',gap:6}}>
+            <div style={{width:3,height:11,borderRadius:2,background:'var(--subtle)',opacity:0.5}}/> SPIELFELD
           </div>
-          <div style={{display:'flex',gap:6,marginBottom:4}}>
-            <button onClick={()=>setSelectedMap('classic')} style={{
-              flex:1,padding:'10px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
-              background:selectedMap==='classic'?'var(--text)':'var(--card)',
-              color:selectedMap==='classic'?'var(--bg)':'var(--text)',
-              border:'1.5px solid '+(selectedMap==='classic'?'var(--text)':'var(--border)'),
-              fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
-              <div style={{display:'flex',justifyContent:'center',marginBottom:5}}>
+          <div style={{display:'flex',gap:8,marginBottom:4}}>
+            <button onClick={()=>setSelectedMap('classic')} className="mi-btn" style={{
+              flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
+              background:selectedMap==='classic'
+                ?'linear-gradient(135deg,#2563eb,#8b5cf6)'
+                :'var(--card)',
+              color:selectedMap==='classic'?'#fff':'var(--text)',
+              border:'1.5px solid '+(selectedMap==='classic'?'transparent':'var(--border)'),
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:selectedMap==='classic'
+                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(37,99,235,0.3)'
+                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+              transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
+              {selectedMap==='classic'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
+              <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
                 <svg width="44" height="34" viewBox="0 0 44 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Brett-Hintergrund */}
-                  <rect x="2" y="2" width="40" height="30" rx="3" fill="currentColor" opacity="0.06"/>
-                  {/* Grüne Ziel-Linie oben */}
-                  <rect x="2" y="2" width="40" height="5" rx="3" fill="#16a34a" opacity="0.7"/>
-                  {/* Zellen-Gitter */}
-                  {[8,14,20,26].map(y=><line key={y} x1="2" y1={y} x2="42" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>)}
-                  {[9,17,25,34].map(x=><line key={x} x1={x} y1="7" x2={x} y2="32" stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>)}
-                  {/* Horizontale Mauern */}
-                  <rect x="9" y="13.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.55"/>
-                  <rect x="25" y="19.5" width="10" height="2.5" rx="1.2" fill="currentColor" opacity="0.55"/>
-                  <rect x="15" y="24.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.4"/>
-                  {/* Spieler A (Rot) unten links */}
-                  <circle cx="13" cy="29" r="3.5" fill="#ef4444" opacity="0.9"/>
-                  {/* Spieler B (Blau) unten rechts */}
-                  <circle cx="31" cy="29" r="3.5" fill="#3b82f6" opacity="0.9"/>
-                  {/* Pfeile nach oben */}
-                  <polyline points="13,25 13,12" stroke="#ef4444" strokeWidth="1.2" opacity="0.45" strokeDasharray="2,2"/>
-                  <polyline points="31,25 31,12" stroke="#3b82f6" strokeWidth="1.2" opacity="0.45" strokeDasharray="2,2"/>
+                  <rect x="2" y="2" width="40" height="30" rx="3" fill="currentColor" opacity="0.08"/>
+                  <rect x="2" y="2" width="40" height="5" rx="3" fill="#16a34a" opacity="0.8"/>
+                  {[8,14,20,26].map(y=><line key={y} x1="2" y1={y} x2="42" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
+                  {[9,17,25,34].map(x=><line key={x} x1={x} y1="7" x2={x} y2="32" stroke="currentColor" strokeWidth="0.5" opacity="0.18"/>)}
+                  <rect x="9" y="13.5" width="8" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
+                  <rect x="25" y="19.5" width="10" height="2.5" rx="1.2" fill="currentColor" opacity="0.6"/>
+                  <circle cx="13" cy="29" r="4" fill={selectedMap==='classic'?'#fff':'#ef4444'} opacity="0.9"/>
+                  <circle cx="31" cy="29" r="4" fill={selectedMap==='classic'?'rgba(255,255,255,0.6)':'#3b82f6'} opacity="0.9"/>
+                  <polyline points="13,24 13,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#ef4444'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
+                  <polyline points="31,24 31,11" stroke={selectedMap==='classic'?'rgba(255,255,255,0.5)':'#3b82f6'} strokeWidth="1.5" opacity="0.5" strokeDasharray="2,2"/>
                 </svg>
               </div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>{t('classic')}</div>
+              <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('classic')}</div>
+              <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>{t('classicDesc')||'Race to top'}</div>
             </button>
-            <button onClick={()=>setSelectedMap('duel')} style={{
-              flex:1,padding:'10px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
-              background:selectedMap==='duel'?'var(--text)':'var(--card)',
-              color:selectedMap==='duel'?'var(--bg)':'var(--text)',
-              border:'1.5px solid '+(selectedMap==='duel'?'var(--text)':'var(--border)'),
-              fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
-              <div style={{display:'flex',justifyContent:'center',marginBottom:5}}>
-                <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="1" y="1" width="34" height="26" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.3"/>
-                  <circle cx="18" cy="5" r="3" fill="#ef4444" opacity="0.85"/>
-                  <line x1="18" y1="9" x2="18" y2="13" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
-                  <polygon points="14,14 22,14 18,18" fill="currentColor" opacity="0.7"/>
-                  <circle cx="18" cy="23" r="3" fill="#3b82f6" opacity="0.85"/>
-                  <line x1="18" y1="19" x2="18" y2="15" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
-                  <polygon points="14,14 22,14 18,10" fill="currentColor" opacity="0.7"/>
+            <button onClick={()=>setSelectedMap('duel')} className="mi-btn" style={{
+              flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
+              background:selectedMap==='duel'
+                ?'linear-gradient(135deg,#7c3aed,#8b5cf6)'
+                :'var(--card)',
+              color:selectedMap==='duel'?'#fff':'var(--text)',
+              border:'1.5px solid '+(selectedMap==='duel'?'transparent':'var(--border)'),
+              fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:selectedMap==='duel'
+                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(124,58,237,0.3)'
+                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+              transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
+              {selectedMap==='duel'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
+              {selectedMap!=='duel'&&<div style={{position:'absolute',top:6,right:6,fontSize:8,fontWeight:800,
+                background:'linear-gradient(135deg,#7c3aed,#8b5cf6)',color:'#fff',
+                padding:'2px 6px',borderRadius:6}}>STD</div>}
+              <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="1" width="34" height="34" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.25"/>
+                  <rect x="1" y="1" width="34" height="5" rx="3" fill="#16a34a" opacity="0.7"/>
+                  <rect x="1" y="30" width="34" height="5" rx="3" fill="#16a34a" opacity="0.7"/>
+                  <circle cx="18" cy="7" r="3.5" fill={selectedMap==='duel'?'#fff':'#ef4444'} opacity="0.9"/>
+                  <circle cx="18" cy="29" r="3.5" fill={selectedMap==='duel'?'rgba(255,255,255,0.6)':'#3b82f6'} opacity="0.9"/>
+                  <line x1="18" y1="12" x2="18" y2="16" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
+                  <line x1="18" y1="24" x2="18" y2="20" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
+                  <polygon points="14,17 22,17 18,21" fill="currentColor" opacity="0.55"/>
+                  <polygon points="14,19 22,19 18,15" fill="currentColor" opacity="0.55"/>
                 </svg>
               </div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:0.2}}>{t('duel')}</div>
+              <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('duel')}</div>
+              <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>1v1 Arena</div>
             </button>
           </div>
           {selectedMap==='duel'&&(
@@ -6371,25 +6411,31 @@ function App(){
               <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label={t('duelFieldSize')}/>
               <div style={{display:'flex',gap:8}}>
                 {(adminCfg.features.duelBlitz)&&(
-                  <button onClick={()=>setDuelSize('blitz')} style={{
-                    flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
-                    background:duelSize==='blitz'?'#8b5cf6':'var(--card)',
+                  <button onClick={()=>setDuelSize('blitz')} className="mi-btn" style={{
+                    flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
+                    background:duelSize==='blitz'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
                     color:duelSize==='blitz'?'#fff':'var(--text)',
-                    border:'1.5px solid '+(duelSize==='blitz'?'#8b5cf6':'var(--border)'),
-                    fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
-                    <div style={{fontSize:13,fontWeight:900}}>⚡ {t('duelBlitzName')}</div>
-                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>7 × 7 · {t('duelBlitzSpeed')}</div>
+                    border:'1.5px solid '+(duelSize==='blitz'?'transparent':'var(--border)'),
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    boxShadow:duelSize==='blitz'?'0 4px 0 rgba(0,0,0,0.18),0 6px 16px rgba(124,58,237,0.28)':'0 3px 0 rgba(0,0,0,0.07)',
+                    transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'}}>
+                    <div style={{fontSize:14,fontWeight:900,marginBottom:2}}>7 × 7</div>
+                    <div style={{fontSize:11,fontWeight:800,marginBottom:1}}>{t('duelBlitzName')}</div>
+                    <div style={{fontSize:9,fontWeight:700,opacity:0.65}}>{t('duelBlitzSpeed')}</div>
                   </button>
                 )}
                 {(adminCfg.features.duelStandard)&&(
-                  <button onClick={()=>setDuelSize('standard')} style={{
-                    flex:1,padding:'11px 8px',borderRadius:11,cursor:'pointer',textAlign:'center',
-                    background:duelSize==='standard'?'#8b5cf6':'var(--card)',
+                  <button onClick={()=>setDuelSize('standard')} className="mi-btn" style={{
+                    flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
+                    background:duelSize==='standard'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
                     color:duelSize==='standard'?'#fff':'var(--text)',
-                    border:'1.5px solid '+(duelSize==='standard'?'#8b5cf6':'var(--border)'),
-                    fontFamily:'system-ui,-apple-system,sans-serif',transition:'all 0.18s'}}>
-                    <div style={{fontSize:13,fontWeight:900}}>🛡 Standard</div>
-                    <div style={{fontSize:10,fontWeight:700,opacity:0.75,marginTop:2}}>9 × 9 · {t('duelTactical')}</div>
+                    border:'1.5px solid '+(duelSize==='standard'?'transparent':'var(--border)'),
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    boxShadow:duelSize==='standard'?'0 4px 0 rgba(0,0,0,0.18),0 6px 16px rgba(124,58,237,0.28)':'0 3px 0 rgba(0,0,0,0.07)',
+                    transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'}}>
+                    <div style={{fontSize:14,fontWeight:900,marginBottom:2}}>9 × 9</div>
+                    <div style={{fontSize:11,fontWeight:800,marginBottom:1}}>Standard</div>
+                    <div style={{fontSize:9,fontWeight:700,opacity:0.65}}>{t('duelTactical')}</div>
                   </button>
                 )}
               </div>
@@ -6647,7 +6693,7 @@ function App(){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
         <div style={{width:'100%',maxWidth:330,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{width:64,height:64,borderRadius:'50%',margin:'0 auto 12px',
@@ -6813,7 +6859,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
         <ScreenHead icon={<BotIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
           title={t('chooseDifficulty')} sub={t('vsBotDesc')}/>
@@ -6838,7 +6884,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{width:'100%',maxWidth:300,display:'flex',flexDirection:'column',position:'relative',zIndex:1}}>
         <ScreenHead icon={<PeopleIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
           title={t('friendPlay')} sub={t('friendDesc')}/>
@@ -6884,7 +6930,7 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
 
         {/* Header */}
@@ -7422,7 +7468,7 @@ function App(){
               {/* Result text */}
               <div style={{fontSize:11,fontWeight:800,letterSpacing:2,textTransform:'uppercase',
                 color:winner?PC[winner]:'var(--subtle)',marginBottom:6,opacity:0.7}}>
-                {winner?(isLoss?t('lossLabel')||'NIEDERLAGE':'SIEG'):'AUFGEGEBEN'}
+                {winner?(isLoss?t('lossLabel'):t('victoryLabel')):t('giveUpLabel')}
               </div>
               <div style={{fontSize:28,fontWeight:900,letterSpacing:-1,lineHeight:1.1,
                 color:winner?PC[winner]:'var(--text)',marginBottom:4}}>
@@ -7430,12 +7476,12 @@ function App(){
               </div>
               <div style={{fontSize:13,fontWeight:600,color:'var(--subtle)',marginBottom:gaveUp?10:0}}>
                 {winner&&!isLoss?t('wins'):''}
-                {winner&&isLoss?(t('lossSubtitle')||'hat gewonnen'):''}
+                {winner&&isLoss?t('lossSubtitle'):''}
               </div>
               {/* Move count */}
               {moveHist&&moveHist.length>0&&(
                 <div style={{fontSize:11,fontWeight:600,color:'var(--subtle)',marginTop:6,opacity:0.6}}>
-                  {moveHist.filter(m=>m.type!=='emote').length} {t('movesPlayed')||'Züge'}
+                  {moveHist.filter(m=>m.type!=='emote').length} {t('movesPlayed')}
                 </div>
               )}
               {gaveUp&&(
@@ -8319,7 +8365,7 @@ function ReplayHistoryScreen({t,darkMode,goBack,onWatch}){
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:txt,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:txt,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:21,fontWeight:900,color:txt,letterSpacing:-0.5,
@@ -8795,7 +8841,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
         cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:text2,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        boxShadow:'0 2px 8px rgba(0,0,0,0.08)',zIndex:100,color:text2,fontWeight:700}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         <div style={{textAlign:'center',marginBottom:18}}>
@@ -9562,7 +9608,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={onExit} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        <button onClick={onExit} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
         <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:18}}>
             <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}>
@@ -9620,7 +9666,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={()=>setSub('config')} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        <button onClick={()=>setSub('config')} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
         <div style={{width:'100%',maxWidth:320,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>Online 2 vs 2</div>
@@ -9748,7 +9794,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
-        <button onClick={leaveLobby} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+        <button onClick={leaveLobby} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
         <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
 
           {/* Code + Teilen */}
@@ -9850,7 +9896,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   return(
     <div style={{...sCont,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
-      <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style={{fontSize:12,fontWeight:800,letterSpacing:0.2}}>Zurück</span></button>
+      <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       {/* Team-Status */}
       <div style={{display:'flex',gap:8,marginBottom:8,marginTop:6,position:'relative',zIndex:1,width:Math.min(COLS2*CELL2,window.innerWidth-16),maxWidth:'96vw'}}>
