@@ -3939,10 +3939,11 @@ function App(){
       const uid=firebaseUser.uid;
       const isG=(firebaseUser.providerData||[]).some(p=>p&&p.providerId==='google.com');
       // E-Mail-Nutzer muessen ihre E-Mail bestaetigt haben.
-      // Ohne diese Pruefung umgeht ein Seiten-Reload den Verifikations-Screen.
+      // KEIN signOut() hier — registerAccount ruft selbst signOut() am Ende auf.
+      // Ein signOut() hier wuerde den registerAccount-Flow brechen (interner Listener
+      // resolved nie → authBusy bleibt true → 3-Punkte-Haenger).
       if(!isG&&!firebaseUser.emailVerified){
         setAccount(null);
-        firebase.auth().signOut().catch(function(){});
         return;
       }
       const prof=await stoGet(PROFILE_KEY(uid));
