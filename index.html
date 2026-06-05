@@ -4309,7 +4309,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -6432,7 +6432,7 @@ function App(){
           )}
 
           {/* Classic */}
-          <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={t('classic').toUpperCase() + ' · ' + t('totalTime').toUpperCase()}/>
+          <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={'TIMER · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <TimeBtn val="none" label={t('noTimer')}/>
             <TimeBtn val="classic-3" label={'3 '+t('minLabel')} disabled={!adminCfg.features.classicTime3&&!isAdmin()}/>
