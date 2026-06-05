@@ -3930,9 +3930,21 @@ function App(){
     if(saved&&saved.key)setAccount(saved);
     // Echter Auto-Login ueber die Firebase-Sitzung (gilt fuer E-Mail UND Google)
     const unsub=firebase.auth().onAuthStateChanged(async firebaseUser=>{
-      if(!firebaseUser||firebaseUser.isAnonymous)return;
+      // Firebase Auth ist die einzige Quelle der Wahrheit.
+      // Kein echter User (anonym) → account zuruecksetzen, auch wenn localStorage etwas hatte.
+      if(!firebaseUser||firebaseUser.isAnonymous){
+        setAccount(null);
+        return;
+      }
       const uid=firebaseUser.uid;
       const isG=(firebaseUser.providerData||[]).some(p=>p&&p.providerId==='google.com');
+      // E-Mail-Nutzer muessen ihre E-Mail bestaetigt haben.
+      // Ohne diese Pruefung umgeht ein Seiten-Reload den Verifikations-Screen.
+      if(!isG&&!firebaseUser.emailVerified){
+        setAccount(null);
+        firebase.auth().signOut().catch(function(){});
+        return;
+      }
       const prof=await stoGet(PROFILE_KEY(uid));
       if(prof&&prof.name)setAccount({...prof,key:uid,isGoogle:isG});
       // Kein Profil + Google = Erstanmeldung -> Namenswahl laeuft ueber den Google-Button
