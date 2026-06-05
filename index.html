@@ -3998,7 +3998,7 @@ function App(){
         stoSet('barricade_game_'+code,gs);
         lastOnlineTs.current=gs.lastUpdated;
         setPlayerNames({A:myName,B:oppName});
-        initGame('online','A',code,false,undefined,false,mapNow,dsNow);
+        initGame('online','A',code,false,undefined,false,mapNow,dsNow,gs.turn);
       }
     });
     return()=>{cancelled=true;ref.off('value',cb);};
@@ -4114,7 +4114,7 @@ function App(){
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
         const gmap=gs.map||selectedMap;
-        initGame('online','B',code,false,gs.tm,false,gmap,gs.duelSize||'standard');return;
+        initGame('online','B',code,false,gs.tm,false,gmap,gs.duelSize||'standard',gs.turn);return;
       }
     }
     if(!joinCancelledRef.current){setNavDir('back');setScreen('friends');}
@@ -4506,7 +4506,7 @@ function App(){
   const color=PC[turn];
 
   // ── Init game ──
-  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride)=>{
+  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride,forcedTurn)=>{
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
     // Ranked = faires Standard-Regelwerk: keine Modifikatoren (Casual-Einstellungen bleiben erhalten)
@@ -4524,7 +4524,9 @@ function App(){
     setPA({...sp.A});setPB({...sp.B});setWalls(new Set());
     let starter;
     const prevMoves=S.current.moveHist;
-    if(isRematch&&prevMoves&&prevMoves.length>0&&prevMoves[0].p){
+    if(forcedTurn==='A'||forcedTurn==='B'){
+      starter=forcedTurn;
+    }else if(isRematch&&prevMoves&&prevMoves.length>0&&prevMoves[0].p){
       starter=prevMoves[0].p==='A'?'B':'A';
     }else{
       starter=Math.random()<0.5?'A':'B';
@@ -4552,8 +4554,8 @@ function App(){
     setDragging(null);setPreviewKey(null);setSnapPos(null);
     setRematchA(false);setRematchB(false);setRematchDeclined(null);
     setChatMsgs([]);setChatInput('');
-    if(mode!=='online')setGameNum(0);
-    setPlayerNames({A:null,B:null});
+    setGameNum(0);
+    if(mode!=='online')setPlayerNames({A:null,B:null});
     if(mode==='online'&&lid){
       const acc=accRef.current;
       const presKey=acc?acc.key:GUEST_ID;
@@ -4919,9 +4921,12 @@ function App(){
       }
       setGameNum(newGN);
 
-      // Spielernamen falls vorhanden
-      if((gs.nameA||gs.nameB)&&(!S.current.playerNames||!S.current.playerNames.A)){
-        setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
+      // Spielernamen synchron halten — aktualisieren sobald sich etwas aendert
+      if(gs.nameA||gs.nameB){
+        const cn=S.current.playerNames||{A:null,B:null};
+        const na=gs.nameA||cn.A||'';
+        const nb=gs.nameB||cn.B||'';
+        if(na!==cn.A||nb!==cn.B)setPlayerNames({A:na,B:nb});
       }
       const rA=gs.rematchA||false,rB=gs.rematchB||false,rD=gs.rematchDeclined||null;
       setRematchA(rA);setRematchB(rB);setRematchDeclined(rD);
@@ -5172,7 +5177,7 @@ function App(){
           lastOnlineTs.current=gs.lastUpdated;
           setPlayerNames({A:nameA,B:nameB});
           setOppAccountKey(accountKeyB);
-          initGame('online','A',lobbyId,false,undefined,false,mapNow,dsNow);
+          initGame('online','A',lobbyId,false,undefined,false,mapNow,dsNow,gs.turn);
         }
       }
     };
@@ -5184,9 +5189,19 @@ function App(){
   useEffect(()=>{
     if(screen!=='waiting'||onlineRole!=='A'||!lobbyId)return;
     const hb=async()=>{
-      const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
+      // Transaction: nur ts aktualisieren — guestId NIEMALS ueberschreiben,
+      // sonst geht ein gerade beigetretener Gast wieder verloren (Connection haengt).
+      let lobby=null;
+      try{
+        const res=await window.db.ref(`barricade_lobby_${lobbyId}`).transaction(cur=>{
+          if(cur===null)return cur; // Lobby weg → nicht neu anlegen
+          let obj;try{obj=JSON.parse(cur);}catch(e){return cur;}
+          obj.ts=Date.now();
+          return JSON.stringify(obj);
+        });
+        if(res&&res.snapshot&&res.snapshot.val()){try{lobby=JSON.parse(res.snapshot.val());}catch(e){}}
+      }catch(e){}
       if(!lobby)return;
-      await stoSet(`barricade_lobby_${lobbyId}`,{...lobby,ts:Date.now()});
       // Nur öffentliche Lobbys stehen in der Liste
       if(!lobby.isPrivate){
         const list=await stoGet('barricade_lobby_list')||[];
@@ -5282,8 +5297,26 @@ function App(){
 
   const joinLobby=async(id)=>{
     joinCancelledRef.current=false;
-    const lobby=await stoGet(`barricade_lobby_${id}`);
-    if(!lobby||lobby.guestId){setFlash(t('lobbyFull'));return;}
+    // Atomarer Beitritt via Transaction — verhindert dass der Host-Heartbeat
+    // den gerade gesetzten guestId wieder ueberschreibt (Ursache fuer "Lobby voll").
+    let lobby=null;
+    try{
+      const res=await window.db.ref(`barricade_lobby_${id}`).transaction(cur=>{
+        if(cur===null)return cur; // Lobby existiert nicht → nicht neu anlegen
+        let obj;try{obj=JSON.parse(cur);}catch(e){return cur;}
+        if(obj.guestId)return; // schon besetzt → Transaction abbrechen
+        obj.guestId=SESSION;
+        obj.guestName=getDisplayName(account);
+        obj.guestAccountKey=account?account.key:null;
+        obj.ts=Date.now();
+        return JSON.stringify(obj);
+      });
+      if(res&&res.committed&&res.snapshot&&res.snapshot.val()){
+        try{lobby=JSON.parse(res.snapshot.val());}catch(e){lobby=null;}
+        if(lobby&&lobby.guestId!==SESSION)lobby=null;
+      }
+    }catch(e){lobby=null;}
+    if(!lobby){setFlash(t('lobbyFull'));return;}
     // Host-Settings übernehmen
     if(lobby.tm!==undefined)setGameTimeMode(lobby.tm);
     if(lobby.ch!==undefined)setChaosMode(!!lobby.ch);
@@ -5292,10 +5325,6 @@ function App(){
     if(lobby.hm!==undefined)setHammerMode(!!lobby.hm);
     if(lobby.hd!==undefined)setHammerDrops(lobby.hd);
     if(lobby.map!==undefined)setSelectedMap(lobby.map);
-    await stoSet(`barricade_lobby_${id}`,{...lobby,guestId:SESSION,guestName:getDisplayName(account),guestAccountKey:account?account.key:null,ts:Date.now()});
-    // Race-Condition-Check: sicherstellen dass wir wirklich eingetragen sind
-    const verify=await stoGet(`barricade_lobby_${id}`);
-    if(!verify||verify.guestId!==SESSION){setFlash(t('lobbyFull'));return;}
     if(joinCancelledRef.current)return;
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
     for(let i=0;i<60;i++){
@@ -5308,7 +5337,7 @@ function App(){
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
-        initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap,lobby.duelSize||'standard');return;
+        initGame('online','B',id,false,lobby.tm,false,lobby.map||selectedMap,lobby.duelSize||'standard',gs.turn);return;
       }
     }
     if(!joinCancelledRef.current){setFlash(t('hostNotResponding'));setScreen('online');}
