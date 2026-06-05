@@ -65,8 +65,11 @@
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;background:transparent;}
   input,button{-webkit-appearance:none;font-family:inherit;}
-  button{transition:transform 0.07s ease;}
-  button:active{transform:scale(0.95);}
+  button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);}
+  button:active{transform:scale(0.94);}
+  .mi-btn{transition:transform 0.11s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.11s ease !important;}
+  .mi-btn:active{transform:translateY(4px) scale(0.985) !important;box-shadow:0 0px 4px rgba(0,0,0,0.10) !important;}
+  .mi-btn-hl:active{transform:translateY(4px) scale(0.985) !important;box-shadow:0 0px 8px rgba(0,0,0,0.18) !important;}
   input{font-size:16px !important;}
   #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999;flex-direction:column;gap:16px;font-family:system-ui,-apple-system,sans-serif;}
   #loader .dot{font-size:40px;}
@@ -102,12 +105,25 @@
     50%{box-shadow:0 0 7px 2px rgba(251,191,36,0.75),0 2px 6px rgba(0,0,0,0.2);}
   }
   @keyframes slide-in-right{
-    0%{transform:translateX(40px);opacity:0;}
-    100%{transform:translateX(0);opacity:1;}
+    0%{transform:translateX(56px) scale(0.96);opacity:0;}
+    100%{transform:translateX(0) scale(1);opacity:1;}
   }
   @keyframes slide-in-left{
-    0%{transform:translateX(-40px);opacity:0;}
-    100%{transform:translateX(0);opacity:1;}
+    0%{transform:translateX(-56px) scale(0.96);opacity:0;}
+    100%{transform:translateX(0) scale(1);opacity:1;}
+  }
+  @keyframes fadeSlideUp{
+    0%{transform:translateY(38px) scale(0.95);opacity:0;}
+    65%{opacity:1;}
+    100%{transform:translateY(0) scale(1);opacity:1;}
+  }
+  @keyframes mi-reveal{
+    0%{transform:translateY(16px) scale(0.96);opacity:0;}
+    100%{transform:translateY(0) scale(1);opacity:1;}
+  }
+  @keyframes screen-pop{
+    0%{transform:scale(0.96);opacity:0;}
+    100%{transform:scale(1);opacity:1;}
   }
   @keyframes hammer-float{
     0%,100%{transform:translateY(0) rotate(-8deg);}
@@ -2862,7 +2878,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
       padding:'0 16px 40px',paddingTop:'calc(env(safe-area-inset-top) + 20px)',
       background:'transparent',position:'relative',zIndex:1,
-      animation:'fadeSlideUp 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+      animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={function(){leaveQueue();goBack();}} style={{position:'fixed',
         top:'calc(env(safe-area-inset-top)+14px)',left:14,
@@ -3110,7 +3126,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
       padding:'0 16px 40px',paddingTop:'calc(env(safe-area-inset-top) + 20px)',
       background:'transparent',position:'relative',zIndex:1,
-      animation:'fadeSlideUp 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+      animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
@@ -4465,7 +4481,7 @@ function App(){
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
-  const pageAnim=navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'slide-in-right 0.32s cubic-bezier(0.25,1,0.5,1) backwards';
+  const pageAnim=navDir==='back'?'slide-in-left 0.38s cubic-bezier(0.22,1,0.36,1) both':'slide-in-right 0.38s cubic-bezier(0.22,1,0.36,1) both';
   useEffect(()=>{
     if(!backMap[screen])return;
     let sx=0,sy=0,active=false;
@@ -7377,7 +7393,7 @@ function App(){
     const canAddFriend=gameMode==='online'&&account&&oppAccountKey&&oppAccountKey!==account.key&&!addFriendSent;
     return (
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
-        background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+        background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
         <MenuBG dark={darkMode}/>
         {winner&&!isLoss&&<Confetti color={PC[winner]}/>}
 
@@ -8762,7 +8778,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
   return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
       padding:'0 16px 32px',paddingTop:'calc(env(safe-area-inset-top) + 20px)',
-      background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+      background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={goBack} style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',background:card,border:'1.5px solid '+border,
@@ -9064,48 +9080,50 @@ function BreakingWall({wkey,dark}){
 }
 function ScreenHead({icon,iconBg,title,sub}){
   return(
-    <div style={{textAlign:'center',marginBottom:22,position:'relative',zIndex:1}}>
-      {icon?<div style={{width:58,height:58,borderRadius:17,margin:'0 auto 12px',
+    <div style={{textAlign:'center',marginBottom:24,position:'relative',zIndex:1}}>
+      {icon?<div style={{width:66,height:66,borderRadius:20,margin:'0 auto 14px',
         background:iconBg||'var(--card)',border:iconBg?'none':'1.5px solid var(--border)',
         display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:iconBg?'0 6px 18px rgba(99,102,241,0.25)':'var(--shadow-soft)'}}>{icon}</div>:null}
-      <div style={{fontSize:23,fontWeight:900,color:'var(--text)',letterSpacing:-0.6,lineHeight:1.1}}>{title}</div>
-      {sub?<div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,marginTop:5}}>{sub}</div>:null}
+        boxShadow:iconBg?'0 8px 24px rgba(0,0,0,0.22),0 3px 8px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.2)':'var(--shadow-soft)'}}>{icon}</div>:null}
+      <div style={{fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.8,lineHeight:1.1}}>{title}</div>
+      {sub?<div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,marginTop:6,letterSpacing:0.1}}>{sub}</div>:null}
     </div>
   );
 }
 function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg,pulse}){
   return(
     <div style={{position:'relative'}}>
-      <button onClick={onClick} style={{
-        width:'100%',padding:highlight?'14px 14px':'11px 13px',borderRadius:16,position:'relative',
+      <button onClick={onClick} className={highlight?'mi-btn mi-btn-hl':'mi-btn'} style={{
+        width:'100%',padding:highlight?'15px 15px':'12px 14px',borderRadius:18,position:'relative',
         background:highlight?highlightBg:'var(--card)',
         border:'1.5px solid '+(highlight?'transparent':'var(--border)'),
-        display:'flex',alignItems:'center',gap:12,cursor:'pointer',
-        boxShadow:highlight?`0 6px 24px rgba(0,0,0,0.22),0 2px 8px rgba(0,0,0,0.12)`:'var(--shadow-soft)',
-        opacity:off?0.5:1,fontFamily:'system-ui,-apple-system,sans-serif',
-        transition:'transform 0.12s,box-shadow 0.12s',
+        display:'flex',alignItems:'center',gap:13,cursor:'pointer',
+        boxShadow:highlight
+          ?'0 5px 0 rgba(0,0,0,0.22),0 8px 28px rgba(0,0,0,0.18)'
+          :'0 4px 0 rgba(0,0,0,0.08),0 2px 8px rgba(0,0,0,0.05)',
+        opacity:off?0.45:1,fontFamily:'system-ui,-apple-system,sans-serif',
         animation:pulse&&!off?'highlightPulse 2.5s ease-in-out infinite':highlight?'highlightGlow 3s ease-in-out infinite':'none',
         overflow:'hidden'}}>
-        {/* Shimmer overlay für highlight */}
-        {highlight&&<div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.12) 50%,transparent 60%)',
+        {highlight&&<div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.13) 50%,transparent 62%)',
           backgroundSize:'200% 100%',animation:'shimmer 2.5s ease-in-out infinite',pointerEvents:'none'}}/>}
-        <div style={{width:highlight?42:38,height:highlight?42:38,borderRadius:12,flexShrink:0,
-          background:highlight?'rgba(255,255,255,0.2)':iconBg,
+        {highlight&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
+          background:'linear-gradient(180deg,rgba(255,255,255,0.12),transparent)',borderRadius:'18px 18px 0 0',pointerEvents:'none'}}/>}
+        <div style={{width:highlight?44:40,height:highlight?44:40,borderRadius:13,flexShrink:0,
+          background:highlight?'rgba(255,255,255,0.22)':iconBg||'var(--border)',
           display:'flex',alignItems:'center',justifyContent:'center',
-          boxShadow:highlight?'0 2px 8px rgba(0,0,0,0.15)':'none'}}>
+          boxShadow:highlight?'0 2px 8px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.25)':'0 2px 6px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.15)'}}>
           {icon}
         </div>
         <div style={{flex:1,textAlign:'left',minWidth:0}}>
-          <div style={{fontSize:highlight?15:14,fontWeight:900,lineHeight:1.15,
+          <div style={{fontSize:highlight?15:14,fontWeight:900,lineHeight:1.2,
             color:highlight?'#fff':'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-            letterSpacing:highlight?-0.3:0}}>{title}</div>
+            letterSpacing:highlight?-0.4:-0.1}}>{title}</div>
           {desc?<div style={{fontSize:11,fontWeight:600,marginTop:2,
-            color:highlight?'rgba(255,255,255,0.85)':'var(--subtle)'}}>{desc}</div>:null}
+            color:highlight?'rgba(255,255,255,0.82)':'var(--subtle)'}}>{desc}</div>:null}
         </div>
         {right?right:null}
-        <span style={{fontSize:18,fontWeight:400,flexShrink:0,
-          color:highlight?'rgba(255,255,255,0.75)':'var(--subtle)'}}>›</span>
+        <span style={{fontSize:16,fontWeight:700,flexShrink:0,
+          color:highlight?'rgba(255,255,255,0.7)':'var(--subtle)',marginRight:2}}>›</span>
       </button>
       {off?<span style={{position:'absolute',top:-6,right:8,fontSize:8,fontWeight:800,
         background:'#ef4444',color:'white',padding:'2px 7px',borderRadius:6,zIndex:2}}>AUS</span>:null}
@@ -9114,10 +9132,12 @@ function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightB
 }
 function MenuSection({label,children}){
   return(
-    <div style={{marginBottom:16}}>
-      <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,color:'var(--subtle)',
-        marginBottom:9,paddingLeft:4,textTransform:'uppercase'}}>{label}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:8}}>{children}</div>
+    <div style={{marginBottom:20}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,paddingLeft:2}}>
+        <div style={{width:3,height:12,borderRadius:2,background:'var(--subtle)',opacity:0.5,flexShrink:0}}/>
+        <div style={{fontSize:10,fontWeight:800,letterSpacing:1.6,color:'var(--subtle)',textTransform:'uppercase'}}>{label}</div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:9}}>{children}</div>
     </div>
   );
 }
