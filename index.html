@@ -4322,7 +4322,12 @@ function App(){
     winnerFiredRef.current=true;
     winSound(p);
     setWinner(p);
-    setSeriesScore(prev=>({A:prev.A+(p==='A'?1:0),B:prev.B+(p==='B'?1:0)}));
+    if(S.current.gameMode==='online'&&S.current.playerNames&&S.current.playerNames[p]){
+      const wn=S.current.playerNames[p];
+      setSeriesScore(prev=>{const n=Object.assign({},prev);n[wn]=(n[wn]||0)+1;return n;});
+    }else{
+      setSeriesScore(prev=>({A:prev.A+(p==='A'?1:0),B:prev.B+(p==='B'?1:0)}));
+    }
     try{
       const s=S.current;
       const mh=finalMoveHist||s.moveHist;
@@ -7420,17 +7425,19 @@ function App(){
           </div>
 
           {/* Serien-Punktestand (ab Runde 2) */}
-          {(seriesScore.A+seriesScore.B)>1&&(
+          {(gameMode==='online'
+            ?((seriesScore[playerNames.A]||0)+(seriesScore[playerNames.B]||0))
+            :(seriesScore.A+seriesScore.B))>1&&(
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,padding:'12px 16px',marginBottom:12,
               borderRadius:14,background:'var(--card)',border:'1.5px solid var(--border)'}}>
               <div style={{textAlign:'center'}}>
                 <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,marginBottom:2}}>{pname('A')}</div>
-                <div style={{fontSize:24,fontWeight:900,color:PC.A}}>{seriesScore.A}</div>
+                <div style={{fontSize:24,fontWeight:900,color:PC.A}}>{gameMode==='online'?(seriesScore[playerNames.A]||0):seriesScore.A}</div>
               </div>
               <div style={{fontSize:14,fontWeight:700,color:'var(--subtle)'}}>:</div>
               <div style={{textAlign:'center'}}>
                 <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,marginBottom:2}}>{pname('B')}</div>
-                <div style={{fontSize:24,fontWeight:900,color:PC.B}}>{seriesScore.B}</div>
+                <div style={{fontSize:24,fontWeight:900,color:PC.B}}>{gameMode==='online'?(seriesScore[playerNames.B]||0):seriesScore.B}</div>
               </div>
             </div>
           )}
