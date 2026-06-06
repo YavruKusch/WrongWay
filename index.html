@@ -5263,10 +5263,10 @@ function App(){
         var list=await stoGet('barricade_lobby_list');
         if(!list||!list.length)return;
         var now=Date.now();
-        var alive=list.filter(function(l){return now-l.ts<45000;});
+        var alive=list.filter(function(l){return (now-l.ts)<45000&&(l.ts-now)<60000;});
         if(alive.length<list.length){
           await stoSet('barricade_lobby_list',alive);
-          var dead=list.filter(function(l){return now-l.ts>=45000;});
+          var dead=list.filter(function(l){return (now-l.ts)>=45000||(l.ts-now)>=60000;});
           for(var i=0;i<dead.length;i++){await stoDel('barricade_lobby_'+dead[i].id);}
         }
       }catch(e){}
@@ -5285,8 +5285,8 @@ function App(){
       // Anzeige: Lobbys bis 20s (etwas Toleranz fuer langsame Heartbeats).
       // Loeschen erst ab 45s — sonst verschwinden Lobbys von Hosts deren Timer
       // im Hintergrund pausiert war, und Gaeste sehen "nicht gefunden".
-      const fresh=all.filter(l=>now-l.ts<20000);
-      const dead=all.filter(l=>now-l.ts>=45000);
+      const fresh=all.filter(l=>(l.ts-now)<30000&&(now-l.ts)<20000);
+      const dead=all.filter(l=>(l.ts-now)>60000||(now-l.ts)>=45000);
       setLobbyList(fresh);
       if(dead.length>0){
         const keep=all.filter(l=>now-l.ts<45000);
@@ -7258,7 +7258,7 @@ function App(){
           ):(
             <div style={{padding:6,display:'flex',flexDirection:'column',gap:5}}>
               {lobbyList.map(l=>{
-                const age=Math.floor((Date.now()-l.ts)/1000);
+                const age=Math.max(0,Math.floor((Date.now()-l.ts)/1000));
                 const ageLabel=age<60?`${age}s`:`${Math.floor(age/60)}m`;
                 const tm=l.tm||'none';
                 const isClassic=tm.indexOf('classic-')===0;
