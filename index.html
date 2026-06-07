@@ -130,6 +130,22 @@
     0%{transform:scale(0.96);opacity:0;}
     100%{transform:scale(1);opacity:1;}
   }
+  @keyframes pulse-inbox{
+    0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}
+    50%{box-shadow:0 0 0 5px rgba(239,68,68,0.18);}
+  }
+  @keyframes kofi-float{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-4px);}
+  }
+  @keyframes inbox-drop{
+    0%{transform:translateY(-30px) scale(0.95);opacity:0;}
+    100%{transform:translateY(0) scale(1);opacity:1;}
+  }
+  @keyframes msg-shine{
+    0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0);}
+    50%{box-shadow:0 0 18px 2px rgba(251,191,36,0.18);}
+  }
   @keyframes hammer-float{
     0%,100%{transform:translateY(0) rotate(-8deg);}
     50%{transform:translateY(-5px) rotate(8deg);}
@@ -830,6 +846,7 @@ const I18N={
 const I18N_EXT={
 en:{
   viewProfile:'View profile',viewProfileDesc:'Opponent stats',opponent:'Opponent',
+  copyLink:'Copy link',
   email:'Email',emailPh:'you@example.com',forgotPw:'Forgot password?',
   pwResetSent:'Reset email sent \u2014 check your inbox.',pwResetErr:'Could not send reset email.',
   auth_emailTaken:'Email already registered',auth_emailInvalid:'Invalid email address',
@@ -874,6 +891,7 @@ en:{
 },
 de:{
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
+  copyLink:'Link kopieren',
   email:'E-Mail',emailPh:'du@beispiel.de',forgotPw:'Passwort vergessen?',
   pwResetSent:'E-Mail zum Zur\u00fccksetzen gesendet \u2014 schau in dein Postfach.',pwResetErr:'E-Mail konnte nicht gesendet werden.',
   auth_emailTaken:'E-Mail bereits registriert',auth_emailInvalid:'Ung\u00fcltige E-Mail-Adresse',
@@ -917,6 +935,7 @@ de:{
 },
 tr:{
   viewProfile:'Profili g\u00f6r',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
+  copyLink:'Ba\u011flant\u0131y\u0131 kopyala',
   email:'E-posta',emailPh:'siz@ornek.com',forgotPw:'\u015eifremi unuttum?',
   pwResetSent:'S\u0131f\u0131rlama e-postas\u0131 g\u00f6nderildi \u2014 gelen kutunuzu kontrol edin.',pwResetErr:'S\u0131f\u0131rlama e-postas\u0131 g\u00f6nderilemedi.',
   auth_emailTaken:'E-posta zaten kay\u0131tl\u0131',auth_emailInvalid:'Ge\u00e7ersiz e-posta adresi',
@@ -960,6 +979,7 @@ tr:{
 },
 fr:{
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
+  copyLink:'Copier le lien',
   email:'E-mail',emailPh:'vous@exemple.fr',forgotPw:'Mot de passe oubli\u00e9\u00a0?',
   pwResetSent:'E-mail de r\u00e9initialisation envoy\u00e9 \u2014 v\u00e9rifiez votre bo\u00eete.',pwResetErr:"Impossible d'envoyer l'e-mail de r\u00e9initialisation.",
   auth_emailTaken:'E-mail d\u00e9j\u00e0 enregistr\u00e9',auth_emailInvalid:'Adresse e-mail invalide',
@@ -3901,6 +3921,14 @@ function App(){
   const[privateCode,setPrivateCode]=useState(null);
   const[lang,setLang]=useState(getInitialLang());
   const[showOptions,setShowOptions]=useState(false);
+  const[showInbox,setShowInbox]=useState(false);
+  const[broadcasts,setBroadcasts]=useState([]);
+  const[readIds,setReadIds]=useState(()=>{try{var r=localStorage.getItem('ww_read_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
+  const[dismissedIds,setDismissedIds]=useState(()=>{try{var r=localStorage.getItem('ww_dismissed_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
+  const[afkTimeLeft,setAfkTimeLeft]=useState(0);
+  const[inactiveWarning,setInactiveWarning]=useState(false);
+  const[inactiveSecs,setInactiveSecs]=useState(15);
+  const[inactiveKicked,setInactiveKicked]=useState(false);
   const[optionsTab,setOptionsTab]=useState('main');
   const[showLang,setShowLang]=useState(false);
   const[hapticOn,setHapticOn]=useState(()=>{try{return localStorage.getItem('ww_haptic')!=='0';}catch{return true;}});
@@ -4137,19 +4165,25 @@ function App(){
   };
   const openOppProfile=async()=>{
     if(!oppAccountKey)return;
-    setOppProfileModal({loading:true,name:'',profilePublic:true});
+    var oppName=playerNames[onlineRole==='A'?'B':'A']||'?';
+    setOppProfileModal({loading:true,name:oppName,profilePublic:true,color:'#8b5cf6'});
     try{
       const prof=await stoGet(PROFILE_KEY(oppAccountKey));
-      if(!prof){setOppProfileModal(null);return;}
+      if(!prof){
+        setOppProfileModal({loading:false,name:oppName,color:'#8b5cf6',profilePublic:true,stats:null,ranked:null});
+        return;
+      }
       setOppProfileModal({
         loading:false,
-        name:prof.name||'Spieler',
+        name:prof.name||oppName,
         color:prof.color||'#8b5cf6',
-        profilePublic:prof.profilePublic!==false, // default public
+        profilePublic:prof.profilePublic!==false,
         stats:prof.profilePublic!==false?prof.stats:null,
         ranked:prof.profilePublic!==false?(prof.stats&&prof.stats.ranked):null,
       });
-    }catch{setOppProfileModal(null);}
+    }catch(e){
+      setOppProfileModal({loading:false,name:oppName,color:'#8b5cf6',profilePublic:true,stats:null,ranked:null});
+    }
   };
 
   const doStartRanked=(code,role,mode,oppKey,oppRating)=>{    const acc=accRef.current;
@@ -4217,7 +4251,15 @@ function App(){
   const openTutorial=()=>{setShowOptions(false);setTutStep(0);setShowTutorial(true);};
   const[adminFlash,setAdminFlash]=useState('');
   const[clearConfirm,setClearConfirm]=useState(false);
+  const[bcTitle,setBcTitle]=useState('');
+  const[bcMsg,setBcMsg]=useState('');
+  const[bcImportance,setBcImportance]=useState('normal');
+  const[bcFontSize,setBcFontSize]=useState('medium');
+  const[bcDays,setBcDays]=useState(7);
+  const[adminAccounts,setAdminAccounts]=useState(null);
+  const[adminAccountsLoading,setAdminAccountsLoading]=useState(false);
   const[announceDur,setAnnounceDur]=useState(0);
+  const[announceVisible,setAnnounceVisible]=useState(true);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
@@ -4274,6 +4316,40 @@ function App(){
 
   // URL ?join=CODE → automatisch zum Freund-Beitritt
   useEffect(()=>{
+    if(!window.db)return;
+    var bcRef=window.db.ref('ww_broadcasts');
+    var bcCb=bcRef.on('value',function(snap){
+      var val=snap.val();
+      if(!val){setBroadcasts([]);return;}
+      var now=Date.now();
+      var list=Object.entries(val).map(function(e){return Object.assign({id:e[0]},e[1]);})
+        .filter(function(b){return b.expiresAt===0||b.expiresAt>now;})
+        .sort(function(a,b){return b.createdAt-a.createdAt;});
+      setBroadcasts(list);
+    });
+    return function(){bcRef.off('value',bcCb);};
+  },[]);
+
+  // Announce-Banner: 60s sichtbar, 8s unsichtbar, wiederholen
+  useEffect(function(){
+    if(!adminCfg.announce)return;
+    var timer;
+    function cycle(){
+      setAnnounceVisible(true);
+      timer=setTimeout(function(){
+        setAnnounceVisible(false);
+        timer=setTimeout(function(){cycle();},8000);
+      },60000);
+    }
+    cycle();
+    return function(){clearTimeout(timer);};
+  },[adminCfg.announce]);
+
+  // AFK-Zug-Timer und Inaktivitäts-Kick: weiter unten nach allen Deklarationen (Safari TDZ)
+
+
+  // URL ?join=CODE → automatisch zum Freund-Beitritt
+  useEffect(()=>{
     try{
       const params=new URLSearchParams(window.location.search);
       const j=params.get('join');
@@ -4287,10 +4363,32 @@ function App(){
     }catch(e){}
   },[]);
   const t=k=>(I18N[lang]&&I18N[lang][k])||(I18N_EXT[lang]&&I18N_EXT[lang][k])||I18N.en[k]||(I18N_EXT.en&&I18N_EXT.en[k])||k;
+  var unreadCount=broadcasts.filter(function(b){return !readIds[b.id];}).length;
+  var markBroadcastRead=function(id){
+    var next=Object.assign({},readIds);
+    next[id]=1;
+    setReadIds(next);
+    try{localStorage.setItem('ww_read_ids',JSON.stringify(next));}catch(e){}
+  };
+  var markAllRead=function(){
+    var next={};
+    broadcasts.forEach(function(b){next[b.id]=1;});
+    setReadIds(next);
+    try{localStorage.setItem('ww_read_ids',JSON.stringify(next));}catch(e){}
+  };
+  var dismissBroadcast=function(id){
+    var nr=Object.assign({},readIds);nr[id]=1;
+    setReadIds(nr);
+    try{localStorage.setItem('ww_read_ids',JSON.stringify(nr));}catch(e){}
+    var nd=Object.assign({},dismissedIds);nd[id]=1;
+    setDismissedIds(nd);
+    try{localStorage.setItem('ww_dismissed_ids',JSON.stringify(nd));}catch(e){}
+  };
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
   // Admin: Config speichern (schreibt global, alle Clients übernehmen live)
   const saveAdminCfg=(cfg)=>{const merged=mergeAdminCfg(cfg);setAdminCfg(merged);stoSet(ADMIN_CFG_KEY,merged);};
   const toggleFeature=(key)=>{const f={...adminCfg.features};f[key]=!f[key];saveAdminCfg({...adminCfg,features:f});};
+  var feat=function(key){return isAdmin()||(adminCfg.features&&!!adminCfg.features[key]);};
   const clearOpenLobbies=async()=>{try{await window.db.ref('barricade_2v2_open').remove();setAdminFlash('Offene Lobbys geleert');setTimeout(()=>setAdminFlash(''),2000);}catch(e){setAdminFlash('Fehler');setTimeout(()=>setAdminFlash(''),2000);}};
 
   const[pA,setPA]=useState({r:ROWS-1,c:2});
@@ -4431,10 +4529,12 @@ function App(){
   };
   const winSound=w=>{ if(!isOwnLoss(w)) playSound('win'); };
   const winnerFiredRef=useRef(false);
+  const afkTriggerRef=useRef(null); // Ref für triggerWin - vermeidet TDZ in Safari
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
     if(winnerFiredRef.current||S.current.winner)return;
     winnerFiredRef.current=true;
+    afkTriggerRef.current=null; // Reset nach Spielende
     winSound(p);
     setWinner(p);
     if(S.current.gameMode==='online'&&S.current.playerNames&&S.current.playerNames[p]){
@@ -4542,6 +4642,7 @@ function App(){
     setCelebrating(true);
     setTimeout(()=>{setCelebrating(false);setScreen('end');},2200);
   };
+  afkTriggerRef.current=triggerWin; // Ref aktuell halten - vermeidet TDZ in Safari
   const EMOTE_DUR=2600;
   const playEmoteSound=type=>{
     if(type==='laugh')playSound('laugh');
@@ -4717,6 +4818,76 @@ function App(){
 
   // ── Hammer 2. Welle: Countdown startet wenn alle Wave-1 weg, spawnt nach 50 Zügen ──
   const hammerWave1ClearedRef=useRef(null); // moveHist.length zu dem Zeitpunkt
+  const turnTimerRef=useRef(null);
+  const inactivityTimerRef=useRef(null);
+  const inactivityWarnRef=useRef(null);
+  const inactiveCountRef=useRef(null);
+  const inactiveKickedRef=useRef(false);
+
+  // AFK-Zug-Timer: 60s pro Zug, nur Online ohne Timer, kein Ranked
+  useEffect(function(){
+    if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
+    setAfkTimeLeft(0);
+    if(screen!=='game'||gameMode!=='online'||winner||turn!==onlineRole||isRanked)return;
+    if(gameTimeMode&&gameTimeMode!=='none')return;
+    var secs=60;
+    setAfkTimeLeft(secs);
+    turnTimerRef.current=setInterval(function(){
+      secs--;
+      setAfkTimeLeft(secs);
+      if(secs<=0){
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current=null;
+        if(S.current&&S.current.turn===onlineRole&&!S.current.winner){
+          var opp=onlineRole==='A'?'B':'A';
+          if(afkTriggerRef.current) afkTriggerRef.current(opp);
+        }
+      }
+    },1000);
+    return function(){
+      if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
+      setAfkTimeLeft(0);
+    };
+  },[turn,winner,screen,onlineRole,gameMode,gameTimeMode,isRanked]);
+
+  // Inaktivitäts-Kick: 2min kein Touch → Warnung → Firebase trennen
+  useEffect(function(){
+    function resetInactivity(){
+      if(inactiveKickedRef.current)return; // Nach Kick nicht mehr zurücksetzen
+      clearTimeout(inactivityTimerRef.current);
+      clearTimeout(inactivityWarnRef.current);
+      clearInterval(inactiveCountRef.current);
+      setInactiveWarning(false);
+      setInactiveSecs(15);
+      inactivityWarnRef.current=setTimeout(function(){
+        setInactiveWarning(true);
+        var s=15;
+        setInactiveSecs(s);
+        inactiveCountRef.current=setInterval(function(){
+          s--;
+          setInactiveSecs(s);
+          if(s<=0)clearInterval(inactiveCountRef.current);
+        },1000);
+      },105000);
+      inactivityTimerRef.current=setTimeout(function(){
+        inactiveKickedRef.current=true;
+        setInactiveWarning(false);
+        setInactiveKicked(true);
+        // Firebase trennen → stoppt Datentransfer, spart Kosten
+        try{if(window.firebase&&window.firebase.database)window.firebase.database().goOffline();}catch(e){}
+      },120000);
+    }
+    var evts=['touchstart','mousedown','click','keydown'];
+    evts.forEach(function(e){document.addEventListener(e,resetInactivity,{passive:true,capture:true});});
+    resetInactivity();
+    return function(){
+      evts.forEach(function(e){document.removeEventListener(e,resetInactivity,{capture:true});});
+      clearTimeout(inactivityTimerRef.current);
+      clearTimeout(inactivityWarnRef.current);
+      clearInterval(inactiveCountRef.current);
+    };
+  },[]);
+
   useEffect(()=>{
     if(!hammerMode||isRanked||hammerDrops!==2||winner||screen!=='game')return;
     if(hammerWave2Ref.current)return;
@@ -5886,6 +6057,25 @@ function App(){
           </div>
         )}
       </button>
+      <button onClick={()=>setShowInbox(true)} style={{
+        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:110,
+        width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
+        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+        boxShadow:'var(--shadow-soft)',zIndex:100,overflow:'visible',
+        animation:unreadCount>0?'pulse-inbox 2s ease-in-out infinite':'none'}}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8"/>
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          <path d="M19 16v6"/><path d="M16 19h6"/>
+        </svg>
+        {unreadCount>0&&(
+          <div style={{position:'absolute',top:2,right:2,minWidth:14,height:14,borderRadius:7,
+            background:'#ef4444',border:'2px solid var(--card)',
+            display:'flex',alignItems:'center',justifyContent:'center',padding:'0 2px'}}>
+            <span style={{fontSize:8,fontWeight:900,color:'#fff',lineHeight:1}}>{unreadCount>9?'9+':unreadCount}</span>
+          </div>
+        )}
+      </button>
       <button onClick={()=>{setNavDir('fwd');setScreen(account?'profile':'auth');}} style={{
         position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:14,
         width:40,height:40,borderRadius:'50%',
@@ -5905,11 +6095,22 @@ function App(){
           boxShadow:'0 2px 10px rgba(245,158,11,0.4)',zIndex:100}}><ShieldSmIcon size={20} color="#fff"/></button>
       )}
       {adminCfg.announce&&(adminCfg.announceUntil===0||Date.now()<adminCfg.announceUntil)?(
-        <div style={{position:'relative',zIndex:1,width:280,marginBottom:14,padding:'10px 14px',
-          background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',borderRadius:12,
-          fontSize:12,fontWeight:700,textAlign:'center',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',
-          display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-          <MegaphoneIcon size={14} color="#fff"/> {adminCfg.announce}
+        <div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 62px)',
+          left:0,right:0,display:'flex',justifyContent:'center',
+          zIndex:200,pointerEvents:'none',padding:'0 16px'}}>
+          <div style={{
+            padding:'10px 18px',
+            background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',borderRadius:22,
+            fontSize:12,fontWeight:700,textAlign:'center',
+            boxShadow:'0 4px 20px rgba(99,102,241,0.4)',
+            display:'flex',alignItems:'center',gap:7,
+            maxWidth:'calc(100vw - 32px)',
+            opacity:announceVisible?1:0,
+            transform:announceVisible?'translateY(0)':'translateY(-12px)',
+            transition:'opacity 0.7s cubic-bezier(0.25,1,0.5,1), transform 0.7s cubic-bezier(0.25,1,0.5,1)'}}>
+            <MegaphoneIcon size={13} color="#fff"/>
+            <span style={{whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{adminCfg.announce}</span>
+          </div>
         </div>
       ):null}
       {pendingInvite&&(
@@ -6019,7 +6220,7 @@ function App(){
 
       <div style={{width:280,position:'relative',zIndex:1}}>
         {/* RANKED — prominent */}
-        {(adminCfg.features.ranked)&&(
+        {feat('ranked')&&(
           <div style={{marginBottom:18}}>
             <MenuItem
               highlight pulse
@@ -6028,7 +6229,7 @@ function App(){
               iconBg="rgba(255,255,255,0.18)"
               title="Ranked"
               desc={t('rankedMenuDesc')}
-              off={!adminCfg.features.ranked}
+              off={!feat('ranked')}
               onClick={()=>{setNavDir('fwd');setScreen('ranked');}}
               right={account&&account.stats&&account.stats.ranked?(()=>{
                 const maxR=Math.max(
@@ -6043,7 +6244,7 @@ function App(){
         )}
 
         {/* RANGLISTE */}
-        {(adminCfg.features.ranked)&&(
+        {feat('ranked')&&(
           <MenuItem
             icon={<TrophySmIcon size={20} color="#fff"/>}
             iconBg="linear-gradient(135deg,#f59e0b,#d97706)"
@@ -6053,41 +6254,41 @@ function App(){
         )}
 
         {/* ONLINE SPIELEN */}
-        {(adminCfg.features.online||adminCfg.features.friend||adminCfg.features.twovtwo)&&(
+        {(feat('online')||feat('friend')||feat('twovtwo'))&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
-            {(adminCfg.features.online)&&<MenuItem
+            {feat('online')&&<MenuItem
               icon={<GlobeIcon size={19} color="#fff"/>}
               iconBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               title={t('playOnline')||'Spielen'} desc={serverOnline?(t('createLobby')+' · '+t('joinExisting')):t('serverFull')}
-              off={!adminCfg.features.online}
+              off={!feat('online')}
               highlight
               highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
               onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
-            {(adminCfg.features.friend)&&<MenuItem
+            {feat('friend')&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
               title={t('friendPlay')} desc={t('friendDesc')}
-              off={!adminCfg.features.friend}
+              off={!feat('friend')}
               onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
-            {(adminCfg.features.twovtwo)&&<MenuItem
+            {feat('twovtwo')&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#ef4444,#3b82f6)"
               title="2 vs 2" desc={t('teamModeDesc')}
-              off={!adminCfg.features.twovtwo}
+              off={!feat('twovtwo')}
               onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
           </MenuSection>
         )}
 
         {/* ÜBEN & OFFLINE */}
-        {(adminCfg.features.bots||adminCfg.features.local)&&(
+        {(feat('bots')||feat('local'))&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>{t('practiceOffline')}</span>}>
-            {(adminCfg.features.bots)&&<MenuItem
+            {feat('bots')&&<MenuItem
               icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
               title={t('vsBot')} desc={t('vsBotDesc')}
-              off={!adminCfg.features.bots}
+              off={!feat('bots')}
               onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
-            {(adminCfg.features.local)&&<MenuItem
+            {feat('local')&&<MenuItem
               icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
               title={t('localPlay')} desc={t('localDesc')}
-              off={!adminCfg.features.local}
+              off={!feat('local')}
               onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
           </MenuSection>
         )}
@@ -6118,6 +6319,24 @@ function App(){
               <path fill="url(#igGrad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
             </svg>
             <span style={{fontSize:12,fontWeight:800,color:'var(--text)',letterSpacing:0.2}}>Instagram</span>
+          </button>
+        </div>
+        {/* KO-FI SUPPORT */}
+        <div style={{width:'100%',maxWidth:300,marginTop:10,paddingBottom:20,display:'flex',flexDirection:'column',alignItems:'center',gap:7}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.3,textAlign:'center',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+            {lang==='de'?'Entwickler unterstützen':lang==='tr'?'Geliştiriciyi destekle':lang==='fr'?'Soutenir le développeur':'Support the Developer'}
+          </div>
+          <button onClick={()=>window.open('https://ko-fi.com/wrongway','_blank')} style={{
+            display:'flex',alignItems:'center',gap:7,padding:'9px 18px',borderRadius:20,
+            background:'var(--card)',border:'1.5px solid var(--border)',cursor:'pointer',
+            boxShadow:'var(--shadow-soft)',fontFamily:'system-ui,-apple-system,sans-serif',
+            animation:'kofi-float 3s ease-in-out infinite'}}>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
+              <rect width="24" height="24" rx="4" fill="#FF5E5B"/>
+              <path d="M5 8h10.5a3.5 3.5 0 0 1 0 7H14l-2 2H9l-2-2H5V8z" fill="white"/>
+              <path d="M14 11.5h1a1 1 0 0 1 0 2h-1v-2z" fill="#FF5E5B"/>
+            </svg>
+            <span style={{fontSize:12,fontWeight:800,color:'var(--text)',letterSpacing:0.2}}>Ko-fi</span>
           </button>
         </div>
       </div>
@@ -6248,6 +6467,163 @@ function App(){
           </div>
         </div>
       )}
+      {inactiveKicked&&(
+        <div style={{position:'fixed',inset:0,
+          background:'rgba(0,0,0,0.88)',zIndex:99999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{
+            background:'var(--card)',borderRadius:20,padding:'32px 24px',
+            border:'1.5px solid var(--border)',boxShadow:'var(--shadow-card)',
+            maxWidth:320,width:'100%',textAlign:'center'}}>
+            <div style={{fontSize:40,marginBottom:12}}>{'(-_-) zZ'}</div>
+            <div style={{fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:8,
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lang==='de'?'Wegen Inaktivität getrennt':lang==='tr'?'Hareketsizlik nedeniyle bağlantı kesildi':lang==='fr'?'Déconnecté pour inactivité':'Disconnected due to inactivity'}
+            </div>
+            <div style={{fontSize:13,color:'var(--subtle)',marginBottom:22,lineHeight:1.5,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lang==='de'?'Du warst zu lange inaktiv. Tippe zum Neuverbinden.':lang==='tr'?'Çok uzun süre hareketsiz kaldın. Yeniden bağlanmak için dokun.':lang==='fr'?'Inactif trop longtemps. Touchez pour vous reconnecter.':'You were inactive too long. Tap to reconnect.'}
+            </div>
+            <button onClick={function(){
+              try{if(window.firebase&&window.firebase.database)window.firebase.database().goOnline();}catch(e){}
+              window.location.reload();
+            }} style={{
+              width:'100%',padding:'13px',borderRadius:12,
+              background:'linear-gradient(135deg,#3b82f6,#6366f1)',
+              color:'white',border:'none',cursor:'pointer',
+              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'0 4px 14px rgba(99,102,241,0.35)'}}>
+              {lang==='de'?'Wieder verbinden':lang==='tr'?'Yeniden bağlan':lang==='fr'?'Se reconnecter':'Reconnect'}
+            </button>
+          </div>
+        </div>
+      )}
+      {inactiveWarning&&(
+        <div onClick={function(){setInactiveWarning(false);}} style={{position:'fixed',inset:0,
+          background:'rgba(0,0,0,0.6)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div onClick={function(e){e.stopPropagation();}} style={{
+            background:'var(--card)',borderRadius:20,padding:'28px 24px',
+            border:'1.5px solid var(--border)',boxShadow:'var(--shadow-card)',
+            maxWidth:300,width:'100%',textAlign:'center',
+            animation:'screen-pop 0.2s cubic-bezier(0.25,1,0.5,1) both'}}>
+            <div style={{fontSize:36,marginBottom:8}}>{'(~_~)'}</div>
+            <div style={{fontSize:17,fontWeight:900,color:'var(--text)',marginBottom:6,
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lang==='de'?'Noch da?':lang==='tr'?'Hâlâ buradasın?':lang==='fr'?'Toujours là ?':'Still there?'}
+            </div>
+            <div style={{fontSize:13,color:'var(--subtle)',marginBottom:20,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {lang==='de'?'Du wirst in ':lang==='tr'?'':lang==='fr'?'Déconnexion dans ':''}{inactiveSecs}s{lang==='tr'?' içinde atılacaksın':''}
+              {lang==='en'?' until disconnect':''}
+              {lang==='de'?' Sek. abgemeldet':''}
+              {lang==='fr'?'':''} 
+            </div>
+            <button onClick={function(){setInactiveWarning(false);}} style={{
+              width:'100%',padding:'12px',borderRadius:12,
+              background:'linear-gradient(135deg,#3b82f6,#6366f1)',
+              color:'white',border:'none',cursor:'pointer',
+              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'0 4px 14px rgba(99,102,241,0.35)'}}>
+              {lang==='de'?'Ich bin noch da!':lang==='tr'?'Hâlâ buradayım!':lang==='fr'?'Je suis là !':'I\'m still here!'}
+            </button>
+          </div>
+        </div>
+      )}
+      {showInbox&&(
+        <div onClick={()=>{setShowInbox(false);markAllRead();}} style={{position:'fixed',inset:0,
+          background:'rgba(0,0,0,0.45)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            width:'100%',maxWidth:360,maxHeight:'78vh',
+            background:'var(--card)',
+            borderRadius:20,
+            border:'1.5px solid var(--border)',
+            boxShadow:'var(--shadow-card)',
+            display:'flex',flexDirection:'column',
+            animation:'screen-pop 0.24s cubic-bezier(0.25,1,0.5,1) both'}}>
+            {/* Header */}
+            <div style={{
+              padding:'16px 18px 13px',
+              borderBottom:'1px solid var(--border)',
+              display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:9}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  <path d="M19 16v6"/><path d="M16 19h6"/>
+                </svg>
+                <div>
+                  <div style={{fontSize:15,fontWeight:900,color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {lang==='de'?'Nachrichten':lang==='tr'?'Mesajlar':lang==='fr'?'Messages':'Messages'}
+                  </div>
+                  {unreadCount>0&&<div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {unreadCount} {lang==='de'?'ungelesen':lang==='tr'?'okunmamış':lang==='fr'?'non lus':'unread'}
+                  </div>}
+                </div>
+              </div>
+              <button onClick={()=>{setShowInbox(false);markAllRead();}} style={{
+                background:'var(--bg)',border:'1.5px solid var(--border)',
+                borderRadius:10,width:32,height:32,cursor:'pointer',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                color:'var(--subtle)',fontSize:16,lineHeight:1,
+                fontFamily:'system-ui,-apple-system,sans-serif'}}>x</button>
+            </div>
+            {/* Messages */}
+            <div style={{overflowY:'auto',flex:1,padding:'10px 14px 18px',WebkitOverflowScrolling:'touch'}}>
+              {broadcasts.length===0?(
+                <div style={{textAlign:'center',padding:'40px 0',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}>
+                    <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--subtle)'}}>
+                    {lang==='de'?'Keine Nachrichten':lang==='tr'?'Mesaj yok':lang==='fr'?'Aucun message':'No messages'}
+                  </div>
+                </div>
+              ):broadcasts.filter(function(b){return !dismissedIds[b.id];}).map(function(b){
+                var isUnread=!readIds[b.id];
+                var imp=b.importance||'normal';
+                var fs=b.fontSize==='large'?16:b.fontSize==='small'?12:14;
+                var impColor=imp==='critical'?'#ef4444':imp==='important'?'#f59e0b':'#3b82f6';
+                var impLabel=imp==='critical'?(lang==='de'?'Wichtig':lang==='tr'?'Önemli':lang==='fr'?'Important':'Important'):imp==='important'?(lang==='de'?'Update':'Update'):(lang==='de'?'Info':'Info');
+                var daysLeft=b.expiresAt===0?null:Math.ceil((b.expiresAt-Date.now())/86400000);
+                return(
+                  <div key={b.id} onClick={function(){markBroadcastRead(b.id);}}
+                    style={{
+                      marginBottom:10,borderRadius:14,overflow:'hidden',cursor:'pointer',
+                      background:isUnread?'var(--bg)':'var(--card)',
+                      border:'1.5px solid '+(isUnread?impColor+'44':'var(--border)'),
+                      boxShadow:isUnread?'0 2px 10px '+impColor+'18':'none',
+                      transition:'box-shadow 0.2s',position:'relative'}}>
+                    <div style={{height:3,background:impColor,opacity:0.7,borderRadius:'14px 14px 0 0'}}/>
+                    <div style={{padding:'12px 36px 12px 14px'}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          {isUnread&&<div style={{width:7,height:7,borderRadius:'50%',background:impColor,flexShrink:0}}/>}
+                          <span style={{fontSize:9,fontWeight:800,color:impColor,letterSpacing:1.2,textTransform:'uppercase',
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{impLabel}</span>
+                        </div>
+                        {daysLeft!==null&&<span style={{fontSize:9,color:'var(--subtle)',fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                          {lang==='de'?'noch ':lang==='tr'?'':''}{daysLeft}d{lang==='tr'?' kaldı':''}
+                        </span>}
+                      </div>
+                      {b.title?(
+                        <div style={{fontSize:15,fontWeight:900,color:'var(--text)',marginBottom:6,lineHeight:1.3,
+                          fontFamily:'system-ui,-apple-system,sans-serif'}}>{b.title}</div>
+                      ):null}
+                      <div style={{fontSize:fs,color:'var(--muted)',lineHeight:1.7,fontWeight:500,
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>{b.message}</div>
+                    </div>
+                    <button onClick={function(e){e.stopPropagation();dismissBroadcast(b.id);}} style={{
+                      position:'absolute',top:10,right:10,
+                      width:22,height:22,borderRadius:6,
+                      background:'var(--bg)',border:'1px solid var(--border)',
+                      cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+                      color:'var(--subtle)',fontSize:13,lineHeight:1,
+                      fontFamily:'system-ui,-apple-system,sans-serif'}}>x</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       {showAdmin&&isAdmin()&&(
         <div onClick={()=>setShowAdmin(false)} style={{position:'fixed',inset:0,
           background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',
@@ -6340,6 +6716,161 @@ function App(){
                   background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
                   fontFamily:'system-ui,-apple-system,sans-serif'}}>Löschen</button>
               </div>
+            </AdminSection>
+
+            {/* ── ACCOUNTS ── */}
+            <AdminSection label="ACCOUNTS">
+              <button onClick={async function(){
+                setAdminAccountsLoading(true);
+                try{
+                  var snap=await window.db.ref('ww_profiles').once('value');
+                  var val=snap.val();
+                  if(!val){setAdminAccounts([]);setAdminAccountsLoading(false);return;}
+                  var list=Object.entries(val).map(function(e){
+                    var uid=e[0];var raw=e[1];
+                    try{
+                      var p=typeof raw==='string'?JSON.parse(raw):raw;
+                      return{uid:uid,name:p.name||'?',color:p.color||'#8b5cf6',
+                        games:(p.stats&&p.stats.games)||0,wins:(p.stats&&p.stats.wins)||0,
+                        created:p.created||0,
+                        eloClassic:(p.stats&&p.stats.ranked&&p.stats.ranked.classic&&p.stats.ranked.classic.rating)||null,
+                        eloDuel:(p.stats&&p.stats.ranked&&p.stats.ranked.duel&&p.stats.ranked.duel.rating)||null};
+                    }catch(e2){return{uid:uid,name:'[Fehler]',games:0,wins:0,created:0,color:'#64748b',eloClassic:null,eloDuel:null};}
+                  }).sort(function(a,b){return b.created-a.created;});
+                  setAdminAccounts(list);
+                }catch(e){setAdminAccounts([]);}
+                setAdminAccountsLoading(false);
+              }} style={{width:'100%',padding:'10px',borderRadius:10,
+                background:'#3b82f6',color:'white',border:'none',cursor:'pointer',
+                fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif',marginBottom:10}}>
+                {adminAccountsLoading?'Lädt...':'Accounts laden'}
+              </button>
+              {adminAccounts!==null&&(
+                <div>
+                  <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,marginBottom:8}}>
+                    {adminAccounts.length} Accounts gesamt
+                  </div>
+                  <div style={{maxHeight:320,overflowY:'auto',WebkitOverflowScrolling:'touch',
+                    border:'1px solid var(--border)',borderRadius:10,background:'var(--bg)'}}>
+                    {adminAccounts.length===0?(
+                      <div style={{padding:'20px',textAlign:'center',color:'var(--subtle)',fontSize:12}}>Keine Accounts</div>
+                    ):adminAccounts.map(function(acc,i){
+                      var d=acc.created?new Date(acc.created):null;
+                      var dateStr=d?(d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear()):'?';
+                      var wr=acc.games>0?Math.round((acc.wins/acc.games)*100):0;
+                      return(
+                        <div key={acc.uid} style={{
+                          padding:'10px 12px',
+                          borderBottom:i<adminAccounts.length-1?'1px solid var(--border)':'none',
+                          display:'flex',alignItems:'center',gap:10}}>
+                          <div style={{width:28,height:28,borderRadius:'50%',background:acc.color,
+                            display:'flex',alignItems:'center',justifyContent:'center',
+                            flexShrink:0,fontSize:12,fontWeight:900,color:'#fff'}}>
+                            {(acc.name||'?').slice(0,1).toUpperCase()}
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:13,fontWeight:800,color:'var(--text)',
+                              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{acc.name}</div>
+                            <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>
+                              {dateStr} · {acc.games}G · {wr}% · {acc.eloClassic?('R:'+acc.eloClassic):''}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </AdminSection>
+
+            {/* ── NACHRICHTEN ── */}
+            <AdminSection label="NACHRICHTEN (POSTKASTEN)">
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>TITEL (optional)</div>
+              <input value={bcTitle} onChange={e=>setBcTitle(e.target.value)}
+                placeholder="z.B. Event-Wochenende!"
+                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:13,
+                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>NACHRICHT</div>
+              <textarea value={bcMsg} onChange={e=>setBcMsg(e.target.value)}
+                placeholder="Deine Nachricht an alle Spieler..."
+                rows={3}
+                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:13,resize:'vertical',
+                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+              <div style={{display:'flex',gap:8,marginBottom:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>WICHTIGKEIT</div>
+                  <div style={{display:'flex',gap:4}}>
+                    {[['normal','Info','#6366f1'],['important','Update','#f59e0b'],['critical','Wichtig','#ef4444']].map(function(o){
+                      var sel=bcImportance===o[0];
+                      return <button key={o[0]} onClick={()=>setBcImportance(o[0])} style={{
+                        flex:1,padding:'6px 4px',borderRadius:8,fontSize:10,fontWeight:800,cursor:'pointer',
+                        background:sel?o[2]:'var(--bg)',color:sel?'white':o[2],
+                        border:'1.5px solid '+o[2],fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
+                    })}
+                  </div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>SCHRIFTGRÖSSE</div>
+                  <div style={{display:'flex',gap:4}}>
+                    {[['small','S'],['medium','M'],['large','L']].map(function(o){
+                      var sel=bcFontSize===o[0];
+                      return <button key={o[0]} onClick={()=>setBcFontSize(o[0])} style={{
+                        flex:1,padding:'6px 4px',borderRadius:8,fontSize:10,fontWeight:800,cursor:'pointer',
+                        background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
+                        border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>GÜLTIG FÜR</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:10}}>
+                {[[1,'1 Tag'],[3,'3 Tage'],[7,'7 Tage'],[14,'14 Tage'],[30,'30 Tage'],[0,'Immer']].map(function(o){
+                  var sel=bcDays===o[0];
+                  return <button key={o[0]} onClick={()=>setBcDays(o[0])} style={{
+                    padding:'5px 9px',borderRadius:8,fontSize:10,fontWeight:700,cursor:'pointer',
+                    background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
+                    border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
+                })}
+              </div>
+              <button onClick={function(){
+                if(!bcMsg.trim())return;
+                var id='bc_'+Date.now();
+                var expiresAt=bcDays===0?0:Date.now()+bcDays*86400000;
+                window.db.ref('ww_broadcasts/'+id).set({
+                  title:bcTitle.trim(),message:bcMsg.trim(),
+                  importance:bcImportance,fontSize:bcFontSize,
+                  createdAt:Date.now(),expiresAt:expiresAt
+                }).then(function(){
+                  setBcTitle('');setBcMsg('');setBcImportance('normal');setBcFontSize('medium');setBcDays(7);
+                  setAdminFlash('Nachricht gesendet!');setTimeout(function(){setAdminFlash('');},2500);
+                }).catch(function(){setAdminFlash('Fehler!');setTimeout(function(){setAdminFlash('');},2000);});
+              }} style={{width:'100%',padding:'11px',borderRadius:10,
+                background:bcMsg.trim()?'linear-gradient(135deg,#fbbf24,#f59e0b)':'var(--bg)',
+                color:bcMsg.trim()?'#1a1220':'var(--subtle)',border:'none',cursor:bcMsg.trim()?'pointer':'default',
+                fontWeight:900,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                Nachricht senden
+              </button>
+              {broadcasts.length>0&&(
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>AKTIVE NACHRICHTEN ({broadcasts.length})</div>
+                  {broadcasts.map(function(b){
+                    return(
+                      <div key={b.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                        padding:'8px 10px',borderRadius:9,background:'var(--bg)',border:'1px solid var(--border)',marginBottom:5}}>
+                        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginRight:8}}>
+                          {b.title||b.message.slice(0,40)}
+                        </div>
+                        <button onClick={function(){window.db.ref('ww_broadcasts/'+b.id).remove();}} style={{
+                          background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:7,
+                          padding:'4px 8px',fontSize:11,fontWeight:700,cursor:'pointer',
+                          fontFamily:'system-ui,-apple-system,sans-serif',flexShrink:0}}>Löschen</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </AdminSection>
 
             {/* ── 🔧 WARTUNG & AUFRÄUMEN ── */}
@@ -6649,7 +7180,7 @@ function App(){
             <div style={{marginBottom:14}}>
               <SectionHeader icon={<span style={{fontSize:11}}>⚔</span>} label={t('duelFieldSize')}/>
               <div style={{display:'flex',gap:8}}>
-                {(adminCfg.features.duelBlitz)&&(
+                {feat('duelBlitz')&&(
                   <button onClick={()=>setDuelSize('blitz')} className="mi-btn" style={{
                     flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
                     background:duelSize==='blitz'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
@@ -6663,7 +7194,7 @@ function App(){
                     <div style={{fontSize:9,fontWeight:700,opacity:0.65}}>{t('duelBlitzSpeed')}</div>
                   </button>
                 )}
-                {(adminCfg.features.duelStandard)&&(
+                {feat('duelStandard')&&(
                   <button onClick={()=>setDuelSize('standard')} className="mi-btn" style={{
                     flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
                     background:duelSize==='standard'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
@@ -6685,40 +7216,38 @@ function App(){
           <SectionHeader icon={<SwordsIcon size={12} color="#64748b"/>} label={'TIMER · ' + t('totalTime').toUpperCase()}/>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <TimeBtn val="none" label={t('noTimer')}/>
-            <TimeBtn val="classic-3" label={'3 '+t('minLabel')} disabled={!adminCfg.features.classicTime3&&!isAdmin()}/>
-            <TimeBtn val="classic-5" label={'5 '+t('minLabel')} disabled={!adminCfg.features.classicTime5&&!isAdmin()}/>
-            <TimeBtn val="classic-8" label={'8 '+t('minLabel')} disabled={!adminCfg.features.classicTime8&&!isAdmin()}/>
+            <TimeBtn val="classic-3" label={'3 '+t('minLabel')} disabled={!feat('classicTime3')}/>
+            <TimeBtn val="classic-5" label={'5 '+t('minLabel')} disabled={!feat('classicTime5')}/>
+            <TimeBtn val="classic-8" label={'8 '+t('minLabel')} disabled={!feat('classicTime8')}/>
             <HelpDot onClick={()=>setHelpKey('classic')}/>
           </div>
 
           {/* Blitz */}
-          {(adminCfg.features.blitz)&&(
-          <div style={{opacity:adminCfg.features.blitz?1:0.45,position:'relative'}}>
-            {!adminCfg.features.blitz&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>{t('featureOff')}</div>}
+          {feat('blitz')&&(
+          <div style={{opacity:feat('blitz')?1:0.45,position:'relative'}}>
             <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime5)&&!isAdmin()}/>
-              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime8)&&!isAdmin()}/>
-              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={(!adminCfg.features.blitz||!adminCfg.features.blitzTime10)&&!isAdmin()}/>
+              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime5'))&&!isAdmin()}/>
+              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime8'))&&!isAdmin()}/>
+              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime10'))&&!isAdmin()}/>
               <HelpDot onClick={()=>setHelpKey('blitz')}/>
             </div>
           </div>
           )}
 
           {/* Chaos */}
-          {(adminCfg.features.chaos||adminCfg.features.drop)&&(
+          {(feat('chaos')||feat('drop'))&&(
           <div style={{position:'relative'}}>
-            {(!adminCfg.features.chaos&&!adminCfg.features.drop)&&<div style={{position:'absolute',top:0,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
             <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
             <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
-              {(adminCfg.features.chaos)&&(
+              {feat('chaos')&&(
               <button onClick={()=>setChaosMode(c=>!c)} style={{
-                flex:1,padding:'11px 7px',opacity:adminCfg.features.chaos?1:0.45,
+                flex:1,padding:'11px 7px',opacity:feat('chaos')?1:0.45,
                 position:'relative',
                 background:chaosMode?'#8b5cf6':'var(--card)',
                 color:chaosMode?'white':'var(--text)',
                 border:`1.5px solid ${chaosMode?'#8b5cf6':'var(--border)'}`,
-                borderRadius:11,cursor:adminCfg.features.chaos?'pointer':'default',textAlign:'center',
+                borderRadius:11,cursor:'pointer',textAlign:'center',
                 fontSize:12,fontWeight:800,letterSpacing:0.2,
                 fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
@@ -6731,8 +7260,8 @@ function App(){
                 </div>
               </button>
               )}
-              {(adminCfg.features.drop)&&(
-              <div style={{flex:1,padding:'11px 7px',display:'flex',flexDirection:'column',opacity:adminCfg.features.drop?1:0.45,
+              {feat('drop')&&(
+              <div style={{flex:1,padding:'11px 7px',display:'flex',flexDirection:'column',opacity:feat('drop')?1:0.45,
                 position:'relative',
                 background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
                 border:`1.5px solid ${dropMode?'#ec4899':'var(--border)'}`,
@@ -6752,10 +7281,9 @@ function App(){
           </div>
           )}
 
-          {(adminCfg.features.hammer)&&(
-          <div style={{marginTop:8,opacity:adminCfg.features.hammer?1:0.45,position:'relative'}}>
-            {!adminCfg.features.hammer&&<div style={{position:'absolute',top:-4,right:0,fontSize:8,fontWeight:800,background:'#ef4444',color:'white',padding:'2px 6px',borderRadius:6,zIndex:1}}>AUS</div>}
-            <button onClick={()=>adminCfg.features.hammer&&setHammerMode(h=>!h)} style={{
+          {feat('hammer')&&(
+          <div style={{marginTop:8,position:'relative'}}>
+            <button onClick={()=>setHammerMode(h=>!h)} style={{
               width:'100%',padding:'11px 12px',position:'relative',
               background:hammerMode?'#f59e0b':'var(--card)',
               color:hammerMode?'white':'var(--text)',
@@ -6817,7 +7345,7 @@ function App(){
 
   if(screen==='ranked'){
     return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
-      onStart={doStartRanked} features={adminCfg.features}/>;
+      onStart={doStartRanked} features={isAdmin()?Object.assign({},adminCfg.features,{ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:true}):adminCfg.features}/>;
   }
 
   // ── FRIENDS ─────────────────────────────────────────────
@@ -6849,22 +7377,22 @@ function App(){
   if(screen==='legal'){
     var legalData={
       impressum:{
-        de:['Impressum','Angaben gem. \u00a75 DDG','Betreiber: H\u00fcseyin Tunay','Adresse: [wird nach Umzug eingetragen]','Kontakt: wrongway.game@gmail.com','Plattform: yavrukusch.github.io'],
-        en:['Legal Notice','Information acc. to \u00a75 DDG','Operator: H\u00fcseyin Tunay','Address: [to be added after relocation]','Contact: wrongway.game@gmail.com','Platform: yavrukusch.github.io'],
-        tr:['K\u00fcnye','6563 say\u0131l\u0131 TCK kapsam\u0131nda','Operat\u00f6r: H\u00fcseyin Tunay','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','\u0130leti\u015fim: wrongway.game@gmail.com','Platform: yavrukusch.github.io'],
-        fr:['Mentions l\u00e9gales','Informations selon \u00a75 DDG','Op\u00e9rateur: H\u00fcseyin Tunay','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Contact: wrongway.game@gmail.com','Plateforme: yavrukusch.github.io']
+        de:['Impressum','Angaben gem. \u00a75 DDG','Betreiber: H\u00fcseyin Tunay','Adresse: [wird nach Umzug eingetragen]','Kontakt: wrongwayapp.official@gmail.com','Plattform: yavrukusch.github.io'],
+        en:['Legal Notice','Information acc. to \u00a75 DDG','Operator: H\u00fcseyin Tunay','Address: [to be added after relocation]','Contact: wrongwayapp.official@gmail.com','Platform: yavrukusch.github.io'],
+        tr:['K\u00fcnye','6563 say\u0131l\u0131 TCK kapsam\u0131nda','Operat\u00f6r: H\u00fcseyin Tunay','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','\u0130leti\u015fim: wrongwayapp.official@gmail.com','Platform: yavrukusch.github.io'],
+        fr:['Mentions l\u00e9gales','Informations selon \u00a75 DDG','Op\u00e9rateur: H\u00fcseyin Tunay','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Contact: wrongwayapp.official@gmail.com','Plateforme: yavrukusch.github.io']
       },
       privacy:{
-        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: H\u00fcseyin Tunay, wrongway.game@gmail.com','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt).','Passw\u00f6rter werden von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Werbung (zuk\u00fcnftig): Einwilligungsbanner vor Aktivierung. Keine Daten ohne Zustimmung.','Speicherdauer: Bis zur Kontol\u00f6schung. L\u00f6schung in den Profileinstellungen.','Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Portabilit\u00e4t. wrongway.game@gmail.com','KVKK (T\u00fcrkei): Rechte gem. Gesetz 6698. www.kvkk.gov.tr'],
-        en:['Privacy Policy (GDPR & KVKK)','Controller: H\u00fcseyin Tunay, wrongway.game@gmail.com','Data collected: email, username, password (hashed), game stats, ELO.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt).','Passwords hashed by Firebase only. No access to plaintext passwords.','Advertising (future): consent banner before activation. No data without consent.','Retention: until account deletion. Deletable in profile settings.','Your rights (GDPR): access, rectification, erasure, portability. wrongway.game@gmail.com','KVKK (Turkey): rights under Law 6698. www.kvkk.gov.tr'],
-        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: H\u00fcseyin Tunay, wrongway.game@gmail.com','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt).','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r.','Reklam (gelecekte): onay banner\u0131 \u00f6nce g\u00f6sterilir.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan silinebilir.','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme. www.kvkk.gov.tr','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, ta\u015f\u0131nabilirlik. wrongway.game@gmail.com'],
-        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: H\u00fcseyin Tunay, wrongway.game@gmail.com','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort).','Mots de passe hach\u00e9s uniquement par Firebase.','Publicit\u00e9 (futur): bandeau de consentement avant activation.','Conservation: jusqu\'au compte supprim\u00e9. Supprimable dans les param\u00e8tres.','Droits (RGPD): acc\u00e8s, rectification, effacement, portabilit\u00e9. wrongway.game@gmail.com','KVKK (Turquie): droits selon loi 6698. www.kvkk.gov.tr']
+        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Werbung (zuk\u00fcnftig): Einwilligungsbanner vor Aktivierung. Keine personalisierten Daten ohne ausdr\u00fcckliche Zustimmung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden.','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        en:['Privacy Policy (GDPR & KVKK)','Controller: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Legal basis: Art. 6(1)(b) GDPR (contract performance) for accounts; Art. 6(1)(a) (consent) for advertising and analytics.','Data collected: email, username, password (hashed), game stats, ELO, game history.','Anonymous sessions: Playing without an account generates anonymous Firebase IDs. Not personally identifiable.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). US transfers based on Standard Contractual Clauses (SCC).','Third parties: Google Firebase (Auth, Database) \u00b7 Google reCAPTCHA v3 (spam protection). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passwords hashed exclusively by Firebase. No access to plaintext passwords.','Cookies & storage: We use localStorage for settings and cookie consent. No tracking cookies without consent.','Advertising (future): consent banner before activation. No personalized data without explicit consent.','Retention: until account deletion. Accounts can be deleted anytime in profile settings.','Your rights (GDPR): access, rectification, erasure, restriction, portability, objection. Contact: wrongwayapp.official@gmail.com','Right to complain: You have the right to lodge a complaint with a data protection authority.','KVKK (Turkey): rights under Law No. 6698. Contact wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Hukuki dayanak: Hesaplar i\u00e7in GDPR Madde 6/1-b (s\u00f6zle\u015fme); reklam i\u00e7in Madde 6/1-a (r\u0131za).','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO, oyun ge\u00e7mi\u015fi.','Anonim oturumlar: Hesaps\u0131z oynarken anonim Firebase kimlikleri olu\u015fturulur. Ki\u015fiye ba\u011flanamaz.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt). ABD transferleri SCC kapsam\u0131nda.','\u00dc\u00e7\u00fcnc\u00fc taraflar: Google Firebase \u00b7 Google reCAPTCHA v3. Google LLC, Mountain View, CA 94043, ABD.','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r. A\u00e7\u0131k metin \u015fifrelere eri\u015fim yoktur.','Depolama: Ayarlar i\u00e7in localStorage kullan\u0131l\u0131r. Onay olmadan takip \u00e7erezi kullan\u0131lmaz.','Reklam (gelecekte): onay banner\u0131 \u00f6nce g\u00f6sterilir. A\u00e7\u0131k r\u0131za olmadan ki\u015fiselle\u015ftirilmi\u015f veri kullan\u0131lmaz.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan istediginiz zaman silinebilir.','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme, s\u0131n\u0131rlama, ta\u015f\u0131nabilirlik. wrongwayapp.official@gmail.com','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, itiraz. wrongwayapp.official@gmail.com','\u015eikayet hakk\u0131: KVKK Kurumu\'na \u015eikayet hakk\u0131n\u0131z bulunmaktad\u0131r. www.kvkk.gov.tr'],
+        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Base l\u00e9gale: Art. 6(1)(b) RGPD (ex\u00e9cution du contrat) pour les comptes; Art. 6(1)(a) (consentement) pour la publicit\u00e9.','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO, historique de parties.','Sessions anonymes: jouer sans compte g\u00e9n\u00e8re des identifiants Firebase anonymes. Non rattachables \u00e0 une personne.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort). Transferts USA bas\u00e9s sur les CCT.','Tiers: Google Firebase (Auth, BDD) \u00b7 Google reCAPTCHA v3 (anti-spam). Google LLC, Mountain View, CA 94043, USA.','Mots de passe hach\u00e9s exclusivement par Firebase. Aucun acc\u00e8s aux mots de passe en clair.','Cookies & stockage: localStorage pour les pr\u00e9f\u00e9rences et le consentement. Pas de cookies de suivi sans accord.','Publicit\u00e9 (futur): bandeau de consentement avant activation. Pas de donn\u00e9es personnalis\u00e9es sans consentement explicite.','Conservation: jusqu\u2019\u00e0 la suppression du compte. Supprimable \u00e0 tout moment dans les param\u00e8tres.','Droits (RGPD): acc\u00e8s, rectification, effacement, limitation, portabilit\u00e9, opposition. wrongwayapp.official@gmail.com','Droit de r\u00e9clamation: vous pouvez saisir une autorit\u00e9 de protection des donn\u00e9es (ex. CNIL: cnil.fr).','KVKK (Turquie): droits selon loi n\u00b0 6698. wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr']
       },
       terms:{
-        de:['Nutzungsbedingungen','Geltungsbereich: Wrong Way: Don\'t be mad, betrieben von H\u00fcseyin Tunay.','Konten: kostenlos spielbar. Online erfordert g\u00fcltige E-Mail. Ein Konto pro Person.','Verbote: Cheating, Bots, Exploits f\u00fchren zur sofortigen Sperrung.','Altersgrenze: ab 13 Jahren. Unter 18 Jahren Elternzustimmung f\u00fcr Eink\u00e4ufe erforderlich.','In-App-K\u00e4ufe (zuk\u00fcnftig): Zahlung nur \u00fcber Google Play / Apple Store. Kein Geldwert f\u00fcr virtuelle G\u00fcter.','Werbung: personalisierte Werbung nur mit Einwilligung (Cookie-Banner).','Haftung: kein Ersatz bei Datenverlust durch Serverausf\u00e4lle.','Geltendes Recht: T\u00fcrkisches Recht. Zwingende EU-Regeln bleiben wirksam.'],
-        en:['Terms of Service','Scope: Wrong Way: Don\'t be mad, operated by H\u00fcseyin Tunay.','Accounts: free to play. Online requires valid email. One account per person.','Prohibited: cheating, bots, exploits lead to immediate suspension.','Age: 13+ required. Under 18 needs parental consent for purchases.','In-App Purchases (future): payments via Google Play / Apple Store only. Virtual goods have no monetary value.','Advertising: personalized ads only with explicit consent (cookie banner).','Liability: no compensation for data loss due to server outages.','Governing law: Turkish law. Mandatory EU consumer rules remain valid.'],
-        tr:['Kullan\u0131m Ko\u015fullar\u0131','Kapsam: H\u00fcseyin Tunay taraf\u0131ndan i\u015fletilen Wrong Way: Don\'t be mad.','Hesaplar: \u00fccretsiz oynanabilir. \u00c7evrimde ge\u00e7erli e-posta gerektirir. Ki\u015fi ba\u015f\u0131na bir hesap.','Yasaklar: hile, bot, exploit an\u0131nda hesap askiya al\u0131nmas\u0131na yol a\u00e7ar.','Ya\u015f: 13 ve \u00fcst\u00fc. 18 alt\u0131 \u00fccretli i\u00e7erik i\u00e7in ebeveyn onay\u0131 gerekir.','Uygulama \u0130\u00e7i Al\u0131mlar (gelecekte): \u00f6deme yaln\u0131zca Google Play / Apple Store. Sanal mallar\u0131n de\u011feri yoktur.','Reklam: ki\u015fiselle\u015ftirilmi\u015f reklam yaln\u0131zca \u00e7erez onay\u0131yla g\u00f6sterilir.','Sorumluluk: sunucu ar\u0131zalar\u0131ndan kaynaklanan kay\u0131plardan sorumluluk yoktur.','Ge\u00e7erli hukuk: T\u00fcrkiye Cumhuriyeti hukuku.'],
-        fr:['Conditions d\'utilisation','Champ: Wrong Way: Don\'t be mad, exploit\u00e9 par H\u00fcseyin Tunay.','Comptes: gratuit. En ligne n\u00e9cessite un e-mail valide. Un compte par personne.','Interdictions: triche, bots, exploits entra\u00eenent suspension imm\u00e9diate.','\u00c2ge: 13 ans minimum. Moins de 18 ans: consentement parental pour achats.','Achats in-app (futur): paiements via Google Play / Apple Store uniquement.','Publicit\u00e9: publicit\u00e9s personnalis\u00e9es uniquement avec consentement explicite.','Responsabilit\u00e9: pas de compensation pour pertes dues aux pannes.','Droit applicable: droit turc. R\u00e8gles UE imp\u00e9ratives restent valables.']
+        de:['Nutzungsbedingungen','Geltungsbereich: Wrong Way: Don\'t be mad, betrieben von H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Konten: kostenlos spielbar. Online erfordert g\u00fcltige E-Mail. Ein Konto pro Person.','Verbote: Cheating, Bots, Exploits f\u00fchren zur sofortigen Sperrung ohne R\u00fcckerstattung.','Altersgrenze: ab 13 Jahren. Unter 18 Jahren ist Elternzustimmung f\u00fcr Eink\u00e4ufe erforderlich.','In-App-K\u00e4ufe (zuk\u00fcnftig): Zahlung nur \u00fcber Google Play / Apple Store. Virtuelle G\u00fcter haben keinen Geldwert und sind nicht erstattungsf\u00e4hig.','Werbung: Personalisierte Werbung nur mit ausdr\u00fccklicher Einwilligung (Cookie-Banner).','Urheberrecht: Alle Inhalte, Grafiken und der Spielcode sind geistiges Eigentum des Betreibers.','Haftung: Keine Gew\u00e4hr f\u00fcr Verf\u00fcgbarkeit. Kein Ersatz bei Datenverlust durch Serverausf\u00e4lle.','K\u00fcndigung: Der Betreiber kann Konten bei Versto\u00df gegen diese Bedingungen jederzeit sperren.','Änderungen: \u00c4nderungen dieser Bedingungen werden 14 Tage im Voraus per In-App-Hinweis bekannt gegeben. Weitere Nutzung gilt als Zustimmung.','Geltendes Recht: T\u00fcrkisches Recht. Zwingende EU-Verbraucherschutzregeln bleiben unber\u00fchrt.'],
+        en:['Terms of Service','Scope: Wrong Way: Don\'t be mad, operated by H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Accounts: free to play. Online requires a valid email. One account per person.','Prohibited: cheating, bots, exploits lead to immediate suspension without refund.','Age: 13+ required. Users under 18 need parental consent for purchases.','In-App Purchases (future): payments via Google Play / Apple Store only. Virtual goods have no monetary value and are non-refundable.','Advertising: personalized ads only with explicit consent (cookie banner).','Intellectual property: all content, graphics, and game code are the intellectual property of the operator.','Liability: no guarantee of availability. No compensation for data loss due to server outages.','Termination: the operator may suspend accounts for violations of these terms at any time.','Amendments: changes to these terms will be announced 14 days in advance via in-app notice. Continued use constitutes acceptance.','Governing law: Turkish law. Mandatory EU consumer protection rules remain unaffected.'],
+        tr:['Kullan\u0131m Ko\u015fullar\u0131','Kapsam: H\u00fcseyin Tunay taraf\u0131ndan i\u015fletilen Wrong Way: Don\'t be mad \u00b7 wrongwayapp.official@gmail.com','Hesaplar: \u00fccretsiz oynanabilir. \u00c7evrim i\u00e7i ge\u00e7erli e-posta gerektirir. Ki\u015fi ba\u015f\u0131na bir hesap.','Yasaklar: hile, bot, exploit an\u0131nda hesap ask\u0131ya al\u0131nmas\u0131na yol a\u00e7ar, iade yap\u0131lmaz.','Ya\u015f: 13 ve \u00fcst\u00fc. 18 alt\u0131 \u00fccretli i\u00e7erik i\u00e7in ebeveyn onay\u0131 gerekir.','Uygulama \u0130\u00e7i Al\u0131mlar (gelecekte): \u00f6deme yaln\u0131zca Google Play / Apple Store. Sanal mallar\u0131n paran\u0131zsal de\u011feri yoktur ve iade edilemez.','Reklam: ki\u015fiselle\u015ftirilmi\u015f reklam yaln\u0131zca a\u00e7\u0131k \u00e7erez onay\u0131yla g\u00f6sterilir.','Fikri m\u00fclkiyet: t\u00fcm i\u00e7erik, grafik ve oyun kodu i\u015fletene aittir.','Sorumluluk: eri\u015filebilirlik garantisi verilmez. Sunucu ar\u0131zalar\u0131ndan kaynaklanan kay\u0131plardan sorumluluk yoktur.','Fesih: \u0130\u015fleten, ko\u015fullar\u0131 ihlal eden hesaplar\u0131 her zaman askiya alabilir.','De\u011fi\u015fiklikler: ko\u015fullardaki de\u011fi\u015fiklikler, uygulama i\u00e7i bildirimle 14 g\u00fcn \u00f6nceden duyurulur. Kullanmaya devam etmek kabul say\u0131l\u0131r.','Ge\u00e7erli hukuk: T\u00fcrkiye Cumhuriyeti hukuku.'],
+        fr:['Conditions d\'utilisation','Champ: Wrong Way: Don\'t be mad, exploit\u00e9 par H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Comptes: gratuit. En ligne n\u00e9cessite un e-mail valide. Un compte par personne.','Interdictions: triche, bots, exploits entra\u00eenent suspension imm\u00e9diate sans remboursement.','\u00c2ge: 13 ans minimum. Moins de 18 ans: consentement parental requis pour les achats.','Achats in-app (futur): paiements via Google Play / Apple Store uniquement. Les biens virtuels n\'ont aucune valeur mon\u00e9taire et ne sont pas remboursables.','Publicit\u00e9: publicit\u00e9s personnalis\u00e9es uniquement avec consentement explicite (bandeau cookies).','Propri\u00e9t\u00e9 intellectuelle: tout le contenu, les graphismes et le code du jeu sont la propri\u00e9t\u00e9 de l\'op\u00e9rateur.','Responsabilit\u00e9: aucune garantie de disponibilit\u00e9. Pas de compensation pour pertes dues aux pannes.','R\u00e9siliation: l\'op\u00e9rateur peut suspendre les comptes en cas de violation \u00e0 tout moment.','Modifications: tout changement sera signal\u00e9 14 jours \u00e0 l\'avance par notification in-app. L\'utilisation continue vaut acceptation.','Droit applicable: droit turc. R\u00e8gles UE de protection des consommateurs restent applicables.']
       }
     };
     var ll=legalData.impressum[lang]?lang:'en';
@@ -7472,15 +8000,30 @@ function App(){
               {t('scanQR')}
             </div>
 
-            {/* WhatsApp Share */}
-            <button onClick={()=>{window.open('https://wa.me/?text='+waMsg,'_blank');}}
-              style={{width:'100%',padding:'12px 14px',background:'#25D366',color:'white',
-                border:'none',borderRadius:12,fontWeight:800,cursor:'pointer',fontSize:13,
-                textAlign:'center',display:'block',
-                boxShadow:'0 4px 12px rgba(37,211,102,0.32)',
-                fontFamily:'system-ui,-apple-system,sans-serif',marginBottom:20}}>
-              <span style={{display:'inline-flex',alignItems:'center',gap:8,justifyContent:'center'}}><PhoneIcon size={15} color="#fff"/>{t('shareWhatsApp')}</span>
-            </button>
+            {/* Share Buttons */}
+            <div style={{display:'flex',gap:8,width:'100%',marginBottom:20}}>
+              <button onClick={()=>{window.open('https://wa.me/?text='+waMsg,'_blank');}}
+                style={{flex:1,padding:'12px 10px',background:'#25D366',color:'white',
+                  border:'none',borderRadius:12,fontWeight:800,cursor:'pointer',fontSize:13,
+                  textAlign:'center',boxShadow:'0 4px 12px rgba(37,211,102,0.32)',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}>
+                  <PhoneIcon size={14} color="#fff"/>{t('shareWhatsApp')}
+                </span>
+              </button>
+              <button onClick={()=>{
+                try{navigator.clipboard.writeText(shareUrl).then(function(){
+                  var b=document.getElementById('copy-link-btn');
+                  if(b){b.textContent=t('copied');setTimeout(function(){b.textContent=t('copyLink');},2000);}
+                });}catch(e){}
+              }} id="copy-link-btn"
+                style={{flex:1,padding:'12px 10px',background:'var(--card)',color:'var(--text)',
+                  border:'1.5px solid var(--border)',borderRadius:12,fontWeight:800,cursor:'pointer',fontSize:13,
+                  textAlign:'center',boxShadow:'var(--shadow-soft)',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {t('copyLink')}
+              </button>
+            </div>
           </>
         )}
         <div style={{fontSize:12,color:'var(--subtle)',marginBottom:22,textAlign:'center'}}>
@@ -7879,7 +8422,7 @@ function App(){
             animation:'intro-bg-in 0.35s ease-out both'}}/>
           {/* Gegner-Banner (oben) */}
           <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',overflow:'hidden',
-            display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:46,
+            display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:78,
             background:`linear-gradient(160deg,${PC[introOppRole]}40 0%,${PC[introOppRole]}10 60%,transparent 100%)`,
             borderBottom:`2px solid ${PC[introOppRole]}55`,
             animation:'intro-card-left 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
@@ -7905,7 +8448,7 @@ function App(){
           </div>
           {/* Eigenes Banner (unten) */}
           <div style={{position:'absolute',bottom:0,left:0,right:0,height:'50%',overflow:'hidden',
-            display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:46,
+            display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:78,
             background:`linear-gradient(20deg,${PC[introMyRole]}40 0%,${PC[introMyRole]}10 60%,transparent 100%)`,
             borderTop:`2px solid ${PC[introMyRole]}55`,
             animation:'intro-card-right 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
@@ -7935,19 +8478,46 @@ function App(){
             </div>
           </div>
           {/* VS in der Mitte */}
-          <div style={{position:'relative',zIndex:3,display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
-            <div style={{fontSize:62,fontWeight:900,fontStyle:'italic',letterSpacing:-3,lineHeight:1,
-              background:'linear-gradient(180deg,#fff 0%,#cbd5e1 100%)',WebkitBackgroundClip:'text',
-              WebkitTextFillColor:'transparent',backgroundClip:'text',
-              filter:'drop-shadow(0 4px 16px rgba(255,255,255,0.35))',
+          <div style={{position:'relative',zIndex:3,display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
+            <div style={{fontSize:72,fontWeight:900,fontStyle:'italic',letterSpacing:-2,lineHeight:1,
+              color:'#ffffff',
+              textShadow:'0 0 40px rgba(255,255,255,0.6), 0 4px 24px rgba(0,0,0,0.8), 0 2px 0 rgba(0,0,0,0.5)',
               animation:'intro-vs 0.75s cubic-bezier(0.34,1.56,0.64,1) 0.4s both'}}>VS</div>
-            {/* Modus-Label */}
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5,
+            {/* Modus-Labels */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,
               animation:'intro-label 0.5s ease-out 0.95s both'}}>
-              <div style={{fontSize:14,fontWeight:900,letterSpacing:2,color:'#fff',textTransform:'uppercase',
-                padding:'7px 18px',borderRadius:20,background:'rgba(255,255,255,0.12)',
-                border:'1.5px solid rgba(255,255,255,0.25)',backdropFilter:'blur(4px)'}}>{introMapLbl}</div>
-              {introTimeLbl&&<div style={{fontSize:11,fontWeight:700,letterSpacing:1,color:'rgba(255,255,255,0.7)',textTransform:'uppercase'}}>{introTimeLbl}</div>}
+              {/* Haupt-Modus */}
+              <div style={{
+                fontSize:18,fontWeight:900,letterSpacing:3,color:'#fff',textTransform:'uppercase',
+                padding:'8px 22px',borderRadius:24,
+                background:isRanked?'linear-gradient(135deg,#f59e0b,#d97706)':selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#6d28d9)':'linear-gradient(135deg,#3b82f6,#2563eb)',
+                boxShadow:isRanked?'0 4px 20px rgba(245,158,11,0.55)':selectedMap==='duel'?'0 4px 20px rgba(139,92,246,0.55)':'0 4px 20px rgba(59,130,246,0.55)',
+                border:'2px solid rgba(255,255,255,0.25)'}}>
+                {isRanked?'RANKED ':''}{introMapLbl.toUpperCase()}
+              </div>
+              {/* Sub-Modi Badges */}
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'center'}}>
+                {introTimeLbl?(
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:'rgba(255,255,255,0.95)',
+                    textTransform:'uppercase',padding:'4px 12px',borderRadius:12,
+                    background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)'}}>{introTimeLbl}</div>
+                ):null}
+                {hammerMode&&!isRanked?(
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:'#1a1220',
+                    textTransform:'uppercase',padding:'4px 12px',borderRadius:12,
+                    background:'#fbbf24',boxShadow:'0 2px 8px rgba(251,191,36,0.5)'}}>HAMMER</div>
+                ):null}
+                {chaosMode&&!isRanked?(
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:'#fff',
+                    textTransform:'uppercase',padding:'4px 12px',borderRadius:12,
+                    background:'linear-gradient(135deg,#8b5cf6,#ec4899)',boxShadow:'0 2px 8px rgba(139,92,246,0.5)'}}>CHAOS</div>
+                ):null}
+                {dropMode&&!isRanked?(
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:'#fff',
+                    textTransform:'uppercase',padding:'4px 12px',borderRadius:12,
+                    background:'linear-gradient(135deg,#ec4899,#f43f5e)',boxShadow:'0 2px 8px rgba(236,72,153,0.5)'}}>DROP</div>
+                ):null}
+              </div>
             </div>
           </div>
           {/* Flash */}
@@ -7990,15 +8560,28 @@ function App(){
           <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('title')}</div>
         </div>
         {!winner&&(
-          <button onClick={handleGiveUp} style={{
-            padding:'6px 15px',fontSize:11,fontWeight:800,cursor:'pointer',
-            background:giveUpArmed?'#ef4444':'var(--card)',
-            color:giveUpArmed?'white':'var(--subtle)',
-            border:`1.5px solid ${giveUpArmed?'#ef4444':'var(--border)'}`,
-            borderRadius:20,transition:'all 0.2s',boxShadow:giveUpArmed?'0 2px 10px rgba(239,68,68,0.35)':'var(--shadow-soft)',
-            fontFamily:'system-ui,-apple-system,sans-serif'}}>
-            {giveUpArmed?t('sure'):t('giveUp')}
-          </button>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            {afkTimeLeft>0&&afkTimeLeft<=20&&gameMode==='online'&&turn===onlineRole&&(
+              <div style={{
+                padding:'5px 10px',borderRadius:12,
+                background:afkTimeLeft<=10?'#ef4444':'#f59e0b',
+                color:'white',fontSize:12,fontWeight:900,
+                fontFamily:'system-ui,-apple-system,sans-serif',
+                boxShadow:afkTimeLeft<=10?'0 2px 10px rgba(239,68,68,0.5)':'0 2px 10px rgba(245,158,11,0.4)',
+                animation:afkTimeLeft<=10?'pulse-inbox 0.8s ease-in-out infinite':'none'}}>
+                {afkTimeLeft}s
+              </div>
+            )}
+            <button onClick={handleGiveUp} style={{
+              padding:'6px 15px',fontSize:11,fontWeight:800,cursor:'pointer',
+              background:giveUpArmed?'#ef4444':'var(--card)',
+              color:giveUpArmed?'white':'var(--subtle)',
+              border:'1.5px solid '+(giveUpArmed?'#ef4444':'var(--border)'),
+              borderRadius:20,transition:'all 0.2s',boxShadow:giveUpArmed?'0 2px 10px rgba(239,68,68,0.35)':'var(--shadow-soft)',
+              fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {giveUpArmed?t('sure'):t('giveUp')}
+            </button>
+          </div>
         )}
       </div>
 
@@ -8045,7 +8628,7 @@ function App(){
         {(gameMode==='online'&&onlineRole==='B'?['B','A']:['A','B']).map(p=>{
           const active=turn===p&&!winner;
           const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
-          const canTapProfile=isOpp&&oppAccountKey&&!winner;
+          const canTapProfile=isOpp&&oppAccountKey;
           const eyeCol=p==='A'?'#ef4444':'#3b82f6';
           return(
             <div key={p} onClick={canTapProfile?openOppProfile:undefined}
@@ -10702,7 +11285,23 @@ document.addEventListener('pointerdown',e=>{
 },true);
 const loader=document.getElementById('loader');
 const root=ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+class ErrorBoundary extends React.Component{
+  constructor(p){super(p);this.state={err:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  render(){
+    if(this.state.err){
+      return React.createElement('div',{style:{position:'fixed',inset:0,background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',padding:24,zIndex:9999}},
+        React.createElement('div',{style:{maxWidth:340,textAlign:'center'}},
+          React.createElement('div',{style:{fontSize:16,fontWeight:800,color:'#ef4444',marginBottom:12}},'Render-Fehler'),
+          React.createElement('div',{style:{fontSize:12,color:'#64748b',wordBreak:'break-word',background:'#f1f5f9',padding:12,borderRadius:8,textAlign:'left'}},
+            String(this.state.err))
+        )
+      );
+    }
+    return this.props.children;
+  }
+}
+root.render(React.createElement(ErrorBoundary,null,React.createElement(App,null)));
 requestAnimationFrame(()=>requestAnimationFrame(()=>{if(loader)loader.style.display='none';}));
 </script>
 
