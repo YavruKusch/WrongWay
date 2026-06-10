@@ -710,6 +710,7 @@ var WSNET={
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
   timeout:function(){ this._send({type:'timeout'}); },
+  requestSync:function(){ this._send({type:'sync'}); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
@@ -5192,6 +5193,23 @@ function App(){
     },1000);
     return()=>clearInterval(iv);
   },[screen,winner,turn,gameTimeMode,gameMode]);
+
+  // ── WS Anti-Deadlock ──
+  // Solange wir auf den Gegner warten, regelmaessig den echten Stand vom Server anfordern.
+  // Faengt verlorene State-Nachrichten ab (z.B. wenn die Verbindung still abbricht ohne onclose),
+  // sodass kein Spiel haengen bleibt weil beide denken der andere sei dran.
+  useEffect(()=>{
+    if(!WSNET.roomId||gameMode!=='online'||screen!=='game')return;
+    const iv=setInterval(()=>{
+      const s=S.current;
+      if(!s||s.gameMode!=='online'||s.winner)return;
+      if(s.turn!==s.onlineRole){ // wir warten auf den Gegner -> Stand pruefen
+        try{ WSNET.requestSync(); }catch(e){}
+        try{ if(!WSNET.sock||WSNET.sock.readyState!==1)WSNET._open(); }catch(e){}
+      }
+    },4000);
+    return()=>clearInterval(iv);
+  },[gameMode,screen]);
 
   // ── AI ──
   useEffect(()=>{
