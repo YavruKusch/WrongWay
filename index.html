@@ -4121,15 +4121,18 @@ function App(){
   // Das verhindert die O(N^2)-Download-Kosten, die auch ohne Spielen anfielen.
   useEffect(()=>{
     if(!window.db||screen!=='menu')return;
-    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: keine Abfragen (Traffic sparen)
+    if(adminCfg.maintenance&&!isAdmin())return;
     let cancelled=false;
-    const ref=window.db.ref('ww_stats');
     const load=async()=>{
       try{
-        const snap=await ref.once('value');
+        const [snapPv,snapIg]=await Promise.all([
+          window.db.ref('ww_pv2').once('value'),
+          window.db.ref('ww_ig').once('value')
+        ]);
         if(cancelled)return;
-        const v=snap.val()||{};
-        setGlobalStats({online:Math.max(0,v.online||0),inGame:Math.max(0,v.inGame||0)});
+        const pv=snapPv.val()||{};
+        const ig=snapIg.val()||{};
+        setGlobalStats({online:Object.keys(pv).length,inGame:Object.keys(ig).length});
       }catch(e){}
     };
     load();
@@ -4143,24 +4146,13 @@ function App(){
     const key=account?account.key:(authU?authU.uid:GUEST_ID);
     const name=getDisplayName(account);
     setPresence(key,true,name);
-    // Verbindung weg (App zu / Crash) → eigenen Presence-Eintrag automatisch entfernen.
-    // Hält ww_presence klein (nur aktuell verbundene Clients) statt unbegrenzt zu wachsen.
     try{window.db.ref(PRESENCE_KEY(key)).onDisconnect().remove();}catch(e){}
-    // Billiger Online-Zaehler: nur +1/-1 fuer SICH SELBST. Alle lesen spaeter nur diese eine Zahl
-    // (statt den ganzen Presence-Knoten) → verhindert O(N^2)-Kosten.
-    var SVonline=(firebase.database&&firebase.database.ServerValue)?firebase.database.ServerValue:null;
-    var canCountOnline=!!(SVonline&&SVonline.increment);
-    var onlineRef=canCountOnline?window.db.ref('ww_stats/online'):null;
-    var connRef=canCountOnline?window.db.ref('.info/connected'):null;
-    var connCb=null;
-    if(canCountOnline){
-      connCb=connRef.on('value',function(s){
-        if(s.val()===true){
-          try{onlineRef.onDisconnect().set(SVonline.increment(-1));}catch(e){}
-          try{onlineRef.set(SVonline.increment(1));}catch(e){}
-        }
-      });
-    }
+    // Zuverlässiger Online-Zähler: jede Browser-Session schreibt einen eigenen Eintrag
+    // ww_pv2/SESSION = true, mit onDisconnect().remove().
+    // Kein increment/decrement → kein Drift bei Reconnects oder Crashes.
+    var pvRef=window.db.ref('ww_pv2/'+SESSION);
+    try{pvRef.onDisconnect().remove();}catch(e){}
+    try{pvRef.set(true);}catch(e){}
     const iv=setInterval(()=>{
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
@@ -4171,25 +4163,20 @@ function App(){
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
       setPresence(k,false,getDisplayName(account));
-      if(canCountOnline){
-        try{connRef.off('value',connCb);}catch(e){}
-        try{onlineRef.onDisconnect().cancel();}catch(e){}
-        try{onlineRef.set(SVonline.increment(-1));}catch(e){}
-      }
+      try{pvRef.onDisconnect().cancel();}catch(e){}
+      try{pvRef.remove();}catch(e){}
     };
   },[account,adminCfg.maintenance]);
-  // "In Runde"-Zaehler: jeder Client zaehlt sich selbst, wenn er in einem Online-Match ist
+  // "In Runde"-Zaehler: Session-Presence-Ansatz, kein Drift
   useEffect(()=>{
     if(adminCfg.maintenance&&!isAdmin())return;
     if(!window.db||gameMode!=='online'||(screen!=='game'&&screen!=='end'))return;
-    var SVig=(firebase.database&&firebase.database.ServerValue)?firebase.database.ServerValue:null;
-    if(!SVig||!SVig.increment)return;
-    var igRef=window.db.ref('ww_stats/inGame');
-    try{igRef.onDisconnect().set(SVig.increment(-1));}catch(e){}
-    try{igRef.set(SVig.increment(1));}catch(e){}
+    var igRef=window.db.ref('ww_ig/'+SESSION);
+    try{igRef.onDisconnect().remove();}catch(e){}
+    try{igRef.set(true);}catch(e){}
     return()=>{
       try{igRef.onDisconnect().cancel();}catch(e){}
-      try{igRef.set(SVig.increment(-1));}catch(e){}
+      try{igRef.remove();}catch(e){}
     };
   },[gameMode,screen,adminCfg.maintenance]);
   useEffect(()=>{
