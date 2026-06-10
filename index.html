@@ -675,11 +675,11 @@ var WW_URL='wss://wrongway-server-production.up.railway.app';
 var WS_ENABLED=(function(){try{return new URLSearchParams(window.location.search).get('ws')!=='0';}catch(e){return true;}})();
 var WS_DEBUG=(function(){try{return new URLSearchParams(window.location.search).get('wsdebug')==='1';}catch(e){return false;}})();
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null,
+  sock:null, token:null, roomId:null, role:null, onState:null, lastRecv:0, pongSeen:false, _hb:null,
   connect:function(roomId,role,onState){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this._dbg('verbinde '+roomId+' ('+role+')'); this._open();
+    this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
   },
   _open:function(){
     var self=this;
@@ -687,14 +687,16 @@ var WSNET={
     if(self.sock&&(self.sock.readyState===0||self.sock.readyState===1))return;
     try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
     self.sock.onopen=function(){
-      self._dbg('socket offen');
+      self._dbg('socket offen'); self.lastRecv=Date.now();
       if(self.onState)self.onState({type:'ws_open'});
       if(self.token){ self._send({type:'reconnect',token:self.token}); }
       else if(self.role==='A'){ self._send({type:'create_room',roomId:self.roomId}); }
       else { self._send({type:'join_room',code:self.roomId}); }
     };
     self.sock.onmessage=function(ev){
+      self.lastRecv=Date.now();
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+      if(d.type==='pong'){ self.pongSeen=true; return; }
       if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId){ setTimeout(function(){ self._send({type:'join_room',code:self.roomId}); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
       if(d.type==='match_start')self._dbg('MATCH laeuft!');
@@ -706,6 +708,20 @@ var WSNET={
     self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId){ setTimeout(function(){ self._open(); },1500); } };
   },
   _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
+  _startHb:function(){
+    var self=this;
+    if(self._hb)return;
+    self._hb=setInterval(function(){
+      if(!self.roomId)return;
+      if(self.sock&&self.sock.readyState===1){
+        try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
+        // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
+        // Nur wenn der Server pong unterstuetzt (sonst alter Server -> keine Fehlausloesung).
+        if(self.pongSeen&&(Date.now()-self.lastRecv>14000)){ self.lastRecv=Date.now(); try{ self.sock.close(); }catch(e){} }
+      }else{ self._open(); }
+    },6000);
+  },
+  _stopHb:function(){ if(this._hb){ clearInterval(this._hb); this._hb=null; } },
   move:function(to){ this._send({type:'move',to:to}); },
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
@@ -714,7 +730,7 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this.roomId=null; this.role=null; this.onState=null; this.token=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  close:function(){ this._stopHb(); this.roomId=null; this.role=null; this.onState=null; this.token=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
 try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId&&(!WSNET.sock||WSNET.sock.readyState!==1)){ WSNET._open(); } }); }catch(e){}
@@ -4629,6 +4645,7 @@ function App(){
   const winnerFiredRef=useRef(false);
   const afkTriggerRef=useRef(null); // Ref für triggerWin - vermeidet TDZ in Safari
   const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs)
+  const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
     if(winnerFiredRef.current||S.current.winner)return;
@@ -4823,6 +4840,20 @@ function App(){
         const wRole=d.winner===0?'A':'B';
         triggerWin(wRole,false,mh);
       }
+      // Verlorenen eigenen Zug automatisch erneut senden (Anti-Verlust auf wackeliger Verbindung)
+      if(d.winner===undefined||d.winner===null){
+        var myRoleP=(typeof d.deineNummer==='number')?(d.deineNummer===0?'A':'B'):S.current.onlineRole;
+        var myNumP=myRoleP==='A'?0:1;
+        var srvTurnP=(typeof d.amZug==='number')?(d.amZug===0?'A':'B'):S.current.turn;
+        var pend=pendingWsRef.current;
+        if(pend){
+          if(d.lm&&d.lm.p===myNumP){ pendingWsRef.current=null; } // eigener Zug bestaetigt
+          else if(srvTurnP===myRoleP){ // Server: ich bin noch dran -> Zug kam nicht an -> erneut senden
+            if(pend.tries<3){ pend.tries++; if(pend.kind==='move')WSNET.move(pend.to); else WSNET.wall(pend.key); }
+            else pendingWsRef.current=null;
+          } else { pendingWsRef.current=null; } // Gegner ist dran -> Zug wurde angewendet
+        }
+      } else { pendingWsRef.current=null; }
     }else if(d.type==='opponent_disconnected'){
       if(d.countdown)setFlash('Gegner getrennt - gewinnt in '+d.countdown+'s');
     }else if(d.type==='opponent_back'){
@@ -4842,6 +4873,7 @@ function App(){
       setMoveHist([]);
       setGameNum((S.current.gameNum||1)+1);
       winnerFiredRef.current=false;
+      pendingWsRef.current=null;
       setGiveUpArmed(false);setFlash('');
       setEloChange(null);
       setScreen('game');
@@ -5966,6 +5998,7 @@ function App(){
       const np={r:r,c:c};const isA=turn==='A';
       if(isA)setPA(np);else setPB(np);
       setTurn(turn==='A'?'B':'A');
+      pendingWsRef.current={kind:'move',to:{r:r,c:c},tries:0};
       WSNET.move({r:r,c:c});
       return;
     }
@@ -6083,6 +6116,7 @@ function App(){
                 setWalls(next);
                 setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1});
                 setTurn(sc.turn==='A'?'B':'A');
+                pendingWsRef.current={kind:'wall',key:key,tries:0};
                 WSNET.wall(key);
               }else setFlash(t('invalidPos'));
             }
