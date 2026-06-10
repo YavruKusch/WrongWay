@@ -669,6 +669,49 @@ const SESSION=Math.random().toString(36).slice(2,10);
 const GUEST_ID=(()=>{try{let n=localStorage.getItem('ww_guest_id');if(!n){n='User'+Math.floor(1000+Math.random()*9000);localStorage.setItem('ww_guest_id',n);}return n;}catch(e){return 'User'+Math.floor(1000+Math.random()*9000);}})();
 function getDisplayName(account){return account?account.name:GUEST_ID;}
 
+// ── WebSocket-Anbindung an den Spiel-Server (server-autoritativ, nur Classic) ──
+// Standardmaessig AUS. Mit ?ws=1 in der URL aktiv (zum Testen auf Staging).
+var WW_URL='wss://wrongway-server-production.up.railway.app';
+var WS_ENABLED=(function(){try{return new URLSearchParams(window.location.search).get('ws')!=='0';}catch(e){return true;}})();
+var WS_DEBUG=(function(){try{return new URLSearchParams(window.location.search).get('wsdebug')==='1';}catch(e){return false;}})();
+var WSNET={
+  sock:null, token:null, roomId:null, role:null, onState:null,
+  connect:function(roomId,role,onState){ this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); },
+  _open:function(){
+    var self=this;
+    if(!self.roomId)return;
+    if(self.sock&&(self.sock.readyState===0||self.sock.readyState===1))return;
+    try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
+    self.sock.onopen=function(){
+      self._dbg('socket offen');
+      if(self.onState)self.onState({type:'ws_open'});
+      if(self.token){ self._send({type:'reconnect',token:self.token}); }
+      else if(self.role==='A'){ self._send({type:'create_room',roomId:self.roomId}); }
+      else { self._send({type:'join_room',code:self.roomId}); }
+    };
+    self.sock.onmessage=function(ev){
+      var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+      if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId){ setTimeout(function(){ self._send({type:'join_room',code:self.roomId}); },1000); return; }
+      if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
+      if(d.type==='match_start')self._dbg('MATCH laeuft!');
+      if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
+      if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
+      if(self.onState)self.onState(d);
+    };
+    self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId){ setTimeout(function(){ self._open(); },1500); } };
+  },
+  _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
+  move:function(to){ this._send({type:'move',to:to}); },
+  wall:function(key){ this._send({type:'wall',key:key}); },
+  giveUp:function(){ this._send({type:'give_up'}); },
+  rematch:function(){ this._send({type:'rematch'}); },
+  rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
+  _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
+  close:function(){ this.roomId=null; this.role=null; this.onState=null; this.token=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+};
+if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
+try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId&&(!WSNET.sock||WSNET.sock.readyState!==1)){ WSNET._open(); } }); }catch(e){}
+
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
 const CELL2=Math.max(26,Math.min(38,Math.floor((window.innerWidth-16)/COLS2)));
@@ -4043,31 +4086,30 @@ function App(){
   const[friendReqCount,setFriendReqCount]=useState(0);
   const[globalStats,setGlobalStats]=useState({online:0,inGame:0});
   const[spectateId,setSpectateId]=useState(null);
-  // Spielerzähler (online / in Runde): NUR im Menü, periodischer Einzel-Abruf statt Dauer-Listener.
-  // Ein .on('value') auf dem GESAMTEN ww_presence-Node lieferte bei JEDEM Heartbeat den
-  // kompletten Node an JEDEN Client zurück → massive Download-Kosten. Daher 45s-Poll, nur im Menü.
+  const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG); // frueh deklariert: wird unten in useEffect-Deps genutzt (sonst Safari TDZ)
+  // Spielerzähler: liest nur einen winzigen Zaehler-Knoten (ww_stats), NICHT mehr den ganzen
+  // Presence-Knoten. Jeder Client zaehlt sich selbst hoch/runter (siehe Heartbeat-Effekt).
+  // Das verhindert die O(N^2)-Download-Kosten, die auch ohne Spielen anfielen.
   useEffect(()=>{
     if(!window.db||screen!=='menu')return;
+    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: keine Abfragen (Traffic sparen)
     let cancelled=false;
-    const ref=window.db.ref('ww_presence');
+    const ref=window.db.ref('ww_stats');
     const load=async()=>{
       try{
         const snap=await ref.once('value');
         if(cancelled)return;
-        const all=snap.val()||{};const now=Date.now();
-        let on=0,ig=0;
-        Object.values(all).forEach(p=>{
-          if(p&&p.online&&(now-p.lastSeen<50000)){on++;if(p.inGame)ig++;}
-        });
-        setGlobalStats({online:on,inGame:ig});
+        const v=snap.val()||{};
+        setGlobalStats({online:Math.max(0,v.online||0),inGame:Math.max(0,v.inGame||0)});
       }catch(e){}
     };
     load();
-    const iv=setInterval(load,45000);
+    const iv=setInterval(load,30000);
     return()=>{cancelled=true;clearInterval(iv);};
-  },[screen]);
+  },[screen,adminCfg.maintenance]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
   useEffect(()=>{
+    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: nicht als online melden
     var authU=firebase.auth().currentUser;
     const key=account?account.key:(authU?authU.uid:GUEST_ID);
     const name=getDisplayName(account);
@@ -4075,6 +4117,21 @@ function App(){
     // Verbindung weg (App zu / Crash) → eigenen Presence-Eintrag automatisch entfernen.
     // Hält ww_presence klein (nur aktuell verbundene Clients) statt unbegrenzt zu wachsen.
     try{window.db.ref(PRESENCE_KEY(key)).onDisconnect().remove();}catch(e){}
+    // Billiger Online-Zaehler: nur +1/-1 fuer SICH SELBST. Alle lesen spaeter nur diese eine Zahl
+    // (statt den ganzen Presence-Knoten) → verhindert O(N^2)-Kosten.
+    var SVonline=(firebase.database&&firebase.database.ServerValue)?firebase.database.ServerValue:null;
+    var canCountOnline=!!(SVonline&&SVonline.increment);
+    var onlineRef=canCountOnline?window.db.ref('ww_stats/online'):null;
+    var connRef=canCountOnline?window.db.ref('.info/connected'):null;
+    var connCb=null;
+    if(canCountOnline){
+      connCb=connRef.on('value',function(s){
+        if(s.val()===true){
+          try{onlineRef.onDisconnect().set(SVonline.increment(-1));}catch(e){}
+          try{onlineRef.set(SVonline.increment(1));}catch(e){}
+        }
+      });
+    }
     const iv=setInterval(()=>{
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
@@ -4085,9 +4142,27 @@ function App(){
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
       setPresence(k,false,getDisplayName(account));
+      if(canCountOnline){
+        try{connRef.off('value',connCb);}catch(e){}
+        try{onlineRef.onDisconnect().cancel();}catch(e){}
+        try{onlineRef.set(SVonline.increment(-1));}catch(e){}
+      }
     };
-  },[account]);
-  // HOST: sobald friend-Lobby existiert, auf Guest warten
+  },[account,adminCfg.maintenance]);
+  // "In Runde"-Zaehler: jeder Client zaehlt sich selbst, wenn er in einem Online-Match ist
+  useEffect(()=>{
+    if(adminCfg.maintenance&&!isAdmin())return;
+    if(!window.db||gameMode!=='online'||(screen!=='game'&&screen!=='end'))return;
+    var SVig=(firebase.database&&firebase.database.ServerValue)?firebase.database.ServerValue:null;
+    if(!SVig||!SVig.increment)return;
+    var igRef=window.db.ref('ww_stats/inGame');
+    try{igRef.onDisconnect().set(SVig.increment(-1));}catch(e){}
+    try{igRef.set(SVig.increment(1));}catch(e){}
+    return()=>{
+      try{igRef.onDisconnect().cancel();}catch(e){}
+      try{igRef.set(SVig.increment(-1));}catch(e){}
+    };
+  },[gameMode,screen,adminCfg.maintenance]);
   useEffect(()=>{
     if(!friendLobbyState||!window.db)return;
     let cancelled=false;
@@ -4240,7 +4315,6 @@ function App(){
     }
     if(!joinCancelledRef.current){setNavDir('back');setScreen('friends');}
   };
-  const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG);
   const[adminCfgReady,setAdminCfgReady]=useState(false);
   const[showAdmin,setShowAdmin]=useState(false);
   const[showTutorial,setShowTutorial]=useState(false);
@@ -4317,6 +4391,7 @@ function App(){
   // URL ?join=CODE → automatisch zum Freund-Beitritt
   useEffect(()=>{
     if(!window.db)return;
+    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: keinen Broadcast-Listener anhängen
     var bcRef=window.db.ref('ww_broadcasts');
     var bcCb=bcRef.on('value',function(snap){
       var val=snap.val();
@@ -4328,7 +4403,7 @@ function App(){
       setBroadcasts(list);
     });
     return function(){bcRef.off('value',bcCb);};
-  },[]);
+  },[adminCfg.maintenance]);
 
   // Announce-Banner: 60s sichtbar, 8s unsichtbar, wiederholen
   useEffect(function(){
@@ -4530,6 +4605,7 @@ function App(){
   const winSound=w=>{ if(!isOwnLoss(w)) playSound('win'); };
   const winnerFiredRef=useRef(false);
   const afkTriggerRef=useRef(null); // Ref für triggerWin - vermeidet TDZ in Safari
+  const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs)
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
     if(winnerFiredRef.current||S.current.winner)return;
@@ -4702,7 +4778,55 @@ function App(){
   const color=PC[turn];
 
   // ── Init game ──
+  // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
+  const applyServerState=(d)=>{
+    if(d.type==='match_start'||d.type==='resync'||d.type==='state'){
+      if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
+      if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
+      if(d.walls){ setWalls(new Set(d.walls)); }
+      if(d.barr){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
+      if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
+      if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      if(d.gaveUp!==undefined&&d.gaveUp!==null)setGaveUp(d.gaveUp===0?'A':'B');
+      var mh=S.current.moveHist;
+      if(d.lm){
+        const lp=d.lm.p===0?'A':'B';
+        const ent=d.lm.type==='wall'?{type:'wall',p:lp,k:d.lm.k}:{type:'move',p:lp,r:d.lm.r,c:d.lm.c};
+        mh=(S.current.moveHist||[]).concat([ent]);
+        setMoveHist(mh);
+        if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':'move');
+      }
+      if(d.winner!==undefined&&d.winner!==null&&!S.current.winner){
+        const wRole=d.winner===0?'A':'B';
+        triggerWin(wRole,false,mh);
+      }
+    }else if(d.type==='opponent_disconnected'){
+      if(d.countdown)setFlash('Gegner getrennt - gewinnt in '+d.countdown+'s');
+    }else if(d.type==='opponent_back'){
+      setFlash('');
+    }else if(d.type==='rematch_state'){
+      setRematchA(!!(d.req&&d.req[0]));
+      setRematchB(!!(d.req&&d.req[1]));
+    }else if(d.type==='rematch_start'){
+      // Vollreset wie neue Runde
+      if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
+      setWalls(new Set(d.walls||[]));
+      if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
+      if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
+      if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      setWinner(null);setCelebrating(false);setGaveUp(null);
+      setRematchA(false);setRematchB(false);setRematchDeclined(null);
+      setMoveHist([]);
+      setGameNum((S.current.gameNum||1)+1);
+      winnerFiredRef.current=false;
+      setGiveUpArmed(false);setFlash('');
+      setEloChange(null);
+      setScreen('game');
+    }
+  };
+
   const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride,forcedTurn)=>{
+    if(WS_ENABLED)WSNET._dbg('start mode='+mode);
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
     // Ranked = faires Standard-Regelwerk: keine Modifikatoren (Casual-Einstellungen bleiben erhalten)
@@ -4728,6 +4852,12 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
+    // Server-autoritative Anbindung nur fuer reines Classic-Online (kein Duell/Ranked/Hammer/Chaos/Timer)
+    if(WS_ENABLED&&mode==='online'&&mapToUse!=='duel'&&!ranked&&!effHammer&&!chaosMode&&!(tm&&(tm.indexOf('classic-')===0||tm.indexOf('blitz-')===0))){
+      // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
+      if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
+      WSNET.connect(lid,role,applyServerState);
+    }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
     setEloChange(null);
     winnerFiredRef.current=false;
@@ -4762,9 +4892,15 @@ function App(){
 
   // ── Sync online ──
   const doSync=(gs)=>{
+    if(WSNET.roomId)return; // WS-Modus: der Server ist die Wahrheit, kein Firebase-Schreiben
     const{gameMode:gm,lobbyId:lid,rematchA:rA,rematchB:rB,rematchDeclined:rD,gameNum:gN}=S.current;
     if(gm!=='online'||!lid)return;
-    stoSet(`barricade_game_${lid}`,{
+    var mvs=gs.moves||[];
+    var newGN=gs.gameNum===undefined?(gN||1):gs.gameNum;
+    // Volle Moves-Liste nur bei Spielende oder neuer Runde senden (für Replay-Integrität).
+    // Bei normalen Zügen: nur letzten Zug + Anzahl → spart wachsende Download-Last.
+    var sendFull=gs.winner||newGN!==(gN||1)||mvs.length===0;
+    var payload={
       ...gs,
       walls:[...gs.walls],
       map:gs.map===undefined?(S.current.selectedMap||'classic'):gs.map,
@@ -4772,14 +4908,22 @@ function App(){
       rematchA:gs.rematchA===undefined?rA:gs.rematchA,
       rematchB:gs.rematchB===undefined?rB:gs.rematchB,
       rematchDeclined:gs.rematchDeclined===undefined?rD:gs.rematchDeclined,
-      gameNum:gs.gameNum===undefined?(gN||1):gs.gameNum,
+      gameNum:newGN,
       chaosItem:gs.chaosItem===undefined?chaosItem:gs.chaosItem,
       goldenWalls:gs.goldenWalls!==undefined?gs.goldenWalls:[...goldenWalls],
       hammers:gs.hammers===undefined?hammers:gs.hammers,
       hammerHeld:gs.hammerHeld===undefined?hammerHeld:gs.hammerHeld,
       hammerUsed:gs.hammerUsed===undefined?hammerUsed:gs.hammerUsed,
+      mc:mvs.length,
       lastUpdated:Date.now()
-    });
+    };
+    if(sendFull){
+      payload.moves=mvs;
+    }else{
+      payload.lm=mvs[mvs.length-1];
+      delete payload.moves;
+    }
+    stoSet(`barricade_game_${lid}`,payload);
   };
 
   // ── Classic-Timer-Tick ──
@@ -4824,11 +4968,24 @@ function App(){
   const inactiveCountRef=useRef(null);
   const inactiveKickedRef=useRef(false);
 
-  // AFK-Zug-Timer: 60s pro Zug, nur Online ohne Timer, kein Ranked
+  // AFK-Zug-Timer: 60s pro Zug. WS-Modus: Countdown fuer beide vom Server, Timeout handhabt der Server.
   useEffect(function(){
     if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
     setAfkTimeLeft(0);
-    if(screen!=='game'||gameMode!=='online'||winner||turn!==onlineRole||isRanked)return;
+    if(screen!=='game'||gameMode!=='online'||winner)return;
+    if(WSNET.roomId){
+      // Server beendet den Zug bei Ablauf. Hier nur Countdown anzeigen (fuer beide Spieler).
+      turnTimerRef.current=setInterval(function(){
+        var ends=wsTurnEndsRef.current;
+        if(!ends||S.current.winner){ setAfkTimeLeft(0); return; }
+        setAfkTimeLeft(Math.max(0,Math.ceil((ends-Date.now())/1000)));
+      },500);
+      return function(){
+        if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
+        setAfkTimeLeft(0);
+      };
+    }
+    if(turn!==onlineRole||isRanked)return;
     if(gameTimeMode&&gameTimeMode!=='none')return;
     var secs=60;
     setAfkTimeLeft(secs);
@@ -5147,6 +5304,7 @@ function App(){
   // ── Online realtime listener ──
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||(screen!=='game'&&screen!=='end'))return;
+    if(WSNET.roomId)return; // WS-Modus: kein Firebase-Listener
     const ref=window.db.ref(`barricade_game_${lobbyId}`);
     const cb=ref.on('value',snap=>{
       const v=snap.val();if(!v)return;
@@ -5155,7 +5313,7 @@ function App(){
       // Clock-Skew-sicher (kein Date.now()-Vergleich mehr).
       const newGN=gs.gameNum||1;
       const oldGN=S.current.gameNum||0;
-      const newMoveCount=(gs.moves||[]).length;
+      const newMoveCount=gs.mc!==undefined?gs.mc:(gs.moves||[]).length;
       const oldMoveCount=S.current.moveHist.length;
       if(newGN<oldGN)return;
       if(newGN===oldGN&&newMoveCount<oldMoveCount)return;
@@ -5256,8 +5414,20 @@ function App(){
       }
 
       // Normales Game-Update
-      const newMoves=gs.moves||[];
+      // Moves rekonstruieren: volle Liste (gs.moves) ODER inkrementell (gs.lm anhängen)
       const oldLen=S.current.moveHist.length;
+      var newMoves;
+      if(gs.moves!==undefined){
+        newMoves=gs.moves;
+      }else if(gs.lm&&newMoveCount===oldLen+1){
+        newMoves=S.current.moveHist.concat([gs.lm]);
+      }else if(gs.lm&&newMoveCount>oldLen){
+        // Fallback (sollte bei alternierenden Zügen nicht auftreten): letzten Zug anhängen
+        newMoves=S.current.moveHist.concat([gs.lm]);
+      }else{
+        // Kein neuer Zug (z.B. Chaos-Item-Update) → moveHist unverändert
+        newMoves=S.current.moveHist;
+      }
       // Map synchron halten (wichtig für Freunde-/Online-Duell, falls Gast andere Map gewählt hatte)
       if(gs.map){CUR_MAP=gs.map;if(gs.map!==S.current.selectedMap)setSelectedMap(gs.map);
         const ds=gs.duelSize||'standard';
@@ -5404,6 +5574,11 @@ function App(){
   const requestRematch=()=>{
     const s=S.current;
     if(s.rematchDeclined)return;
+    if(WSNET.roomId){
+      if(s.onlineRole==='A')setRematchA(true);else setRematchB(true);
+      WSNET.rematch();
+      return;
+    }
     const isA=s.onlineRole==='A';
     doSync({
       pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,
@@ -5417,6 +5592,11 @@ function App(){
   const declineRematch=()=>{
     const s=S.current;
     if(s.gameMode!=='online'||!s.lobbyId)return;
+    if(WSNET.roomId){
+      setRematchA(false);setRematchB(false);
+      WSNET.rematchCancel();
+      return;
+    }
     doSync({
       pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,
       turn:s.turn,winner:s.winner,moves:s.moveHist,
@@ -5736,6 +5916,15 @@ function App(){
     // Sicherheits-Check für Online+Blitz: sicherstellen dass es noch der eigene Zug ist
     if(gameMode==='online'&&S.current.turn!==onlineRole)return;
     if(!getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c))return;
+    if(WSNET.roomId){
+      // Optimistisch: eigenen Zug sofort lokal zeigen, Server bestaetigt parallel
+      playSound('move');
+      const np={r:r,c:c};const isA=turn==='A';
+      if(isA)setPA(np);else setPB(np);
+      setTurn(turn==='A'?'B':'A');
+      WSNET.move({r:r,c:c});
+      return;
+    }
     playSound('move');
     const np={r,c};const isA=turn==='A';
     if(isA)setPA(np);else setPB(np);
@@ -5802,8 +5991,12 @@ function App(){
     const winP=loser==='A'?'B':'A';
     setGaveUp(loser);
     if(gameMode==='online'){
-      const s=S.current;
-      doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem,gaveUp:loser});
+      if(WSNET.roomId){
+        WSNET.giveUp();
+      }else{
+        const s=S.current;
+        doSync({pA:s.pA,pB:s.pB,walls:s.walls,barrLeft:s.barrLeft,turn:s.turn,winner:winP,moves:s.moveHist,chaosItem:s.chaosItem,gaveUp:loser});
+      }
     }
     triggerWin(winP);
   };
@@ -5836,6 +6029,22 @@ function App(){
         const rel=getRel(x,y-OFFSET);
         if(rel){
           const key=snapWall(rel.x,rel.y,dragging.orient);
+          if(WSNET.roomId){
+            // Optimistisch: Wand lokal pruefen+setzen, Server bestaetigt parallel
+            const sc=S.current;
+            if(sc.barrLeft[sc.turn]>0){
+              const next=tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
+              if(next){
+                playSound('wall');
+                setWalls(next);
+                setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1});
+                setTurn(sc.turn==='A'?'B':'A');
+                WSNET.wall(key);
+              }else setFlash(t('invalidPos'));
+            }
+            setDragging(null);setPreviewKey(null);setSnapPos(null);
+            return;
+          }
           const{walls:w,pA:a,pB:b,barrLeft:bl,turn:curT,moveHist:mh}=S.current;
           if(bl[curT]>0){
             _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b):null;
@@ -8561,10 +8770,10 @@ function App(){
         </div>
         {!winner&&(
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            {afkTimeLeft>0&&afkTimeLeft<=20&&gameMode==='online'&&turn===onlineRole&&(
+            {afkTimeLeft>0&&afkTimeLeft<=20&&gameMode==='online'&&(WSNET.roomId||turn===onlineRole)&&(
               <div style={{
                 padding:'5px 10px',borderRadius:12,
-                background:afkTimeLeft<=10?'#ef4444':'#f59e0b',
+                background:(WSNET.roomId&&turn!==onlineRole)?'#3b82f6':(afkTimeLeft<=10?'#ef4444':'#f59e0b'),
                 color:'white',fontSize:12,fontWeight:900,
                 fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:afkTimeLeft<=10?'0 2px 10px rgba(239,68,68,0.5)':'0 2px 10px rgba(245,158,11,0.4)',
