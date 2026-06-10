@@ -704,6 +704,7 @@ var WSNET={
   move:function(to){ this._send({type:'move',to:to}); },
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
+  timeout:function(){ this._send({type:'timeout'}); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
@@ -3041,6 +3042,29 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features}){
     </div>
   );
 }
+function AdminWhoAmI(){
+  // Zeigt die eigene Firebase-UID an (fuer die Firebase-Regel) + ob eingeloggt
+  var u=null;
+  try{u=firebase.auth().currentUser;}catch(e){}
+  var uid=u?u.uid:'';
+  var email=u&&u.email?u.email:'';
+  var anon=u?!!u.isAnonymous:true;
+  var copy=function(){ try{navigator.clipboard.writeText(uid);}catch(e){} };
+  return(
+    <div style={{marginBottom:16,padding:'12px',borderRadius:12,background:'var(--bg)',border:'1.5px solid var(--border)'}}>
+      <div style={{fontSize:10,fontWeight:800,color:'var(--subtle)',letterSpacing:1.2,marginBottom:8,textTransform:'uppercase'}}>DEIN ACCOUNT (FUER FIREBASE-REGEL)</div>
+      {anon?(
+        <div style={{fontSize:12,color:'#ef4444',fontWeight:600,lineHeight:1.4}}>Nicht eingeloggt (Gast). Logge dich mit E-Mail/Google ein, dann erscheint hier deine UID.</div>
+      ):(
+        <div>
+          {email?<div style={{fontSize:12,color:'var(--subtle)',marginBottom:4}}>{email}</div>:null}
+          <div style={{fontSize:12,color:'var(--text)',fontFamily:'monospace',wordBreak:'break-all',marginBottom:8}}>{uid}</div>
+          <button onClick={copy} style={{fontSize:12,fontWeight:700,padding:'6px 12px',borderRadius:8,border:'1.5px solid var(--border)',background:'var(--card)',color:'var(--text)',cursor:'pointer'}}>UID kopieren</button>
+        </div>
+      )}
+    </div>
+  );
+}
 function AdminSection({label,children}){
   return(
     <div style={{marginBottom:16}}>
@@ -4852,8 +4876,8 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
-    // Server-autoritative Anbindung nur fuer reines Classic-Online (kein Duell/Ranked/Hammer/Chaos/Timer)
-    if(WS_ENABLED&&mode==='online'&&mapToUse!=='duel'&&!ranked&&!effHammer&&!chaosMode&&!(tm&&(tm.indexOf('classic-')===0||tm.indexOf('blitz-')===0))){
+    // Server-autoritative Anbindung fuer Classic-Online inkl. Classic-Zeit (3/5/8); kein Duell/Ranked/Hammer/Chaos/Blitz
+    if(WS_ENABLED&&mode==='online'&&mapToUse!=='duel'&&!ranked&&!effHammer&&!chaosMode&&(!tm||tm.indexOf('blitz-')!==0)){
       // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
       if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
       WSNET.connect(lid,role,applyServerState);
@@ -5143,6 +5167,8 @@ function App(){
       // Classic: Zug-Zeit abgelaufen → Gegner gewinnt (außerhalb des State-Setters)
       if(turnExpired&&!S.current.winner){
         const other=turn==='A'?'B':'A';
+        // WS: Verlierer (aktiver Spieler) meldet Zeitablauf an Server
+        if(WSNET.roomId&&S.current.turn===S.current.onlineRole)WSNET.timeout();
         triggerWin(other);
       }
       // Gesamt-Zeit nur für Classic runterzählen
@@ -5160,6 +5186,8 @@ function App(){
         });
         if(totalExpired&&!S.current.winner){
           const other=turn==='A'?'B':'A';
+          // WS: Verlierer (aktiver Spieler) meldet Zeitablauf an Server
+          if(WSNET.roomId&&S.current.turn===S.current.onlineRole)WSNET.timeout();
           triggerWin(other);
         }
       }
@@ -6847,6 +6875,8 @@ function App(){
               <button onClick={()=>setShowAdmin(false)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
             </div>
             <div style={{fontSize:11,color:'var(--subtle)',marginBottom:18,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
+
+            <AdminWhoAmI/>
 
             <AdminSection label="SPIELMODI">
               {[['online','Online-Lobby',<GlobeIcon size={13} color="var(--subtle)"/>],['friend','Mit Freund',<PeopleIcon size={13} color="var(--subtle)"/>],['bots','Gegen Bots',<BotIcon size={13} color="var(--subtle)"/>],['local','Lokal',<PhoneIcon size={13} color="var(--subtle)"/>],['twovtwo','2 vs 2',<SwordsIcon size={13} color="var(--subtle)"/>]].map(function(f){
