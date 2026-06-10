@@ -4549,7 +4549,7 @@ function App(){
       if(prev==='classic'&&!f.race)return 'duel';
       return prev;
     });
-  },[adminCfgReady]);
+  },[adminCfgReady,adminCfg.features.race,adminCfg.features.duel]);
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
   const[copyFlash,setCopyFlash]=useState(false);
