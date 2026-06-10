@@ -745,7 +745,7 @@ let _adminUnlocked=false;
 function isAdmin(){return _adminUnlocked;}
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true},announce:'',announceUntil:0,maintenance:false};
 function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
@@ -4543,6 +4543,12 @@ function App(){
       if(prev==='standard'&&!f.duelStandard)return 'blitz';
       return prev;
     });
+    // selectedMap auto-switch wenn Spielfeld deaktiviert
+    setSelectedMap(prev=>{
+      if(prev==='duel'&&!f.duel)return 'classic';
+      if(prev==='classic'&&!f.race)return 'duel';
+      return prev;
+    });
   },[adminCfgReady]);
   const[timeLeft,setTimeLeft]=useState({A:0,B:0}); // Restzeit in Sekunden je Spieler (Classic-Modus)
   const[turnTimeLeft,setTurnTimeLeft]=useState(60); // Restzeit für aktuellen Zug (Classic-Modus)
@@ -6865,16 +6871,22 @@ function App(){
             </AdminSection>
 
             <AdminSection label="DUELL-MODI">
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Welche Duell-Feldgrößen Spieler wählen können:</div>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}>⚡ Blitz-Duell (7×7)</span>} on={adminCfg.features.duelBlitz} onClick={()=>toggleFeature('duelBlitz')}/>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}>🛡 Standard-Duell (9×9)</span>} on={adminCfg.features.duelStandard} onClick={()=>toggleFeature('duelStandard')}/>
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><SwordsIcon size={13} color="var(--subtle)"/>Duell-Spielfeld aktiv</span>} on={adminCfg.features.duel} onClick={()=>toggleFeature('duel')} accent/>
+              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.duel?1:0.4}}>
+                <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:2}}>Welche Feldgrößen wählbar:</div>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{fontSize:11}}>+</span> Blitz-Duell (7x7)</span>} on={adminCfg.features.duelBlitz} onClick={()=>{if(adminCfg.features.duel)toggleFeature('duelBlitz');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{fontSize:11}}>+</span> Standard-Duell (9x9)</span>} on={adminCfg.features.duelStandard} onClick={()=>{if(adminCfg.features.duel)toggleFeature('duelStandard');}}/>
+              </div>
             </AdminSection>
 
-            <AdminSection label="ZEITMODI — RACE">
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Welche Classic-Optionen Spieler wählen können:</div>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>3 Minuten</span>} on={adminCfg.features.classicTime3} onClick={()=>toggleFeature('classicTime3')}/>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>5 Minuten</span>} on={adminCfg.features.classicTime5} onClick={()=>toggleFeature('classicTime5')}/>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>8 Minuten</span>} on={adminCfg.features.classicTime8} onClick={()=>toggleFeature('classicTime8')}/>
+            <AdminSection label="RACE-MODI">
+              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>Race-Spielfeld aktiv</span>} on={adminCfg.features.race} onClick={()=>toggleFeature('race')} accent/>
+              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.race?1:0.4}}>
+                <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:2}}>Welche Zeitmodi wählbar:</div>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>3 Minuten</span>} on={adminCfg.features.classicTime3} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime3');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>5 Minuten</span>} on={adminCfg.features.classicTime5} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime5');}}/>
+                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>8 Minuten</span>} on={adminCfg.features.classicTime8} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime8');}}/>
+              </div>
             </AdminSection>
 
             <AdminSection label="ZEITMODI — BLITZ">
@@ -7320,7 +7332,7 @@ function App(){
             <div style={{width:3,height:11,borderRadius:2,background:'var(--subtle)',opacity:0.5}}/> SPIELFELD
           </div>
           <div style={{display:'flex',gap:8,marginBottom:4}}>
-            <button onClick={()=>setSelectedMap('duel')} className="mi-btn" style={{
+            {feat('duel')&&<button onClick={()=>setSelectedMap('duel')} className="mi-btn" style={{
               flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
               background:selectedMap==='duel'
                 ?'linear-gradient(135deg,#7c3aed,#8b5cf6)'
@@ -7351,8 +7363,8 @@ function App(){
               </div>
               <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('duel')}</div>
               <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>1v1 Arena</div>
-            </button>
-            <button onClick={()=>setSelectedMap('classic')} className="mi-btn" style={{
+            </button>}
+            {feat('race')&&<button onClick={()=>setSelectedMap('classic')} className="mi-btn" style={{
               flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
               background:selectedMap==='classic'
                 ?'linear-gradient(135deg,#2563eb,#8b5cf6)'
@@ -7381,7 +7393,7 @@ function App(){
               </div>
               <div style={{fontSize:12,fontWeight:900,letterSpacing:-0.2}}>{t('classic')}</div>
               <div style={{fontSize:9,fontWeight:700,opacity:0.65,marginTop:2}}>{t('classicDesc')||'Race to top'}</div>
-            </button>
+            </button>}
           </div>
           {selectedMap==='duel'&&(
             <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:8,paddingLeft:2,lineHeight:1.5}}>
