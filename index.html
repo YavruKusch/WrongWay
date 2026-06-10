@@ -676,7 +676,11 @@ var WS_ENABLED=(function(){try{return new URLSearchParams(window.location.search
 var WS_DEBUG=(function(){try{return new URLSearchParams(window.location.search).get('wsdebug')==='1';}catch(e){return false;}})();
 var WSNET={
   sock:null, token:null, roomId:null, role:null, onState:null,
-  connect:function(roomId,role,onState){ this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); },
+  connect:function(roomId,role,onState){
+    // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
+    if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
+    this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this._dbg('verbinde '+roomId+' ('+role+')'); this._open();
+  },
   _open:function(){
     var self=this;
     if(!self.roomId)return;
@@ -694,6 +698,7 @@ var WSNET={
       if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId){ setTimeout(function(){ self._send({type:'join_room',code:self.roomId}); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
       if(d.type==='match_start')self._dbg('MATCH laeuft!');
+      if(d.type==='state'&&d.winner!==undefined&&d.winner!==null)self._dbg('Runde vorbei');
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
       if(self.onState)self.onState(d);
@@ -8609,6 +8614,7 @@ function App(){
               title={t('menu')} desc="Zurück zum Hauptmenü"
               onClick={()=>{
                 if(gameMode==='online'&&myRematch)declineRematch();
+                try{WSNET.close();}catch(e){}
                 setScreen('menu');setGameMode(null);setLobbyId(null);
               }}/>
           </div>
