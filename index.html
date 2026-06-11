@@ -776,20 +776,16 @@ const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
 const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
-// Admin-Gate: Passwort wird als SHA-256 Hash verglichen, nie im Klartext gespeichert
-const ADMIN_HASH="d368f5db7669d1fd75264c840ca016f384083996b5bd9007894dbafe96d3f0b1";
-let _adminUnlocked=false;
-(async function(){
+// Admin-Gate: nur der eingeloggte Firebase-Account mit der Admin-UID hat Zugang.
+// Kein Hash, kein Passwort, kein URL-Parameter — serverseitig durch Firebase-Regel gesichert.
+// Die UID ist KEIN Geheimnis: sie nuetzt nur dem, der sich in genau diesen Account einloggen kann.
+const ADMIN_UID='mSonMcXmL8fktWt170Q1pYVduya2';
+function isAdmin(){
   try{
-    const param=new URLSearchParams(window.location.search).get("admin");
-    if(!param)return;
-    const enc=new TextEncoder().encode(param);
-    const buf=await crypto.subtle.digest("SHA-256",enc);
-    const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-    if(hash===ADMIN_HASH)_adminUnlocked=true;
-  }catch(e){}
-})();
-function isAdmin(){return _adminUnlocked;}
+    var u=firebase.auth().currentUser;
+    return !!(u&&u.uid===ADMIN_UID);
+  }catch(e){return false;}
+}
 // Spielerzaehler-Cache: verhindert Neuladen von ww_pv2/ww_ig bei jeder Rueckkehr ins Hauptmenue
 var PVCACHE={ts:0,online:0,inGame:0};
 // Drossel fuer Lobby-Listen-Bereinigung (max. 1x pro Intervall, egal wie oft Menue/Liste geoeffnet wird)
@@ -6421,15 +6417,6 @@ function App(){
       );
     }
     if(adminCfg.maintenance&&!isAdmin()){
-      const tryUnlock=async()=>{
-        try{
-          const enc=new TextEncoder().encode(adminUnlockPw);
-          const buf=await crypto.subtle.digest('SHA-256',enc);
-          const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-          if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setAdminUnlockPw('');setShowAdmin(true);}
-          else setAdminUnlockErr(true);
-        }catch(e){setAdminUnlockErr(true);}
-      };
       return(
         <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,justifyContent:'space-between',paddingBottom:'calc(env(safe-area-inset-bottom)+28px)'}}>
           <MenuBG dark={darkMode}/>
@@ -6583,7 +6570,7 @@ function App(){
         <div onClick={()=>{
           const next=adminTaps+1;
           setAdminTaps(next);
-          if(next>=10){setAdminTaps(0);setShowAdminUnlock(true);setAdminUnlockPw('');setAdminUnlockErr(false);}
+          if(next>=10){setAdminTaps(0);if(isAdmin())setShowAdmin(true);}
         }} style={{fontSize:32,fontWeight:900,letterSpacing:-1.8,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
         <div style={{fontSize:10,fontWeight:800,letterSpacing:3,color:'var(--subtle)',marginTop:8,textTransform:'uppercase',userSelect:'none'}}>{t('subtitle')}</div>
         {/* Dynamischer Unter-Slogan */}
@@ -7345,7 +7332,7 @@ function App(){
             </AdminSection>
 
             {adminFlash?<div style={{textAlign:'center',fontSize:12,color:'#16a34a',fontWeight:700,marginTop:10}}>{adminFlash}</div>:null}
-            <button onClick={()=>{_adminUnlocked=false;setShowAdmin(false);window.location.reload();}} style={{
+            <button onClick={()=>{setShowAdmin(false);window.location.reload();}} style={{
               width:'100%',padding:'10px',marginTop:14,borderRadius:10,
               background:'#fee2e2',color:'#dc2626',border:'1.5px solid #fecaca',
               cursor:'pointer',fontWeight:700,fontSize:12,
@@ -7358,35 +7345,8 @@ function App(){
       {showTutorial&&<TutorialModal t={t} darkMode={darkMode} step={tutStep} setStep={setTutStep} onClose={closeTutorial}/>}
       {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
 
-      {showAdminUnlock&&(
-        <div onClick={()=>{setShowAdminUnlock(false);setAdminUnlockPw('');setAdminUnlockErr(false);}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:18,padding:22,width:'100%',maxWidth:300,boxShadow:'0 8px 40px rgba(0,0,0,0.35)'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'var(--text)',marginBottom:14,textAlign:'center'}}>Admin-Zugang</div>
-            <input value={adminUnlockPw} onChange={e=>{setAdminUnlockPw(e.target.value);setAdminUnlockErr(false);}} type="password"
-              placeholder="Passwort"
-              onKeyDown={async e=>{
-                if(e.key==='Enter'){
-                  const enc=new TextEncoder().encode(adminUnlockPw);
-                  const buf=await crypto.subtle.digest('SHA-256',enc);
-                  const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-                  if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setAdminUnlockPw('');setShowAdmin(true);}
-                  else{setAdminUnlockErr(true);}
-                }
-              }}
-              style={{width:'100%',padding:'12px',borderRadius:10,border:adminUnlockErr?'1.5px solid #ef4444':'1.5px solid var(--border)',fontSize:15,outline:'none',background:'var(--bg)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box'}}/>
-            {adminUnlockErr&&<div style={{color:'#ef4444',fontSize:12,fontWeight:600,marginTop:6,textAlign:'center'}}>Falsches Passwort</div>}
-            <button onClick={async()=>{
-              const enc=new TextEncoder().encode(adminUnlockPw);
-              const buf=await crypto.subtle.digest('SHA-256',enc);
-              const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-              if(hash===ADMIN_HASH){_adminUnlocked=true;setShowAdminUnlock(false);setAdminUnlockPw('');setShowAdmin(true);}
-              else{setAdminUnlockErr(true);}
-            }} style={{width:'100%',padding:'12px',marginTop:12,borderRadius:10,background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              Entsperren
-            </button>
-          </div>
-        </div>
-      )}
+
+      {/* showAdminUnlock entfernt: Admin-Zugang nur per Firebase-Auth */}
 
       {/* Update-Banner */}
       {updateAvailable&&(
