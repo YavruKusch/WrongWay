@@ -4213,6 +4213,25 @@ function App(){
           return;
         }
         if(document.hidden)return; // Tab im Hintergrund: nichts laden
+        // Stufe 1: winziges Aggregat lesen — FIXE Groesse, egal ob 40 oder 10.000 online sind.
+        // Verhindert das quadratische Wachstum (mehr Spieler x groesserer Knoten) bei Skalierung.
+        const cnt=await stoGet('ww_count');
+        const cntFrisch=cnt&&typeof cnt.online==='number'&&Date.now()-(cnt.ts||0)<45000&&(cnt.ts||0)-Date.now()<60000;
+        if(cntFrisch){
+          PVCACHE={ts:Date.now(),online:cnt.online,inGame:cnt.inGame||0};
+          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
+          return;
+        }
+        // Stufe 2: Aggregat veraltet -> EIN Client zaehlt fuer alle. Zufalls-Verzoegerung + Re-Check
+        // verhindert, dass viele Clients gleichzeitig den grossen Knoten laden.
+        await new Promise(function(r){setTimeout(r,Math.floor(Math.random()*2500));});
+        if(cancelled||document.hidden)return;
+        const cnt2=await stoGet('ww_count');
+        if(cnt2&&typeof cnt2.online==='number'&&Date.now()-(cnt2.ts||0)<45000&&(cnt2.ts||0)-Date.now()<60000){
+          PVCACHE={ts:Date.now(),online:cnt2.online,inGame:cnt2.inGame||0};
+          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
+          return;
+        }
         const [snapPv,snapIg]=await Promise.all([
           window.db.ref('ww_pv2').once('value'),
           window.db.ref('ww_ig').once('value')
@@ -4223,6 +4242,7 @@ function App(){
         dlTrack('ww_pv2',pv);dlTrack('ww_ig',ig);
         PVCACHE={ts:Date.now(),online:Object.keys(pv).length,inGame:Object.keys(ig).length};
         setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
+        stoSet('ww_count',{online:PVCACHE.online,inGame:PVCACHE.inGame,ts:Date.now()}); // fuer alle anderen
       }catch(e){}
     };
     load();
