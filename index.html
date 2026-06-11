@@ -5846,7 +5846,7 @@ function App(){
       const all=lobbyListRawRef.current||[];
       setLobbyList(all.filter(l=>(l.ts-now)<30000&&(now-l.ts)<20000));
     };
-    const cb=ref.on('value',snap=>{
+    const handler=snap=>{
       const v=snap.val();
       dlTrack('barricade_lobby_list',v);
       let list=[];
@@ -5861,9 +5861,17 @@ function App(){
         stoSet('barricade_lobby_list',list.filter(l=>now-l.ts<45000));
         dead.forEach(l=>stoDel(`barricade_lobby_${l.id}`));
       }
-    });
+    };
+    // Listener nur bei SICHTBAREM Tab: Hintergrund-Tabs im Lobby-Screen laden sonst
+    // jede Listen-Aenderung mit (groesster Kostenposten, skaliert quadratisch mit Spielerzahl)
+    let attached=false;
+    const anhaengen=()=>{if(attached)return;attached=true;ref.on('value',handler);};
+    const abhaengen=()=>{if(!attached)return;attached=false;ref.off('value',handler);};
+    const onVis=()=>{if(document.hidden)abhaengen();else anhaengen();};
+    onVis();
+    document.addEventListener('visibilitychange',onVis);
     const iv=setInterval(apply,5000);
-    return()=>{ref.off('value',cb);clearInterval(iv);};
+    return()=>{abhaengen();document.removeEventListener('visibilitychange',onVis);clearInterval(iv);};
   },[screen]);
 
   // ── Wartescreen-Poll (nur Host: Gast-Beitritt erkennen) ──
