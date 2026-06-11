@@ -760,7 +760,7 @@ var WSNET={
   close:function(){ this._stopHb(); this.roomId=null; this.role=null; this.onState=null; this.token=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId&&(!WSNET.sock||WSNET.sock.readyState!==1)){ WSNET._open(); } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId){ if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else { try{ WSNET.requestSync(); }catch(e){} } } }); }catch(e){}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
@@ -787,6 +787,8 @@ let _adminUnlocked=false;
   }catch(e){}
 })();
 function isAdmin(){return _adminUnlocked;}
+// Spielerzaehler-Cache: verhindert Neuladen von ww_pv2/ww_ig bei jeder Rueckkehr ins Hauptmenue
+var PVCACHE={ts:0,online:0,inGame:0};
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
 const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true},announce:'',announceUntil:0,maintenance:false};
@@ -4178,6 +4180,12 @@ function App(){
     let cancelled=false;
     const load=async()=>{
       try{
+        // Cache: innerhalb von 30s nicht neu laden (Menü-Rückkehr loest sonst jedes Mal Downloads aus)
+        if(Date.now()-PVCACHE.ts<30000){
+          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
+          return;
+        }
+        if(document.hidden)return; // Tab im Hintergrund: nichts laden
         const [snapPv,snapIg]=await Promise.all([
           window.db.ref('ww_pv2').once('value'),
           window.db.ref('ww_ig').once('value')
@@ -4186,11 +4194,12 @@ function App(){
         const pv=snapPv.val()||{};
         const ig=snapIg.val()||{};
         dlTrack('ww_pv2',pv);dlTrack('ww_ig',ig);
-        setGlobalStats({online:Object.keys(pv).length,inGame:Object.keys(ig).length});
+        PVCACHE={ts:Date.now(),online:Object.keys(pv).length,inGame:Object.keys(ig).length};
+        setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
       }catch(e){}
     };
     load();
-    const iv=setInterval(load,30000);
+    const iv=setInterval(load,60000);
     return()=>{cancelled=true;clearInterval(iv);};
   },[screen,adminCfg.maintenance]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
@@ -5752,6 +5761,7 @@ function App(){
     if(screen!=='waiting'&&screen!=='online')return;
     let gameStarted=false;
     const poll=async()=>{
+      if(document.hidden)return; // Tab im Hintergrund: keine Downloads
       // Volle Lobby-Liste nur lesen wenn sie auch angezeigt wird (Online-Screen).
       // Im Wartescreen wurde sie vorher alle 2s sinnlos mitgeladen (Download-Kosten).
       if(screen==='online'){
