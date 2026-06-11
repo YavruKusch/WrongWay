@@ -789,6 +789,8 @@ let _adminUnlocked=false;
 function isAdmin(){return _adminUnlocked;}
 // Spielerzaehler-Cache: verhindert Neuladen von ww_pv2/ww_ig bei jeder Rueckkehr ins Hauptmenue
 var PVCACHE={ts:0,online:0,inGame:0};
+// Drossel fuer Lobby-Listen-Bereinigung (max. 1x pro Intervall, egal wie oft Menue/Liste geoeffnet wird)
+var LOBBY_CLEAN_TS={t:0};
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
 const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true},announce:'',announceUntil:0,maintenance:false};
@@ -5740,8 +5742,10 @@ function App(){
   // ── Menü: tote Lobbys einmalig bereinigen ──
   useEffect(()=>{
     if(screen!=='menu')return;
+    if(Date.now()-LOBBY_CLEAN_TS.t<60000)return; // max. 1x/min — Menue-Rueckkehr loest sonst jedes Mal Downloads aus
     var cleanup=async function(){
       try{
+        LOBBY_CLEAN_TS.t=Date.now();
         var list=await stoGet('barricade_lobby_list');
         if(!list||!list.length)return;
         var now=Date.now();
@@ -5756,30 +5760,44 @@ function App(){
     cleanup();
   },[screen]);
 
-  // ── Lobby polling ──
+  // ── Lobby-Liste: Push-Listener statt 2s-Polling ──
+  // on('value') laedt NUR bei Aenderungen — leere Liste im Leerlauf = 0 Downloads.
+  // Lokaler 5s-Refilter haelt die 20s-Frische-Anzeige aktuell OHNE neue Downloads.
+  const lobbyListRawRef=useRef([]);
   useEffect(()=>{
-    if(screen!=='waiting'&&screen!=='online')return;
+    if(screen!=='online')return;
+    const ref=window.db.ref('barricade_lobby_list');
+    const apply=()=>{
+      const now=Date.now();
+      const all=lobbyListRawRef.current||[];
+      setLobbyList(all.filter(l=>(l.ts-now)<30000&&(now-l.ts)<20000));
+    };
+    const cb=ref.on('value',snap=>{
+      const v=snap.val();
+      dlTrack('barricade_lobby_list',v);
+      let list=[];
+      if(v){try{list=JSON.parse(v)||[];}catch(e){list=[];}}
+      lobbyListRawRef.current=list;
+      apply();
+      // Tote Eintraege bereinigen: max. 1x pro 30s pro Client (sonst Schreib-Sturm bei vielen Zuschauern)
+      const now=Date.now();
+      const dead=list.filter(l=>(l.ts-now)>60000||(now-l.ts)>=45000);
+      if(dead.length>0&&now-LOBBY_CLEAN_TS.t>30000){
+        LOBBY_CLEAN_TS.t=now;
+        stoSet('barricade_lobby_list',list.filter(l=>now-l.ts<45000));
+        dead.forEach(l=>stoDel(`barricade_lobby_${l.id}`));
+      }
+    });
+    const iv=setInterval(apply,5000);
+    return()=>{ref.off('value',cb);clearInterval(iv);};
+  },[screen]);
+
+  // ── Wartescreen-Poll (nur Host: Gast-Beitritt erkennen) ──
+  useEffect(()=>{
+    if(screen!=='waiting')return;
     let gameStarted=false;
     const poll=async()=>{
       if(document.hidden)return; // Tab im Hintergrund: keine Downloads
-      // Volle Lobby-Liste nur lesen wenn sie auch angezeigt wird (Online-Screen).
-      // Im Wartescreen wurde sie vorher alle 2s sinnlos mitgeladen (Download-Kosten).
-      if(screen==='online'){
-      const list=await stoGet('barricade_lobby_list');
-      const now=Date.now();
-      const all=list||[];
-      // Anzeige: Lobbys bis 20s (etwas Toleranz fuer langsame Heartbeats).
-      // Loeschen erst ab 45s — sonst verschwinden Lobbys von Hosts deren Timer
-      // im Hintergrund pausiert war, und Gaeste sehen "nicht gefunden".
-      const fresh=all.filter(l=>(l.ts-now)<30000&&(now-l.ts)<20000);
-      const dead=all.filter(l=>(l.ts-now)>60000||(now-l.ts)>=45000);
-      setLobbyList(fresh);
-      if(dead.length>0){
-        const keep=all.filter(l=>now-l.ts<45000);
-        await stoSet('barricade_lobby_list',keep);
-        for(const l of dead){await stoDel(`barricade_lobby_${l.id}`);}
-      }
-      }
       if(gameStarted)return;
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
         const lobby=await stoGet(`barricade_lobby_${lobbyId}`);
