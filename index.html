@@ -682,8 +682,10 @@ function dlTrack(key,val){
   if(!DB_STATS_ON)return;
   try{
     var n=(val===null||val===undefined)?4:JSON.stringify(val).length;
-    DLSTAT.total+=n;
-    var p=String(key)
+    var up=String(key).charAt(0)==='^';
+    var raw=up?String(key).slice(1):String(key);
+    if(!up)DLSTAT.total+=n; // nur Downloads zaehlen ins Gesamt (Uploads kosten ~nichts)
+    var p=(up?'^':'')+raw
       .replace(/^barricade_lobby_(?!list).+$/,'barricade_lobby_*')
       .replace(/^barricade_game_.+$/,'barricade_game_*')
       .replace(/^barricade_chat_.+$/,'barricade_chat_*')
@@ -698,15 +700,15 @@ function dlTrack(key,val){
     var rows=Object.keys(DLSTAT.paths).map(function(k){return [k,DLSTAT.paths[k]];})
       .sort(function(a,b){return b[1].b-a[1].b;}).slice(0,8)
       .map(function(e){return (e[1].b/1024).toFixed(1)+'KB x'+e[1].c+'  '+e[0];});
-    if(el)el.textContent='DB: '+(DLSTAT.total/1024).toFixed(1)+'KB ('+(DLSTAT.total/1024/mins).toFixed(1)+'KB/min)\n'+rows.join('\n');
+    if(el)el.textContent='DB-Down: '+(DLSTAT.total/1024).toFixed(1)+'KB ('+(DLSTAT.total/1024/mins).toFixed(1)+'KB/min) | ^=Upload\n'+rows.join('\n');
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, lastRecv:0, pongSeen:false, _hb:null,
-  connect:function(roomId,role,onState){
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, lastRecv:0, pongSeen:false, _hb:null,
+  connect:function(roomId,role,onState,settings){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.onState=onState; this.token=null; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
+    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.token=null; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
   },
   _open:function(){
     var self=this;
@@ -717,7 +719,7 @@ var WSNET={
       self._dbg('socket offen'); self.lastRecv=Date.now();
       if(self.onState)self.onState({type:'ws_open'});
       if(self.token){ self._send({type:'reconnect',token:self.token}); }
-      else if(self.role==='A'){ self._send({type:'create_room',roomId:self.roomId}); }
+      else if(self.role==='A'){ self._send({type:'create_room',roomId:self.roomId,settings:self.settings||{}}); }
       else { self._send({type:'join_room',code:self.roomId}); }
     };
     self.sock.onmessage=function(ev){
@@ -757,7 +759,7 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this._stopHb(); this.roomId=null; this.role=null; this.onState=null; this.token=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  close:function(){ this._stopHb(); this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
 try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId){ if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else { try{ WSNET.requestSync(); }catch(e){} } } }); }catch(e){}
@@ -2132,6 +2134,29 @@ function loadReplayHistory(){
 // ── Firebase storage ────────────────────────────────────────
 const randId=n=>Array.from({length:n},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
 window.lastFbError=null;
+// Wartet per Listener (statt 500ms-Polling) bis der Spielstand existiert.
+// Spart die Dauer-Reads beim Lobby-Beitritt: Firebase pusht genau EINMAL wenn der Host schreibt.
+function waitForGame(id,timeoutMs){
+  return new Promise(function(resolve){
+    var ref=window.db.ref('barricade_game_'+id);
+    var done=false;var timer=null;
+    var cb=ref.on('value',function(snap){
+      var v=snap.val();
+      if(v===null||v===undefined)return;
+      if(done)return;done=true;
+      try{ref.off('value',cb);}catch(e){}
+      if(timer)clearTimeout(timer);
+      dlTrack('barricade_game_'+id,v);
+      var g=null;try{g=JSON.parse(v);}catch(e){}
+      resolve(g);
+    },function(){ if(!done){done=true;if(timer)clearTimeout(timer);resolve(null);} });
+    timer=setTimeout(function(){
+      if(done)return;done=true;
+      try{ref.off('value',cb);}catch(e){}
+      resolve(null);
+    },timeoutMs||30000);
+  });
+}
 async function stoGet(k){
   try{
     const snap=await window.db.ref(k).once('value');
@@ -2141,7 +2166,7 @@ async function stoGet(k){
   }catch(e){console.error('FB GET fail',k,e);window.lastFbError=e.message;return null;}
 }
 async function stoSet(k,v){
-  try{await window.db.ref(k).set(JSON.stringify(v));return true;}
+  try{dlTrack('^'+k,v);await window.db.ref(k).set(JSON.stringify(v));return true;}
   catch(e){console.error('FB SET fail',k,e);window.lastFbError=e.message;return false;}
 }
 async function stoDel(k){
@@ -4381,14 +4406,11 @@ function App(){
     setLobbyId(code);setOnlineRole('B');setPrivateCode(null);
     joinCancelledRef.current=false;
     setNavDir('fwd');setScreen('waiting');
-    // Auf initialen Spielstand des Einladenden warten (wie beim öffentlichen Beitritt)
-    for(let i=0;i<60;i++){
+    // Auf initialen Spielstand des Einladenden warten (Listener statt Polling)
+    {
+      const gs=await waitForGame(code,30000);
       if(joinCancelledRef.current)return;
-      await new Promise(r=>setTimeout(r,500));
-      if(joinCancelledRef.current)return;
-      const gs=await stoGet('barricade_game_'+code);
       if(gs){
-        if(joinCancelledRef.current)return;
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
@@ -4451,19 +4473,14 @@ function App(){
       if(!firebaseUser)return;
       clearTimeout(timeout);
       ref=window.db.ref(ADMIN_CFG_KEY);
-      // Einmalig laden für schnellen Start
-      ref.once('value',snap=>{
+      // NUR der Listener: dessen erstes Event liefert die Daten bereits.
+      // Vorher: once() + on() = derselbe Download zweimal bei jedem App-Start.
+      cb=ref.on('value',snap=>{
         const v=snap.val();
         dlTrack('barricade_admin_config',v);
         if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
         else setAdminCfg(DEFAULT_ADMIN_CFG);
         setAdminCfgReady(true);
-        // Danach live updates
-        cb=ref.on('value',snap2=>{
-          const v2=snap2.val();
-          dlTrack('barricade_admin_config',v2);
-          if(v2){try{setAdminCfg(mergeAdminCfg(JSON.parse(v2)));}catch(e){}}
-        });
       });
     });
     return ()=>{
@@ -4874,6 +4891,8 @@ function App(){
   // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
   const applyServerState=(d)=>{
     if(d.type==='match_start'||d.type==='resync'||d.type==='state'){
+      // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
+      if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){WSNET._dbg('GEO-MISMATCH! Server '+d.cols+'x'+d.rows+' vs Client '+COLS+'x'+ROWS);}
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
       if(d.walls){ setWalls(new Set(d.walls)); }
@@ -4960,11 +4979,12 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
-    // Server-autoritative Anbindung fuer Classic-Online inkl. Classic-Zeit (3/5/8); kein Duell/Ranked/Hammer/Chaos/Blitz
-    if(WS_ENABLED&&mode==='online'&&mapToUse!=='duel'&&!ranked&&!effHammer&&!chaosMode&&(!tm||tm.indexOf('blitz-')!==0)){
+    // Server-autoritative Anbindung fuer Race UND Duell (inkl. Classic-Zeit 3/5/8).
+    // Ausgeschlossen: Ranked, Hammer, Chaos, Zufalls-Waende (Drop), Blitz-Zugzeit — laufen weiter ueber Firebase.
+    if(WS_ENABLED&&mode==='online'&&!ranked&&!effHammer&&!chaosMode&&!effDrop&&(!tm||tm.indexOf('blitz-')!==0)){
       // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
       if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
-      WSNET.connect(lid,role,applyServerState);
+      WSNET.connect(lid,role,applyServerState,{map:mapToUse,size:sizeToUse,barr:gameBarr});
     }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
     setEloChange(null);
@@ -5991,13 +6011,10 @@ function App(){
     if(lobby.map!==undefined)setSelectedMap(lobby.map);
     if(joinCancelledRef.current)return;
     setLobbyId(id);setOnlineRole('B');setPrivateCode(null);setScreen('waiting');
-    for(let i=0;i<60;i++){
+    {
+      const gs=await waitForGame(id,30000);
       if(joinCancelledRef.current)return;
-      await new Promise(r=>setTimeout(r,500));
-      if(joinCancelledRef.current)return;
-      const gs=await stoGet(`barricade_game_${id}`);
       if(gs){
-        if(joinCancelledRef.current)return;
         lastOnlineTs.current=gs.lastUpdated;
         if(gs.nameA||gs.nameB)setPlayerNames({A:gs.nameA||'',B:gs.nameB||''});
         setOppAccountKey(gs.accountKeyA||null);
