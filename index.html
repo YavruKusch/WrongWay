@@ -732,6 +732,7 @@ var WSNET={
       if(d.type==='state'&&d.winner!==undefined&&d.winner!==null)self._dbg('Runde vorbei');
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
+      if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
       if(self.onState)self.onState(d);
     };
     self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId){ setTimeout(function(){ self._open(); },1500); } };
@@ -956,6 +957,7 @@ en:{
   auth_tooManyAttempts:'Too many attempts \u2014 please wait a few minutes.',
   serverFull:'Server full (100/100 players)',serverFullSub:'Play against the bot in the meantime',serverFullBtn:'Play vs Bot',serverOffline:'No connection to server',
   reconnectingOwn:'Restoring connection...',reconnectingOwnSub:'The game continues once you are back online',
+  wsRoomGone:'Connection to the match was lost \u2014 match aborted.',
   duel:'Duell',
   gameOver:'Game over',winner:'Winner',turn:'playing',
   rankedTitle:'Ranked Games',rankedSubtitle:'ELO starts at 1000 · Two modes, 3 min each',
@@ -1001,6 +1003,7 @@ de:{
   auth_tooManyAttempts:'Zu viele Versuche \u2014 bitte einige Minuten warten.',
   serverFull:'Server voll (100/100 Spieler)',serverFullSub:'Spiel in der Zwischenzeit gegen den Bot',serverFullBtn:'Gegen Bot spielen',serverOffline:'Keine Verbindung zum Server',
   reconnectingOwn:'Verbindung wird wiederhergestellt...',reconnectingOwnSub:'Das Spiel l\u00e4uft weiter sobald du wieder online bist',
+  wsRoomGone:'Verbindung zum Match verloren \u2014 Match abgebrochen.',
   gameOver:'Spiel beendet',winner:'Gewonnen',turn:'am Zug',
   rankedTitle:'Ranglistenspiele',rankedSubtitle:'ELO startet bei 1000 \u00b7 Zwei Modi, je 3 Min',
   rankedAccountRequired:'Konto erforderlich',rankedLoginHint:'Melde dich an um Ranked zu spielen',
@@ -1045,6 +1048,7 @@ tr:{
   verifySent:'Do\u011frulama e-postas\u0131 g\u00f6nderildi! Spam klas\u00f6r\u00fcn\u00fc de kontrol edin.',resendVerification:'Do\u011frulama e-postas\u0131n\u0131 tekrar g\u00f6nder',
   serverFull:'Sunucu dolu (100/100 oyuncu)',serverFullSub:'Bu arada bota kar\u015f\u0131 oyna',serverFullBtn:'Bota kar\u015f\u0131 oyna',serverOffline:'Sunucuya ba\u011flant\u0131 yok',
   reconnectingOwn:'Ba\u011flant\u0131 yeniden kuruluyor...',reconnectingOwnSub:'Tekrar \u00e7evri\u00e7i\u0099i oldu\u011funda oyun devam eder',
+  wsRoomGone:'Ma\u00e7 ba\u011flant\u0131s\u0131 koptu \u2014 ma\u00e7 iptal edildi.',
   gameOver:'Oyun bitti',winner:'Kazand\u0131',turn:'s\u0131rada',
   rankedTitle:'Dereceli Oyunlar',rankedSubtitle:'ELO 1000\'den ba\u015flar \u00b7 \u0130ki mod, 3 dk.',
   rankedAccountRequired:'Hesap gerekli',rankedLoginHint:'Ranked oynamak i\u00e7in giri\u015f yap',
@@ -1089,6 +1093,7 @@ fr:{
   verifySent:'E-mail de v\u00e9rification envoy\u00e9\u00a0! V\u00e9rifiez aussi le spam.',resendVerification:"Renvoyer l'e-mail de v\u00e9rification",
   serverFull:'Serveur plein (100/100 joueurs)',serverFullSub:'Jouez contre le bot en attendant',serverFullBtn:'Jouer vs Bot',serverOffline:'Pas de connexion au serveur',
   reconnectingOwn:'R\u00e9tablissement de la connexion...',reconnectingOwnSub:'La partie reprend d\u00e8s que vous serez reconnect\u00e9',
+  wsRoomGone:'Connexion \u00e0 la partie perdue \u2014 match annul\u00e9.',
   gameOver:'Partie termin\u00e9e',winner:'Gagnant',turn:'\u00e0 jouer',
   rankedTitle:'Parties class\u00e9es',rankedSubtitle:'ELO d\u00e9bute \u00e0 1000 \u00b7 Deux modes, 3 min chacun',
   rankedAccountRequired:'Compte requis',rankedLoginHint:'Connecte-toi pour jouer en class\u00e9',
@@ -4064,6 +4069,7 @@ function App(){
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
   const[serverOnline,setServerOnline]=useState(true);
+  const[wsConn,setWsConn]=useState(true); // WS-Socket-Status (nur in WS-Matches relevant)
   // Firebase Verbindungsstatus ueberwachen
   useEffect(()=>{
     const ref=window.db.ref('.info/connected');
@@ -4911,6 +4917,7 @@ function App(){
   // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
   const applyServerState=(d)=>{
     if(d.type==='match_start'||d.type==='resync'||d.type==='state'){
+      setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
       if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){WSNET._dbg('GEO-MISMATCH! Server '+d.cols+'x'+d.rows+' vs Client '+COLS+'x'+ROWS);}
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
@@ -4969,6 +4976,33 @@ function App(){
       setGiveUpArmed(false);setFlash('');
       setEloChange(null);
       setScreen('game');
+    }else if(d.type==='ws_open'){
+      setWsConn(true);
+    }else if(d.type==='ws_closed'){
+      setWsConn(false);
+    }else if(d.type==='error'){
+      // Server hat eine Aktion abgelehnt -> optimistischen Stand SOFORT durch die Server-Wahrheit ersetzen.
+      // (Vorher wurde der Fehler ignoriert: Geisterzug blieb lokal stehen, Zugwechsel nur lokal ->
+      //  BEIDE Spieler sahen "Gegner ist dran" und einer konnte scheinbar doppelt ziehen.)
+      if(d.grund==='nicht dein zug'||d.grund==='ungueltiger zug'||d.grund==='ungueltige wand'||d.grund==='keine waende uebrig'||d.grund==='match beendet'){
+        pendingWsRef.current=null;
+        try{WSNET.requestSync();}catch(e){}
+      }
+    }else if(d.type==='reconnect_failed'){
+      // Raum existiert nicht mehr (Server-Neustart oder aufgeraeumt nach langem Doppel-Disconnect)
+      const sc2=S.current;
+      if(sc2.gameMode==='online'&&sc2.screen==='game'&&!sc2.winner){
+        // Laufendes Match unrettbar -> ehrlich beenden statt ewig "Gegner ist dran" zu zeigen
+        try{WSNET.close();}catch(e){}
+        setFlash(t('wsRoomGone'));
+        setScreen('menu');setGameMode(null);setLobbyId(null);
+      }else if(sc2.winner){
+        try{WSNET.close();}catch(e){} // Match vorbei, Raum weg -> nichts mehr zu retten
+      }else if(WSNET.roomId){
+        // Warteraum: Raum auf dem (neu gestarteten) Server einfach frisch anlegen/beitreten
+        if(WSNET.role==='A')WSNET._send({type:'create_room',roomId:WSNET.roomId,settings:WSNET.settings||{}});
+        else WSNET._send({type:'join_room',code:WSNET.roomId});
+      }
     }
   };
 
@@ -9227,7 +9261,7 @@ function App(){
       )}
 
       {/* Eigener Reconnect-Overlay: wenn EIGENE Verbindung weg */}
-      {!serverOnline&&gameMode==='online'&&!winner&&(
+      {(!serverOnline||(WSNET.roomId&&!wsConn))&&gameMode==='online'&&!winner&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(8px)',
           WebkitBackdropFilter:'blur(8px)',zIndex:600,display:'flex',flexDirection:'column',
           alignItems:'center',justifyContent:'center',gap:16,padding:24}}>
