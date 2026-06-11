@@ -674,6 +674,33 @@ function getDisplayName(account){return account?account.name:GUEST_ID;}
 var WW_URL='wss://wrongway-server-production.up.railway.app';
 var WS_ENABLED=(function(){try{return new URLSearchParams(window.location.search).get('ws')!=='0';}catch(e){return true;}})();
 var WS_DEBUG=(function(){try{return new URLSearchParams(window.location.search).get('wsdebug')==='1';}catch(e){return false;}})();
+// ── DB-Download-Messung (?dbstats=1): zaehlt empfangene Firebase-Bytes je Pfad, Overlay unten links.
+// Damit finden wir die echten Download-Kostentreiber statt zu raten. Ohne URL-Param: komplett inaktiv.
+var DB_STATS_ON=(function(){try{return new URLSearchParams(window.location.search).get('dbstats')==='1';}catch(e){return false;}})();
+var DLSTAT={total:0,start:Date.now(),paths:{}};
+function dlTrack(key,val){
+  if(!DB_STATS_ON)return;
+  try{
+    var n=(val===null||val===undefined)?4:JSON.stringify(val).length;
+    DLSTAT.total+=n;
+    var p=String(key)
+      .replace(/^barricade_lobby_(?!list).+$/,'barricade_lobby_*')
+      .replace(/^barricade_game_.+$/,'barricade_game_*')
+      .replace(/^barricade_chat_.+$/,'barricade_chat_*')
+      .replace(/^barricade_hb_.+$/,'barricade_hb_*')
+      .replace(/^barricade_code_.+$/,'barricade_code_*')
+      .replace(/^(ww_profiles|ww_presence|ww_invites|ww_freq|ww_usernames|ww_friends|ww_leaderboard|ww_spec|ww_spec_emote)\/.+$/,'$1/*');
+    if(!DLSTAT.paths[p])DLSTAT.paths[p]={b:0,c:0};
+    DLSTAT.paths[p].b+=n;DLSTAT.paths[p].c++;
+    var el=document.getElementById('dbstats');
+    if(!el){el=document.createElement('div');el.id='dbstats';el.style.cssText='position:fixed;bottom:6px;left:6px;z-index:999999;background:rgba(0,0,0,0.85);color:#fbbf24;font:10px monospace;padding:5px 9px;border-radius:6px;max-width:86vw;pointer-events:none;white-space:pre;line-height:1.5;';if(document.body)document.body.appendChild(el);}
+    var mins=Math.max(1,(Date.now()-DLSTAT.start)/60000);
+    var rows=Object.keys(DLSTAT.paths).map(function(k){return [k,DLSTAT.paths[k]];})
+      .sort(function(a,b){return b[1].b-a[1].b;}).slice(0,8)
+      .map(function(e){return (e[1].b/1024).toFixed(1)+'KB x'+e[1].c+'  '+e[0];});
+    if(el)el.textContent='DB: '+(DLSTAT.total/1024).toFixed(1)+'KB ('+(DLSTAT.total/1024/mins).toFixed(1)+'KB/min)\n'+rows.join('\n');
+  }catch(e){}
+}
 var WSNET={
   sock:null, token:null, roomId:null, role:null, onState:null, lastRecv:0, pongSeen:false, _hb:null,
   connect:function(roomId,role,onState){
@@ -2105,6 +2132,7 @@ async function stoGet(k){
   try{
     const snap=await window.db.ref(k).once('value');
     const v=snap.val();
+    dlTrack(k,v);
     return v?JSON.parse(v):null;
   }catch(e){console.error('FB GET fail',k,e);window.lastFbError=e.message;return null;}
 }
@@ -2130,6 +2158,7 @@ async function stoGetChildren(k){
   try{
     const snap=await window.db.ref(k).once('value');
     const v=snap.val();if(!v)return{};
+    dlTrack(k,v);
     if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return{};}}
     const out={};
     for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
@@ -2392,6 +2421,7 @@ async function getPresenceMany(keys){
     try{
       const snap=await window.db.ref(PRESENCE_KEY(k)).once('value');
       const p=snap.val();
+      dlTrack('ww_presence/x',p);
       const isOnline=p&&p.online&&(Date.now()-p.lastSeen<90000);
       res[k]={
         status:isOnline?(p.inGame?'in_game':'online'):'offline',
@@ -3616,8 +3646,14 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
     setLoading(true);
     try{
       if(!window.db){setLoading(false);return;}
-      const snap=await window.db.ref('ww_leaderboard').once('value');
-      setRaw(snap.val()||{});
+      // Nur Top 100 je Modus laden statt des KOMPLETTEN Knotens (massive Download-Kosten
+      // bei vielen registrierten Spielern). Benoetigt .indexOn in den Firebase-Regeln!
+      const [s1,s2]=await Promise.all([
+        window.db.ref('ww_leaderboard').orderByChild('classic/rating').limitToLast(100).once('value'),
+        window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value')
+      ]);
+      setRaw(Object.assign({},s1.val()||{},s2.val()||{}));
+      dlTrack('ww_leaderboard',s1.val());dlTrack('ww_leaderboard',s2.val());
     }catch(e){console.warn('Leaderboard load error',e);}
     setLoading(false);
   };
@@ -4149,6 +4185,7 @@ function App(){
         if(cancelled)return;
         const pv=snapPv.val()||{};
         const ig=snapIg.val()||{};
+        dlTrack('ww_pv2',pv);dlTrack('ww_ig',ig);
         setGlobalStats({online:Object.keys(pv).length,inGame:Object.keys(ig).length});
       }catch(e){}
     };
@@ -4203,6 +4240,7 @@ function App(){
     const cb=ref.on('value',snap=>{
       if(cancelled)return;
       const lob=snap.val();
+      dlTrack('barricade_lobby_x',lob);
       if(!lob)return;
       const players=Object.keys(lob.players||{});
       if(players.length>=2){
@@ -4236,7 +4274,7 @@ function App(){
       if(inv&&!cancelled&&Date.now()-inv.ts<60000)setPendingInvite(inv);
       else if(!cancelled)setPendingInvite(null);
     };
-    poll();const iv=setInterval(poll,1500);
+    poll();const iv=setInterval(poll,5000); // 1,5s -> 5s: Einladung ist 60s gueltig, spart Dauerlast
     return()=>{cancelled=true;clearInterval(iv);};
   },[account,screen]);
   // Freundschaftsanfragen pollen (Badge im Menü)
@@ -4248,6 +4286,7 @@ function App(){
       try{
         const snap=await window.db.ref(FR_KEY(account.key)).once('value');
         const v=snap.val()||{};
+        dlTrack('ww_freq/x',v);
         if(!cancelled)setFriendReqCount(Object.keys(v).length);
       }catch(e){}
     };
@@ -4404,12 +4443,14 @@ function App(){
       // Einmalig laden für schnellen Start
       ref.once('value',snap=>{
         const v=snap.val();
+        dlTrack('barricade_admin_config',v);
         if(v){try{setAdminCfg(mergeAdminCfg(JSON.parse(v)));}catch(e){}}
         else setAdminCfg(DEFAULT_ADMIN_CFG);
         setAdminCfgReady(true);
         // Danach live updates
         cb=ref.on('value',snap2=>{
           const v2=snap2.val();
+          dlTrack('barricade_admin_config',v2);
           if(v2){try{setAdminCfg(mergeAdminCfg(JSON.parse(v2)));}catch(e){}}
         });
       });
@@ -4428,6 +4469,7 @@ function App(){
     var bcRef=window.db.ref('ww_broadcasts');
     var bcCb=bcRef.on('value',function(snap){
       var val=snap.val();
+      dlTrack('ww_broadcasts',val);
       if(!val){setBroadcasts([]);return;}
       var now=Date.now();
       var list=Object.entries(val).map(function(e){return Object.assign({id:e[0]},e[1]);})
@@ -5384,6 +5426,7 @@ function App(){
     const ref=window.db.ref(`barricade_game_${lobbyId}`);
     const cb=ref.on('value',snap=>{
       const v=snap.val();if(!v)return;
+      dlTrack('barricade_game_'+lobbyId,v);
       let gs;try{gs=JSON.parse(v);}catch{return;}
       // Robuste Filterung: Updates aus alter Runde oder mit weniger moves ignorieren.
       // Clock-Skew-sicher (kein Date.now()-Vergleich mehr).
@@ -5577,6 +5620,7 @@ function App(){
   },[gameMode,lobbyId,screen]);
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
+    if(WSNET.roomId)return; // WS-Match: Server ueberwacht Verbindungen selbst, kein Firebase-Heartbeat
     const myRef=window.db.ref(`barricade_hb_${lobbyId}/${onlineRole}`);
     const send=()=>myRef.set(Date.now());
     send();
@@ -5591,6 +5635,7 @@ function App(){
 
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
+    if(WSNET.roomId)return; // WS-Match: kein Firebase-Gegner-Heartbeat
     const oppRole=onlineRole==='A'?'B':'A';
     oppLastSeenRef.current=Date.now();
     const ref=window.db.ref(`barricade_hb_${lobbyId}/${oppRole}`);
@@ -5607,6 +5652,7 @@ function App(){
 
   useEffect(()=>{
     if(gameMode!=='online'||screen!=='game'||winner){setOppCountdown(null);return;}
+    if(WSNET.roomId){setOppCountdown(null);return;} // WS-Match: NUR der Server entscheidet Disconnect-Forfeits
     let lastTick=Date.now();
     const iv=setInterval(()=>{
       const nowT=Date.now();
@@ -5706,6 +5752,9 @@ function App(){
     if(screen!=='waiting'&&screen!=='online')return;
     let gameStarted=false;
     const poll=async()=>{
+      // Volle Lobby-Liste nur lesen wenn sie auch angezeigt wird (Online-Screen).
+      // Im Wartescreen wurde sie vorher alle 2s sinnlos mitgeladen (Download-Kosten).
+      if(screen==='online'){
       const list=await stoGet('barricade_lobby_list');
       const now=Date.now();
       const all=list||[];
@@ -5719,6 +5768,7 @@ function App(){
         const keep=all.filter(l=>now-l.ts<45000);
         await stoSet('barricade_lobby_list',keep);
         for(const l of dead){await stoDel(`barricade_lobby_${l.id}`);}
+      }
       }
       if(gameStarted)return;
       if(screen==='waiting'&&lobbyId&&onlineRole==='A'){
@@ -5750,6 +5800,7 @@ function App(){
   // ── Host-Heartbeat: hält die Lobby in der Liste am Leben solange der Host wartet ──
   useEffect(()=>{
     if(screen!=='waiting'||onlineRole!=='A'||!lobbyId)return;
+    let hbCount=0;
     const hb=async()=>{
       // Transaction: nur ts aktualisieren — guestId NIEMALS ueberschreiben,
       // sonst geht ein gerade beigetretener Gast wieder verloren (Connection haengt).
@@ -5764,8 +5815,10 @@ function App(){
         if(res&&res.snapshot&&res.snapshot.val()){try{lobby=JSON.parse(res.snapshot.val());}catch(e){}}
       }catch(e){}
       if(!lobby)return;
-      // Nur öffentliche Lobbys stehen in der Liste
-      if(!lobby.isPrivate){
+      // Nur öffentliche Lobbys stehen in der Liste; volle Liste nur jedes 3. Mal (alle 9s)
+      // lesen+schreiben statt alle 3s — Anzeigefenster ist 20s, bleibt sicher. Spart Downloads.
+      hbCount++;
+      if(!lobby.isPrivate&&hbCount%3===1){
         const list=await stoGet('barricade_lobby_list')||[];
         const updated=list.map(l=>l.id===lobbyId?{...l,ts:Date.now()}:l);
         await stoSet('barricade_lobby_list',updated);
@@ -5795,6 +5848,7 @@ function App(){
     const ref=window.db.ref('barricade_chat_'+lobbyId);
     const cb=ref.on('value',snap=>{
       const v=snap.val();
+      dlTrack('barricade_chat_'+lobbyId,v);
       let list=[];
       if(v){try{list=JSON.parse(v)||[];}catch(e){list=[];}}
       setChatMsgs(list);
