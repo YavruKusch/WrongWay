@@ -704,29 +704,74 @@ function dlTrack(key,val){
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, lastRecv:0, pongSeen:false, _hb:null,
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null,
   connect:function(roomId,role,onState,settings){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.token=null; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
+    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.meta=null; this.token=null; this._jr=false; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
+  },
+  // Lobby als Host eroeffnen (Raum-ID = oeffentliche ID oder privater Code). Socket wird wiederverwendet.
+  openLobby:function(roomId,settings,meta,onState){
+    this.roomId=roomId; this.role='A'; this.onState=onState; this.settings=settings||{}; this.meta=meta||null; this.token=null; this._jr=false; this.lastRecv=Date.now();
+    this._dbg('lobby '+roomId);
+    if(this.sock&&this.sock.readyState===1){ this._send(this._createMsg()); }
+    else{ this._open(); }
+    this._startHb();
+  },
+  // Raum per Code beitreten (Liste, Code-Eingabe, Einladung, ?join-Link)
+  joinRoom:function(code,meta,onState){
+    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this._jr=false; this.lastRecv=Date.now();
+    this._dbg('beitritt '+code);
+    if(this.sock&&this.sock.readyState===1){ this._send(this._joinMsg()); }
+    else{ this._open(); }
+    this._startHb();
+  },
+  _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
+  _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
+  // Warteraum bewusst verlassen: Server raeumt sofort auf, Code wird frei
+  leaveRoom:function(){
+    try{ this._send({type:'leave_room'}); }catch(e){}
+    this.roomId=null; this.role=null; this.settings=null; this.meta=null; this.token=null;
+    if(!this.browseOn){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  },
+  // Lobby-Liste beobachten: 4s-Poll, nur bei sichtbarem Tab (WS-Traffic ist quasi kostenlos)
+  startBrowse:function(onLobbies,onState){
+    var self=this;
+    self.browseOn=true; self.onLobbies=onLobbies;
+    if(onState&&!self.roomId)self.onState=onState;
+    self._open(); self._startHb();
+    if(!self._lp){
+      var tick=function(){ if(!self.browseOn)return; try{ if(document.hidden)return; }catch(e){} self._send({type:'list_lobbies'}); };
+      if(self.sock&&self.sock.readyState===1)tick();
+      self._lp=setInterval(tick,4000);
+    }
+  },
+  stopBrowse:function(){
+    this.browseOn=false; this.onLobbies=null;
+    if(this._lp){ clearInterval(this._lp); this._lp=null; }
+    if(!this.roomId){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
   _open:function(){
     var self=this;
-    if(!self.roomId)return;
+    if(!self.roomId&&!self.browseOn)return;
     if(self.sock&&(self.sock.readyState===0||self.sock.readyState===1))return;
     try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
     self.sock.onopen=function(){
       self._dbg('socket offen'); self.lastRecv=Date.now();
       if(self.onState)self.onState({type:'ws_open'});
-      if(self.token){ self._send({type:'reconnect',token:self.token}); }
-      else if(self.role==='A'){ self._send({type:'create_room',roomId:self.roomId,settings:self.settings||{}}); }
-      else { self._send({type:'join_room',code:self.roomId}); }
+      if(self.roomId){
+        if(self.token){ self._send({type:'reconnect',token:self.token}); }
+        else if(self.role==='A'){ self._send(self._createMsg()); }
+        else { self._send(self._joinMsg()); }
+      }
+      if(self.browseOn){ self._send({type:'list_lobbies'}); }
     };
     self.sock.onmessage=function(ev){
       self.lastRecv=Date.now();
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
       if(d.type==='pong'){ self.pongSeen=true; return; }
-      if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId){ setTimeout(function(){ self._send({type:'join_room',code:self.roomId}); },1000); return; }
+      if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
+      if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId&&!self._jr){ self._jr=true; setTimeout(function(){ if(self.roomId&&self.role==='B')self._send(self._joinMsg()); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
       if(d.type==='match_start')self._dbg('MATCH laeuft!');
       if(d.type==='state'&&d.winner!==undefined&&d.winner!==null)self._dbg('Runde vorbei');
@@ -735,14 +780,14 @@ var WSNET={
       if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
       if(self.onState)self.onState(d);
     };
-    self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId){ setTimeout(function(){ self._open(); },1500); } };
+    self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn){ setTimeout(function(){ self._open(); },1500); } };
   },
   _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
   _startHb:function(){
     var self=this;
     if(self._hb)return;
     self._hb=setInterval(function(){
-      if(!self.roomId)return;
+      if(!self.roomId&&!self.browseOn)return;
       if(self.sock&&self.sock.readyState===1){
         try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
         // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
@@ -760,10 +805,10 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this._stopHb(); this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  close:function(){ this._stopHb(); if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&WSNET.roomId){ if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else { try{ WSNET.requestSync(); }catch(e){} } } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else { try{ WSNET._send({type:'list_lobbies'}); }catch(e){} } }); }catch(e){}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
@@ -4065,6 +4110,11 @@ function App(){
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
   const[serverOnline,setServerOnline]=useState(true);
+  // WS-Lobby: Router fuer Server-Nachrichten VOR Match-Start. Das Trampolin ist stabil,
+  // der Inhalt wird pro Render frisch zugewiesen (keine Stale-Closures).
+  const wsLobbyMsgRef=useRef(null);
+  const wsLobbyTrampRef=useRef(null);
+  if(!wsLobbyTrampRef.current){wsLobbyTrampRef.current=function(d){if(wsLobbyMsgRef.current)wsLobbyMsgRef.current(d);};}
   const[wsConn,setWsConn]=useState(true); // WS-Socket-Status (nur in WS-Matches relevant)
   // Firebase Verbindungsstatus ueberwachen
   useEffect(()=>{
@@ -4292,6 +4342,7 @@ function App(){
     };
   },[gameMode,screen,adminCfg.maintenance]);
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: Trampolin uebernimmt den Match-Start
     if(!friendLobbyState||!window.db)return;
     let cancelled=false;
     const ref=window.db.ref('barricade_lobby_'+friendLobbyState.code);
@@ -4355,16 +4406,23 @@ function App(){
   const doInviteFriend=async(friendKey,friendName)=>{
     if(!account)return;
     const code=randId(4);
-    const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,duelSize:duelSize,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
-    lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
-    await stoSet('barricade_lobby_'+code,lobby);
+    if(WS_ENABLED){
+      // Privater WS-Raum; Einladung weiter ueber Firebase (ww_invites)
+      const fbm=(chaosMode||hammerMode||dropMode||(gameTimeMode&&gameTimeMode.indexOf('blitz-')===0))?1:0;
+      WSNET.openLobby(code,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:1},{name:account.name,akey:account.key},wsLobbyTrampRef.current);
+    }else{
+      const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,duelSize:duelSize,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
+      lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
+      await stoSet('barricade_lobby_'+code,lobby);
+    }
     await sendLobbyInvite(friendKey,account.key,account.name,code,'1v1');
     setFriendLobbyState({code:code,friendKey:friendKey,friendName:friendName});
     setNavDir('fwd');setScreen('friends');
   };
   const doCancelFriendInvite=async()=>{
     if(!friendLobbyState)return;
-    await stoDel('barricade_lobby_'+friendLobbyState.code);
+    if(WS_ENABLED){try{WSNET.leaveRoom();}catch(e){}}
+    else await stoDel('barricade_lobby_'+friendLobbyState.code);
     await clearInvite(friendLobbyState.friendKey);
     setFriendLobbyState(null);
   };
@@ -4409,6 +4467,14 @@ function App(){
     const code=pendingInvite.code;
     await clearInvite(account.key);
     setPendingInvite(null);
+    if(WS_ENABLED){
+      // WS-Modus: direkt dem privaten Raum beitreten, Trampolin uebernimmt
+      setLobbyId(code);setOnlineRole('B');setPrivateCode(null);
+      joinCancelledRef.current=false;
+      setNavDir('fwd');setScreen('waiting');
+      WSNET.joinRoom(code,{name:account.name,akey:account.key},wsLobbyTrampRef.current);
+      return;
+    }
     try{
       const lob=await stoGet('barricade_lobby_'+code);
       if(lob){
@@ -5002,13 +5068,16 @@ function App(){
     }
   };
 
-  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride,forcedTurn)=>{
+  const initGame=(mode,role='A',lid=null,isRematch=false,tmOverride,ranked=false,mapOverride,sizeOverride,forcedTurn,wsKeep=false)=>{
     if(WS_ENABLED)WSNET._dbg('start mode='+mode);
     setIsRanked(ranked);
     setGameMode(mode);setOnlineRole(role);setLobbyId(lid);
+    // wsGo = Raum besteht bereits seit der Lobby-Phase auf dem WS-Server (match_start kam vom Server).
+    // Der Server ist hier die Wahrheit: lokale Modus-Reste (Hammer/Chaos/Drop vom Gast) werden ignoriert.
+    const wsGo=wsKeep&&WS_ENABLED&&mode==='online'&&WSNET.roomId&&WSNET.roomId===lid;
     // Ranked = faires Standard-Regelwerk: keine Modifikatoren (Casual-Einstellungen bleiben erhalten)
-    const effHammer=ranked?false:hammerMode;
-    const effDrop=ranked?false:dropMode;
+    const effHammer=(ranked||wsGo)?false:hammerMode;
+    const effDrop=(ranked||wsGo)?false:dropMode;
     const tm=tmOverride!==undefined?tmOverride:gameTimeMode;
     if(tmOverride!==undefined)setGameTimeMode(tmOverride);
     // Spawn-Positionen je nach Spielfeld (Duell: A unten zentriert, B oben zentriert)
@@ -5031,7 +5100,10 @@ function App(){
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
     // Server-autoritative Anbindung fuer Race UND Duell (inkl. Classic-Zeit 3/5/8).
     // Ausgeschlossen: Ranked, Hammer, Chaos, Zufalls-Waende (Drop), Blitz-Zugzeit — laufen weiter ueber Firebase.
-    if(WS_ENABLED&&mode==='online'&&!ranked&&!effHammer&&!chaosMode&&!effDrop&&(!tm||tm.indexOf('blitz-')!==0)){
+    if(wsGo){
+      // Raum existiert schon seit der Lobby -> nur den Handler aufs laufende Spiel umhaengen.
+      WSNET.onState=applyServerState;
+    }else if(WS_ENABLED&&mode==='online'&&!ranked&&!effHammer&&!chaosMode&&!effDrop&&(!tm||tm.indexOf('blitz-')!==0)){
       // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
       if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
       WSNET.connect(lid,role,applyServerState,{map:mapToUse,size:sizeToUse,barr:gameBarr});
@@ -5066,6 +5138,76 @@ function App(){
       setGamePresence(presKey,true,lid);
     }
     setScreen('game');
+  };
+
+  // ── WS-Lobby-Router: verarbeitet Server-Nachrichten waehrend Lobby/Warteschirm ──
+  // Plain-Assignment pro Render (kein Hook, kein TDZ) — alle referenzierten Funktionen existieren hier bereits.
+  wsLobbyMsgRef.current=function(d){
+    if(!d||!d.type)return;
+    if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
+      var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
+      var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
+      var tmS=(st.tm!==undefined&&st.tm!==null)?st.tm:'none';
+      var brS=parseInt(st.barr,10);if(!(brS>=1&&brS<=25))brS=10; setGameBarr(brS);
+      setChaosMode(!!st.ch);setHammerMode(!!st.hm);setDropMode(st.dp!==undefined?st.dp:false);
+      var nm=d.namen||[];var ak=d.akeys||[];
+      setPlayerNames({A:nm[0]||'',B:nm[1]||''});
+      setOppAccountKey(role==='A'?(ak[1]||null):(ak[0]||null));
+      setPendingInvite(null);setFriendLobbyState(null);setPrivateCode(null);setFlash('');
+      setNavDir('fwd');
+      initGame('online',role,WSNET.roomId,false,tmS,false,mapS,sizeS,d.amZug===0?'A':'B',true);
+      applyServerState(d); return;
+    }
+    if(d.type==='lobby_ready'){
+      // Firebase-Modus-Match: Server hat gepaart, Raum geloescht — Match laeuft klassisch ueber barricade_game_
+      var stF=d.settings||{};var nmF=d.namen||[];var akF=d.akeys||[];
+      var codeF=d.code||WSNET.roomId; var myNr=d.deineNummer;
+      try{WSNET.close();}catch(e){}
+      setPendingInvite(null);setFriendLobbyState(null);setPrivateCode(null);setFlash('');
+      var mapF=stF.map==='duel'?'duel':'classic'; var dsF=stF.size==='blitz'?'blitz':'standard';
+      var brF=parseInt(stF.barr,10);if(!(brF>=1&&brF<=25))brF=10;
+      if(myNr===0){
+        // Host: Spielzustand anlegen wie frueher der Warteschirm-Poll
+        CUR_MAP=mapF;applyBoardSize(mapF,dsF);
+        const spF=startPos(mapF);
+        const gsF={pA:{...spF.A},pB:{...spF.B},walls:[],barrLeft:{A:brF,B:brF},turn:Math.random()<0.5?'A':'B',winner:null,moves:[],rematchA:false,rematchB:false,rematchDeclined:null,gameNum:1,chaosItem:null,hammers:hammerMode?makeHammers():[],hammerHeld:{A:false,B:false},tm:gameTimeMode,map:mapF,duelSize:dsF,nameA:nmF[0]||'',nameB:nmF[1]||'',accountKeyA:akF[0]||null,accountKeyB:akF[1]||null,lastUpdated:Date.now()};
+        stoSet('barricade_game_'+codeF,gsF);
+        lastOnlineTs.current=gsF.lastUpdated;
+        setPlayerNames({A:gsF.nameA,B:gsF.nameB}); setOppAccountKey(akF[1]||null);
+        setNavDir('fwd');
+        initGame('online','A',codeF,false,undefined,false,mapF,dsF,gsF.turn);
+      }else{
+        // Gast: Settings uebernehmen, dann auf Spielzustand des Hosts warten
+        if(stF.tm!==undefined)setGameTimeMode(stF.tm);
+        setChaosMode(!!stF.ch);setGameBarr(brF);
+        setDropMode(stF.dp!==undefined?stF.dp:false); setHammerMode(!!stF.hm);
+        if(stF.hd!==undefined)setHammerDrops(stF.hd);
+        setSelectedMap(mapF);setDuelSize(dsF);
+        setLobbyId(codeF);setOnlineRole('B');
+        setPlayerNames({A:nmF[0]||'',B:nmF[1]||''}); setOppAccountKey(akF[0]||null);
+        if(S.current.screen!=='waiting'){setNavDir('fwd');setScreen('waiting');}
+        waitForGame(codeF,30000).then(function(gsW){
+          if(joinCancelledRef.current)return;
+          if(gsW){ lastOnlineTs.current=gsW.lastUpdated;
+            if(gsW.nameA||gsW.nameB)setPlayerNames({A:gsW.nameA||'',B:gsW.nameB||''});
+            setOppAccountKey(gsW.accountKeyA||null);
+            initGame('online','B',codeF,false,gsW.tm,false,gsW.map||mapF,gsW.duelSize||dsF,gsW.turn);
+          }else if(S.current.screen==='waiting'){ setFlash(t('hostNotResponding')); setNavDir('back');setScreen('online'); }
+        });
+      } return;
+    }
+    if(d.type==='error'){
+      if((d.grund==='raum nicht gefunden'||d.grund==='raum nicht verfuegbar'||d.grund==='raum voll')&&S.current.screen==='waiting'&&S.current.onlineRole==='B'){
+        try{WSNET.leaveRoom();}catch(e){}
+        setFlash(d.grund==='raum voll'?t('lobbyFull'):t('codeNotFound'));
+        setNavDir('back');setScreen('online');
+      } return;
+    }
+    if(d.type==='reconnect_failed'){
+      // Server kennt Token nicht mehr (Restart) — Raum neu anlegen/beitreten
+      if(WSNET.roomId){ if(WSNET.role==='A')WSNET._send(WSNET._createMsg()); else WSNET._send(WSNET._joinMsg()); }
+      return;
+    }
   };
 
   // ── Sync online ──
@@ -5811,6 +5953,7 @@ function App(){
 
   // ── Menü: tote Lobbys einmalig bereinigen ──
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: Server raeumt Raeume selbst auf
     if(screen!=='menu')return;
     if(Date.now()-LOBBY_CLEAN_TS.t<60000)return; // max. 1x/min — Menue-Rueckkehr loest sonst jedes Mal Downloads aus
     var cleanup=async function(){
@@ -5835,6 +5978,7 @@ function App(){
   // Lokaler 5s-Refilter haelt die 20s-Frische-Anzeige aktuell OHNE neue Downloads.
   const lobbyListRawRef=useRef([]);
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: Browse-Effekt unten uebernimmt
     if(screen!=='online')return;
     const ref=window.db.ref('barricade_lobby_list');
     const apply=()=>{
@@ -5870,8 +6014,23 @@ function App(){
     return()=>{abhaengen();document.removeEventListener('visibilitychange',onVis);clearInterval(iv);};
   },[screen]);
 
+  // ── WS-Lobby-Liste: 4s-Poll ueber WebSocket (Traffic praktisch kostenlos) ──
+  useEffect(()=>{
+    if(!WS_ENABLED||screen!=='online')return;
+    setLobbyList([]);
+    WSNET.startBrowse(function(lobbies){
+      var now=Date.now();
+      setLobbyList((lobbies||[]).map(function(L){
+        var st=L.settings||{};
+        return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),tm:st.tm,ch:st.ch?1:0,br:st.barr,map:st.map,dp:st.dp,hm:st.hm?1:0};
+      }));
+    },wsLobbyTrampRef.current);
+    return function(){WSNET.stopBrowse();};
+  },[screen]);
+
   // ── Wartescreen-Poll (nur Host: Gast-Beitritt erkennen) ──
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: match_start/lobby_ready kommen vom Server
     if(screen!=='waiting')return;
     let gameStarted=false;
     const poll=async()=>{
@@ -5905,6 +6064,7 @@ function App(){
 
   // ── Host-Heartbeat: hält die Lobby in der Liste am Leben solange der Host wartet ──
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: offener Socket = Heartbeat
     if(screen!=='waiting'||onlineRole!=='A'||!lobbyId)return;
     let hbCount=0;
     const hb=async()=>{
@@ -5937,6 +6097,7 @@ function App(){
 
   // ── Cleanup: Lobby aus der Liste entfernen wenn Host ins Spiel startet ──
   useEffect(()=>{
+    if(WS_ENABLED)return; // WS-Modus: Server entfernt Raum beim Start selbst
     if(gameMode!=='online'||onlineRole!=='A'||screen!=='game'||!lobbyId)return;
     const cleanup=async()=>{
       const list=await stoGet('barricade_lobby_list')||[];
@@ -5946,6 +6107,20 @@ function App(){
     };
     cleanup();
   },[gameMode,onlineRole,screen,lobbyId]);
+
+  // ── WS-Gast-Warteschutz: kommt nach 25s kein Match, zurueck zur Lobby-Liste ──
+  useEffect(()=>{
+    if(!WS_ENABLED||screen!=='waiting')return;
+    if(onlineRole!=='B')return;
+    const tmo=setTimeout(function(){
+      if(S.current.screen!=='waiting')return;
+      if(!WSNET.roomId)return; // lobby_ready-Uebergabe laeuft bereits (waitForGame hat eigenes Timeout)
+      try{WSNET.leaveRoom();}catch(e){}
+      setFlash(t('hostNotResponding'));
+      setNavDir('back');setScreen('online');
+    },25000);
+    return()=>clearTimeout(tmo);
+  },[screen,onlineRole]);
 
   // ── Game-Chat Listener (pro Lobby) ──
   useEffect(()=>{
@@ -5992,6 +6167,16 @@ function App(){
   // ── Create lobby ──
   const createLobby=async(isPrivate)=>{
     setFlash('');
+    if(WS_ENABLED){
+      // WS-Modus: Raum auf dem Server, Code = Raum-ID (privat kurz, oeffentlich lang)
+      const id=isPrivate?randId(4):randId(6);
+      const fbm=(chaosMode||hammerMode||dropMode||(gameTimeMode&&gameTimeMode.indexOf('blitz-')===0))?1:0;
+      WSNET.openLobby(id,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:isPrivate?1:0},{name:getDisplayName(account),akey:account?account.key:null},wsLobbyTrampRef.current);
+      setLobbyId(id);setOnlineRole('A');
+      setPrivateCode(isPrivate?id:null);
+      setScreen('waiting');
+      return;
+    }
     const id=randId(6);
     const code=isPrivate?randId(4):null;
     const cfg={tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,map:selectedMap,duelSize:duelSize};
@@ -6025,6 +6210,13 @@ function App(){
 
   const joinLobby=async(id)=>{
     joinCancelledRef.current=false;
+    if(WS_ENABLED){
+      setFlash('');
+      setLobbyId(id);setOnlineRole('B');setPrivateCode(null);
+      setNavDir('fwd');setScreen('waiting');
+      WSNET.joinRoom(id,{name:getDisplayName(account),akey:account?account.key:null},wsLobbyTrampRef.current);
+      return;
+    }
     // Atomarer Beitritt via Transaction — verhindert dass der Host-Heartbeat
     // den gerade gesetzten guestId wieder ueberschreibt (Ursache fuer "Lobby voll").
     // Gibt {lobby} bei Erfolg, sonst {reason:'gone'|'full'} zurueck.
@@ -6095,6 +6287,7 @@ function App(){
 
   const joinByCode=async()=>{
     const code=codeInput.trim().toUpperCase();if(!code){return;}
+    if(WS_ENABLED){await joinLobby(code);return;} // WS-Modus: Code = Raum-ID
     const ref=await stoGet(`barricade_code_${code}`);
     if(!ref){setFlash(t('codeNotFound'));return;}
     await joinLobby(ref.id);
@@ -8429,7 +8622,9 @@ function App(){
         </div>
         <button onClick={async()=>{
           joinCancelledRef.current=true;
-          if(onlineRole==='A'){
+          if(WS_ENABLED&&WSNET.roomId){
+            try{WSNET.leaveRoom();}catch(e){} // Server raeumt Raum/Slot auf
+          }else if(onlineRole==='A'){
             await cleanupLobby(lobbyId);
           }else{
             // Guest: nur guestId entfernen, Host-Lobby bleibt bestehen
