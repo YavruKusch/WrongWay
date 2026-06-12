@@ -801,6 +801,7 @@ var WSNET={
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
   timeout:function(){ this._send({type:'timeout'}); },
+  skipTurn:function(){ this._send({type:'skip'}); },
   requestSync:function(){ this._send({type:'sync'}); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
@@ -882,7 +883,7 @@ const I18N={
     chooseDifficulty:'Choose difficulty',easy:'Easy',normal:'Normal',hard:'Hard',
     easyDesc:'Casual game',normalDesc:'Balanced challenge',hardDesc:'For experienced players',
     playOnline:'Play Online',publicLobby:'+ Public Lobby',privateLobby:'Private Lobby',joinWithCode:'JOIN WITH CODE',join:'Join',
-    lobbyFull:'Lobby is full!',lobbyGone:'Lobby no longer available.',codeNotFound:'Code not found!',hostNotResponding:'Host not responding.',
+    turnSkipped:'Time up - turn skipped!',lobbyFull:'Lobby is full!',lobbyGone:'Lobby no longer available.',codeNotFound:'Code not found!',hostNotResponding:'Host not responding.',
     firebaseError:'Firebase error: ',checkRules:' — Check database rules!',openLobbies:'OPEN LOBBIES',lobby:'Lobby',joinSuffix:'Join →',back:'← Back',
     waitingOpponent:'Waiting for opponent...',connecting:'Connecting...',shareCode:'Share the code with your opponent',
     waitingStart:'Waiting for game to start...',cancel:'Cancel',codePrefix:'Code: ',
@@ -908,7 +909,7 @@ const I18N={
     chooseDifficulty:'Schwierigkeit wählen',easy:'Einfach',normal:'Normal',hard:'Schwer',
     easyDesc:'Gemütliches Spiel',normalDesc:'Ausgeglichene Herausforderung',hardDesc:'Für erfahrene Spieler',
     playOnline:'Online spielen',publicLobby:'+ Öffentliche Lobby',privateLobby:'Private Lobby',joinWithCode:'MIT CODE BEITRETEN',join:'Beitreten',
-    lobbyFull:'Lobby ist voll!',lobbyGone:'Lobby nicht mehr verfügbar.',codeNotFound:'Code nicht gefunden!',hostNotResponding:'Host antwortet nicht.',
+    turnSkipped:'Zeit um - Zug verfallen!',lobbyFull:'Lobby ist voll!',lobbyGone:'Lobby nicht mehr verfügbar.',codeNotFound:'Code nicht gefunden!',hostNotResponding:'Host antwortet nicht.',
     firebaseError:'Firebase-Fehler: ',checkRules:' — Datenbank-Regeln prüfen!',openLobbies:'OFFENE LOBBYS',lobby:'Lobby',joinSuffix:'Beitreten →',back:'← Zurück',
     waitingOpponent:'Warte auf Gegner...',connecting:'Verbinde...',shareCode:'Teile den Code mit deinem Gegner',
     waitingStart:'Warte auf Spielstart...',cancel:'Abbrechen',codePrefix:'Code: ',
@@ -934,7 +935,7 @@ const I18N={
     chooseDifficulty:'Zorluk seç',easy:'Kolay',normal:'Normal',hard:'Zor',
     easyDesc:'Rahat oyun',normalDesc:'Dengeli zorluk',hardDesc:'Deneyimli oyuncular için',
     playOnline:'Çevrimiçi Oyna',publicLobby:'+ Genel Lobi',privateLobby:'Özel Lobi',joinWithCode:'KODLA KATIL',join:'Katıl',
-    lobbyFull:'Lobi dolu!',lobbyGone:'Lobi artık mevcut değil.',codeNotFound:'Kod bulunamadı!',hostNotResponding:'Sunucu yanıt vermiyor.',
+    turnSkipped:'Süre doldu - hamle yandı!',lobbyFull:'Lobi dolu!',lobbyGone:'Lobi artık mevcut değil.',codeNotFound:'Kod bulunamadı!',hostNotResponding:'Sunucu yanıt vermiyor.',
     firebaseError:'Firebase hatası: ',checkRules:' — Veritabanı kurallarını kontrol et!',openLobbies:'AÇIK LOBİLER',lobby:'Lobi',joinSuffix:'Katıl →',back:'← Geri',
     waitingOpponent:'Rakip bekleniyor...',connecting:'Bağlanıyor...',shareCode:'Kodu rakibinle paylaş',
     waitingStart:'Oyun başlatılıyor...',cancel:'İptal',codePrefix:'Kod: ',
@@ -960,7 +961,7 @@ const I18N={
     chooseDifficulty:'Choisir la difficulté',easy:'Facile',normal:'Normal',hard:'Difficile',
     easyDesc:'Partie décontractée',normalDesc:'Défi équilibré',hardDesc:'Pour joueurs expérimentés',
     playOnline:'Jouer en ligne',publicLobby:'+ Salon public',privateLobby:'Salon privé',joinWithCode:'REJOINDRE AVEC CODE',join:'Rejoindre',
-    lobbyFull:'Salon plein!',lobbyGone:'Salon non disponible.',codeNotFound:'Code introuvable!',hostNotResponding:"L'hôte ne répond pas.",
+    turnSkipped:'Temps écoulé - tour sauté !',lobbyFull:'Salon plein!',lobbyGone:'Salon non disponible.',codeNotFound:'Code introuvable!',hostNotResponding:"L'hôte ne répond pas.",
     firebaseError:'Erreur Firebase: ',checkRules:' — Vérifie les règles de la base!',openLobbies:'SALONS OUVERTS',lobby:'Salon',joinSuffix:'Rejoindre →',back:'← Retour',
     waitingOpponent:"En attente d'un adversaire...",connecting:'Connexion...',shareCode:'Partage le code avec ton adversaire',
     waitingStart:'En attente du début...',cancel:'Annuler',codePrefix:'Code: ',
@@ -4408,7 +4409,7 @@ function App(){
     const code=randId(4);
     if(WS_ENABLED){
       // Privater WS-Raum; Einladung weiter ueber Firebase (ww_invites)
-      const fbm=(chaosMode||hammerMode||dropMode||(gameTimeMode&&gameTimeMode.indexOf('blitz-')===0))?1:0;
+      const fbm=(chaosMode||hammerMode||dropMode)?1:0;
       WSNET.openLobby(code,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:1},{name:account.name,akey:account.key},wsLobbyTrampRef.current);
     }else{
       const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,duelSize:duelSize,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
@@ -4803,6 +4804,7 @@ function App(){
   const winnerFiredRef=useRef(false);
   const afkTriggerRef=useRef(null); // Ref für triggerWin - vermeidet TDZ in Safari
   const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs)
+  const wsSkipForRef=useRef(0); // WS-Blitz: fuer welche Deadline schon ein skip gesendet wurde (Doppelsende-Schutz)
   const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
@@ -4988,6 +4990,11 @@ function App(){
       if(d.barr){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
       if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
+        // Eigener Zug ist per Blitz-Timer verfallen -> kurzes Feedback
+        setFlash(t('turnSkipped'));
+        setTimeout(function(){ setFlash(function(f){ return f===t('turnSkipped')?'':f; }); },1600);
+      }
       if(d.gaveUp!==undefined&&d.gaveUp!==null)setGaveUp(d.gaveUp===0?'A':'B');
       var mh=S.current.moveHist;
       if(d.lm){
@@ -5098,15 +5105,15 @@ function App(){
       starter=Math.random()<0.5?'A':'B';
     }
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
-    // Server-autoritative Anbindung fuer Race UND Duell (inkl. Classic-Zeit 3/5/8).
-    // Ausgeschlossen: Ranked, Hammer, Chaos, Zufalls-Waende (Drop), Blitz-Zugzeit — laufen weiter ueber Firebase.
+    // Server-autoritative Anbindung fuer Race UND Duell (inkl. Classic-Zeit 3/5/8 und Blitz-Zugzeit 5/8/10s).
+    // Ausgeschlossen: Ranked, Hammer, Chaos, Zufalls-Waende (Drop) — laufen weiter ueber Firebase.
     if(wsGo){
       // Raum existiert schon seit der Lobby -> nur den Handler aufs laufende Spiel umhaengen.
       WSNET.onState=applyServerState;
-    }else if(WS_ENABLED&&mode==='online'&&!ranked&&!effHammer&&!chaosMode&&!effDrop&&(!tm||tm.indexOf('blitz-')!==0)){
+    }else if(WS_ENABLED&&mode==='online'&&!ranked&&!effHammer&&!chaosMode&&!effDrop){
       // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
       if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
-      WSNET.connect(lid,role,applyServerState,{map:mapToUse,size:sizeToUse,barr:gameBarr});
+      WSNET.connect(lid,role,applyServerState,{map:mapToUse,size:sizeToUse,barr:gameBarr,tm:tm});
     }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
     setEloChange(null);
@@ -5293,6 +5300,7 @@ function App(){
     if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
     setAfkTimeLeft(0);
     if(screen!=='game'||gameMode!=='online'||winner)return;
+    if(WSNET.roomId&&gameTimeMode&&gameTimeMode.indexOf('blitz-')===0)return; // WS-Blitz: eigener Zug-Timer-Badge, kein AFK-Countdown daneben
     if(WSNET.roomId){
       // Server beendet den Zug bei Ablauf. Hier nur Countdown anzeigen (fuer beide Spieler).
       turnTimerRef.current=setInterval(function(){
@@ -5434,6 +5442,26 @@ function App(){
     if(winner)return;
     if(!isTimerMode(gameTimeMode))return;
     const isBlitz=gameTimeMode.indexOf('blitz-')===0;
+    if(isBlitz&&WSNET.roomId&&gameMode==='online'){
+      // WS-Blitz: der SERVER skippt autoritativ bei Ablauf (kein Verlust, Zug wechselt).
+      // Hier nur Countdown aus der Server-Deadline anzeigen + Sicherheitsnetz: bei 0
+      // einmalig skip senden (falls die Server-Uhr haengt; Server validiert eh).
+      const ivW=setInterval(()=>{
+        if(S.current.winner||S.current.screen!=='game')return;
+        var ends=wsTurnEndsRef.current;
+        if(!ends){setTurnTimeLeft(getTurnTime(gameTimeMode));return;}
+        var rest=Math.max(0,Math.ceil((ends-Date.now())/1000));
+        setTurnTimeLeft(rest);
+        // Server skippt selbst ~600ms nach Ablauf (Kulanz fuer Zuege in letzter Sekunde).
+        // Erst wenn 900ms nach Deadline IMMER NOCH kein neuer State kam (Skip-Broadcast
+        // verloren / Server-Uhr haengt), einmalig selbst skip schicken. Server validiert eh.
+        if(S.current.turn===S.current.onlineRole&&(Date.now()-ends)>900&&wsSkipForRef.current!==ends){
+          wsSkipForRef.current=ends; // pro Deadline nur ein skip
+          try{WSNET.skipTurn();}catch(e){}
+        }
+      },300);
+      return()=>clearInterval(ivW);
+    }
     const iv=setInterval(()=>{
       if(S.current.winner||S.current.screen!=='game')return;
       let turnExpired=false;
@@ -6170,7 +6198,7 @@ function App(){
     if(WS_ENABLED){
       // WS-Modus: Raum auf dem Server, Code = Raum-ID (privat kurz, oeffentlich lang)
       const id=isPrivate?randId(4):randId(6);
-      const fbm=(chaosMode||hammerMode||dropMode||(gameTimeMode&&gameTimeMode.indexOf('blitz-')===0))?1:0;
+      const fbm=(chaosMode||hammerMode||dropMode)?1:0;
       WSNET.openLobby(id,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:isPrivate?1:0},{name:getDisplayName(account),akey:account?account.key:null},wsLobbyTrampRef.current);
       setLobbyId(id);setOnlineRole('A');
       setPrivateCode(isPrivate?id:null);
