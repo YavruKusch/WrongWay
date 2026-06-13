@@ -1033,6 +1033,7 @@ en:{
   tv2AllReady:'Starts when everyone is ready \u00b7 other team begins',tv2OtherStarts:'Other team begins',
   tv2Removed:'You were removed from the game',tv2RemovedAfk:'3 turns missed in a row',tv2RemovedDc:'Connection lost for too long',
   tv2MateGone:'Your teammate is gone \u2013 reach your goal alone!',tv2LeftGame:'left the game',tv2PlayerDc:'disconnected...',tv2ByForfeit:'by forfeit',
+  tv2RulesTitle:'How 2 vs 2 works',tv2Rule1:'Your team wins when both players reach the other side.',tv2Rule2:'Players take turns, always alternating between the teams.',tv2Rule3:'If a teammate leaves, their partner keeps playing alone.',tv2Rule4:'Barricades are shared within your team \u2013 no one can be fully trapped.',
   modeConfigSub:'Timer, Barricades & Special Modes',
   statWins:'Wins',statWinRate:'Win-%',statStreak:'Streak',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1087,6 +1088,7 @@ de:{
   tv2AllReady:'Startet wenn alle bereit sind \u00b7 anderes Team beginnt',tv2OtherStarts:'Anderes Team beginnt',
   tv2Removed:'Du wurdest aus dem Spiel entfernt',tv2RemovedAfk:'3 Z\u00fcge in Folge verpasst',tv2RemovedDc:'Verbindung zu lange verloren',
   tv2MateGone:'Dein Partner ist weg \u2013 erreiche dein Ziel allein!',tv2LeftGame:'hat das Spiel verlassen',tv2PlayerDc:'getrennt...',tv2ByForfeit:'durch Aufgabe',
+  tv2RulesTitle:'So funktioniert 2 vs 2',tv2Rule1:'Dein Team gewinnt, wenn beide Spieler die andere Seite erreichen.',tv2Rule2:'Es geht reihum, immer abwechselnd zwischen den Teams.',tv2Rule3:'Verl\u00e4sst ein Mitspieler das Spiel, spielt sein Partner allein weiter.',tv2Rule4:'Barrikaden teilt ihr euch im Team \u2013 niemand kann komplett eingesperrt werden.',
   modeConfigSub:'Timer, Barrikaden & Spezial-Modi',
   statWins:'Siege',statWinRate:'Siege-%',statStreak:'Serie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1141,6 +1143,7 @@ tr:{
   tv2AllReady:'Herkes haz\u0131r olunca ba\u015flar \u00b7 di\u011fer tak\u0131m ba\u015flar',tv2OtherStarts:'Di\u011fer tak\u0131m ba\u015flar',
   tv2Removed:'Oyundan \u00e7\u0131kar\u0131ld\u0131n',tv2RemovedAfk:'\u00dcst \u00fcste 3 hamle ka\u00e7\u0131r\u0131ld\u0131',tv2RemovedDc:'Ba\u011flant\u0131 \u00e7ok uzun s\u00fcre koptu',
   tv2MateGone:'Tak\u0131m arkada\u015f\u0131n gitti \u2013 hedefe tek ba\u015f\u0131na ula\u015f!',tv2LeftGame:'oyundan ayr\u0131ld\u0131',tv2PlayerDc:'ba\u011flant\u0131 kesildi...',tv2ByForfeit:'terk nedeniyle',
+  tv2RulesTitle:'2 vs 2 nas\u0131l oynan\u0131r',tv2Rule1:'Her iki oyuncu da kar\u015f\u0131 tarafa ula\u015f\u0131nca tak\u0131m\u0131n kazan\u0131r.',tv2Rule2:'S\u0131ra, tak\u0131mlar aras\u0131nda d\u00f6n\u00fc\u015f\u00fcml\u00fc ilerler.',tv2Rule3:'Bir oyuncu ayr\u0131l\u0131rsa, e\u015fi tek ba\u015f\u0131na oynamaya devam eder.',tv2Rule4:'Barikatlar tak\u0131mda ortakt\u0131r \u2013 kimse tamamen kapat\u0131lamaz.',
   modeConfigSub:'Zamanlay\u0131c\u0131, Barikatlar & \u00d6zel Modlar',
   statWins:'Galibiyet',statWinRate:'Kazan-%',statStreak:'Seri',
   duelModeClassic:'RACE',duelModeDuel:'D\u00dcELLO',
@@ -1195,6 +1198,7 @@ fr:{
   tv2AllReady:'D\u00e9marre quand tout le monde est pr\u00eat \u00b7 l\u2019autre \u00e9quipe commence',tv2OtherStarts:'L\u2019autre \u00e9quipe commence',
   tv2Removed:'Tu as \u00e9t\u00e9 retir\u00e9 de la partie',tv2RemovedAfk:'3 tours manqu\u00e9s de suite',tv2RemovedDc:'Connexion perdue trop longtemps',
   tv2MateGone:'Ton co\u00e9quipier est parti \u2013 atteins ton but seul !',tv2LeftGame:'a quitt\u00e9 la partie',tv2PlayerDc:'d\u00e9connect\u00e9...',tv2ByForfeit:'par abandon',
+  tv2RulesTitle:'Comment jouer en 2 vs 2',tv2Rule1:'Ton \u00e9quipe gagne quand les deux joueurs atteignent l\u2019autre c\u00f4t\u00e9.',tv2Rule2:'On joue chacun son tour, en alternant entre les \u00e9quipes.',tv2Rule3:'Si un co\u00e9quipier quitte, son partenaire continue seul.',tv2Rule4:'Les barricades sont partag\u00e9es dans l\u2019\u00e9quipe \u2013 impossible d\u2019enfermer quelqu\u2019un.',
   modeConfigSub:'Minuteur, Barricades & Modes sp\u00e9ciaux',
   statWins:'Victoires',statWinRate:'Victoires-%',statStreak:'S\u00e9rie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -11474,6 +11478,17 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
               <PhoneIcon size={15}/>{t('tv2Hotseat')}
             </button>
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'14px 16px',border:'1.5px solid var(--border)',marginTop:14,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>{t('tv2RulesTitle')}</div>
+            {[t('tv2Rule1'),t('tv2Rule2'),t('tv2Rule3'),t('tv2Rule4')].map(function(rule,ri){
+              return(
+                <div key={ri} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:ri<3?8:0}}>
+                  <span style={{color:'#8b5cf6',fontWeight:900,fontSize:13,lineHeight:1.5,flexShrink:0}}>{'\u203a'}</span>
+                  <span style={{fontSize:12,color:'var(--text)',lineHeight:1.5}}>{rule}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
