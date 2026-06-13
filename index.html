@@ -734,20 +734,21 @@ var WSNET={
     this.roomId=null; this.role=null; this.settings=null; this.meta=null; this.token=null;
     if(!this.browseOn){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
-  // Lobby-Liste beobachten: 4s-Poll, nur bei sichtbarem Tab (WS-Traffic ist quasi kostenlos)
-  startBrowse:function(onLobbies,onState){
+  // Lobby-Liste beobachten: 4s-Poll, nur bei sichtbarem Tab (WS-Traffic ist quasi kostenlos).
+  // mode (optional): '2v2' fuer den Team-Lobby-Browse, sonst normale 1v1-Liste.
+  startBrowse:function(onLobbies,onState,mode){
     var self=this;
-    self.browseOn=true; self.onLobbies=onLobbies;
+    self.browseOn=true; self.onLobbies=onLobbies; self.browseMode=mode||null;
     if(onState&&!self.roomId)self.onState=onState;
     self._open(); self._startHb();
     if(!self._lp){
-      var tick=function(){ if(!self.browseOn)return; try{ if(document.hidden)return; }catch(e){} self._send({type:'list_lobbies'}); };
+      var tick=function(){ if(!self.browseOn)return; try{ if(document.hidden)return; }catch(e){} var m={type:'list_lobbies'}; if(self.browseMode)m.mode=self.browseMode; self._send(m); };
       if(self.sock&&self.sock.readyState===1)tick();
       self._lp=setInterval(tick,4000);
     }
   },
   stopBrowse:function(){
-    this.browseOn=false; this.onLobbies=null;
+    this.browseOn=false; this.onLobbies=null; this.browseMode=null;
     if(this._lp){ clearInterval(this._lp); this._lp=null; }
     if(!this.roomId){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
@@ -764,7 +765,7 @@ var WSNET={
         else if(self.role==='A'){ self._send(self._createMsg()); }
         else { self._send(self._joinMsg()); }
       }
-      if(self.browseOn){ self._send({type:'list_lobbies'}); }
+      if(self.browseOn){ var lm={type:'list_lobbies'}; if(self.browseMode)lm.mode=self.browseMode; self._send(lm); }
     };
     self.sock.onmessage=function(ev){
       self.lastRecv=Date.now();
@@ -809,7 +810,7 @@ var WSNET={
   close:function(){ this._stopHb(); if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else { try{ WSNET._send({type:'list_lobbies'}); }catch(e){} } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
@@ -1023,6 +1024,15 @@ en:{
   addFriendTitle:'Add friend',addFriendDesc:'Add opponent as friend',
   spectatorReact:'React as spectator',
   rematchReady:'Ready \u00b7 waiting',rematchNeed4:'Rematch (4 players needed)',rematch2v2:'Rematch',
+  tv2Hotseat:'Local test (hotseat)',tv2OnlineSub:'Create or join a lobby',tv2BoardInfo:'11\u00d715 board \u00b7 25 barricades per team \u00b7 30s per turn',
+  tv2CreateNew:'CREATE NEW',tv2Creating:'Creating...',tv2CreateBtn:'+ Create lobby',tv2OpenLob:'OPEN LOBBIES',tv2CodeJoin:'JOIN WITH CODE',tv2CodePh:'Enter code...',
+  tv2LobbyCode:'LOBBY CODE',tv2Copied:'Copied!',tv2Copy:'Copy',tv2Empty:'Empty',tv2Here:'Move here',tv2You:'You',
+  tv2NowHost:'You are now the host',tv2Need22:'Exactly 2 per team needed!',tv2NotAllOn:'A player is disconnected',tv2TeamFull:'Team is full',tv2NotFound:'Lobby not found',tv2ConnLost:'Connection lost',
+  tv2Bottom:'Bottom',tv2Top:'Top',tv2RoundBottom:'Bottom round',tv2RoundTop:'Top round',tv2Goal:'GOAL',
+  tv2AtGoal:'At the goal! Place a barricade or skip',tv2Stuck:'No moves possible \u2013 place a barricade or skip',tv2SkipBtn:'Skip',
+  tv2AllReady:'Starts when everyone is ready \u00b7 other team begins',tv2OtherStarts:'Other team begins',
+  tv2Removed:'You were removed from the game',tv2RemovedAfk:'3 turns missed in a row',tv2RemovedDc:'Connection lost for too long',
+  tv2MateGone:'Your teammate is gone \u2013 reach your goal alone!',tv2LeftGame:'left the game',tv2PlayerDc:'disconnected...',tv2ByForfeit:'by forfeit',
   modeConfigSub:'Timer, Barricades & Special Modes',
   statWins:'Wins',statWinRate:'Win-%',statStreak:'Streak',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1068,6 +1078,15 @@ de:{
   addFriendTitle:'Freund hinzuf\u00fcgen',addFriendDesc:'Gegner als Freund hinzuf\u00fcgen',
   spectatorReact:'Als Zuschauer reagieren',
   rematchReady:'Bereit \u00b7 warte',rematchNeed4:'Revanche (4 Spieler n\u00f6tig)',rematch2v2:'Revanche',
+  tv2Hotseat:'Lokal testen (Hotseat)',tv2OnlineSub:'Lobby erstellen oder beitreten',tv2BoardInfo:'11\u00d715 Feld \u00b7 25 Barrikaden pro Team \u00b7 30s pro Zug',
+  tv2CreateNew:'NEU ERSTELLEN',tv2Creating:'Erstelle...',tv2CreateBtn:'+ Lobby erstellen',tv2OpenLob:'OFFENE LOBBYS',tv2CodeJoin:'MIT CODE BEITRETEN',tv2CodePh:'Code eingeben...',
+  tv2LobbyCode:'LOBBY-CODE',tv2Copied:'Kopiert!',tv2Copy:'Kopieren',tv2Empty:'Leer',tv2Here:'Hierher',tv2You:'Du',
+  tv2NowHost:'Du bist jetzt Host',tv2Need22:'Genau 2 pro Team n\u00f6tig!',tv2NotAllOn:'Ein Spieler ist getrennt',tv2TeamFull:'Team ist voll',tv2NotFound:'Lobby nicht gefunden',tv2ConnLost:'Verbindung verloren',
+  tv2Bottom:'Unten',tv2Top:'Oben',tv2RoundBottom:'Unten-Runde',tv2RoundTop:'Oben-Runde',tv2Goal:'ZIEL',
+  tv2AtGoal:'Am Ziel! Barrikade setzen oder \u00fcberspringen',tv2Stuck:'Kein Zug m\u00f6glich \u2013 Barrikade setzen oder \u00fcberspringen',tv2SkipBtn:'\u00dcberspringen',
+  tv2AllReady:'Startet wenn alle bereit sind \u00b7 anderes Team beginnt',tv2OtherStarts:'Anderes Team beginnt',
+  tv2Removed:'Du wurdest aus dem Spiel entfernt',tv2RemovedAfk:'3 Z\u00fcge in Folge verpasst',tv2RemovedDc:'Verbindung zu lange verloren',
+  tv2MateGone:'Dein Partner ist weg \u2013 erreiche dein Ziel allein!',tv2LeftGame:'hat das Spiel verlassen',tv2PlayerDc:'getrennt...',tv2ByForfeit:'durch Aufgabe',
   modeConfigSub:'Timer, Barrikaden & Spezial-Modi',
   statWins:'Siege',statWinRate:'Siege-%',statStreak:'Serie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1113,6 +1132,15 @@ tr:{
   addFriendTitle:'Arkada\u015f ekle',addFriendDesc:'Rakibi arkada\u015f olarak ekle',
   spectatorReact:'Seyirci olarak tepki ver',
   rematchReady:'Haz\u0131r \u00b7 bekleniyor',rematchNeed4:'R\u00f6van\u015f (4 oyuncu gerekli)',rematch2v2:'R\u00f6van\u015f',
+  tv2Hotseat:'Yerel test (hotseat)',tv2OnlineSub:'Lobi olu\u015ftur veya kat\u0131l',tv2BoardInfo:'11\u00d715 tahta \u00b7 tak\u0131m ba\u015f\u0131na 25 barikat \u00b7 hamle ba\u015f\u0131na 30sn',
+  tv2CreateNew:'YEN\u0130 OLU\u015eTUR',tv2Creating:'Olu\u015fturuluyor...',tv2CreateBtn:'+ Lobi olu\u015ftur',tv2OpenLob:'A\u00c7IK LOB\u0130LER',tv2CodeJoin:'KODLA KATIL',tv2CodePh:'Kodu gir...',
+  tv2LobbyCode:'LOB\u0130 KODU',tv2Copied:'Kopyaland\u0131!',tv2Copy:'Kopyala',tv2Empty:'Bo\u015f',tv2Here:'Buraya ge\u00e7',tv2You:'Sen',
+  tv2NowHost:'Art\u0131k ev sahibisin',tv2Need22:'Her tak\u0131mda tam 2 ki\u015fi gerekli!',tv2NotAllOn:'Bir oyuncunun ba\u011flant\u0131s\u0131 kesik',tv2TeamFull:'Tak\u0131m dolu',tv2NotFound:'Lobi bulunamad\u0131',tv2ConnLost:'Ba\u011flant\u0131 koptu',
+  tv2Bottom:'Alt',tv2Top:'\u00dcst',tv2RoundBottom:'Alt turu',tv2RoundTop:'\u00dcst turu',tv2Goal:'HEDEF',
+  tv2AtGoal:'Hedefte! Barikat koy veya pas ge\u00e7',tv2Stuck:'Hamle yok \u2013 barikat koy veya pas ge\u00e7',tv2SkipBtn:'Pas ge\u00e7',
+  tv2AllReady:'Herkes haz\u0131r olunca ba\u015flar \u00b7 di\u011fer tak\u0131m ba\u015flar',tv2OtherStarts:'Di\u011fer tak\u0131m ba\u015flar',
+  tv2Removed:'Oyundan \u00e7\u0131kar\u0131ld\u0131n',tv2RemovedAfk:'\u00dcst \u00fcste 3 hamle ka\u00e7\u0131r\u0131ld\u0131',tv2RemovedDc:'Ba\u011flant\u0131 \u00e7ok uzun s\u00fcre koptu',
+  tv2MateGone:'Tak\u0131m arkada\u015f\u0131n gitti \u2013 hedefe tek ba\u015f\u0131na ula\u015f!',tv2LeftGame:'oyundan ayr\u0131ld\u0131',tv2PlayerDc:'ba\u011flant\u0131 kesildi...',tv2ByForfeit:'terk nedeniyle',
   modeConfigSub:'Zamanlay\u0131c\u0131, Barikatlar & \u00d6zel Modlar',
   statWins:'Galibiyet',statWinRate:'Kazan-%',statStreak:'Seri',
   duelModeClassic:'RACE',duelModeDuel:'D\u00dcELLO',
@@ -1158,6 +1186,15 @@ fr:{
   addFriendTitle:'Ajouter un ami',addFriendDesc:"Ajouter l'adversaire en ami",
   spectatorReact:'R\u00e9agir en spectateur',
   rematchReady:'Pr\u00eat \u00b7 attente',rematchNeed4:'Revanche (4 joueurs requis)',rematch2v2:'Revanche',
+  tv2Hotseat:'Test local (hotseat)',tv2OnlineSub:'Cr\u00e9er ou rejoindre un salon',tv2BoardInfo:'Plateau 11\u00d715 \u00b7 25 barricades par \u00e9quipe \u00b7 30s par tour',
+  tv2CreateNew:'CR\u00c9ER',tv2Creating:'Cr\u00e9ation...',tv2CreateBtn:'+ Cr\u00e9er un salon',tv2OpenLob:'SALONS OUVERTS',tv2CodeJoin:'REJOINDRE AVEC CODE',tv2CodePh:'Entrer le code...',
+  tv2LobbyCode:'CODE DU SALON',tv2Copied:'Copi\u00e9 !',tv2Copy:'Copier',tv2Empty:'Vide',tv2Here:'Aller ici',tv2You:'Toi',
+  tv2NowHost:'Tu es maintenant l\u2019h\u00f4te',tv2Need22:'Exactement 2 par \u00e9quipe !',tv2NotAllOn:'Un joueur est d\u00e9connect\u00e9',tv2TeamFull:'\u00c9quipe compl\u00e8te',tv2NotFound:'Salon introuvable',tv2ConnLost:'Connexion perdue',
+  tv2Bottom:'Bas',tv2Top:'Haut',tv2RoundBottom:'Tour du bas',tv2RoundTop:'Tour du haut',tv2Goal:'BUT',
+  tv2AtGoal:'Au but ! Pose une barricade ou passe',tv2Stuck:'Aucun coup possible \u2013 pose une barricade ou passe',tv2SkipBtn:'Passer',
+  tv2AllReady:'D\u00e9marre quand tout le monde est pr\u00eat \u00b7 l\u2019autre \u00e9quipe commence',tv2OtherStarts:'L\u2019autre \u00e9quipe commence',
+  tv2Removed:'Tu as \u00e9t\u00e9 retir\u00e9 de la partie',tv2RemovedAfk:'3 tours manqu\u00e9s de suite',tv2RemovedDc:'Connexion perdue trop longtemps',
+  tv2MateGone:'Ton co\u00e9quipier est parti \u2013 atteins ton but seul !',tv2LeftGame:'a quitt\u00e9 la partie',tv2PlayerDc:'d\u00e9connect\u00e9...',tv2ByForfeit:'par abandon',
   modeConfigSub:'Minuteur, Barricades & Modes sp\u00e9ciaux',
   statWins:'Victoires',statWinRate:'Victoires-%',statStreak:'S\u00e9rie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1299,7 +1336,7 @@ function wallSafeToken2(start,goalRow,walls,R,C){
 function quickValidWall2(key,walls,tokens,R,C){
   if(!wallGeomOk2(key,walls))return false;
   const next=new Set([...walls,key]);
-  for(const id of ORDER_2V2)if(!hasPathTo(tokens[id],next,GOAL_2V2[id],R,C))return false;
+  for(const id of ORDER_2V2){if(!tokens[id])continue;if(!hasPathTo(tokens[id],next,GOAL_2V2[id],R,C))return false;}
   return true;
 }
 // Prüft ob ein horizontaler Schnitt bei Reihe r die Breitenregel erfüllt:
@@ -1322,7 +1359,7 @@ function passageWidthOk2(walls,r,C){
 function tryWall2(key,walls,tokens,R,C){
   if(!wallGeomOk2(key,walls))return null;
   const next=new Set([...walls,key]);
-  for(const id of ORDER_2V2)if(!wallSafeToken2(tokens[id],GOAL_2V2[id],next,R,C))return null;
+  for(const id of ORDER_2V2){if(!tokens[id])continue;if(!wallSafeToken2(tokens[id],GOAL_2V2[id],next,R,C))return null;}
   // Breitenregel: alle Reihen prüfen (nicht nur die neue Mauer-Reihe)
   if(key[0]==='H'){
     for(let r=0;r<R-1;r++){if(!passageWidthOk2(next,r,C))return null;}
@@ -10819,6 +10856,22 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const[hostUid,setHostUid]=React.useState(null);
   const[votes,setVotes]=React.useState({});
   const[startTeam,setStartTeam]=React.useState('A');
+  // WS-2v2: Server-autoritativer Online-Modus (Firebase bleibt als ?ws=0-Fallback)
+  const useWS=WS_ENABLED;
+  const[removed,setRemoved]=React.useState({A1:false,A2:false,B1:false,B2:false});
+  const[dcMap,setDcMap]=React.useState({});
+  const[wsPresent,setWsPresent]=React.useState(4);
+  const[wsNames,setWsNames]=React.useState({});
+  const[wsYouKey,setWsYouKey]=React.useState(null);
+  const[winReason,setWinReason]=React.useState(null);
+  const[tickSec,setTickSec]=React.useState(0);
+  const[removedMeReason,setRemovedMeReason]=React.useState(null);
+  const wsMsgRef=React.useRef(null);
+  const wsTrampRef=React.useRef(null);
+  if(!wsTrampRef.current){wsTrampRef.current=function(d){if(wsMsgRef.current)wsMsgRef.current(d);};}
+  const wsLastSlotRef=React.useRef({A:null,B:null});
+  const wsTurnEndsRef=React.useRef(0);
+  const wsActiveRef=React.useRef(false);
 
   const myUidRef=React.useRef(null);
   if(!myUidRef.current){
@@ -10829,7 +10882,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const gridRef=React.useRef(null);
   const snapPosRef=React.useRef(null);
   const St=React.useRef({});
-  St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap,reached};
+  St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap,reached,removed,sub,lobbyPlayers,wsYouKey,removedMeReason};
   React.useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
 
   const lKey=c=>'barricade_2v2_lobby_'+c;
@@ -10838,8 +10891,9 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const myTeam=myToken?TEAM_2V2(myToken):null;
   const team=TEAM_2V2(turn);
   const cur=tokens[turn];
-  const others=ORDER_2V2.filter(id=>id!==turn).map(id=>tokens[id]);
-  const myTurnNow=!winner&&sub==='game'&&(!isOnline||turn===myToken);
+  const others=ORDER_2V2.filter(id=>id!==turn&&tokens[id]&&!removed[id]).map(id=>tokens[id]);
+  const myTurnNow=!winner&&sub==='game'&&!removedMeReason&&(!isOnline||turn===myToken);
+  const noMovesNow=myTurnNow&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2).length===0;
   const canPlace=myTurnNow&&barr[isOnline?(myTeam||team):team]>0;
   const teamName=tm=>tm==='A'?t('red'):t('blue');
   const sz=Math.round(CELL2*0.74),off=(CELL2-sz)/2;
@@ -10857,13 +10911,41 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   };
 
   const doSync2v2=update=>{
+    if(useWS)return; // WS-Modus: der Server ist die Wahrheit, kein Firebase-Schreiben
     const{lobbyCode:lc,isOnline:io,playerMap:pm,reached:rc}=St.current;
     if(!io||!lc)return;
     stoSet(gKey(lc),{tokens:update.tokens,walls:[...update.walls],barr:update.barr,turn:update.turn,winner:update.winner||null,reached:update.reached||rc,players:pm,lastUpdated:Date.now()});
   };
 
+  // WS: Spieler-Meta (Name/Account-Key) fuer Lobby-Anzeige
+  const wsMeta=()=>({name:(account&&account.name)?account.name:('Gast-'+uid),akey:(account&&account.key)?account.key:null});
+  // WS: naechster am Zug lokal vorhersagen (gleiche Logik wie Server) fuer fluessiges UI
+  const tv2NextLocal=(curTurn,rem)=>{
+    const oth=curTurn.charAt(0)==='A'?'B':'A';
+    const ids=oth==='A'?['A1','A2']:['B1','B2'];
+    const list=ids.filter(function(s){return !rem[s];});
+    if(list.length===0)return curTurn;
+    if(list.length===1)return list[0];
+    const last=wsLastSlotRef.current[oth];
+    return (last===list[0])?list[1]:list[0];
+  };
+  // WS: kompletter Reset der Spiel-/Lobby-States vor neuem Erstellen/Beitreten
+  const wsResetStates=()=>{
+    setWinner(null);setWinReason(null);setCelebrating(false);setFlash('');
+    setReached({A1:false,A2:false,B1:false,B2:false});
+    setRemoved({A1:false,A2:false,B1:false,B2:false});
+    setDcMap({});setVotes({});setRemovedMeReason(null);setMyToken(null);
+    wsLastSlotRef.current={A:null,B:null};wsTurnEndsRef.current=0;
+  };
+
   // ── Online: Lobby erstellen ──
   const createLobby=async()=>{
+    if(useWS){
+      setLobbyLoading(true);setJoinError('');wsResetStates();
+      setIsOnline(true);wsActiveRef.current=true;
+      WSNET.openLobby(randId(4),{mode:'2v2'},wsMeta(),wsTrampRef.current);
+      return;
+    }
     setLobbyLoading(true);setJoinError('');
     setWinner(null);setCelebrating(false);setReached({A1:false,A2:false,B1:false,B2:false});setFlash('');
     const code=randId(4);
@@ -10884,6 +10966,12 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   };
   // ── Online: Lobby beitreten (per Code, von Liste oder Eingabe) ──
   const joinByCode=async(code)=>{
+    if(useWS){
+      setJoinError('');setLobbyLoading(true);wsResetStates();
+      setIsOnline(true);wsActiveRef.current=true;
+      WSNET.joinRoom(code,wsMeta(),wsTrampRef.current);
+      return;
+    }
     setJoinError('');setLobbyLoading(true);
     setWinner(null);setCelebrating(false);setReached({A1:false,A2:false,B1:false,B2:false});setFlash('');
     const data=await stoGet(lKey(code));
@@ -10906,6 +10994,13 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Online: Team wechseln (frei – Start nur bei 2+2) ──
   const switchTeam=async()=>{
+    if(useWS){
+      const lp=St.current.lobbyPlayers||{};
+      const me=St.current.wsYouKey?lp[St.current.wsYouKey]:null;
+      const nt=(me&&me.team==='A')?'B':'A';
+      try{WSNET._send({type:'tv2_team',team:nt});}catch(e){}
+      return;
+    }
     const lc=St.current.lobbyCode;
     const data=await stoGet(lKey(lc));
     if(!data||!data.players)return;
@@ -10917,6 +11012,14 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Online: Lobby verlassen (Host wird ggf. übergeben) ──
   const leaveLobby=async()=>{
+    if(useWS){
+      wsActiveRef.current=false;
+      try{WSNET.leaveRoom();}catch(e){}
+      wsResetStates();
+      setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setPlayerMap({});setHostUid(null);setWsYouKey(null);
+      setSub('config');
+      return;
+    }
     const lc=St.current.lobbyCode;
     const data=await stoGet(lKey(lc));
     if(data&&data.players){
@@ -10937,6 +11040,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Online: Spiel starten (Host) ──
   const startOnlineGame=async()=>{
+    if(useWS){try{WSNET._send({type:'tv2_start'});}catch(e){}return;}
     const lc=St.current.lobbyCode;
     const data=await stoGet(lKey(lc));if(!data)return;
     const ps=data.players||{};
@@ -10964,6 +11068,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Endscreen: Revanche wählen (Stimme abgeben) ──
   const voteRematch=async()=>{
+    if(useWS){try{WSNET._send({type:'tv2_vote'});}catch(e){}return;}
     const lc=St.current.lobbyCode;
     const gs=await stoGet(gKey(lc));if(!gs)return;
     const v={...(gs.votes||{})};v[uid]=true;
@@ -10972,6 +11077,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Endscreen: zurück zur Lobby ──
   const backToLobbyFromGame=async()=>{
+    if(useWS){try{WSNET._send({type:'tv2_to_lobby'});}catch(e){}return;}
     const lc=St.current.lobbyCode;
     const gs=await stoGet(gKey(lc));
     if(gs&&gs.players){const pm={...gs.players};delete pm[uid];const v={...(gs.votes||{})};delete v[uid];
@@ -10985,6 +11091,12 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Endscreen: zum Hauptmenü (verlässt Spiel + Lobby) ──
   const exitFromGame=async()=>{
+    if(useWS){
+      wsActiveRef.current=false;
+      try{WSNET.leaveRoom();}catch(e){}
+      onExit();
+      return;
+    }
     const lc=St.current.lobbyCode;
     if(isOnline){
       const gs=await stoGet(gKey(lc));
@@ -11008,12 +11120,26 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Online: offene Lobbys laden ──
   const refreshLobbies=async()=>{
+    if(useWS){
+      setListLoading(true);
+      try{WSNET._send({type:'list_lobbies',mode:'2v2'});}catch(e){}
+      return;
+    }
     setListLoading(true);
     const list=await lobbyIndexList2();
     setOpenLobbies(list);setListLoading(false);
   };
   React.useEffect(()=>{
     if(sub!=='online')return;
+    if(useWS){
+      setListLoading(true);
+      WSNET.startBrowse(function(list){
+        const out=[];const arr=list||[];
+        for(let i=0;i<arr.length;i++){if(arr[i].mode==='2v2')out.push({code:arr[i].code,count:arr[i].count||1});}
+        setOpenLobbies(out);setListLoading(false);
+      },wsTrampRef.current,'2v2');
+      return function(){WSNET.stopBrowse();};
+    }
     refreshLobbies();
     const iv=setInterval(refreshLobbies,5000);
     return function(){clearInterval(iv);};
@@ -11021,6 +11147,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Lobby-Listener ──
   React.useEffect(()=>{
+    if(useWS)return; // WS-Modus: tv2_lobby-Pushes vom Server, kein Firebase
     if(sub!=='lobby'||!lobbyCode)return;
     const ref=window.db.ref(lKey(lobbyCode));
     const cb=ref.on('value',snap=>{
@@ -11041,6 +11168,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Game-Listener (online) ──
   React.useEffect(()=>{
+    if(useWS)return; // WS-Modus: tv2_state-Pushes vom Server, kein Firebase
     if(sub!=='game'||!isOnline||!lobbyCode)return;
     const ref=window.db.ref(gKey(lobbyCode));
     const cb=ref.on('value',snap=>{
@@ -11069,8 +11197,20 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
   // ── Bewegen ──
   const moveTo=(r,c)=>{
-    if(!myTurnNow||dragging||reached[turn])return;
+    if(!myTurnNow||dragging||reached[turn]||!cur)return;
     if(!validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c))return;
+    if(isOnline&&useWS){
+      // optimistisch: Position + Zugwechsel sofort, reached/Sieg entscheidet der Server (kommt in ms)
+      playSound('move');
+      const ntw={A1:tokens.A1,A2:tokens.A2,B1:tokens.B1,B2:tokens.B2};
+      ntw[turn]={r,c};
+      setTokens(ntw);
+      const nxw=tv2NextLocal(turn,removed);
+      wsLastSlotRef.current[nxw.charAt(0)]=nxw;
+      setTurn(nxw);
+      try{WSNET.move({r:r,c:c});}catch(e){}
+      return;
+    }
     playSound('move');
     const nt={A1:tokens.A1,A2:tokens.A2,B1:tokens.B1,B2:tokens.B2};
     nt[turn]={r,c};
@@ -11094,13 +11234,20 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   };
 
   const skipTurn=()=>{
-    if(!myTurnNow||!reached[turn])return;
+    if(!myTurnNow||(!reached[turn]&&!noMovesNow))return;
+    if(isOnline&&useWS){
+      const nxs=tv2NextLocal(turn,removed);
+      wsLastSlotRef.current[nxs.charAt(0)]=nxs;
+      setTurn(nxs);setFlash('');
+      try{WSNET.skipTurn();}catch(e){}
+      return;
+    }
     const nextTurn=NEXT_2V2[turn];
     setTurn(nextTurn);setFlash('');
     if(isOnline)doSync2v2({tokens,walls,barr,turn:nextTurn,winner:null,reached});
   };
 
-  const validDot=(r,c)=>myTurnNow&&!dragging&&!reached[turn]&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
+  const validDot=(r,c)=>myTurnNow&&!dragging&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
 
   const startDrag=(e,orient)=>{
     if(!canPlace)return;e.preventDefault();
@@ -11137,10 +11284,14 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
             const next=tryWall2(key,w,tk,ROWS2,COLS2);
             if(next){
               playSound('wall');
-              const nextTurn=NEXT_2V2[tn];
+              const nextTurn=(io&&useWS)?tv2NextLocal(tn,St.current.removed||{}):NEXT_2V2[tn];
+              if(io&&useWS)wsLastSlotRef.current[nextTurn.charAt(0)]=nextTurn;
               const newBl={A:bl.A,B:bl.B};newBl[tmm]=bl[tmm]-1;
               setWalls(next);setBarr(newBl);setFlash('');setTurn(nextTurn);
-              if(io)doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null,reached:St.current.reached});
+              if(io){
+                if(useWS){try{WSNET.wall(key);}catch(e){}}
+                else doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null,reached:St.current.reached});
+              }
             }else setFlash(t('invalidPos'));
           }
         }
@@ -11155,6 +11306,121 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     document.addEventListener('touchmove',tmv,{passive:false});document.addEventListener('touchend',te);
     return function(){document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('touchmove',tmv);document.removeEventListener('touchend',te);};
   },[dragging]);
+
+  // ── WS-2v2: Server-Nachrichten verarbeiten (Plain-Assignment NACH allen Deklarationen) ──
+  const applyTv2State=function(d){
+    if(d.tokens)setTokens(d.tokens);
+    if(d.walls)setWalls(new Set(d.walls));
+    if(d.barr)setBarr(d.barr);
+    if(d.turn){setTurn(d.turn);wsLastSlotRef.current[d.turn.charAt(0)]=d.turn;}
+    if(d.reached)setReached(d.reached);
+    if(d.removed)setRemoved(d.removed);
+    if(d.names)setWsNames(d.names);
+    if(d.dc)setDcMap(d.dc);
+    if(typeof d.present==='number')setWsPresent(d.present);
+    if(d.votes)setVotes(d.votes);
+    if(typeof d.turnMs==='number')wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0;
+    if(d.skipped&&d.skipped===St.current.myToken){setFlash(t('turnSkipped'));setTimeout(function(){setFlash('');},2200);}
+    if(d.removedSlot){
+      if(d.removedSlot===St.current.myToken){
+        setRemovedMeReason(d.removedReason||'disconnect');
+        wsActiveRef.current=false;
+      }else{
+        const meTok=St.current.myToken;
+        const sameTeam=meTok&&d.removedSlot.charAt(0)===meTok.charAt(0);
+        setFlash(sameTeam?t('tv2MateGone'):((d.removedName||'?')+' '+t('tv2LeftGame')));
+        setTimeout(function(){setFlash('');},3500);
+      }
+    }
+    if(d.winner){
+      setWinReason(d.winReason||null);
+      if(!St.current.winner)triggerWin(d.winner);
+    }else if(d.winner===null&&St.current.winner){setWinner(null);setWinReason(null);}
+  };
+  wsMsgRef.current=function(d){
+    if(!useWS||!d)return;
+    if(d.type==='room_created'||d.type==='room_joined'){
+      setLobbyCode(d.code);
+      if(WSNET.roomId!==d.code)WSNET.roomId=d.code;
+      setIsOnline(true);setLobbyLoading(false);setJoinError('');
+      return;
+    }
+    if(d.type==='tv2_lobby'){
+      const mp={};let hk=null;
+      const arr=d.players||[];
+      for(let i=0;i<arr.length;i++){mp['p'+i]={team:arr[i].team,name:arr[i].name,on:arr[i].on!==false};if(arr[i].host)hk='p'+i;}
+      setLobbyPlayers(mp);setHostUid(hk);setWsYouKey('p'+d.you);
+      const becameHost=!!d.host&&!St.current.isHost&&St.current.sub==='lobby';
+      setIsHost(!!d.host);
+      if(becameHost){setFlash(t('tv2NowHost'));setTimeout(function(){setFlash('');},2500);}
+      setLobbyLoading(false);
+      if(St.current.sub!=='lobby'&&(St.current.sub!=='game'||St.current.winner||St.current.removedMeReason)){
+        wsResetStates();
+        setSub('lobby');
+      }
+      return;
+    }
+    if(d.type==='tv2_match'){
+      setMyToken(d.slot);
+      setWinner(null);setWinReason(null);setCelebrating(false);setVotes({});
+      setRemovedMeReason(null);setFlash('');
+      wsLastSlotRef.current={A:null,B:null};
+      applyTv2State(d);
+      setSub('game');
+      return;
+    }
+    if(d.type==='tv2_state'){applyTv2State(d);return;}
+    if(d.type==='tv2_resync'){
+      if(d.phase==='game'){
+        if(d.slot)setMyToken(d.slot);
+        setRemovedMeReason(null);
+        applyTv2State(d);
+        if(St.current.sub!=='game')setSub('game');
+      }
+      return; // phase 'lobby': der Server schickt direkt danach tv2_lobby
+    }
+    if(d.type==='error'){
+      const g=d.grund||'';
+      if(g==='raum nicht gefunden'){setJoinError(t('tv2NotFound'));setLobbyLoading(false);}
+      else if(g==='raum voll'){setJoinError(t('lobbyFull4'));setLobbyLoading(false);}
+      else if(g==='team voll'){setFlash(t('tv2TeamFull'));setTimeout(function(){setFlash('');},2000);}
+      else if(g==='teams unvollstaendig'){setFlash(t('tv2Need22'));setTimeout(function(){setFlash('');},2500);}
+      else if(g==='spieler getrennt'){setFlash(t('tv2NotAllOn'));setTimeout(function(){setFlash('');},2500);}
+      return;
+    }
+    if(d.type==='reconnect_failed'){
+      if(St.current.sub==='lobby'||St.current.sub==='game'){
+        wsActiveRef.current=false;
+        try{WSNET.close();}catch(e){}
+        wsResetStates();
+        setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setWsYouKey(null);
+        setJoinError(t('tv2ConnLost'));
+        setSub('online');
+      }
+      return;
+    }
+  };
+
+  // ── WS-2v2: Zug-Countdown-Anzeige (Server skippt autoritativ, hier nur Anzeige) ──
+  React.useEffect(()=>{
+    if(!useWS||!isOnline||sub!=='game'||winner){setTickSec(0);return;}
+    const iv=setInterval(function(){
+      const e=wsTurnEndsRef.current;
+      if(!e){setTickSec(0);return;}
+      const ms=e-Date.now();
+      setTickSec(ms>0?Math.ceil(ms/1000):0);
+    },250);
+    return function(){clearInterval(iv);};
+  },[sub,isOnline,winner]);
+
+  // ── WS-2v2: beim Verlassen der Komponente sauber abmelden ──
+  React.useEffect(()=>{
+    return function(){
+      if(!WS_ENABLED)return;
+      try{WSNET.stopBrowse();}catch(e){}
+      if(wsActiveRef.current){wsActiveRef.current=false;try{WSNET.leaveRoom();}catch(e){}}
+    };
+  },[]);
 
   // ── CONFIG ──
   if(sub==='config'){
@@ -11185,7 +11451,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               </div>
             </div>
             <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.8,textAlign:'center'}}>
-              11×15 Feld · 25 Barrikaden/Team
+              {t('tv2BoardInfo')}
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -11206,7 +11472,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               border:'1.5px solid var(--border)',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,
               fontFamily:'system-ui,-apple-system,sans-serif',
               display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-              <PhoneIcon size={15}/>Lokal testen (Hotseat)
+              <PhoneIcon size={15}/>{t('tv2Hotseat')}
             </button>
           </div>
         </div>
@@ -11223,25 +11489,25 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         <div style={{width:'100%',maxWidth:320,position:'relative',zIndex:1}}>
           <div style={{textAlign:'center',marginBottom:22}}>
             <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>Online 2 vs 2</div>
-            <div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>Lobby erstellen oder beitreten</div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{t('tv2OnlineSub')}</div>
           </div>
 
           {/* Erstellen */}
           <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
-            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>NEU ERSTELLEN</div>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>{t('tv2CreateNew')}</div>
             <button onClick={createLobby} disabled={lobbyLoading} style={{width:'100%',padding:'13px',
               background:lobbyLoading?'var(--border)':'#3b82f6',color:lobbyLoading?'var(--subtle)':'white',
               border:'none',borderRadius:10,cursor:lobbyLoading?'not-allowed':'pointer',
               fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:lobbyLoading?'none':'0 2px 8px rgba(59,130,246,0.3)'}}>
-              {lobbyLoading?'Erstelle...':'+ Lobby erstellen'}
+              {lobbyLoading?t('tv2Creating'):t('tv2CreateBtn')}
             </button>
           </div>
 
           {/* Offene Lobbys */}
           <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-              <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5}}>OFFENE LOBBYS</div>
+              <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5}}>{t('tv2OpenLob')}</div>
               <button onClick={refreshLobbies} disabled={listLoading} style={{padding:'4px 10px',borderRadius:8,
                 background:'var(--bg)',border:'1.5px solid var(--border)',cursor:listLoading?'wait':'pointer',
                 fontSize:11,fontWeight:700,color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
@@ -11278,11 +11544,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
           {/* Beitreten */}
           <div style={{background:'var(--card)',borderRadius:16,padding:'18px 16px',border:'1.5px solid var(--border)',boxShadow:'var(--shadow-soft)'}}>
-            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>MIT CODE BEITRETEN</div>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>{t('tv2CodeJoin')}</div>
             <input
               value={joinInput}
               onChange={e=>setJoinInput(e.target.value.toUpperCase().slice(0,4))}
-              placeholder="Code eingeben..."
+              placeholder={t('tv2CodePh')}
               maxLength={4}
               style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:20,fontWeight:800,
                 textAlign:'center',letterSpacing:4,textTransform:'uppercase',
@@ -11310,8 +11576,10 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     const aPlayers=entries.filter(function(e){return e[1].team==='A';});
     const bPlayers=entries.filter(function(e){return e[1].team==='B';});
     const total=entries.length;
-    const canStart=isHost&&aPlayers.length===2&&bPlayers.length===2;
-    const myEntry=ps[uid];
+    const allOn=!useWS||entries.every(function(e){return e[1].on!==false;});
+    const canStart=isHost&&aPlayers.length===2&&bPlayers.length===2&&allOn;
+    const youKey=useWS?wsYouKey:uid;
+    const myEntry=youKey?ps[youKey]:null;
     const myCurrentTeam=myEntry?myEntry.team:null;
 
     const copyCode=()=>{
@@ -11352,13 +11620,13 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
 
           {/* Code + Teilen */}
           <div style={{textAlign:'center',marginBottom:16}}>
-            <div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,letterSpacing:1,marginBottom:6}}>LOBBY-CODE</div>
+            <div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,letterSpacing:1,marginBottom:6}}>{t('tv2LobbyCode')}</div>
             <button onClick={copyCode} style={{
               display:'inline-flex',alignItems:'center',gap:10,
               background:'var(--card)',border:'2px solid var(--border)',borderRadius:14,
               padding:'10px 20px',cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>
               <span style={{fontSize:28,fontWeight:900,letterSpacing:6,color:'var(--text)'}}>{lobbyCode}</span>
-              <span style={{fontSize:11,fontWeight:700,color:codeFlash?'#16a34a':'var(--subtle)'}}>{codeFlash?'Kopiert!':'Kopieren'}</span>
+              <span style={{fontSize:11,fontWeight:700,color:codeFlash?'#16a34a':'var(--subtle)'}}>{codeFlash?t('tv2Copied'):t('tv2Copy')}</span>
             </button>
             <div style={{fontSize:10,color:'var(--subtle)',marginTop:8,fontWeight:500}}>{t('shareCode')}</div>
           </div>
@@ -11380,18 +11648,20 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                     <div style={{marginLeft:'auto',fontSize:10,color:full?'#16a34a':'var(--subtle)',fontWeight:700}}>{tPlayers.length}/2{full?' ✓':''}</div>
                   </div>
                   {tPlayers.map(function(entry){
-                    const pUid=entry[0];const isMe=pUid===uid;
+                    const pUid=entry[0];const isMe=pUid===youKey;
+                    const dispNm=entry[1].name||pUid;
+                    const offline=useWS&&entry[1].on===false;
                     return(
                       <div key={pUid} style={{padding:'7px 10px',borderRadius:8,marginBottom:4,
                         background:isMe?'var(--bg)':'transparent',
                         border:isMe?'1.5px solid var(--border)':'1.5px solid transparent',
-                        display:'flex',alignItems:'center',gap:6}}>
+                        display:'flex',alignItems:'center',gap:6,opacity:offline?0.45:1}}>
                         <div style={{width:22,height:22,borderRadius:'50%',background:col,flexShrink:0,
                           display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800,color:'white'}}>
-                          {pUid.slice(0,2)}
+                          {dispNm.slice(0,2)}
                         </div>
                         <span style={{flex:1,fontSize:11,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {pUid}{isMe?' (Du)':''}{pUid===hostUid?<CrownIcon size={11} color="#f59e0b"/>:''}
+                          {dispNm}{isMe?' ('+t('tv2You')+')':''}{offline?' \u00b7 offline':''}{pUid===hostUid?<CrownIcon size={11} color="#f59e0b"/>:''}
                         </span>
                       </div>
                     );
@@ -11399,11 +11669,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                   {tPlayers.length===0&&(
                     <div style={{padding:'8px 10px',borderRadius:8,border:'1.5px dashed var(--border)',
                       display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      <span style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>Leer</span>
+                      <span style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>{t('tv2Empty')}</span>
                     </div>
                   )}
                   {myCurrentTeam!==tm&&(
-                    <div style={{marginTop:6,textAlign:'center',fontSize:11,fontWeight:700,color:col}}>→ Hierher</div>
+                    <div style={{marginTop:6,textAlign:'center',fontSize:11,fontWeight:700,color:col}}>{'\u2192'} {t('tv2Here')}</div>
                   )}
                 </div>
               );
@@ -11426,11 +11696,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                 background:'#16a34a',color:'white',border:'none',borderRadius:10,
                 cursor:'pointer',fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:'0 2px 10px rgba(22,163,74,0.35)'}}>
-                🚀 {t('startGame')}
+                {'\u25b6'} {t('startGame')}
               </button>
             ):(
               <div style={{textAlign:'center',fontSize:12,fontWeight:600,color:'var(--subtle)',padding:'8px 0'}}>
-                {isHost?(aPlayers.length===2&&bPlayers.length===2?t('readyState'):t('waitingPlayers4')):t('waitingHost4')}
+                {isHost?(aPlayers.length===2&&bPlayers.length===2?(allOn?t('readyState'):t('tv2NotAllOn')):t('waitingPlayers4')):t('waitingHost4')}
               </div>
             )}
           </div>
@@ -11464,8 +11734,8 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.2s'}}>
               <span style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:800,color:col}}>
                 <span style={{width:8,height:8,borderRadius:'50%',background:col}}/>
-                {teamName(tm)}{isMy?' ★':''}
-                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?'⬆ unten':'⬇ oben'}</span>}
+                {teamName(tm)}{isMy?' \u2605':''}
+                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?('\u2191 '+t('tv2Bottom')):('\u2193 '+t('tv2Top'))}</span>}
               </span>
               <span style={{fontSize:11,fontWeight:800,color:'var(--text)',display:'flex',alignItems:'center',gap:2}}>{barr[tm]}<BrickMini size={10}/></span>
             </div>
@@ -11473,22 +11743,30 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         })}
       </div>
 
-      {isOnline&&!myTurnNow&&!winner&&(
+      {isOnline&&!myTurnNow&&!winner&&!removedMeReason&&(
         <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:4,letterSpacing:0.5}}>
-          {turn[1]==='1'?'Unten':'Oben'} · {teamName(TEAM_2V2(turn))} ist dran...
+          {(isOnline&&useWS&&wsNames[turn]?wsNames[turn]:(turn[1]==='1'?t('tv2Bottom'):t('tv2Top')))+' \u00b7 '+teamName(TEAM_2V2(turn))}...
+        </div>
+      )}
+      {isOnline&&useWS&&!winner&&ORDER_2V2.some(function(id){return dcMap[id]&&!removed[id];})&&(
+        <div style={{fontSize:10,color:'#f59e0b',fontWeight:700,marginBottom:4}}>
+          {ORDER_2V2.filter(function(id){return dcMap[id]&&!removed[id];}).map(function(id){return wsNames[id]||id;}).join(', ')+' '+t('tv2PlayerDc')}
         </div>
       )}
       {/* Phase-Indikator */}
       {!winner&&(
         <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:'uppercase',
-          marginBottom:4,padding:'4px 12px',borderRadius:8,
+          marginBottom:4,padding:'4px 12px',borderRadius:8,display:'flex',alignItems:'center',gap:8,
           background:turn[1]==='1'?'rgba(59,130,246,0.15)':'rgba(139,92,246,0.15)',
           color:turn[1]==='1'?'#3b82f6':'#8b5cf6'}}>
-          {turn[1]==='1'?'⬆ Unten-Runde':'⬇ Oben-Runde'}
+          <span>{turn[1]==='1'?('\u2191 '+t('tv2RoundBottom')):('\u2193 '+t('tv2RoundTop'))}</span>
+          {isOnline&&useWS&&tickSec>0&&(
+            <span style={{fontWeight:900,color:tickSec<=5?'#ef4444':'inherit',minWidth:26,textAlign:'right'}}>{tickSec}s</span>
+          )}
         </div>
       )}
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>▲ ZIEL ▲</div>
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{'\u25b2'} {t('tv2Goal')} {'\u25b2'}</div>
 
       <div ref={gridRef} style={{position:'relative',width:COLS2*CELL2,height:ROWS2*CELL2,touchAction:'auto',...sGrid}}>
         {Array.from({length:ROWS2},function(_,r){return Array.from({length:COLS2},function(_,c){
@@ -11512,6 +11790,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         {previewKey&&<Wall2 wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
         {ORDER_2V2.map(function(id){
           const pos=tokens[id];const active=turn===id&&!winner;
+          if(!pos||removed[id])return null;
           return(
             <div key={id} style={{position:'absolute',left:pos.c*CELL2+off,top:pos.r*CELL2+off,
               width:sz,height:sz,
@@ -11527,7 +11806,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         })}
       </div>
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginTop:2}}>▼ ZIEL ▼</div>
+      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginTop:2}}>{'\u25bc'} {t('tv2Goal')} {'\u25bc'}</div>
 
       {flash&&<div style={{position:'fixed',bottom:120,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
         <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
@@ -11541,11 +11820,27 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         </div>
       )}
 
+      {removedMeReason&&isOnline&&!winner&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,padding:20}}>
+          <div style={{background:'var(--card)',borderRadius:22,padding:'26px 24px 22px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.3)',width:'100%',maxWidth:300}}>
+            <div style={{fontSize:17,fontWeight:900,color:'var(--text)',letterSpacing:-0.3,marginBottom:6}}>{t('tv2Removed')}</div>
+            <div style={{fontSize:12,color:'var(--subtle)',marginBottom:18,fontWeight:500}}>
+              {removedMeReason==='afk'?t('tv2RemovedAfk'):t('tv2RemovedDc')}
+            </div>
+            <button onClick={exitFromGame} style={{width:'100%',padding:'12px',
+              background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:12,
+              cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {t('menu')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {winner&&!celebrating&&(()=>{
         const ids=Object.keys(playerMap);
-        const voteCount=ids.filter(u=>votes&&votes[u]).length;
-        const iVoted=votes&&votes[uid];
-        const present=ids.length;
+        const voteCount=useWS?ORDER_2V2.filter(s=>votes&&votes[s]).length:ids.filter(u=>votes&&votes[u]).length;
+        const iVoted=useWS?!!(votes&&myToken&&votes[myToken]):!!(votes&&votes[uid]);
+        const present=useWS?wsPresent:ids.length;
         const col=winner==='A'?'#ef4444':'#3b82f6';
         return(
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
@@ -11553,6 +11848,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
             <div style={{background:'var(--card)',borderRadius:22,padding:'28px 28px 22px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.3)',position:'relative',width:'100%',maxWidth:300}}>
               <div style={{marginBottom:8,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}><TrophyIcon size={44}/></div>
               <div style={{fontSize:21,fontWeight:900,color:col,letterSpacing:-0.5,marginBottom:4}}>Team {teamName(winner)} {t('wins')}</div>
+              {winReason==='forfeit'&&<div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginBottom:4}}>{t('tv2ByForfeit')}</div>}
               {isOnline?(
                 <>
                   <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>{t('whatsNext')}</div>
@@ -11562,7 +11858,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                     border:iVoted?'1.5px solid #16a34a':'none',borderRadius:12,
                     cursor:iVoted||present<4?'default':'pointer',fontWeight:800,fontSize:15,
                     fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    {iVoted?('\u2713 '+t('rematchReady')+' ('+voteCount+'/'+present+')'):(present<4?t('rematchNeed4'):('\uD83D\uDD01 '+t('rematch2v2')+' '+voteCount+'/'+present))}
+                    {iVoted?('\u2713 '+t('rematchReady')+' ('+voteCount+'/'+present+')'):(present<4?t('rematchNeed4'):(t('rematch2v2')+' '+voteCount+'/'+present))}
                   </button>
                   <div style={{display:'flex',gap:8}}>
                     <button onClick={backToLobbyFromGame} style={{flex:1,padding:'11px',
@@ -11576,20 +11872,20 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                       {t('menu')}
                     </button>
                   </div>
-                  {iVoted&&present===4&&<div style={{fontSize:10,color:'var(--subtle)',marginTop:10,fontWeight:500}}>Startet wenn alle bereit sind · anderes Team beginnt</div>}
+                  {iVoted&&present===4&&<div style={{fontSize:10,color:'var(--subtle)',marginTop:10,fontWeight:500}}>{t('tv2AllReady')}</div>}
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>Anderes Team beginnt</div>
+                  <div style={{fontSize:11,color:'var(--subtle)',marginBottom:16,fontWeight:500}}>{t('tv2OtherStarts')}</div>
                   <button onClick={rematchLocal} style={{width:'100%',padding:'13px',marginBottom:8,
                     background:'#16a34a',color:'white',border:'none',borderRadius:12,
                     cursor:'pointer',fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    🔁 Revanche
+                    {t('rematch2v2')}
                   </button>
                   <button onClick={onExit} style={{width:'100%',padding:'11px',
                     background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',borderRadius:12,
                     cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    Menü
+                    {t('menu')}
                   </button>
                 </>
               )}
@@ -11601,10 +11897,10 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       {!winner&&(
         <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
           display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,pointerEvents:'none'}}>
-          {myTurnNow&&reached[turn]?(
+          {myTurnNow&&(reached[turn]||noMovesNow)?(
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,pointerEvents:'all'}}>
               <div style={{fontSize:10,color:'#16a34a',fontWeight:700,letterSpacing:0.5}}>
-                🎯 Am Ziel! Barrikade setzen oder überspringen
+                {reached[turn]?t('tv2AtGoal'):t('tv2Stuck')}
               </div>
               <div style={{display:'flex',gap:10,alignItems:'center'}}>
                 {['H','V'].map(function(orient){
@@ -11629,7 +11925,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                   fontWeight:700,fontSize:12,color:'var(--text)',
                   fontFamily:'system-ui,-apple-system,sans-serif',
                   backdropFilter:'blur(12px)',boxShadow:'var(--shadow-soft)'}}>
-                  Überspringen →
+                  {t('tv2SkipBtn')} {'\u2192'}
                 </button>
               </div>
             </div>
