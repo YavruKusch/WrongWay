@@ -4419,34 +4419,41 @@ function App(){
     });
     return()=>{cancelled=true;ref.off('value',cb);};
   },[friendLobbyState]);
-  // GUEST: Einladungen pollen (nur im Menü)
+  // Einladungen: Push-Listener statt 5s-Poll (nur im Menü).
+  // Read nur beim Anhaengen + wenn wirklich eine Einladung kommt/verschwindet.
+  // Der 60s-Ablauf wird rein lokal per Timer ausgeblendet (kein DB-Read).
   useEffect(()=>{
-    if(!account||screen!=='menu')return;
-    let cancelled=false;
-    const poll=async()=>{
-      if(cancelled)return;
-      const inv=await stoGet(INVITE_KEY(account.key));
-      if(inv&&!cancelled&&Date.now()-inv.ts<60000)setPendingInvite(inv);
-      else if(!cancelled)setPendingInvite(null);
-    };
-    poll();const iv=setInterval(poll,5000); // 1,5s -> 5s: Einladung ist 60s gueltig, spart Dauerlast
-    return()=>{cancelled=true;clearInterval(iv);};
+    if(!account||screen!=='menu'||!window.db)return;
+    const ref=window.db.ref(INVITE_KEY(account.key));
+    let expireTimer=null;
+    const cb=ref.on('value',snap=>{
+      const raw=snap.val();
+      dlTrack('ww_invites/x',raw);
+      let inv=null;try{inv=raw?JSON.parse(raw):null;}catch(e){inv=null;}
+      if(expireTimer){clearTimeout(expireTimer);expireTimer=null;}
+      const age=inv?Date.now()-inv.ts:1e9;
+      if(inv&&age<60000){
+        setPendingInvite(inv);
+        expireTimer=setTimeout(function(){setPendingInvite(null);},60000-age);
+      }else{
+        setPendingInvite(null);
+      }
+    });
+    return()=>{ref.off('value',cb);if(expireTimer)clearTimeout(expireTimer);};
   },[account,screen]);
-  // Freundschaftsanfragen pollen (Badge im Menü)
+  // Freundschaftsanfragen: Push-Listener statt 12s-Poll (Badge im Menü).
+  // on('value') laedt nur beim Anhaengen + bei echten Aenderungen. Der alte Poll
+  // klopfte alle 12s bei Firebase an — jeder Read kostet Verbindungs-Overhead,
+  // auch wenn der Knoten leer ist (skaliert linear mit jedem eingeloggten Spieler).
   useEffect(()=>{
-    if(!account)return;
-    let cancelled=false;
-    const poll=async()=>{
-      if(cancelled)return;
-      try{
-        const snap=await window.db.ref(FR_KEY(account.key)).once('value');
-        const v=snap.val()||{};
-        dlTrack('ww_freq/x',v);
-        if(!cancelled)setFriendReqCount(Object.keys(v).length);
-      }catch(e){}
-    };
-    poll();const iv=setInterval(poll,12000);
-    return()=>{cancelled=true;clearInterval(iv);};
+    if(!account||!window.db)return;
+    const ref=window.db.ref(FR_KEY(account.key));
+    const cb=ref.on('value',snap=>{
+      const v=snap.val()||{};
+      dlTrack('ww_freq/x',v);
+      setFriendReqCount(Object.keys(v).length);
+    });
+    return()=>ref.off('value',cb);
   },[account]);
   // Freund einladen: Lobby erstellen + Einladung senden
   const doInviteFriend=async(friendKey,friendName)=>{
