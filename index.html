@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" translate="no">
 <head>
 <meta charset="UTF-8">
+<meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -26,12 +27,12 @@
     background-size:40px 40px;
   }
   html.dark{
-    background-color:#0f172a;
+    background-color:#070c16;
     background-image:linear-gradient(rgba(148,163,184,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.06) 1px,transparent 1px);
     background-size:40px 40px;
   }
   body{min-height:100%;overscroll-behavior:none;background:#f8f9fa;}
-  body.dark{background:#0f172a;}
+  body.dark{background:#070c16;}
   a{color:inherit;text-decoration:none;pointer-events:none;}
   :not(input):not(textarea){-webkit-touch-callout:none;}
   :root{
@@ -44,9 +45,10 @@
     --shadow-card:0 4px 24px rgba(0,0,0,0.08),0 1px 4px rgba(0,0,0,0.04);
     --shadow-soft:0 2px 8px rgba(0,0,0,0.06);
     --menu-grid-line:rgba(15,23,42,0.04);
+    --msec-bg:rgba(255,255,255,0.5);--msec-border:rgba(140,160,200,0.22);
   }
   body.dark,html.dark{
-    --bg:#0a1020;--card:#161e33;--text:#f1f5f9;--subtle:#64748b;--muted:#94a3b8;
+    --bg:#070c16;--card:#161e33;--text:#f1f5f9;--subtle:#64748b;--muted:#94a3b8;
     --border:#252d44;--border-soft:#1f2840;
     --grid-bg:#161e33;--cell-a:#161e33;--cell-b:#1a2238;--cell-line:#1f2840;
     --goal:#0d2a1c;--start:#0f1a2c;
@@ -55,6 +57,7 @@
     --shadow-card:0 4px 24px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.3);
     --shadow-soft:0 2px 8px rgba(0,0,0,0.3);
     --menu-grid-line:rgba(148,163,184,0.065);
+    --msec-bg:rgba(255,255,255,0.035);--msec-border:rgba(150,180,235,0.1);
   }
   html,body{width:100%;overflow-x:hidden;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;
     background-color:var(--bg);
@@ -67,9 +70,9 @@
   input,button{-webkit-appearance:none;font-family:inherit;}
   button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);touch-action:manipulation;}
   button:active{transform:scale(0.94);}
-  .mi-btn{transition:transform 0.11s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.11s ease !important;}
-  .mi-btn:active{transform:translateY(4px) scale(0.985) !important;box-shadow:0 0px 4px rgba(0,0,0,0.10) !important;}
-  .mi-btn-hl:active{transform:translateY(4px) scale(0.985) !important;box-shadow:0 0px 8px rgba(0,0,0,0.18) !important;}
+  .mi-btn{transition:transform 0.13s cubic-bezier(0.34,1.4,0.64,1),box-shadow 0.13s ease !important;}
+  .mi-btn:active{transform:scale(0.972) !important;box-shadow:0 1px 4px rgba(15,23,42,0.07) !important;}
+  .mi-btn-hl:active{transform:scale(0.972) !important;box-shadow:0 2px 9px rgba(15,23,42,0.18) !important;}
   input{font-size:16px !important;}
   #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999;flex-direction:column;gap:16px;font-family:system-ui,-apple-system,sans-serif;}
   #loader .dot{font-size:40px;}
@@ -230,6 +233,11 @@
   @keyframes piece-pulse{
     0%,100%{transform:scale(0.9);opacity:0.5;}
     50%{transform:scale(1.55);opacity:0;}
+  }
+  @keyframes ww-land{
+    0%{transform:scale(0.35);opacity:0;}
+    35%{opacity:0.45;}
+    100%{transform:scale(1.7);opacity:0;}
   }
   @keyframes confetti-fall{
     0%{transform:translateY(-20px) rotate(0deg);opacity:1;}
@@ -563,6 +571,109 @@
     0%,100%{opacity:0.5;transform:scaleX(1);}
     50%{opacity:0.85;transform:scaleX(1.04);}
   }
+  @keyframes mbg-gp{0%,100%{opacity:0.55;}50%{opacity:1;}}
+  @keyframes ms-heartbeat{
+    0%{transform:scale(1);}
+    12%{transform:scale(1.11);}
+    24%{transform:scale(1);}
+    36%{transform:scale(1.11);}
+    60%,100%{transform:scale(1);}
+  }
+  @keyframes ms-sonar{
+    0%{transform:scale(0.55);opacity:0.55;}
+    100%{transform:scale(2.3);opacity:0;}
+  }
+  @keyframes ms-rotate{
+    0%{transform:rotate(0deg);}
+    100%{transform:rotate(360deg);}
+  }
+  @keyframes ms-dots{
+    0%,20%{opacity:0;}
+    50%{opacity:1;}
+    100%{opacity:0;}
+  }
+  @keyframes ms-fade{
+    0%{opacity:0;transform:translateY(6px);}
+    100%{opacity:1;transform:translateY(0);}
+  }
+  /* ===== Design v8: steinige Spielsteine + hochwertige Mauern ===== */
+  .ww-stone{position:relative;pointer-events:none;}
+  .ww-stone-tex{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;pointer-events:none;mix-blend-mode:soft-light;opacity:0.5;background-size:cover;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='wwsg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wwsg)'/%3E%3C/svg%3E");}
+  .ww-stone-sheen{position:absolute;left:22%;top:14%;width:48%;height:36%;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,255,255,0.4),transparent);filter:blur(1.5px);}
+  .ww-wall-gloss{position:absolute;left:7%;right:7%;top:1.5px;height:28%;border-radius:4px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.34),transparent);}
+  .ww-board-tex{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;background-size:150px 150px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='wwbn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wwbn)' opacity='0.5'/%3E%3C/svg%3E");}
+  .ww-board-veins{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;background-size:cover;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23808a9c' stroke-opacity='0.14'%3E%3Cpath d='M40 0 C 70 110 20 210 80 400' stroke-width='1'/%3E%3Cpath d='M380 10 C 300 140 360 250 270 400' stroke-width='1.2'/%3E%3Cpath d='M150 0 C 180 90 120 180 160 400' stroke-width='0.8'/%3E%3Cpath d='M0 120 C 130 150 250 90 400 140' stroke-width='0.9'/%3E%3C/g%3E%3C/svg%3E");}
+  /* ===== Design v8: Brett-Rahmen (Frame) wie Preview ===== */
+  .ww-edge{position:absolute;left:18px;right:18px;height:2.5px;border-radius:3px;z-index:4;pointer-events:none;}
+  .ww-edge-t{top:6px;background:linear-gradient(90deg,transparent,#ec5346 25%,#ec5346 75%,transparent);box-shadow:0 0 11px #ec5346,0 0 22px rgba(216,57,45,0.53);}
+  .ww-edge-b{bottom:6px;background:linear-gradient(90deg,transparent,#4793ec 25%,#4793ec 75%,transparent);box-shadow:0 0 11px #4793ec,0 0 22px rgba(59,130,246,0.53);}
+  .ww-stud{position:absolute;width:9px;height:9px;top:50%;margin-top:-4.5px;transform:rotate(45deg);border-radius:2px;z-index:4;pointer-events:none;background:linear-gradient(135deg,#aab4c6,#3a4252);box-shadow:0 1px 2px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.5);}
+  .ww-stud-l{left:3px;} .ww-stud-r{right:3px;}
+  @keyframes ww-dotb{0%,100%{transform:scale(1);opacity:0.9;}50%{transform:scale(1.16);opacity:1;}}
+  /* ===== Design v8: Spielerkarten + VS-Trenner (Preview) ===== */
+  .ww-players{display:flex;align-items:stretch;gap:9px;}
+  .ww-pcard{flex:1;border-radius:17px;padding:9px 11px;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden;
+    box-shadow:0 7px 20px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.15),inset 0 -3px 7px rgba(0,0,0,0.26);
+    transition:transform 0.3s,box-shadow 0.4s,filter 0.4s;}
+  .ww-pcard .ww-sheen2{position:absolute;top:0;bottom:0;width:38%;left:-50%;pointer-events:none;background:linear-gradient(105deg,transparent,rgba(255,255,255,0.28),transparent);}
+  .ww-pcard.pA{background:linear-gradient(150deg,#e54d3c,#b41d1d);}
+  .ww-pcard.pB{background:linear-gradient(150deg,#4385ee,#1b4cc0);}
+  .ww-pcard.dim{filter:saturate(0.55) brightness(0.82);box-shadow:0 4px 12px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);}
+  .ww-pcard.pA.live{box-shadow:0 7px 22px rgba(229,77,60,0.45),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28);transform:translateY(-1px);}
+  .ww-pcard.pB.live{box-shadow:0 7px 22px rgba(67,133,238,0.45),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28);transform:translateY(-1px);}
+  .ww-pcard.live .ww-sheen2{animation:ww-sheen 2.8s cubic-bezier(0.4,0,0.2,1) infinite;}
+  .ww-figslot{width:46px;height:46px;flex-shrink:0;position:relative;border-radius:50%;
+    background:radial-gradient(circle at 50% 38%,rgba(0,0,0,0.12),rgba(0,0,0,0.28));
+    box-shadow:inset 0 2px 5px rgba(0,0,0,0.4),inset 0 -1px 0 rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;}
+  .ww-pinfo{flex:1;min-width:0;color:#fff;}
+  .ww-pname{font-size:16px;font-weight:900;letter-spacing:-0.3px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ww-pwalls{font-size:12px;font-weight:800;display:flex;align-items:center;gap:4px;margin-top:3px;color:rgba(255,255,255,0.92);}
+  .ww-pclock{flex-shrink:0;text-align:center;color:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;
+    background:rgba(0,0,0,0.24);border:1px solid rgba(255,255,255,0.15);border-radius:11px;padding:5px 8px;min-width:54px;transition:background 0.3s,box-shadow 0.3s;}
+  .ww-pcard.live .ww-pclock{background:rgba(0,0,0,0.32);box-shadow:0 0 0 1.5px rgba(255,255,255,0.28),inset 0 1px 2px rgba(0,0,0,0.3);}
+  .ww-pcard.dim .ww-pclock{opacity:0.78;}
+  .ww-ptime{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0.5px;line-height:1;}
+  .ww-pcap{font-size:7px;font-weight:800;letter-spacing:1px;opacity:0.75;}
+  .ww-vs{width:36px;flex-shrink:0;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    background:linear-gradient(180deg,#f3f6fb,#ffffff);border:1px solid rgba(15,23,42,0.07);box-shadow:0 6px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.9);}
+  body.dark .ww-vs,html.dark .ww-vs{background:linear-gradient(180deg,#1b2438,#141c2d);border:1px solid rgba(255,255,255,0.08);box-shadow:0 6px 16px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.06);}
+  .ww-vt{font-size:11px;font-weight:900;letter-spacing:1px;color:var(--subtle);}
+  .ww-vd{display:flex;flex-direction:column;gap:3px;}
+  .ww-vd i{width:3px;height:3px;border-radius:50%;background:var(--subtle);opacity:0.5;}
+  @keyframes ww-sheen{0%{left:-50%;}40%{left:130%;}100%{left:130%;}}
+  /* ===== Design v8: Ziel-Glühlinien (Preview) ===== */
+  .ww-goalext{display:flex;align-items:center;justify-content:center;gap:8px;}
+  .ww-goalext.t{margin-bottom:6px;} .ww-goalext.b{margin-top:6px;}
+  .ww-goalext .ln{flex:0 1 80px;height:2px;border-radius:2px;background:currentColor;opacity:0.6;box-shadow:0 0 7px currentColor;}
+  .ww-goalext .ar{font-size:15px;line-height:1;text-shadow:0 0 9px currentColor;}
+  .ww-goalext .nm2{font-size:12px;font-weight:900;letter-spacing:2px;white-space:nowrap;text-shadow:0 0 8px currentColor;}
+  /* ===== Design v8: untere Steuerleiste (Preview) ===== */
+  .ww-bottombar{display:flex;align-items:flex-end;gap:10px;}
+  .ww-bottombar.pos-bottom{justify-content:flex-start;}
+  .ww-bottombar.pos-bottom .ww-wallctl{flex:1;}
+  .ww-bottombar.pos-right{justify-content:space-between;}
+  .ww-bottombar.pos-left{flex-direction:row-reverse;justify-content:space-between;}
+  .ww-iconbtn{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;
+    border:1px solid var(--border);background:linear-gradient(180deg,#ffffff,#e9edf3);
+    box-shadow:0 6px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -2px 5px rgba(0,0,0,0.12);
+    transition:transform 0.14s cubic-bezier(0.34,1.56,0.64,1);}
+  .ww-iconbtn:active{transform:scale(0.92);}
+  .ww-wallctl{border-radius:16px;padding:5px 11px 7px;
+    background:linear-gradient(180deg,#f3f6fb,#ffffff);border:1px solid var(--border);
+    box-shadow:0 6px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -2px 5px rgba(0,0,0,0.08);}
+  body.dark .ww-wallctl,html.dark .ww-wallctl{background:linear-gradient(180deg,#1b2438,#141c2d);box-shadow:0 6px 16px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.06),inset 0 -2px 5px rgba(0,0,0,0.26);}
+  .ww-wallctl .wl{font-size:9px;font-weight:900;letter-spacing:0.8px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px;}
+  .ww-wallctl .tools{display:flex;justify-content:center;align-items:center;gap:9px;}
+  .ww-wtool{border-radius:13px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;
+    background:linear-gradient(180deg,#eef2f8,#d2d9e4);border:1px solid rgba(0,0,0,0.06);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),0 3px 7px rgba(0,0,0,0.18);transition:transform 0.14s,box-shadow 0.2s,opacity 0.2s;}
+  body.dark .ww-wtool,html.dark .ww-wtool{background:linear-gradient(180deg,#27344b,#0e131d);border:1px solid rgba(255,255,255,0.07);box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 3px 7px rgba(0,0,0,0.42);}
+  .ww-wtool.armed:active{transform:scale(0.94);}
+  @keyframes ww-goalpulse{0%,100%{opacity:0.3;}50%{opacity:0.7;}}
 </style>
 </head>
 <body>
@@ -639,16 +750,16 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 let COLS=9,ROWS=13;const WW=8,BARR=10;
-let CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
+let CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-46)/COLS)));
 // Feldgröße je Modus setzen. Classic bleibt 9x13. Duell: Blitz 7x7, Standard 9x9.
 function applyBoardSize(map,duelSize){
   if(map==='duel'){
     if(duelSize==='blitz'){COLS=7;ROWS=7;}
     else{COLS=9;ROWS=9;}
-    CELL=Math.max(38,Math.min(50,Math.floor((window.innerWidth-20)/COLS)));
+    CELL=Math.max(38,Math.min(50,Math.floor((window.innerWidth-46)/COLS)));
   }else{
     COLS=9;ROWS=13;
-    CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-20)/COLS)));
+    CELL=Math.max(34,Math.min(40,Math.floor((window.innerWidth-46)/COLS)));
   }
 }
 // Startpositionen je nach Map (dynamisch aus aktueller Feldgröße)
@@ -813,12 +924,13 @@ if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
 try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
-const COLS2=11,ROWS2=15,WW2=8,BARR2=25,MIN_PATHS_2V2=2;
-const CELL2=Math.max(26,Math.min(38,Math.floor((window.innerWidth-16)/COLS2)));
-// Tokens: A=Rot(links), B=Blau(rechts). Suffix 1=unten→oben(row0), 2=oben→unten(rowMax)
-const INIT_2V2={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
-const GOAL_2V2={A1:0,A2:ROWS2-1,B1:0,B2:ROWS2-1};
-const NEXT_2V2={A1:'B1',B1:'A2',A2:'B2',B2:'A1'}; // Unten (A1+B1) → Oben (A2+B2) → Unten ...
+const COLS2=9,ROWS2=9,WW2=8,BARR2=10,MIN_PATHS_2V2=2;
+const CELL2=Math.max(28,Math.min(40,Math.floor((window.innerWidth-42)/COLS2)));
+// Team A=Rot startet UNTEN (Reihe 8, Spalten 3/5) -> Ziel Reihe 0.
+// Team B=Blau startet OBEN (Reihe 0, Spalten 3/5) -> Ziel Reihe 8. Wie 1v1-Race zu zweit.
+const INIT_2V2={A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}};
+const GOAL_2V2={A1:0,A2:0,B1:ROWS2-1,B2:ROWS2-1};
+const NEXT_2V2={A1:'B1',B1:'A2',A2:'B2',B2:'A1'}; // Teams wechseln A,B,A,B; im Team rotieren beide
 const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
@@ -890,9 +1002,9 @@ const I18N={
     waitingStart:'Waiting for game to start...',cancel:'Cancel',codePrefix:'Code: ',
     replay:'Replay',step:'Step',wallPlaced:'Wall placed',
     wins:'wins!',givenUp:'Given up',lostGiveUp:'gave up',rematch:'Rematch',replayBtn:'Replay',menu:'Menu',
-    giveUp:'Give up',sure:'Sure?',walls:'Walls',statusWait:'WAITING',statusThink:'THINKING',statusTurn:'TURN',
+    giveUp:'Give up',sure:'Sure?',walls:'Walls',statusWait:'WAITING',statusThink:'THINKING',statusTurn:'TURN',timeLabel:'TIME',
     goalLabel:'▲ GOAL ▲',startLabel:'▼ START ▼',invalidPos:'Invalid position!',opponentTurn:"Opponent's turn...",
-    wallsLeft:'walls left',tapContinue:'Tap to continue',red:'Red',blue:'Blue',
+    wallsLeft:'walls left',wallCtrl:'Wall controls',wpBottom:'Bottom',wpLeft:'Left',wpRight:'Right',tapContinue:'Tap to continue',red:'Red',blue:'Blue',
     options:'Options',language:'Language',close:'Close',theme:'Theme',light:'Light',dark:'Dark',
     tutHelp:'How to play',tutSkip:'Skip',tutNext:'Next',tutBack:'Back',tutDone:"Let's go!",
     tut1Title:'The goal',tut1Desc:'Get your piece to the green line at the top.',
@@ -916,9 +1028,9 @@ const I18N={
     waitingStart:'Warte auf Spielstart...',cancel:'Abbrechen',codePrefix:'Code: ',
     replay:'Replay',step:'Schritt',wallPlaced:'Mauer gesetzt',
     wins:'gewinnt!',givenUp:'Aufgegeben',lostGiveUp:'hat aufgegeben',rematch:'Revanche',replayBtn:'Replay',menu:'Menü',
-    giveUp:'Aufgeben',sure:'Sicher?',walls:'Mauern',statusWait:'WARTET',statusThink:'DENKT',statusTurn:'DRAN',
+    giveUp:'Aufgeben',sure:'Sicher?',walls:'Mauern',statusWait:'WARTET',statusThink:'DENKT',statusTurn:'DRAN',timeLabel:'ZEIT',
     goalLabel:'▲ ZIEL ▲',startLabel:'▼ START ▼',invalidPos:'Ungültige Position!',opponentTurn:'Gegner ist dran...',
-    wallsLeft:'Mauern übrig',tapContinue:'Tippen um fortzufahren',red:'Rot',blue:'Blau',
+    wallsLeft:'Mauern übrig',wallCtrl:'Wand-Steuerung',wpBottom:'Unten',wpLeft:'Links',wpRight:'Rechts',tapContinue:'Tippen um fortzufahren',red:'Rot',blue:'Blau',
     options:'Optionen',language:'Sprache',close:'Schließen',theme:'Design',light:'Hell',dark:'Dunkel',
     tutHelp:"So funktioniert's",tutSkip:'Überspringen',tutNext:'Weiter',tutBack:'Zurück',tutDone:'Los geht\'s!',
     tut1Title:'Das Ziel',tut1Desc:'Bring deinen Spielstein nach oben zur grünen Linie.',
@@ -942,9 +1054,9 @@ const I18N={
     waitingStart:'Oyun başlatılıyor...',cancel:'İptal',codePrefix:'Kod: ',
     replay:'Tekrar',step:'Adım',wallPlaced:'Duvar yerleştirildi',
     wins:'kazandı!',givenUp:'Pes etti',lostGiveUp:'pes etti',rematch:'Rövanş',replayBtn:'Tekrar',menu:'Menü',
-    giveUp:'Pes et',sure:'Emin misin?',walls:'Duvar',statusWait:'BEKLİYOR',statusThink:'DÜŞÜNÜYOR',statusTurn:'SIRA',
+    giveUp:'Pes et',sure:'Emin misin?',walls:'Duvar',statusWait:'BEKLİYOR',statusThink:'DÜŞÜNÜYOR',statusTurn:'SIRA',timeLabel:'SÜRE',
     goalLabel:'▲ HEDEF ▲',startLabel:'▼ BAŞLANGIÇ ▼',invalidPos:'Geçersiz konum!',opponentTurn:'Rakibin sırası...',
-    wallsLeft:'duvar kaldı',tapContinue:'Devam etmek için dokun',red:'Kırmızı',blue:'Mavi',
+    wallsLeft:'duvar kaldı',wallCtrl:'Duvar kontrolü',wpBottom:'Alt',wpLeft:'Sol',wpRight:'Sağ',tapContinue:'Devam etmek için dokun',red:'Kırmızı',blue:'Mavi',
     options:'Seçenekler',language:'Dil',close:'Kapat',theme:'Tema',light:'Açık',dark:'Koyu',
     tutHelp:'Nasıl oynanır',tutSkip:'Atla',tutNext:'İleri',tutBack:'Geri',tutDone:'Başlayalım!',
     tut1Title:'Hedef',tut1Desc:'Taşını yukarıdaki yeşil çizgiye ulaştır.',
@@ -968,9 +1080,9 @@ const I18N={
     waitingStart:'En attente du début...',cancel:'Annuler',codePrefix:'Code: ',
     replay:'Replay',step:'Pas',wallPlaced:'Mur placé',
     wins:'gagne!',givenUp:'Abandonné',lostGiveUp:'a abandonné',rematch:'Revanche',replayBtn:'Replay',menu:'Menu',
-    giveUp:'Abandonner',sure:'Sûr?',walls:'Murs',statusWait:'ATTENTE',statusThink:'RÉFLEXION',statusTurn:'TOUR',
+    giveUp:'Abandonner',sure:'Sûr?',walls:'Murs',statusWait:'ATTENTE',statusThink:'RÉFLEXION',statusTurn:'TOUR',timeLabel:'TEMPS',
     goalLabel:'▲ BUT ▲',startLabel:'▼ DÉPART ▼',invalidPos:'Position invalide!',opponentTurn:"Tour de l'adversaire...",
-    wallsLeft:'murs restants',tapContinue:'Touche pour continuer',red:'Rouge',blue:'Bleu',
+    wallsLeft:'murs restants',wallCtrl:'Contrôles des murs',wpBottom:'Bas',wpLeft:'Gauche',wpRight:'Droite',tapContinue:'Touche pour continuer',red:'Rouge',blue:'Bleu',
     options:'Options',language:'Langue',close:'Fermer',theme:'Thème',light:'Clair',dark:'Sombre',
     tutHelp:'Comment jouer',tutSkip:'Passer',tutNext:'Suivant',tutBack:'Retour',tutDone:"C'est parti !",
     tut1Title:'Le but',tut1Desc:'Amène ton pion jusqu\'à la ligne verte en haut.',
@@ -1024,17 +1136,17 @@ en:{
   addFriendTitle:'Add friend',addFriendDesc:'Add opponent as friend',
   spectatorReact:'React as spectator',
   rematchReady:'Ready \u00b7 waiting',rematchNeed4:'Rematch (4 players needed)',rematch2v2:'Rematch',
-  tv2Hotseat:'Local test (hotseat)',tv2OnlineSub:'Create or join a lobby',tv2BoardInfo:'11\u00d715 board \u00b7 25 barricades per team \u00b7 30s per turn',
+  tv2Hotseat:'Local test (hotseat)',tv2OnlineSub:'Create or join a lobby',tv2BoardInfo:'9\u00d79 board \u00b7 10 barricades per team \u00b7 30s per turn',
   tv2CreateNew:'CREATE NEW',tv2Creating:'Creating...',tv2CreateBtn:'+ Create lobby',tv2OpenLob:'OPEN LOBBIES',tv2CodeJoin:'JOIN WITH CODE',tv2CodePh:'Enter code...',
   tv2LobbyCode:'LOBBY CODE',tv2Copied:'Copied!',tv2Copy:'Copy',tv2Empty:'Empty',tv2Here:'Move here',tv2You:'You',
   tv2NowHost:'You are now the host',tv2Need22:'Exactly 2 per team needed!',tv2NotAllOn:'A player is disconnected',tv2TeamFull:'Team is full',tv2NotFound:'Lobby not found',tv2ConnLost:'Connection lost',
   tv2Bottom:'Bottom',tv2Top:'Top',tv2RoundBottom:'Bottom round',tv2RoundTop:'Top round',tv2Goal:'GOAL',
-  tv2AtGoal:'At the goal! Place a barricade or skip',tv2Stuck:'No moves possible \u2013 place a barricade or skip',tv2SkipBtn:'Skip',
+  tv2AtGoal:'At the goal! Place a barricade or skip',tv2Stuck:'No moves possible \u2013 place a barricade or skip',tv2SkipBtn:'Skip',tv2MateWait:'\u25c9 At the goal! Teammate still on the way...',
   tv2AllReady:'Starts when everyone is ready \u00b7 other team begins',tv2OtherStarts:'Other team begins',
   tv2Removed:'You were removed from the game',tv2RemovedAfk:'3 turns missed in a row',tv2RemovedDc:'Connection lost for too long',
   tv2MateGone:'Your teammate is gone \u2013 reach your goal alone!',tv2LeftGame:'left the game',tv2PlayerDc:'disconnected...',tv2ByForfeit:'by forfeit',
   tv2RulesTitle:'How 2 vs 2 works',tv2Rule1:'Your team wins when both players reach the other side.',tv2Rule2:'Players take turns, always alternating between the teams.',tv2Rule3:'If a teammate leaves, their partner keeps playing alone.',tv2Rule4:'Barricades are shared within your team \u2013 no one can be fully trapped.',
-  tv2MoreBtn:'Rules in detail',tv2TrapTitle:'No one can be trapped',tv2TrapText:'Every player always keeps at least two separate routes to the goal. A barricade that would lock someone into a dead end simply can\u2019t be placed. Even a trap made of two walls is impossible \u2013 the very first wall of it is already blocked, so the trap can never be built.',tv2PassTitle:'Passages stay open',tv2PassText:'In every row across the board there is always room to get through: either two separate gaps, or one wide opening of three or more. That way no row can shrink into a single narrow bottleneck where all four pawns pile up.',
+  tv2MoreBtn:'Rules in detail',tv2TrapTitle:'No one gets cut off completely',tv2TrapText:'You can wall off almost everything \u2013 but every player always keeps at least one open route to their goal. A barricade that would cut someone off completely simply can\u2019t be placed.',tv2PassTitle:'Narrow paths are allowed',tv2PassText:'Unlike before, a route may be squeezed down to a single corridor. That makes walls far stronger \u2013 so secure your own path early and watch where the others are heading.',
   modeConfigSub:'Timer, Barricades & Special Modes',
   statWins:'Wins',statWinRate:'Win-%',statStreak:'Streak',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1080,17 +1192,17 @@ de:{
   addFriendTitle:'Freund hinzuf\u00fcgen',addFriendDesc:'Gegner als Freund hinzuf\u00fcgen',
   spectatorReact:'Als Zuschauer reagieren',
   rematchReady:'Bereit \u00b7 warte',rematchNeed4:'Revanche (4 Spieler n\u00f6tig)',rematch2v2:'Revanche',
-  tv2Hotseat:'Lokal testen (Hotseat)',tv2OnlineSub:'Lobby erstellen oder beitreten',tv2BoardInfo:'11\u00d715 Feld \u00b7 25 Barrikaden pro Team \u00b7 30s pro Zug',
+  tv2Hotseat:'Lokal testen (Hotseat)',tv2OnlineSub:'Lobby erstellen oder beitreten',tv2BoardInfo:'9\u00d79 Feld \u00b7 10 Barrikaden pro Team \u00b7 30s pro Zug',
   tv2CreateNew:'NEU ERSTELLEN',tv2Creating:'Erstelle...',tv2CreateBtn:'+ Lobby erstellen',tv2OpenLob:'OFFENE LOBBYS',tv2CodeJoin:'MIT CODE BEITRETEN',tv2CodePh:'Code eingeben...',
   tv2LobbyCode:'LOBBY-CODE',tv2Copied:'Kopiert!',tv2Copy:'Kopieren',tv2Empty:'Leer',tv2Here:'Hierher',tv2You:'Du',
   tv2NowHost:'Du bist jetzt Host',tv2Need22:'Genau 2 pro Team n\u00f6tig!',tv2NotAllOn:'Ein Spieler ist getrennt',tv2TeamFull:'Team ist voll',tv2NotFound:'Lobby nicht gefunden',tv2ConnLost:'Verbindung verloren',
   tv2Bottom:'Unten',tv2Top:'Oben',tv2RoundBottom:'Unten-Runde',tv2RoundTop:'Oben-Runde',tv2Goal:'ZIEL',
-  tv2AtGoal:'Am Ziel! Barrikade setzen oder \u00fcberspringen',tv2Stuck:'Kein Zug m\u00f6glich \u2013 Barrikade setzen oder \u00fcberspringen',tv2SkipBtn:'\u00dcberspringen',
+  tv2AtGoal:'Am Ziel! Barrikade setzen oder \u00fcberspringen',tv2Stuck:'Kein Zug m\u00f6glich \u2013 Barrikade setzen oder \u00fcberspringen',tv2SkipBtn:'\u00dcberspringen',tv2MateWait:'\u25c9 Am Ziel! Partner noch unterwegs...',
   tv2AllReady:'Startet wenn alle bereit sind \u00b7 anderes Team beginnt',tv2OtherStarts:'Anderes Team beginnt',
   tv2Removed:'Du wurdest aus dem Spiel entfernt',tv2RemovedAfk:'3 Z\u00fcge in Folge verpasst',tv2RemovedDc:'Verbindung zu lange verloren',
   tv2MateGone:'Dein Partner ist weg \u2013 erreiche dein Ziel allein!',tv2LeftGame:'hat das Spiel verlassen',tv2PlayerDc:'getrennt...',tv2ByForfeit:'durch Aufgabe',
   tv2RulesTitle:'So funktioniert 2 vs 2',tv2Rule1:'Dein Team gewinnt, wenn beide Spieler die andere Seite erreichen.',tv2Rule2:'Es geht reihum, immer abwechselnd zwischen den Teams.',tv2Rule3:'Verl\u00e4sst ein Mitspieler das Spiel, spielt sein Partner allein weiter.',tv2Rule4:'Barrikaden teilt ihr euch im Team \u2013 niemand kann komplett eingesperrt werden.',
-  tv2MoreBtn:'Regeln im Detail',tv2TrapTitle:'Niemand kann eingesperrt werden',tv2TrapText:'Jeder Spieler hat immer mindestens zwei getrennte Wege zum Ziel. Eine Barrikade, die jemanden in eine Sackgasse sperren w\u00fcrde, l\u00e4sst sich gar nicht setzen. Auch eine Falle aus zwei W\u00e4nden ist unm\u00f6glich \u2013 schon die erste Wand davon wird blockiert, die Falle kann also nie gebaut werden.',tv2PassTitle:'Durchg\u00e4nge bleiben offen',tv2PassText:'In jeder Querreihe bleibt immer Platz zum Durchkommen: entweder zwei getrennte L\u00fccken oder eine breite \u00d6ffnung von drei oder mehr. So kann keine Reihe zu einem einzigen engen Nadel\u00f6hr werden, an dem sich alle vier Figuren stauen.',
+  tv2MoreBtn:'Regeln im Detail',tv2TrapTitle:'Niemand wird komplett abgeschnitten',tv2TrapText:'Ihr k\u00f6nnt fast alles zubauen \u2013 aber jeder Spieler beh\u00e4lt immer mindestens einen Weg zu seinem Ziel. Eine Barrikade, die jemanden komplett abschneiden w\u00fcrde, l\u00e4sst sich nicht setzen.',tv2PassTitle:'Enge Wege sind erlaubt',tv2PassText:'Anders als fr\u00fcher darf ein Weg bis auf einen einzigen Korridor zugebaut werden. Das macht Mauern viel st\u00e4rker \u2013 sichere deinen eigenen Weg fr\u00fch und behalte im Blick, wohin die anderen wollen.',
   modeConfigSub:'Timer, Barrikaden & Spezial-Modi',
   statWins:'Siege',statWinRate:'Siege-%',statStreak:'Serie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1136,17 +1248,17 @@ tr:{
   addFriendTitle:'Arkada\u015f ekle',addFriendDesc:'Rakibi arkada\u015f olarak ekle',
   spectatorReact:'Seyirci olarak tepki ver',
   rematchReady:'Haz\u0131r \u00b7 bekleniyor',rematchNeed4:'R\u00f6van\u015f (4 oyuncu gerekli)',rematch2v2:'R\u00f6van\u015f',
-  tv2Hotseat:'Yerel test (hotseat)',tv2OnlineSub:'Lobi olu\u015ftur veya kat\u0131l',tv2BoardInfo:'11\u00d715 tahta \u00b7 tak\u0131m ba\u015f\u0131na 25 barikat \u00b7 hamle ba\u015f\u0131na 30sn',
+  tv2Hotseat:'Yerel test (hotseat)',tv2OnlineSub:'Lobi olu\u015ftur veya kat\u0131l',tv2BoardInfo:'9\u00d79 tahta \u00b7 tak\u0131m ba\u015f\u0131na 10 barikat \u00b7 hamle ba\u015f\u0131na 30sn',
   tv2CreateNew:'YEN\u0130 OLU\u015eTUR',tv2Creating:'Olu\u015fturuluyor...',tv2CreateBtn:'+ Lobi olu\u015ftur',tv2OpenLob:'A\u00c7IK LOB\u0130LER',tv2CodeJoin:'KODLA KATIL',tv2CodePh:'Kodu gir...',
   tv2LobbyCode:'LOB\u0130 KODU',tv2Copied:'Kopyaland\u0131!',tv2Copy:'Kopyala',tv2Empty:'Bo\u015f',tv2Here:'Buraya ge\u00e7',tv2You:'Sen',
   tv2NowHost:'Art\u0131k ev sahibisin',tv2Need22:'Her tak\u0131mda tam 2 ki\u015fi gerekli!',tv2NotAllOn:'Bir oyuncunun ba\u011flant\u0131s\u0131 kesik',tv2TeamFull:'Tak\u0131m dolu',tv2NotFound:'Lobi bulunamad\u0131',tv2ConnLost:'Ba\u011flant\u0131 koptu',
   tv2Bottom:'Alt',tv2Top:'\u00dcst',tv2RoundBottom:'Alt turu',tv2RoundTop:'\u00dcst turu',tv2Goal:'HEDEF',
-  tv2AtGoal:'Hedefte! Barikat koy veya pas ge\u00e7',tv2Stuck:'Hamle yok \u2013 barikat koy veya pas ge\u00e7',tv2SkipBtn:'Pas ge\u00e7',
+  tv2AtGoal:'Hedefte! Barikat koy veya pas ge\u00e7',tv2Stuck:'Hamle yok \u2013 barikat koy veya pas ge\u00e7',tv2SkipBtn:'Pas ge\u00e7',tv2MateWait:'\u25c9 Hedefte! Tak\u0131m arkada\u015f\u0131 hen\u00fcz yolda...',
   tv2AllReady:'Herkes haz\u0131r olunca ba\u015flar \u00b7 di\u011fer tak\u0131m ba\u015flar',tv2OtherStarts:'Di\u011fer tak\u0131m ba\u015flar',
   tv2Removed:'Oyundan \u00e7\u0131kar\u0131ld\u0131n',tv2RemovedAfk:'\u00dcst \u00fcste 3 hamle ka\u00e7\u0131r\u0131ld\u0131',tv2RemovedDc:'Ba\u011flant\u0131 \u00e7ok uzun s\u00fcre koptu',
   tv2MateGone:'Tak\u0131m arkada\u015f\u0131n gitti \u2013 hedefe tek ba\u015f\u0131na ula\u015f!',tv2LeftGame:'oyundan ayr\u0131ld\u0131',tv2PlayerDc:'ba\u011flant\u0131 kesildi...',tv2ByForfeit:'terk nedeniyle',
   tv2RulesTitle:'2 vs 2 nas\u0131l oynan\u0131r',tv2Rule1:'Her iki oyuncu da kar\u015f\u0131 tarafa ula\u015f\u0131nca tak\u0131m\u0131n kazan\u0131r.',tv2Rule2:'S\u0131ra, tak\u0131mlar aras\u0131nda d\u00f6n\u00fc\u015f\u00fcml\u00fc ilerler.',tv2Rule3:'Bir oyuncu ayr\u0131l\u0131rsa, e\u015fi tek ba\u015f\u0131na oynamaya devam eder.',tv2Rule4:'Barikatlar tak\u0131mda ortakt\u0131r \u2013 kimse tamamen kapat\u0131lamaz.',
-  tv2MoreBtn:'Kurallar ayr\u0131nt\u0131l\u0131',tv2TrapTitle:'Kimse kapat\u0131lamaz',tv2TrapText:'Her oyuncunun hedefe her zaman en az iki ayr\u0131 yolu vard\u0131r. Birini \u00e7\u0131kmaz soka\u011fa hapsedecek bir barikat konulamaz. \u0130ki duvarl\u0131 bir tuzak bile imk\u00e2ns\u0131zd\u0131r \u2013 daha ilk duvar engellendi\u011fi i\u00e7in tuzak hi\u00e7bir zaman kurulamaz.',tv2PassTitle:'Ge\u00e7itler a\u00e7\u0131k kal\u0131r',tv2PassText:'Tahtadaki her sat\u0131rda ge\u00e7mek i\u00e7in her zaman yer kal\u0131r: ya iki ayr\u0131 bo\u015fluk ya da \u00fc\u00e7 veya daha geni\u015f bir a\u00e7\u0131kl\u0131k. B\u00f6ylece hi\u00e7bir sat\u0131r, d\u00f6rt ta\u015f\u0131n da s\u0131k\u0131\u015ft\u0131\u011f\u0131 tek bir dar bo\u011faza d\u00f6n\u00fc\u015fmez.',
+  tv2MoreBtn:'Kurallar ayr\u0131nt\u0131l\u0131',tv2TrapTitle:'Kimse tamamen kesilemez',tv2TrapText:'Neredeyse her yeri kapatabilirsiniz \u2013 ama her oyuncu hedefine giden en az bir yolu her zaman korur. Birini tamamen kesecek bir barikat konulamaz.',tv2PassTitle:'Dar yollar serbest',tv2PassText:'Eskisinin aksine bir yol tek bir koridora kadar daralt\u0131labilir. Bu da barikatlar\u0131 \u00e7ok daha g\u00fc\u00e7l\u00fc yapar \u2013 kendi yolunu erken g\u00fcvenceye al ve di\u011ferlerinin nereye gitti\u011fine dikkat et.',
   modeConfigSub:'Zamanlay\u0131c\u0131, Barikatlar & \u00d6zel Modlar',
   statWins:'Galibiyet',statWinRate:'Kazan-%',statStreak:'Seri',
   duelModeClassic:'RACE',duelModeDuel:'D\u00dcELLO',
@@ -1192,17 +1304,17 @@ fr:{
   addFriendTitle:'Ajouter un ami',addFriendDesc:"Ajouter l'adversaire en ami",
   spectatorReact:'R\u00e9agir en spectateur',
   rematchReady:'Pr\u00eat \u00b7 attente',rematchNeed4:'Revanche (4 joueurs requis)',rematch2v2:'Revanche',
-  tv2Hotseat:'Test local (hotseat)',tv2OnlineSub:'Cr\u00e9er ou rejoindre un salon',tv2BoardInfo:'Plateau 11\u00d715 \u00b7 25 barricades par \u00e9quipe \u00b7 30s par tour',
+  tv2Hotseat:'Test local (hotseat)',tv2OnlineSub:'Cr\u00e9er ou rejoindre un salon',tv2BoardInfo:'Plateau 9\u00d79 \u00b7 10 barricades par \u00e9quipe \u00b7 30s par tour',
   tv2CreateNew:'CR\u00c9ER',tv2Creating:'Cr\u00e9ation...',tv2CreateBtn:'+ Cr\u00e9er un salon',tv2OpenLob:'SALONS OUVERTS',tv2CodeJoin:'REJOINDRE AVEC CODE',tv2CodePh:'Entrer le code...',
   tv2LobbyCode:'CODE DU SALON',tv2Copied:'Copi\u00e9 !',tv2Copy:'Copier',tv2Empty:'Vide',tv2Here:'Aller ici',tv2You:'Toi',
   tv2NowHost:'Tu es maintenant l\u2019h\u00f4te',tv2Need22:'Exactement 2 par \u00e9quipe !',tv2NotAllOn:'Un joueur est d\u00e9connect\u00e9',tv2TeamFull:'\u00c9quipe compl\u00e8te',tv2NotFound:'Salon introuvable',tv2ConnLost:'Connexion perdue',
   tv2Bottom:'Bas',tv2Top:'Haut',tv2RoundBottom:'Tour du bas',tv2RoundTop:'Tour du haut',tv2Goal:'BUT',
-  tv2AtGoal:'Au but ! Pose une barricade ou passe',tv2Stuck:'Aucun coup possible \u2013 pose une barricade ou passe',tv2SkipBtn:'Passer',
+  tv2AtGoal:'Au but ! Pose une barricade ou passe',tv2Stuck:'Aucun coup possible \u2013 pose une barricade ou passe',tv2SkipBtn:'Passer',tv2MateWait:'\u25c9 Au but ! Co\u00e9quipier encore en route...',
   tv2AllReady:'D\u00e9marre quand tout le monde est pr\u00eat \u00b7 l\u2019autre \u00e9quipe commence',tv2OtherStarts:'L\u2019autre \u00e9quipe commence',
   tv2Removed:'Tu as \u00e9t\u00e9 retir\u00e9 de la partie',tv2RemovedAfk:'3 tours manqu\u00e9s de suite',tv2RemovedDc:'Connexion perdue trop longtemps',
   tv2MateGone:'Ton co\u00e9quipier est parti \u2013 atteins ton but seul !',tv2LeftGame:'a quitt\u00e9 la partie',tv2PlayerDc:'d\u00e9connect\u00e9...',tv2ByForfeit:'par abandon',
   tv2RulesTitle:'Comment jouer en 2 vs 2',tv2Rule1:'Ton \u00e9quipe gagne quand les deux joueurs atteignent l\u2019autre c\u00f4t\u00e9.',tv2Rule2:'On joue chacun son tour, en alternant entre les \u00e9quipes.',tv2Rule3:'Si un co\u00e9quipier quitte, son partenaire continue seul.',tv2Rule4:'Les barricades sont partag\u00e9es dans l\u2019\u00e9quipe \u2013 impossible d\u2019enfermer quelqu\u2019un.',
-  tv2MoreBtn:'R\u00e8gles en d\u00e9tail',tv2TrapTitle:'Impossible d\u2019enfermer',tv2TrapText:'Chaque joueur garde toujours au moins deux chemins distincts vers son but. Une barricade qui enfermerait quelqu\u2019un dans une impasse ne peut pas \u00eatre pos\u00e9e. M\u00eame un pi\u00e8ge \u00e0 deux murs est impossible \u2013 le premier mur est d\u00e9j\u00e0 bloqu\u00e9, donc le pi\u00e8ge ne peut jamais \u00eatre construit.',tv2PassTitle:'Les passages restent ouverts',tv2PassText:'Sur chaque rang\u00e9e du plateau il reste toujours de quoi passer : soit deux ouvertures s\u00e9par\u00e9es, soit une large ouverture de trois ou plus. Aucune rang\u00e9e ne peut devenir un goulet unique o\u00f9 les quatre pions se bloquent.',
+  tv2MoreBtn:'R\u00e8gles en d\u00e9tail',tv2TrapTitle:'Personne n\u2019est coup\u00e9 totalement',tv2TrapText:'Tu peux presque tout barricader \u2013 mais chaque joueur garde toujours au moins un chemin vers son but. Une barricade qui couperait totalement quelqu\u2019un ne peut pas \u00eatre pos\u00e9e.',tv2PassTitle:'Les passages \u00e9troits sont permis',tv2PassText:'Contrairement \u00e0 avant, un chemin peut \u00eatre r\u00e9duit \u00e0 un seul couloir. Les murs deviennent bien plus puissants \u2013 s\u00e9curise ta route t\u00f4t et surveille o\u00f9 vont les autres.',
   modeConfigSub:'Minuteur, Barricades & Modes sp\u00e9ciaux',
   statWins:'Victoires',statWinRate:'Victoires-%',statStreak:'S\u00e9rie',
   duelModeClassic:'RACE',duelModeDuel:'DUELL',
@@ -1363,15 +1475,11 @@ function passageWidthOk2(walls,r,C){
   }
   return groups>=2||maxGroup>=3;
 }
-// Volle Pruefung beim Setzen: keine Barrikade darf einen Token einsperrbar machen (alle 4)
+// Wand-Pruefung wie 1v1: nur Geometrie + jeder Pawn behaelt mindestens EINEN Weg zum Ziel.
 function tryWall2(key,walls,tokens,R,C){
   if(!wallGeomOk2(key,walls))return null;
   const next=new Set([...walls,key]);
-  for(const id of ORDER_2V2){if(!tokens[id])continue;if(!wallSafeToken2(tokens[id],GOAL_2V2[id],next,R,C))return null;}
-  // Breitenregel: alle Reihen prüfen (nicht nur die neue Mauer-Reihe)
-  if(key[0]==='H'){
-    for(let r=0;r<R-1;r++){if(!passageWidthOk2(next,r,C))return null;}
-  }
+  for(const id of ORDER_2V2){if(!tokens[id])continue;if(!hasPathTo(tokens[id],next,GOAL_2V2[id],R,C))return null;}
   return next;
 }
 
@@ -3954,7 +4062,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const SC=Math.min(Math.floor((Math.min(window.innerWidth,440)-48)/COLS),Math.floor((window.innerHeight*0.55)/ROWS));
   const SW=Math.max(4,Math.round(SC*0.2));
   const myKey=account?account.key:SESSION;
-  const myName=account?account.name:'👁';
+  const myName=account?account.name:GUEST_ID;
   React.useEffect(()=>{
     if(!lobbyId||!window.db)return;
     // Spielstand live verfolgen
@@ -3982,7 +4090,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
       const v=snap.val();
       if(!v||!v.type||!v.ts||v.ts<initTs-300||v.from===myKey)return;
       const id=v.ts+Math.random();
-      setOtherEmotes(prev=>[...prev.slice(-3),{type:v.type,id,name:v.name||'👁'}]);
+      setOtherEmotes(prev=>[...prev.slice(-3),{type:v.type,id,name:v.name||'?'}]);
       setTimeout(()=>setOtherEmotes(prev=>prev.filter(e=>e.id!==id)),3000);
     });
     return()=>{
@@ -4009,29 +4117,32 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const walls=gs?new Set(gs.walls||[]):new Set();
   const pA=gs?gs.pA:{r:ROWS-1,c:2};
   const pB=gs?gs.pB:{r:ROWS-1,c:6};
-  const cells=[];
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
-    cells.push(<div key={r+'-'+c} style={{position:'absolute',left:c*SC,top:r*SC,width:SC,height:SC,
-      background:(r+c)%2===0?(dk?'#1e293b':'#f8fafc'):(dk?'#1a2740':'#f1f5f9'),
-      boxSizing:'border-box',border:'0.5px solid '+(dk?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.05)')}}/>);
+  const wallOverlay='linear-gradient(180deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0) 30%,rgba(0,0,0,0) 62%,rgba(0,0,0,0.3) 73%,rgba(0,0,0,0.1) 100%), ';
   const wallEls=[...walls].map(key=>{
     const a=key.split('-');const ty=a[0],r=+a[1],c=+a[2];const isH=ty==='H';
+    const wc=dk?'#e2e8f0':'#1e293b';
     return <div key={key} style={{position:'absolute',
       left:isH?c*SC:(c+1)*SC-SW/2,top:isH?(r+1)*SC-SW/2:r*SC,
       width:isH?2*SC:SW,height:isH?SW:2*SC,
-      background:dk?'#e2e8f0':'#1e293b',borderRadius:SW/2,zIndex:4,
-      boxShadow:'0 1px 4px rgba(0,0,0,0.18)'}}/>;
+      background:wallOverlay+wc,borderRadius:4,zIndex:10,overflow:'hidden',
+      boxShadow:'inset 0 1.5px 1px rgba(255,255,255,0.28),inset 0 -2px 3px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.5),0 2px 3px rgba(0,0,0,0.35)'}}>
+      <div className="ww-wall-gloss"/>
+    </div>;
   });
-  const Piece=({pos,col,border:bd})=>(
-    <div style={{position:'absolute',
-      left:pos.c*SC+SC/2-SC*0.36,top:pos.r*SC+SC/2-SC*0.36,
-      width:SC*0.72,height:SC*0.72,borderRadius:'50%',
-      background:col,border:'2px solid '+bd,zIndex:6,
-      boxShadow:'0 2px 8px '+col+'55',
-      transition:'left 0.25s cubic-bezier(0.34,1.56,0.64,1),top 0.25s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-  );
+  const SpecStone=({pos,p})=>{
+    const sz=Math.round(SC*0.72),off=(SC-sz)/2;
+    return <div style={{position:'absolute',left:pos.c*SC+off,top:pos.r*SC+off,width:sz,height:sz,zIndex:20,
+      transition:'left 0.25s cubic-bezier(0.34,1.56,0.64,1),top 0.25s cubic-bezier(0.34,1.56,0.64,1)'}}>
+      <div className="ww-stone" style={{width:sz,height:sz,position:'relative'}}>
+        <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
+          background:`radial-gradient(circle at 38% 32%, ${PC[p]}, ${PD[p]} 100%)`,
+          boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 4px 7px rgba(0,0,0,0.4)`}}/>
+        <div className="ww-stone-tex"/>
+        <div className="ww-stone-sheen"/>
+      </div>
+    </div>;
+  };
   const SPEC_EMOTES=['laugh','cry','angry','confused'];
-  const EMOTE_EMOJI={laugh:'😂',cry:'😢',angry:'😡',confused:'🤔'};
   return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
       paddingTop:'calc(env(safe-area-inset-top) + 20px)',paddingBottom:24,
@@ -4044,14 +4155,27 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
       <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:440,padding:'0 16px'}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:10,paddingTop:48}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:9,marginBottom:8}}>
+            <div style={{width:32,height:32,borderRadius:10,
+              background:'linear-gradient(145deg,#7c3aed,#6366f1 48%,#3b82f6)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:'0 5px 16px rgba(99,102,241,0.5),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -3px 6px rgba(49,46,129,0.6)'}}>
+              <BrickWallIcon size={18} light/>
+            </div>
+            <div style={{fontSize:18,fontWeight:900,color:txt,letterSpacing:-0.5}}>{t('title')}</div>
+          </div>
+          <div style={{display:'flex',justifyContent:'center'}}>
           <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 12px',
             borderRadius:20,background:'rgba(239,68,68,0.12)',marginBottom:6}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:'#ef4444',animation:'pulse 1.2s ease-in-out infinite'}}/>
             <span style={{fontSize:11,fontWeight:800,color:'#ef4444',letterSpacing:1}}>LIVE</span>
-            {specCount>0&&<span style={{fontSize:11,fontWeight:800,color:'#ef4444',opacity:0.7}}>· 👁 {specCount}</span>}
+            {specCount>0&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:11,fontWeight:800,color:'#ef4444',opacity:0.8}}><span style={{opacity:0.6}}>{'\u00b7'}</span><EyeIcon size={11} color="#ef4444"/>{specCount}</span>}
+          </div>
           </div>
           {gone?(
-            <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8}}>🏁 {t('gameOver')}</div>
+            <div style={{fontSize:14,color:muted,fontWeight:600,marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-1.5 3.5L16 11H5"/></svg>{t('gameOver')}
+            </div>
           ):gs&&gs.winner?(
             <div style={{fontSize:16,fontWeight:900,color:gs.winner==='A'?'#ef4444':'#3b82f6',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
               <div style={{width:12,height:12,borderRadius:'50%',background:gs.winner==='A'?'#ef4444':'#3b82f6'}}/>
@@ -4064,72 +4188,117 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
             </div>
           ):null}
         </div>
-        {/* Brett */}
-        <div style={{display:'flex',justifyContent:'center',position:'relative'}}>
-          <div style={{position:'relative',width:COLS*SC,height:ROWS*SC,
-            borderRadius:10,overflow:'hidden',border:'1.5px solid '+border,
-            boxShadow:'0 4px 20px rgba(0,0,0,0.12)'}}>
-            <div style={{position:'absolute',top:0,left:0,right:0,height:3,
-              background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:5}}/>
-            {gs&&gs.map==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
-              background:'linear-gradient(90deg,#16a34a,#22c55e)',zIndex:5}}/>}
-            {cells}{wallEls}
-            {gs&&<Piece pos={pA} col="#ef4444" border="#7f1d1d"/>}
-            {gs&&<Piece pos={pB} col="#3b82f6" border="#1e3a5f"/>}
+        {/* Spielerkarten */}
+        <div className="ww-players" style={{width:COLS*SC+26,margin:'0 auto 9px'}}>
+          {['A','B'].map((p,idx)=>{
+            const active=gs&&gs.turn===p&&!gs.winner;
+            const nm=p==='A'?(gs&&gs.nameA||t('red')):(gs&&gs.nameB||t('blue'));
+            const wl=gs&&gs.barrLeft?(gs.barrLeft[p]||0):0;
+            return(
+              <React.Fragment key={p}>
+              <div className={"ww-pcard p"+p+(active?" live":" dim")}>
+                <div className="ww-sheen2"/>
+                <div className="ww-figslot">
+                  <div className="ww-stone" style={{width:38,height:38,position:'relative'}}>
+                    <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
+                      background:`radial-gradient(circle at 38% 32%, ${PC[p]}, ${PD[p]} 100%)`,
+                      boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 3px 6px rgba(0,0,0,0.4)`}}/>
+                    <div className="ww-stone-tex"/>
+                    <div className="ww-stone-sheen"/>
+                  </div>
+                </div>
+                <div className="ww-pinfo">
+                  <div className="ww-pname">{nm}</div>
+                  <div className="ww-pwalls">
+                    <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
+                    {wl}
+                  </div>
+                </div>
+              </div>
+              {idx===0&&<div className="ww-vs"><div className="ww-vt">VS</div><div className="ww-vd"><i/><i/><i/></div></div>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        {/* Ziel oben */}
+        <div className="ww-goalext t" style={{width:COLS*SC+26,margin:'0 auto',color:gs&&gs.map==='duel'?PC['A']:'#16a34a'}}>
+          <span className="ln"/><span className="ar">{'\u25b2'}</span>
+          {gs&&gs.map==='duel'&&<span className="nm2">{(gs.nameA||t('red')).toUpperCase()}</span>}
+          <span className="ln"/>
+        </div>
+        {/* Brett (v8) */}
+        <div style={{position:'relative',width:COLS*SC+26,margin:'0 auto',borderRadius:24,padding:13,
+          background:dk?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
+          boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
+          <div className="ww-edge ww-edge-t" style={{opacity:dk?0.85:0.5}}/>
+          <div className="ww-edge ww-edge-b" style={{opacity:dk?0.85:0.5}}/>
+          <div className="ww-stud ww-stud-l"/><div className="ww-stud ww-stud-r"/>
+          <div style={{position:'relative',width:COLS*SC,height:ROWS*SC,borderRadius:14,overflow:'hidden',
+            background:dk?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
+            boxShadow:dk?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)'}}>
+            <div className="ww-board-tex" style={{mixBlendMode:dk?'screen':'multiply',opacity:dk?0.12:0.4}}/>
+            <div className="ww-board-veins" style={{opacity:dk?0.3:0.45}}/>
+            <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:dk?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:SC,pointerEvents:'none',zIndex:1,
+              background:`linear-gradient(180deg,${gs&&gs.map==='duel'?'#ef4444':'#22c55e'}28 0%,${gs&&gs.map==='duel'?'#ef4444':'#22c55e'}12 60%,transparent 100%)`,
+              boxShadow:`inset 0 0 0 1.5px ${gs&&gs.map==='duel'?'#ef4444':'#22c55e'}55,inset 0 2px 10px ${gs&&gs.map==='duel'?'#ef4444':'#22c55e'}33`,
+              animation:'ww-goalpulse 3s ease-in-out infinite'}}/>
+            {gs&&gs.map==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:SC,pointerEvents:'none',zIndex:1,
+              background:'linear-gradient(0deg,rgba(59,130,246,0.16) 0%,rgba(59,130,246,0.07) 60%,transparent 100%)',
+              boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.33),inset 0 -2px 10px rgba(59,130,246,0.2)',
+              animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+            <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
+              backgroundImage:`linear-gradient(${dk?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${dk?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${dk?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
+              backgroundSize:`${SC}px ${SC}px,${SC}px ${SC}px,${SC}px ${SC}px`}}/>
+            {wallEls}
+            {gs&&<SpecStone pos={pA} p="A"/>}
+            {gs&&<SpecStone pos={pB} p="B"/>}
           </div>
         </div>
-        {/* Barrikaden-Info mit Spielernamen */}
-        {gs&&gs.barrLeft&&(
-          <div style={{display:'flex',justifyContent:'space-between',marginTop:8,padding:'0 4px'}}>
-            <div style={{fontSize:12,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:4}}>
-              <div style={{width:9,height:9,borderRadius:'50%',background:'#ef4444'}}/>
-              <span style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{gs.nameA||t('red')}</span>
-              <BrickMini size={12}/>{gs.barrLeft.A||0}
-            </div>
-            <div style={{fontSize:12,color:'#3b82f6',fontWeight:700,display:'flex',alignItems:'center',gap:4}}>
-              {gs.barrLeft.B||0}<BrickMini size={12}/>
-              <span style={{maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{gs.nameB||t('blue')}</span>
-              <div style={{width:9,height:9,borderRadius:'50%',background:'#3b82f6'}}/>
-            </div>
-          </div>
-        )}
+        {/* Ziel unten */}
+        <div className="ww-goalext b" style={{width:COLS*SC+26,margin:'8px auto 0',color:gs&&gs.map==='duel'?PC['B']:'var(--subtle)',opacity:gs&&gs.map==='duel'?1:0.4}}>
+          <span className="ln"/>
+          {gs&&gs.map==='duel'&&<span className="ar">{'\u25bc'}</span>}
+          {gs&&gs.map==='duel'&&<span className="nm2">{(gs.nameB||t('blue')).toUpperCase()}</span>}
+          <span className="ln"/>
+        </div>
         {/* Andere Zuschauer-Emotes */}
         {otherEmotes.length>0&&(
           <div style={{display:'flex',gap:6,marginTop:8,flexWrap:'wrap',justifyContent:'center'}}>
             {otherEmotes.map(e=>(
-              <div key={e.id} style={{display:'inline-flex',alignItems:'center',gap:4,
+              <div key={e.id} style={{display:'inline-flex',alignItems:'center',gap:5,
                 padding:'4px 10px',borderRadius:12,
                 background:'rgba(139,92,246,0.12)',border:'1px solid rgba(139,92,246,0.2)',
                 animation:'fadeSlideUp 0.25s ease-out both',fontSize:11,color:txt,fontWeight:700}}>
-                <span style={{fontSize:9,color:muted}}>👁</span>
-                <span style={{fontSize:18}}>{EMOTE_EMOJI[e.type]||'👋'}</span>
+                <EyeIcon size={9} color={muted}/>
+                <EmoteChar color="#8b5cf6" dark="#6d28d9" type={e.type} size={20}/>
               </div>
             ))}
           </div>
         )}
         {/* Eigenes gesendetes Emote */}
         {myEmote&&(
-          <div style={{textAlign:'center',marginTop:8}}>
-            <span style={{fontSize:24,animation:'trophy-pop 0.3s ease-out both'}}>{EMOTE_EMOJI[myEmote.type]}</span>
+          <div style={{display:'flex',justifyContent:'center',marginTop:8,animation:'trophy-pop 0.3s ease-out both'}}>
+            <EmoteChar color="#8b5cf6" dark="#6d28d9" type={myEmote.type} size={30}/>
           </div>
         )}
         {/* Emote-Picker */}
         <div style={{marginTop:14,padding:'12px',borderRadius:16,
           background:card,border:'1.5px solid '+border,
           boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:1,color:muted,textAlign:'center',marginBottom:10,textTransform:'uppercase'}}>
-            {'\uD83D\uDC41'} {t('spectatorReact')}
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:1,color:muted,textAlign:'center',marginBottom:10,textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
+            <EyeIcon size={11} color={muted}/> {t('spectatorReact')}
           </div>
           <div style={{display:'flex',gap:8,justifyContent:'center'}}>
             {SPEC_EMOTES.map(type=>(
               <button key={type} onClick={()=>sendEmote(type)} style={{
                 width:52,height:52,borderRadius:16,border:'1.5px solid '+border,
                 background:myEmote&&myEmote.type===type?'rgba(139,92,246,0.15)':card,
-                cursor:'pointer',fontSize:24,display:'flex',alignItems:'center',justifyContent:'center',
+                cursor:'pointer',padding:0,display:'flex',alignItems:'center',justifyContent:'center',
                 fontFamily:'system-ui,-apple-system,sans-serif',
                 boxShadow:myEmote&&myEmote.type===type?'0 0 0 2px #8b5cf6':'none',
                 transition:'all 0.15s'}}>
-                {EMOTE_EMOJI[type]}
+                <EmoteHead color="#8b5cf6" dark="#6d28d9" type={type} size={36}/>
               </button>
             ))}
           </div>
@@ -4596,6 +4765,8 @@ function App(){
   const[selectedMap,setSelectedMap]=useState('duel');
   const[duelSize,setDuelSize]=useState(()=>{try{return localStorage.getItem('ww_duelsize')||'standard';}catch{return 'standard';}});
   useEffect(()=>{try{localStorage.setItem('ww_duelsize',duelSize);}catch{}},[duelSize]);
+  const[wallBarPos,setWallBarPos]=useState(()=>{try{return localStorage.getItem('ww_wallbarpos')||'bottom';}catch{return 'bottom';}});
+  useEffect(()=>{try{localStorage.setItem('ww_wallbarpos',wallBarPos);}catch{}},[wallBarPos]);
   useEffect(()=>{
     document.body.classList.toggle('dark',darkMode);
     document.documentElement.classList.toggle('dark',darkMode);
@@ -6517,7 +6688,7 @@ function App(){
     const onMove=(x,y)=>{
       setGhostPos({x,y});
       const rect=gridRef.current?gridRef.current.getBoundingClientRect():null;
-      const inZone=rect&&y<=rect.bottom+60&&y>=rect.top-20;
+      const inZone=rect&&y<=rect.bottom+90&&y>=rect.top-20;
       const rel=getRel(x,y-OFFSET);
       if(inZone&&rel){
         const key=snapWall(rel.x,rel.y,dragging.orient);
@@ -6885,7 +7056,7 @@ function App(){
         border:'1.5px solid var(--border)',
         borderLeft:selectedMap==='duel'?'4px solid #8b5cf6':'4px solid #3b82f6',
         borderRadius:16,cursor:'pointer',display:'flex',alignItems:'center',gap:12,
-        boxShadow:'0 4px 0 rgba(0,0,0,0.08),0 2px 10px rgba(0,0,0,0.06)',
+        boxShadow:'0 2px 5px rgba(15,23,42,0.1),0 12px 28px rgba(15,23,42,0.16)',
         fontFamily:'system-ui,-apple-system,sans-serif'}}>
         <div style={{width:40,height:40,borderRadius:12,
           background:selectedMap==='duel'
@@ -6914,6 +7085,7 @@ function App(){
           <div style={{marginBottom:18}}>
             <MenuItem
               highlight pulse
+              glowColor="rgba(239,68,68,0.5)"
               highlightBg="linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)"
               icon={<SwordsIcon size={19} color="#fff"/>}
               iconBg="rgba(255,255,255,0.18)"
@@ -6948,11 +7120,12 @@ function App(){
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
             {feat('online')&&<MenuItem
               icon={<GlobeIcon size={19} color="#fff"/>}
-              iconBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
+              iconBg={selectedMap==='duel'?'linear-gradient(135deg,#a855f7,#7c3aed)':'linear-gradient(135deg,#3b82f6,#4f46e5)'}
               title={t('playOnline')||'Spielen'} desc={serverOnline?(t('createLobby')+' · '+t('joinExisting')):t('serverFull')}
               off={!feat('online')}
               highlight
-              highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#3b82f6,#2563eb)'}
+              glowColor={selectedMap==='duel'?'rgba(139,92,246,0.55)':'rgba(79,70,229,0.55)'}
+              highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#a855f7 0%,#8b5cf6 52%,#6d28d9 100%)':'linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)'}
               onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
             {feat('friend')&&<MenuItem
               icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
@@ -7011,24 +7184,7 @@ function App(){
             <span style={{fontSize:12,fontWeight:800,color:'var(--text)',letterSpacing:0.2}}>Instagram</span>
           </button>
         </div>
-        {/* KO-FI SUPPORT */}
-        <div style={{width:'100%',maxWidth:300,marginTop:10,paddingBottom:20,display:'flex',flexDirection:'column',alignItems:'center',gap:7}}>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.3,textAlign:'center',fontFamily:'system-ui,-apple-system,sans-serif'}}>
-            {lang==='de'?'Entwickler unterstützen':lang==='tr'?'Geliştiriciyi destekle':lang==='fr'?'Soutenir le développeur':'Support the Developer'}
-          </div>
-          <button onClick={()=>window.open('https://ko-fi.com/wrongway','_blank')} style={{
-            display:'flex',alignItems:'center',gap:7,padding:'9px 18px',borderRadius:20,
-            background:'var(--card)',border:'1.5px solid var(--border)',cursor:'pointer',
-            boxShadow:'var(--shadow-soft)',fontFamily:'system-ui,-apple-system,sans-serif',
-            animation:'kofi-float 3s ease-in-out infinite'}}>
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
-              <rect width="24" height="24" rx="4" fill="#FF5E5B"/>
-              <path d="M5 8h10.5a3.5 3.5 0 0 1 0 7H14l-2 2H9l-2-2H5V8z" fill="white"/>
-              <path d="M14 11.5h1a1 1 0 0 1 0 2h-1v-2z" fill="#FF5E5B"/>
-            </svg>
-            <span style={{fontSize:12,fontWeight:800,color:'var(--text)',letterSpacing:0.2}}>Ko-fi</span>
-          </button>
-        </div>
+        <div style={{height:24}}/>
       </div>
       {showOptions&&(
         <div onClick={()=>{setShowOptions(false);setShowLang(false);setOptionsTab('main');}} style={{position:'fixed',inset:0,
@@ -7103,6 +7259,23 @@ function App(){
                         border:`1.5px solid ${darkMode===o.k?'var(--text)':'var(--border)'}`,
                         fontFamily:'system-ui,-apple-system,sans-serif'}}>
                         <span style={{display:'flex'}}>{o.icon==='sun'?<SunIcon size={15}/>:<MoonIcon size={15}/>}</span>{o.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Wand-Steuerung */}
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1,marginBottom:8}}>
+                    {t('wallCtrl').toUpperCase()}
+                  </div>
+                  <div style={{display:'flex',gap:6,marginBottom:18}}>
+                    {[{k:'bottom',label:t('wpBottom')},{k:'left',label:t('wpLeft')},{k:'right',label:t('wpRight')}].map(o=>(
+                      <button key={o.k} onClick={()=>setWallBarPos(o.k)} style={{
+                        flex:1,padding:'11px 8px',borderRadius:10,fontSize:13,fontWeight:600,
+                        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+                        background:wallBarPos===o.k?'var(--text)':'var(--bg)',
+                        color:wallBarPos===o.k?'var(--bg)':'var(--text)',
+                        border:`1.5px solid ${wallBarPos===o.k?'var(--text)':'var(--border)'}`,
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                        {o.label}
                       </button>
                     ))}
                   </div>
@@ -7650,6 +7823,8 @@ function App(){
         {lang==='de'?'Datenschutz & Impressum':lang==='tr'?'Gizlilik & K\u00fcnye':lang==='fr'?'Confidentialit\u00e9 & Mentions':'Privacy & Legal'}
       </button>
 
+
+
       {/* Cookie Banner */}
       {!cookieConsent&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:3000,padding:'0 0 calc(env(safe-area-inset-bottom) + 0px) 0'}}>
@@ -7689,12 +7864,13 @@ function App(){
       const sel=gameTimeMode===val;
       return(
         <button onClick={()=>setGameTimeMode(val)} style={{
-          flex:1,padding:'10px 4px',borderRadius:10,
-          background:sel?'var(--text)':'var(--card)',
-          color:sel?'var(--bg)':'var(--text)',
-          border:`1.5px solid ${sel?'var(--text)':'var(--border)'}`,
+          flex:1,padding:'11px 4px',borderRadius:12,position:'relative',overflow:'hidden',
+          background:sel?'linear-gradient(135deg,#7c3aed,#8b5cf6)':(darkMode?'#1b2740':'var(--card)'),
+          color:sel?'#fff':'var(--text)',
+          border:`1.5px solid ${sel?'transparent':(darkMode?'rgba(160,185,235,0.22)':'#d6dded')}`,
           cursor:'pointer',
           opacity:1,
+          boxShadow:sel?'0 3px 10px rgba(124,58,237,0.35),0 0 22px rgba(124,58,237,0.35),inset 0 1px 0 rgba(255,255,255,0.22)':(darkMode?'0 2px 8px rgba(0,0,0,0.4)':'0 2px 5px rgba(15,23,42,0.1),0 8px 18px rgba(15,23,42,0.14),inset 0 1px 0 rgba(255,255,255,0.5)'),
           fontSize:12,fontWeight:800,letterSpacing:0.3,
           fontFamily:'system-ui,-apple-system,sans-serif'}}>
           {label}
@@ -7705,10 +7881,11 @@ function App(){
       const sel=dropMode===val;
       return(
         <button onClick={()=>setDropMode(d=>d===val?false:val)} style={{
-          flex:1,padding:'7px 2px',borderRadius:8,
-          background:sel?'#ec4899':'var(--bg)',
+          flex:1,padding:'8px 2px',borderRadius:9,
+          background:sel?'#ec4899':'var(--card)',
           color:sel?'white':'var(--text)',
           border:`1.5px solid ${sel?'#ec4899':'var(--border)'}`,
+          boxShadow:sel?'0 3px 12px rgba(236,72,153,0.4)':'0 2px 5px rgba(15,23,42,0.1),0 6px 14px rgba(15,23,42,0.12),inset 0 1px 0 rgba(255,255,255,0.5)',
           cursor:'pointer',fontSize:10,fontWeight:800,letterSpacing:0.2,
           fontFamily:'system-ui,-apple-system,sans-serif'}}>
           {label}
@@ -7716,18 +7893,31 @@ function App(){
       );
     };
     const SectionHeader=({label,icon})=>(
-      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:800,letterSpacing:1.5,marginTop:16,marginBottom:9,paddingLeft:2,display:'flex',alignItems:'center',gap:6}}>
-        <div style={{width:3,height:11,borderRadius:2,background:'var(--subtle)',opacity:0.5,flexShrink:0}}/>
-        {icon&&<span style={{opacity:0.7}}>{icon}</span>}
+      <div style={{fontSize:10.5,color:'var(--subtle)',fontWeight:800,letterSpacing:1.5,marginTop:18,marginBottom:9,paddingLeft:2,display:'flex',alignItems:'center',gap:8,textTransform:'uppercase'}}>
+        <div style={{width:3.5,height:13,borderRadius:2,background:'#8b5cf6',flexShrink:0}}/>
+        {icon&&<span style={{opacity:0.7,display:'inline-flex'}}>{icon}</span>}
         {label}
       </div>
     );
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
+        <div style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 40px)',left:0,right:0,height:200,zIndex:0,pointerEvents:'none',overflow:'hidden'}}>
+          <DecoStone dark={darkMode} size={48} style={{top:34,left:'7%'}}
+            hi="#c4b5fd" mid="#8b5cf6" lo="#6d28d9" wall="#5b21b6" rim="#c4b5fd"/>
+          <DecoStone dark={darkMode} size={58} style={{top:54,right:'8%'}}
+            hi="#fecaca" mid="#ef4444" lo="#b91c1c" wall={darkMode?'#7f1d1d':'#991b1b'} rim="#fca5a5"/>
+          <DecoStone dark={darkMode} size={40} style={{top:6,right:'27%'}}
+            hi="#bfdbfe" mid="#3b82f6" lo="#1d4ed8" wall={darkMode?'#1e3a8a':'#1e40af'} rim="#93c5fd"/>
+          <DecoCube dark={darkMode} size={26} style={{top:96,left:'4%'}}/>
+          <DecoCube dark={darkMode} size={26} style={{top:80,left:'10%'}}/>
+          <DecoCube dark={darkMode} size={26} style={{top:108,left:'11%'}}/>
+          <DecoCube dark={darkMode} size={24} style={{top:20,right:'20%'}}/>
+          <DecoCube dark={darkMode} size={24} style={{top:8,right:'15%'}}/>
+        </div>
         <MapAura map={selectedMap} dark={darkMode}/>
         <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
-        <div style={{width:'100%',maxWidth:340}}>
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
           <ScreenHead icon={<MazeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#3b82f6)"
             title={t('mode')} sub={t('modeConfigSub')}/>
 
@@ -7782,13 +7972,13 @@ function App(){
               flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
               background:selectedMap==='duel'
                 ?'linear-gradient(135deg,#7c3aed,#8b5cf6)'
-                :'var(--card)',
+                :(darkMode?'#1b2740':'var(--card)'),
               color:selectedMap==='duel'?'#fff':'var(--text)',
-              border:'1.5px solid '+(selectedMap==='duel'?'transparent':'var(--border)'),
+              border:'1.5px solid '+(selectedMap==='duel'?'transparent':(darkMode?'rgba(160,185,235,0.22)':'#d6dded')),
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:selectedMap==='duel'
-                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(124,58,237,0.3)'
-                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+                ?'0 4px 10px rgba(124,58,237,0.28),0 14px 32px rgba(124,58,237,0.32),inset 0 1px 0 rgba(255,255,255,0.25)'
+                :'0 2px 6px rgba(15,23,42,0.1),0 12px 28px rgba(15,23,42,0.16),inset 0 1px 0 rgba(255,255,255,0.45)',
               transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
               {selectedMap==='duel'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
               {selectedMap!=='duel'&&<div style={{position:'absolute',top:6,right:6,fontSize:8,fontWeight:800,
@@ -7814,13 +8004,13 @@ function App(){
               flex:1,padding:'14px 10px',borderRadius:14,cursor:'pointer',textAlign:'center',
               background:selectedMap==='classic'
                 ?'linear-gradient(135deg,#2563eb,#8b5cf6)'
-                :'var(--card)',
+                :(darkMode?'#1b2740':'var(--card)'),
               color:selectedMap==='classic'?'#fff':'var(--text)',
-              border:'1.5px solid '+(selectedMap==='classic'?'transparent':'var(--border)'),
+              border:'1.5px solid '+(selectedMap==='classic'?'transparent':(darkMode?'rgba(160,185,235,0.22)':'#d6dded')),
               fontFamily:'system-ui,-apple-system,sans-serif',
               boxShadow:selectedMap==='classic'
-                ?'0 4px 0 rgba(0,0,0,0.18),0 6px 20px rgba(37,99,235,0.3)'
-                :'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
+                ?'0 4px 10px rgba(37,99,235,0.28),0 14px 32px rgba(37,99,235,0.32),inset 0 1px 0 rgba(255,255,255,0.25)'
+                :'0 2px 6px rgba(15,23,42,0.1),0 12px 28px rgba(15,23,42,0.16),inset 0 1px 0 rgba(255,255,255,0.45)',
               transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',overflow:'hidden',position:'relative'}}>
               {selectedMap==='classic'&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'14px 14px 0 0',pointerEvents:'none'}}/>}
               <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
@@ -7854,12 +8044,12 @@ function App(){
                 {feat('duelBlitz')&&(
                   <button onClick={()=>setDuelSize('blitz')} className="mi-btn" style={{
                     flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
-                    background:duelSize==='blitz'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
+                    background:duelSize==='blitz'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':(darkMode?'#1b2740':'var(--card)'),
                     color:duelSize==='blitz'?'#fff':'var(--text)',
-                    border:'1.5px solid '+(duelSize==='blitz'?'transparent':'var(--border)'),
+                    border:'1.5px solid '+(duelSize==='blitz'?'transparent':(darkMode?'rgba(160,185,235,0.22)':'#d6dded')),
                     fontFamily:'system-ui,-apple-system,sans-serif',
-                    boxShadow:duelSize==='blitz'?'0 4px 0 rgba(0,0,0,0.18),0 6px 16px rgba(124,58,237,0.28)':'0 3px 0 rgba(0,0,0,0.07)',
-                    transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'}}>
+                    boxShadow:duelSize==='blitz'?'0 3px 10px rgba(124,58,237,0.3),0 0 26px rgba(124,58,237,0.4),0 12px 28px rgba(124,58,237,0.25),inset 0 1px 0 rgba(255,255,255,0.22)':'0 2px 6px rgba(15,23,42,0.1),0 10px 24px rgba(15,23,42,0.16),inset 0 1px 0 rgba(255,255,255,0.4)',
+                    transition:'all 0.22s cubic-bezier(0.34,1.4,0.64,1)'}}>
                     <div style={{fontSize:14,fontWeight:900,marginBottom:2}}>7 × 7</div>
                     <div style={{fontSize:11,fontWeight:800,marginBottom:1}}>{t('duelBlitzName')}</div>
                     <div style={{fontSize:9,fontWeight:700,opacity:0.65}}>{t('duelBlitzSpeed')}</div>
@@ -7868,12 +8058,12 @@ function App(){
                 {feat('duelStandard')&&(
                   <button onClick={()=>setDuelSize('standard')} className="mi-btn" style={{
                     flex:1,padding:'12px 8px',borderRadius:13,cursor:'pointer',textAlign:'center',
-                    background:duelSize==='standard'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'var(--card)',
+                    background:duelSize==='standard'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':(darkMode?'#1b2740':'var(--card)'),
                     color:duelSize==='standard'?'#fff':'var(--text)',
-                    border:'1.5px solid '+(duelSize==='standard'?'transparent':'var(--border)'),
+                    border:'1.5px solid '+(duelSize==='standard'?'transparent':(darkMode?'rgba(160,185,235,0.22)':'#d6dded')),
                     fontFamily:'system-ui,-apple-system,sans-serif',
-                    boxShadow:duelSize==='standard'?'0 4px 0 rgba(0,0,0,0.18),0 6px 16px rgba(124,58,237,0.28)':'0 3px 0 rgba(0,0,0,0.07)',
-                    transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'}}>
+                    boxShadow:duelSize==='standard'?'0 3px 10px rgba(124,58,237,0.3),0 0 26px rgba(124,58,237,0.4),0 12px 28px rgba(124,58,237,0.25),inset 0 1px 0 rgba(255,255,255,0.22)':'0 2px 6px rgba(15,23,42,0.1),0 10px 24px rgba(15,23,42,0.16),inset 0 1px 0 rgba(255,255,255,0.4)',
+                    transition:'all 0.22s cubic-bezier(0.34,1.4,0.64,1)'}}>
                     <div style={{fontSize:14,fontWeight:900,marginBottom:2}}>9 × 9</div>
                     <div style={{fontSize:11,fontWeight:800,marginBottom:1}}>Standard</div>
                     <div style={{fontSize:9,fontWeight:700,opacity:0.65}}>{t('duelTactical')}</div>
@@ -7921,7 +8111,7 @@ function App(){
                 borderRadius:11,cursor:'pointer',textAlign:'center',
                 fontSize:12,fontWeight:800,letterSpacing:0.2,
                 fontFamily:'system-ui,-apple-system,sans-serif',
-                boxShadow:chaosMode?'0 4px 14px rgba(139,92,246,0.35)':'none',
+                boxShadow:chaosMode?'0 3px 12px rgba(139,92,246,0.4),0 0 20px rgba(139,92,246,0.3)':'var(--card-shadow)',
                 transition:'all 0.2s'}}>
                 <HelpDot onClick={()=>setHelpKey('chaos')} style={{position:'absolute',top:5,right:5}}/>
                 <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{chaosMode?<CheckIcon size={18} color="currentColor"/>:<CrateIcon size={20}/>}</div>
@@ -7936,7 +8126,8 @@ function App(){
                 position:'relative',
                 background:dropMode?'rgba(236,72,153,0.10)':'var(--card)',
                 border:`1.5px solid ${dropMode?'#ec4899':'var(--border)'}`,
-                borderRadius:11,textAlign:'center',transition:'all 0.2s'}}>
+                borderRadius:11,textAlign:'center',transition:'all 0.2s',
+                boxShadow:dropMode?'0 3px 12px rgba(236,72,153,0.35),0 0 20px rgba(236,72,153,0.25)':'var(--card-shadow)'}}>
                 <HelpDot onClick={()=>setHelpKey('random')} style={{position:'absolute',top:5,right:5}}/>
                 <div style={{marginBottom:3,display:'flex',justifyContent:'center',height:20,alignItems:'center'}}>{dropMode?<CheckIcon size={18} color="#ec4899"/>:<ModeGlyph kind="burst" size={18} color="#ec4899"/>}</div>
                 <div style={{fontSize:12,fontWeight:800,color:dropMode?'#ec4899':'var(--text)'}}>{t('randomDrop')}</div>
@@ -7962,7 +8153,7 @@ function App(){
               borderRadius:11,cursor:'pointer',textAlign:'left',
               display:'flex',alignItems:'center',gap:10,
               fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:hammerMode?'0 4px 14px rgba(245,158,11,0.35)':'none',transition:'all 0.2s'}}>
+              boxShadow:hammerMode?'0 3px 12px rgba(245,158,11,0.4),0 0 20px rgba(245,158,11,0.3)':'var(--card-shadow)',transition:'all 0.2s'}}>
               <HelpDot onClick={()=>setHelpKey('hammer')} style={{position:'absolute',top:5,right:5}}/>
               <span style={{display:'flex',width:24,justifyContent:'center'}}>{hammerMode?<CheckIcon size={20} color="currentColor"/>:<HammerIcon size={22}/>}</span>
               <span>
@@ -7988,20 +8179,52 @@ function App(){
 
           {/* Barricades */}
           <SectionHeader icon={<BrickMini size={11}/>} label={t('barricadesLabel')}/>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:14,
-            padding:'8px 14px',background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:11}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,
+            padding:'10px 14px',background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:14,
+            boxShadow:'var(--card-shadow)'}}>
             <button onClick={()=>setGameBarr(b=>Math.max(8,b-1))}
-              style={{width:32,height:32,borderRadius:8,
-                background:'var(--bg)',border:'1.5px solid var(--border)',
-                cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
+              style={{width:38,height:38,borderRadius:11,
+                background:darkMode?'rgba(255,255,255,0.05)':'#f3f5fa',border:'1.5px solid var(--border)',
+                cursor:'pointer',fontSize:21,fontWeight:800,color:'#8b5cf6',display:'flex',alignItems:'center',justifyContent:'center',
                 fontFamily:'system-ui,-apple-system,sans-serif'}}>−</button>
-            <div style={{fontSize:24,fontWeight:900,color:'var(--text)',minWidth:28,textAlign:'center'}}>{gameBarr}</div>
+            <div style={{fontSize:26,fontWeight:900,color:'var(--text)',minWidth:40,textAlign:'center'}}>{gameBarr}</div>
             <button onClick={()=>setGameBarr(b=>Math.min(15,b+1))}
-              style={{width:32,height:32,borderRadius:8,
-                background:'var(--bg)',border:'1.5px solid var(--border)',
-                cursor:'pointer',fontSize:18,fontWeight:800,color:'var(--text)',
+              style={{width:38,height:38,borderRadius:11,
+                background:darkMode?'rgba(255,255,255,0.05)':'#f3f5fa',border:'1.5px solid var(--border)',
+                cursor:'pointer',fontSize:21,fontWeight:800,color:'#8b5cf6',display:'flex',alignItems:'center',justifyContent:'center',
                 fontFamily:'system-ui,-apple-system,sans-serif'}}>+</button>
           </div>
+
+          {/* START BUTTON */}
+          <button onClick={()=>{setNavDir('fwd');setFlash('');createLobby(false);}}
+            className="mi-btn" style={{
+            width:'100%',marginTop:22,padding:'16px 18px',borderRadius:20,position:'relative',overflow:'hidden',
+            background:'linear-gradient(135deg,#7c3aed 0%,#8b5cf6 55%,#6d28d9 100%)',
+            border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:14,
+            boxShadow:'0 4px 14px rgba(124,58,237,0.4),0 0 40px rgba(124,58,237,0.35),0 14px 34px rgba(124,58,237,0.3),inset 0 1px 0 rgba(255,255,255,0.25)',
+            fontFamily:'system-ui,-apple-system,sans-serif',
+            animation:'highlightGlow 3s ease-in-out infinite'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
+              background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',borderRadius:'20px 20px 0 0',pointerEvents:'none'}}/>
+            <div style={{width:46,height:46,borderRadius:14,flexShrink:0,
+              background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.25)'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <div style={{flex:1,textAlign:'left',minWidth:0,zIndex:1}}>
+              <div style={{fontSize:17,fontWeight:900,color:'#fff',letterSpacing:-0.4,lineHeight:1.15}}>
+                {selectedMap==='duel'
+                  ?(lang==='de'?'Duell starten':lang==='tr'?'Düello başlat':lang==='fr'?'Démarrer le duel':'Start Duel')
+                  :(lang==='de'?'Rennen starten':lang==='tr'?'Yarış başlat':lang==='fr'?'Démarrer la course':'Start Race')}
+              </div>
+              <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.82)',marginTop:2}}>
+                {lang==='de'?'Gegner finden':lang==='tr'?'Rakip bul':lang==='fr'?'Trouver un adversaire':'Find an opponent'}
+              </div>
+            </div>
+            <div style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',opacity:0.18,pointerEvents:'none'}}>
+              <SwordsIcon size={52} color="#fff"/>
+            </div>
+          </button>
 
         </div>
         {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
@@ -8048,22 +8271,22 @@ function App(){
   if(screen==='legal'){
     var legalData={
       impressum:{
-        de:['Impressum','Angaben gem. \u00a75 DDG','Betreiber: H\u00fcseyin Tunay','Adresse: [wird nach Umzug eingetragen]','Kontakt: wrongwayapp.official@gmail.com','Plattform: yavrukusch.github.io'],
-        en:['Legal Notice','Information acc. to \u00a75 DDG','Operator: H\u00fcseyin Tunay','Address: [to be added after relocation]','Contact: wrongwayapp.official@gmail.com','Platform: yavrukusch.github.io'],
-        tr:['K\u00fcnye','6563 say\u0131l\u0131 TCK kapsam\u0131nda','Operat\u00f6r: H\u00fcseyin Tunay','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','\u0130leti\u015fim: wrongwayapp.official@gmail.com','Platform: yavrukusch.github.io'],
-        fr:['Mentions l\u00e9gales','Informations selon \u00a75 DDG','Op\u00e9rateur: H\u00fcseyin Tunay','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Contact: wrongwayapp.official@gmail.com','Plateforme: yavrukusch.github.io']
+        de:['Impressum','Angaben gem. \u00a75 DDG','Adresse: [wird nach Umzug eingetragen]','Kontakt: wrongwayapp.official@gmail.com'],
+        en:['Legal Notice','Information acc. to \u00a75 DDG','Address: [to be added after relocation]','Contact: wrongwayapp.official@gmail.com'],
+        tr:['K\u00fcnye','6563 say\u0131l\u0131 TCK kapsam\u0131nda','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','\u0130leti\u015fim: wrongwayapp.official@gmail.com'],
+        fr:['Mentions l\u00e9gales','Informations selon \u00a75 DDG','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Contact: wrongwayapp.official@gmail.com']
       },
       privacy:{
-        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Werbung (zuk\u00fcnftig): Einwilligungsbanner vor Aktivierung. Keine personalisierten Daten ohne ausdr\u00fcckliche Zustimmung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden.','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
-        en:['Privacy Policy (GDPR & KVKK)','Controller: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Legal basis: Art. 6(1)(b) GDPR (contract performance) for accounts; Art. 6(1)(a) (consent) for advertising and analytics.','Data collected: email, username, password (hashed), game stats, ELO, game history.','Anonymous sessions: Playing without an account generates anonymous Firebase IDs. Not personally identifiable.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). US transfers based on Standard Contractual Clauses (SCC).','Third parties: Google Firebase (Auth, Database) \u00b7 Google reCAPTCHA v3 (spam protection). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passwords hashed exclusively by Firebase. No access to plaintext passwords.','Cookies & storage: We use localStorage for settings and cookie consent. No tracking cookies without consent.','Advertising (future): consent banner before activation. No personalized data without explicit consent.','Retention: until account deletion. Accounts can be deleted anytime in profile settings.','Your rights (GDPR): access, rectification, erasure, restriction, portability, objection. Contact: wrongwayapp.official@gmail.com','Right to complain: You have the right to lodge a complaint with a data protection authority.','KVKK (Turkey): rights under Law No. 6698. Contact wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
-        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Hukuki dayanak: Hesaplar i\u00e7in GDPR Madde 6/1-b (s\u00f6zle\u015fme); reklam i\u00e7in Madde 6/1-a (r\u0131za).','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO, oyun ge\u00e7mi\u015fi.','Anonim oturumlar: Hesaps\u0131z oynarken anonim Firebase kimlikleri olu\u015fturulur. Ki\u015fiye ba\u011flanamaz.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt). ABD transferleri SCC kapsam\u0131nda.','\u00dc\u00e7\u00fcnc\u00fc taraflar: Google Firebase \u00b7 Google reCAPTCHA v3. Google LLC, Mountain View, CA 94043, ABD.','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r. A\u00e7\u0131k metin \u015fifrelere eri\u015fim yoktur.','Depolama: Ayarlar i\u00e7in localStorage kullan\u0131l\u0131r. Onay olmadan takip \u00e7erezi kullan\u0131lmaz.','Reklam (gelecekte): onay banner\u0131 \u00f6nce g\u00f6sterilir. A\u00e7\u0131k r\u0131za olmadan ki\u015fiselle\u015ftirilmi\u015f veri kullan\u0131lmaz.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan istediginiz zaman silinebilir.','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme, s\u0131n\u0131rlama, ta\u015f\u0131nabilirlik. wrongwayapp.official@gmail.com','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, itiraz. wrongwayapp.official@gmail.com','\u015eikayet hakk\u0131: KVKK Kurumu\'na \u015eikayet hakk\u0131n\u0131z bulunmaktad\u0131r. www.kvkk.gov.tr'],
-        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Base l\u00e9gale: Art. 6(1)(b) RGPD (ex\u00e9cution du contrat) pour les comptes; Art. 6(1)(a) (consentement) pour la publicit\u00e9.','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO, historique de parties.','Sessions anonymes: jouer sans compte g\u00e9n\u00e8re des identifiants Firebase anonymes. Non rattachables \u00e0 une personne.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort). Transferts USA bas\u00e9s sur les CCT.','Tiers: Google Firebase (Auth, BDD) \u00b7 Google reCAPTCHA v3 (anti-spam). Google LLC, Mountain View, CA 94043, USA.','Mots de passe hach\u00e9s exclusivement par Firebase. Aucun acc\u00e8s aux mots de passe en clair.','Cookies & stockage: localStorage pour les pr\u00e9f\u00e9rences et le consentement. Pas de cookies de suivi sans accord.','Publicit\u00e9 (futur): bandeau de consentement avant activation. Pas de donn\u00e9es personnalis\u00e9es sans consentement explicite.','Conservation: jusqu\u2019\u00e0 la suppression du compte. Supprimable \u00e0 tout moment dans les param\u00e8tres.','Droits (RGPD): acc\u00e8s, rectification, effacement, limitation, portabilit\u00e9, opposition. wrongwayapp.official@gmail.com','Droit de r\u00e9clamation: vous pouvez saisir une autorit\u00e9 de protection des donn\u00e9es (ex. CNIL: cnil.fr).','KVKK (Turquie): droits selon loi n\u00b0 6698. wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr']
+        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Werbung (zuk\u00fcnftig): Einwilligungsbanner vor Aktivierung. Keine personalisierten Daten ohne ausdr\u00fcckliche Zustimmung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden.','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        en:['Privacy Policy (GDPR & KVKK)','Controller: wrongwayapp.official@gmail.com','Legal basis: Art. 6(1)(b) GDPR (contract performance) for accounts; Art. 6(1)(a) (consent) for advertising and analytics.','Data collected: email, username, password (hashed), game stats, ELO, game history.','Anonymous sessions: Playing without an account generates anonymous Firebase IDs. Not personally identifiable.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). US transfers based on Standard Contractual Clauses (SCC).','Third parties: Google Firebase (Auth, Database) \u00b7 Google reCAPTCHA v3 (spam protection). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passwords hashed exclusively by Firebase. No access to plaintext passwords.','Cookies & storage: We use localStorage for settings and cookie consent. No tracking cookies without consent.','Advertising (future): consent banner before activation. No personalized data without explicit consent.','Retention: until account deletion. Accounts can be deleted anytime in profile settings.','Your rights (GDPR): access, rectification, erasure, restriction, portability, objection. Contact: wrongwayapp.official@gmail.com','Right to complain: You have the right to lodge a complaint with a data protection authority.','KVKK (Turkey): rights under Law No. 6698. Contact wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: wrongwayapp.official@gmail.com','Hukuki dayanak: Hesaplar i\u00e7in GDPR Madde 6/1-b (s\u00f6zle\u015fme); reklam i\u00e7in Madde 6/1-a (r\u0131za).','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO, oyun ge\u00e7mi\u015fi.','Anonim oturumlar: Hesaps\u0131z oynarken anonim Firebase kimlikleri olu\u015fturulur. Ki\u015fiye ba\u011flanamaz.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt). ABD transferleri SCC kapsam\u0131nda.','\u00dc\u00e7\u00fcnc\u00fc taraflar: Google Firebase \u00b7 Google reCAPTCHA v3. Google LLC, Mountain View, CA 94043, ABD.','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r. A\u00e7\u0131k metin \u015fifrelere eri\u015fim yoktur.','Depolama: Ayarlar i\u00e7in localStorage kullan\u0131l\u0131r. Onay olmadan takip \u00e7erezi kullan\u0131lmaz.','Reklam (gelecekte): onay banner\u0131 \u00f6nce g\u00f6sterilir. A\u00e7\u0131k r\u0131za olmadan ki\u015fiselle\u015ftirilmi\u015f veri kullan\u0131lmaz.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan istediginiz zaman silinebilir.','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme, s\u0131n\u0131rlama, ta\u015f\u0131nabilirlik. wrongwayapp.official@gmail.com','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, itiraz. wrongwayapp.official@gmail.com','\u015eikayet hakk\u0131: KVKK Kurumu\'na \u015eikayet hakk\u0131n\u0131z bulunmaktad\u0131r. www.kvkk.gov.tr'],
+        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: wrongwayapp.official@gmail.com','Base l\u00e9gale: Art. 6(1)(b) RGPD (ex\u00e9cution du contrat) pour les comptes; Art. 6(1)(a) (consentement) pour la publicit\u00e9.','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO, historique de parties.','Sessions anonymes: jouer sans compte g\u00e9n\u00e8re des identifiants Firebase anonymes. Non rattachables \u00e0 une personne.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort). Transferts USA bas\u00e9s sur les CCT.','Tiers: Google Firebase (Auth, BDD) \u00b7 Google reCAPTCHA v3 (anti-spam). Google LLC, Mountain View, CA 94043, USA.','Mots de passe hach\u00e9s exclusivement par Firebase. Aucun acc\u00e8s aux mots de passe en clair.','Cookies & stockage: localStorage pour les pr\u00e9f\u00e9rences et le consentement. Pas de cookies de suivi sans accord.','Publicit\u00e9 (futur): bandeau de consentement avant activation. Pas de donn\u00e9es personnalis\u00e9es sans consentement explicite.','Conservation: jusqu\u2019\u00e0 la suppression du compte. Supprimable \u00e0 tout moment dans les param\u00e8tres.','Droits (RGPD): acc\u00e8s, rectification, effacement, limitation, portabilit\u00e9, opposition. wrongwayapp.official@gmail.com','Droit de r\u00e9clamation: vous pouvez saisir une autorit\u00e9 de protection des donn\u00e9es (ex. CNIL: cnil.fr).','KVKK (Turquie): droits selon loi n\u00b0 6698. wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr']
       },
       terms:{
-        de:['Nutzungsbedingungen','Geltungsbereich: Wrong Way: Don\'t be mad, betrieben von H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Konten: kostenlos spielbar. Online erfordert g\u00fcltige E-Mail. Ein Konto pro Person.','Verbote: Cheating, Bots, Exploits f\u00fchren zur sofortigen Sperrung ohne R\u00fcckerstattung.','Altersgrenze: ab 13 Jahren. Unter 18 Jahren ist Elternzustimmung f\u00fcr Eink\u00e4ufe erforderlich.','In-App-K\u00e4ufe (zuk\u00fcnftig): Zahlung nur \u00fcber Google Play / Apple Store. Virtuelle G\u00fcter haben keinen Geldwert und sind nicht erstattungsf\u00e4hig.','Werbung: Personalisierte Werbung nur mit ausdr\u00fccklicher Einwilligung (Cookie-Banner).','Urheberrecht: Alle Inhalte, Grafiken und der Spielcode sind geistiges Eigentum des Betreibers.','Haftung: Keine Gew\u00e4hr f\u00fcr Verf\u00fcgbarkeit. Kein Ersatz bei Datenverlust durch Serverausf\u00e4lle.','K\u00fcndigung: Der Betreiber kann Konten bei Versto\u00df gegen diese Bedingungen jederzeit sperren.','Änderungen: \u00c4nderungen dieser Bedingungen werden 14 Tage im Voraus per In-App-Hinweis bekannt gegeben. Weitere Nutzung gilt als Zustimmung.','Geltendes Recht: T\u00fcrkisches Recht. Zwingende EU-Verbraucherschutzregeln bleiben unber\u00fchrt.'],
-        en:['Terms of Service','Scope: Wrong Way: Don\'t be mad, operated by H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Accounts: free to play. Online requires a valid email. One account per person.','Prohibited: cheating, bots, exploits lead to immediate suspension without refund.','Age: 13+ required. Users under 18 need parental consent for purchases.','In-App Purchases (future): payments via Google Play / Apple Store only. Virtual goods have no monetary value and are non-refundable.','Advertising: personalized ads only with explicit consent (cookie banner).','Intellectual property: all content, graphics, and game code are the intellectual property of the operator.','Liability: no guarantee of availability. No compensation for data loss due to server outages.','Termination: the operator may suspend accounts for violations of these terms at any time.','Amendments: changes to these terms will be announced 14 days in advance via in-app notice. Continued use constitutes acceptance.','Governing law: Turkish law. Mandatory EU consumer protection rules remain unaffected.'],
-        tr:['Kullan\u0131m Ko\u015fullar\u0131','Kapsam: H\u00fcseyin Tunay taraf\u0131ndan i\u015fletilen Wrong Way: Don\'t be mad \u00b7 wrongwayapp.official@gmail.com','Hesaplar: \u00fccretsiz oynanabilir. \u00c7evrim i\u00e7i ge\u00e7erli e-posta gerektirir. Ki\u015fi ba\u015f\u0131na bir hesap.','Yasaklar: hile, bot, exploit an\u0131nda hesap ask\u0131ya al\u0131nmas\u0131na yol a\u00e7ar, iade yap\u0131lmaz.','Ya\u015f: 13 ve \u00fcst\u00fc. 18 alt\u0131 \u00fccretli i\u00e7erik i\u00e7in ebeveyn onay\u0131 gerekir.','Uygulama \u0130\u00e7i Al\u0131mlar (gelecekte): \u00f6deme yaln\u0131zca Google Play / Apple Store. Sanal mallar\u0131n paran\u0131zsal de\u011feri yoktur ve iade edilemez.','Reklam: ki\u015fiselle\u015ftirilmi\u015f reklam yaln\u0131zca a\u00e7\u0131k \u00e7erez onay\u0131yla g\u00f6sterilir.','Fikri m\u00fclkiyet: t\u00fcm i\u00e7erik, grafik ve oyun kodu i\u015fletene aittir.','Sorumluluk: eri\u015filebilirlik garantisi verilmez. Sunucu ar\u0131zalar\u0131ndan kaynaklanan kay\u0131plardan sorumluluk yoktur.','Fesih: \u0130\u015fleten, ko\u015fullar\u0131 ihlal eden hesaplar\u0131 her zaman askiya alabilir.','De\u011fi\u015fiklikler: ko\u015fullardaki de\u011fi\u015fiklikler, uygulama i\u00e7i bildirimle 14 g\u00fcn \u00f6nceden duyurulur. Kullanmaya devam etmek kabul say\u0131l\u0131r.','Ge\u00e7erli hukuk: T\u00fcrkiye Cumhuriyeti hukuku.'],
-        fr:['Conditions d\'utilisation','Champ: Wrong Way: Don\'t be mad, exploit\u00e9 par H\u00fcseyin Tunay \u00b7 wrongwayapp.official@gmail.com','Comptes: gratuit. En ligne n\u00e9cessite un e-mail valide. Un compte par personne.','Interdictions: triche, bots, exploits entra\u00eenent suspension imm\u00e9diate sans remboursement.','\u00c2ge: 13 ans minimum. Moins de 18 ans: consentement parental requis pour les achats.','Achats in-app (futur): paiements via Google Play / Apple Store uniquement. Les biens virtuels n\'ont aucune valeur mon\u00e9taire et ne sont pas remboursables.','Publicit\u00e9: publicit\u00e9s personnalis\u00e9es uniquement avec consentement explicite (bandeau cookies).','Propri\u00e9t\u00e9 intellectuelle: tout le contenu, les graphismes et le code du jeu sont la propri\u00e9t\u00e9 de l\'op\u00e9rateur.','Responsabilit\u00e9: aucune garantie de disponibilit\u00e9. Pas de compensation pour pertes dues aux pannes.','R\u00e9siliation: l\'op\u00e9rateur peut suspendre les comptes en cas de violation \u00e0 tout moment.','Modifications: tout changement sera signal\u00e9 14 jours \u00e0 l\'avance par notification in-app. L\'utilisation continue vaut acceptation.','Droit applicable: droit turc. R\u00e8gles UE de protection des consommateurs restent applicables.']
+        de:['Nutzungsbedingungen','Geltungsbereich: Wrong Way: Don\'t be mad, betrieben von wrongwayapp.official@gmail.com','Konten: kostenlos spielbar. Online erfordert g\u00fcltige E-Mail. Ein Konto pro Person.','Verbote: Cheating, Bots, Exploits f\u00fchren zur sofortigen Sperrung ohne R\u00fcckerstattung.','Altersgrenze: ab 13 Jahren. Unter 18 Jahren ist Elternzustimmung f\u00fcr Eink\u00e4ufe erforderlich.','In-App-K\u00e4ufe (zuk\u00fcnftig): Zahlung nur \u00fcber Google Play / Apple Store. Virtuelle G\u00fcter haben keinen Geldwert und sind nicht erstattungsf\u00e4hig.','Werbung: Personalisierte Werbung nur mit ausdr\u00fccklicher Einwilligung (Cookie-Banner).','Urheberrecht: Alle Inhalte, Grafiken und der Spielcode sind geistiges Eigentum des Betreibers.','Haftung: Keine Gew\u00e4hr f\u00fcr Verf\u00fcgbarkeit. Kein Ersatz bei Datenverlust durch Serverausf\u00e4lle.','K\u00fcndigung: Der Betreiber kann Konten bei Versto\u00df gegen diese Bedingungen jederzeit sperren.','Änderungen: \u00c4nderungen dieser Bedingungen werden 14 Tage im Voraus per In-App-Hinweis bekannt gegeben. Weitere Nutzung gilt als Zustimmung.','Geltendes Recht: T\u00fcrkisches Recht. Zwingende EU-Verbraucherschutzregeln bleiben unber\u00fchrt.'],
+        en:['Terms of Service','Scope: Wrong Way: Don\'t be mad, operated by wrongwayapp.official@gmail.com','Accounts: free to play. Online requires a valid email. One account per person.','Prohibited: cheating, bots, exploits lead to immediate suspension without refund.','Age: 13+ required. Users under 18 need parental consent for purchases.','In-App Purchases (future): payments via Google Play / Apple Store only. Virtual goods have no monetary value and are non-refundable.','Advertising: personalized ads only with explicit consent (cookie banner).','Intellectual property: all content, graphics, and game code are the intellectual property of the operator.','Liability: no guarantee of availability. No compensation for data loss due to server outages.','Termination: the operator may suspend accounts for violations of these terms at any time.','Amendments: changes to these terms will be announced 14 days in advance via in-app notice. Continued use constitutes acceptance.','Governing law: Turkish law. Mandatory EU consumer protection rules remain unaffected.'],
+        tr:['Kullan\u0131m Ko\u015fullar\u0131','Kapsam: Wrong Way taraf\u0131ndan i\u015fletilen Wrong Way: Don\'t be mad \u00b7 wrongwayapp.official@gmail.com','Hesaplar: \u00fccretsiz oynanabilir. \u00c7evrim i\u00e7i ge\u00e7erli e-posta gerektirir. Ki\u015fi ba\u015f\u0131na bir hesap.','Yasaklar: hile, bot, exploit an\u0131nda hesap ask\u0131ya al\u0131nmas\u0131na yol a\u00e7ar, iade yap\u0131lmaz.','Ya\u015f: 13 ve \u00fcst\u00fc. 18 alt\u0131 \u00fccretli i\u00e7erik i\u00e7in ebeveyn onay\u0131 gerekir.','Uygulama \u0130\u00e7i Al\u0131mlar (gelecekte): \u00f6deme yaln\u0131zca Google Play / Apple Store. Sanal mallar\u0131n paran\u0131zsal de\u011feri yoktur ve iade edilemez.','Reklam: ki\u015fiselle\u015ftirilmi\u015f reklam yaln\u0131zca a\u00e7\u0131k \u00e7erez onay\u0131yla g\u00f6sterilir.','Fikri m\u00fclkiyet: t\u00fcm i\u00e7erik, grafik ve oyun kodu i\u015fletene aittir.','Sorumluluk: eri\u015filebilirlik garantisi verilmez. Sunucu ar\u0131zalar\u0131ndan kaynaklanan kay\u0131plardan sorumluluk yoktur.','Fesih: \u0130\u015fleten, ko\u015fullar\u0131 ihlal eden hesaplar\u0131 her zaman askiya alabilir.','De\u011fi\u015fiklikler: ko\u015fullardaki de\u011fi\u015fiklikler, uygulama i\u00e7i bildirimle 14 g\u00fcn \u00f6nceden duyurulur. Kullanmaya devam etmek kabul say\u0131l\u0131r.','Ge\u00e7erli hukuk: T\u00fcrkiye Cumhuriyeti hukuku.'],
+        fr:['Conditions d\'utilisation','Champ: Wrong Way: Don\'t be mad, exploit\u00e9 par wrongwayapp.official@gmail.com','Comptes: gratuit. En ligne n\u00e9cessite un e-mail valide. Un compte par personne.','Interdictions: triche, bots, exploits entra\u00eenent suspension imm\u00e9diate sans remboursement.','\u00c2ge: 13 ans minimum. Moins de 18 ans: consentement parental requis pour les achats.','Achats in-app (futur): paiements via Google Play / Apple Store uniquement. Les biens virtuels n\'ont aucune valeur mon\u00e9taire et ne sont pas remboursables.','Publicit\u00e9: publicit\u00e9s personnalis\u00e9es uniquement avec consentement explicite (bandeau cookies).','Propri\u00e9t\u00e9 intellectuelle: tout le contenu, les graphismes et le code du jeu sont la propri\u00e9t\u00e9 de l\'op\u00e9rateur.','Responsabilit\u00e9: aucune garantie de disponibilit\u00e9. Pas de compensation pour pertes dues aux pannes.','R\u00e9siliation: l\'op\u00e9rateur peut suspendre les comptes en cas de violation \u00e0 tout moment.','Modifications: tout changement sera signal\u00e9 14 jours \u00e0 l\'avance par notification in-app. L\'utilisation continue vaut acceptation.','Droit applicable: droit turc. R\u00e8gles UE de protection des consommateurs restent applicables.']
       }
     };
     var ll=legalData.impressum[lang]?lang:'en';
@@ -8093,7 +8316,7 @@ function App(){
             );})}
           </div>
           <div style={{textAlign:'center',marginTop:10,fontSize:10,color:'var(--subtle)',fontWeight:600}}>
-            {'\u00a9'} {new Date().getFullYear()} Wrong Way \u00b7 H\u00fcseyin Tunay
+            {'\u00a9'} {new Date().getFullYear()} Wrong Way \u00b7 Wrong Way
           </div>
           <div style={{textAlign:'center',marginTop:10}}>
             <button onClick={function(){try{localStorage.removeItem('ww_cookie_consent');}catch(e){}setCookieConsent(null);goBack();}} style={{background:'none',border:'1px solid var(--border)',color:'var(--subtle)',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif',padding:'8px 16px',borderRadius:8}}>
@@ -8642,6 +8865,21 @@ function App(){
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 30px)',background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
       <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
+        {(onlineRole==='A'&&!privateCode)?(
+          <>
+            <MatchSearch dark={darkMode} t={t} lang={lang}/>
+            <button onClick={async()=>{
+              joinCancelledRef.current=true;
+              if(WS_ENABLED&&WSNET.roomId){
+                try{WSNET.leaveRoom();}catch(e){}
+              }else if(onlineRole==='A'){
+                await cleanupLobby(lobbyId);
+              }
+              setScreen('menu');setLobbyId(null);setPrivateCode(null);
+            }} style={{...sBack,marginTop:34}}>{t('cancel')}</button>
+          </>
+        ):(
+        <>
         <div style={{fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:18,textAlign:'center'}}>
           {onlineRole==='A'?(privateCode?t('waitingPrivate'):t('waitingOpponent')):t('connecting')}
         </div>
@@ -8717,6 +8955,8 @@ function App(){
           }
           setScreen('menu');setLobbyId(null);setPrivateCode(null);
         }} style={sBack}>{t('cancel')}</button>
+        </>
+        )}
       </div>
     </div>
     );
@@ -8757,15 +8997,15 @@ function App(){
         )}
 
         {/* Header */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:10}}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <div style={{width:28,height:28,borderRadius:9,
-              background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:COLS*CELL+26,marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:11}}>
+            <div style={{width:36,height:36,borderRadius:11,
+              background:'linear-gradient(145deg,#7c3aed,#6366f1 48%,#3b82f6)',
               display:'flex',alignItems:'center',justifyContent:'center',
-              boxShadow:'0 2px 8px rgba(99,102,241,0.3)'}}>
-              <BrickWallIcon size={16} light/>
+              boxShadow:'0 5px 16px rgba(99,102,241,0.5),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -3px 6px rgba(49,46,129,0.6)'}}>
+              <BrickWallIcon size={20} light/>
             </div>
-            <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('replay')}</div>
+            <div style={{fontSize:19,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('replay')}</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:6,
             background:'var(--card)',border:'1.5px solid var(--border)',
@@ -8778,32 +9018,44 @@ function App(){
         </div>
 
         {/* Progress bar */}
-        <div style={{width:'100%',maxWidth:360,height:3,background:'var(--border)',borderRadius:2,marginBottom:10,overflow:'hidden'}}>
+        <div style={{width:COLS*CELL+26,height:3,background:'var(--border)',borderRadius:2,marginBottom:10,overflow:'hidden'}}>
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,width:COLS*CELL}}>
-          {rMap==='duel'?(
-            <>
-              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,transparent,${PC['A']})`}}/>
-              <div style={{fontSize:10,fontWeight:800,color:PC['A'],display:'flex',alignItems:'center',gap:3}}>
-                <span style={{fontSize:14}}>▲</span><span>{pname('A')}</span>
-              </div>
-              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,${PC['A']},transparent)`}}/>
-            </>
-          ):(
-            <div style={{flex:1,height:2,borderRadius:2,background:'#16a34a',opacity:0.4}}/>
-          )}
+        <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?PC['A']:'#16a34a'}}>
+          <span className="ln"/>
+          <span className="ar">{'\u25b2'}</span>
+          {rMap==='duel'&&<span className="nm2">{pname('A').toUpperCase()}</span>}
+          <span className="ln"/>
         </div>
-        <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid}}>
+        <div style={{position:'relative',width:COLS*CELL+26,margin:'0 auto',borderRadius:24,padding:13,
+          background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
+          boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
+          <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
+          <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+          <div className="ww-stud ww-stud-l"/>
+          <div className="ww-stud ww-stud-r"/>
+        <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid,
+          background:darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
+          border:'none',
+          boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)'}}>
+          <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:darkMode?0.12:0.4}}/>
+          <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
+          <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
+          <div style={{position:'absolute',top:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
+            background:`linear-gradient(180deg,${rMap==='duel'?'#ef4444':'#22c55e'}28 0%,${rMap==='duel'?'#ef4444':'#22c55e'}12 60%,transparent 100%)`,
+            boxShadow:`inset 0 0 0 1.5px ${rMap==='duel'?'#ef4444':'#22c55e'}55,inset 0 2px 10px ${rMap==='duel'?'#ef4444':'#22c55e'}33`,
+            animation:'ww-goalpulse 3s ease-in-out infinite'}}/>
+          {rMap==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
+            background:'linear-gradient(0deg,rgba(59,130,246,0.16) 0%,rgba(59,130,246,0.07) 60%,transparent 100%)',
+            boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.33),inset 0 -2px 10px rgba(59,130,246,0.2)',
+            animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+          <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
+            backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
+            backgroundSize:`${CELL}px ${CELL}px,${CELL}px ${CELL}px,${CELL}px ${CELL}px`}}/>
           {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){return(
             <div key={r+'-'+c} style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
-              background:r===0?(rMap==='duel'?'rgba(239,68,68,0.13)':'var(--goal)'):r===ROWS-1?(rMap==='duel'?'rgba(59,130,246,0.13)':'var(--start)'):(r+c)%2===0?'var(--cell-b)':'var(--cell-a)',
-              border:'1px solid var(--cell-line)',boxSizing:'border-box'}}>
-              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
-                background:rMap==='duel'?'linear-gradient(90deg,#ef4444,#f87171)':'linear-gradient(90deg,#16a34a,#22c55e)'}}/>}
-              {rMap==='duel'&&r===ROWS-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
-                background:'linear-gradient(90deg,#3b82f6,#60a5fa)'}}/>}
+              background:'transparent',boxSizing:'border-box'}}>
             </div>
           );})})}
           {[...rs.walls].map(function(k){
@@ -8811,10 +9063,10 @@ function App(){
             var wallColor=owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
             return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner?PC[owner]:null}/>;
           })}
-          {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=30,off=(CELL-sz)/2;return(
+          {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
               transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none'}}>
-              <Piece color={PC[p]} dark={PD[p]}/>
+              <Piece color={PC[p]} dark={PD[p]} size={sz}/>
             </div>
           );})}
           {/* Emote-Anzeige neben Spieler */}
@@ -8827,18 +9079,12 @@ function App(){
             </div>
           )}
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:14,width:COLS*CELL}}>
-          {rMap==='duel'?(
-            <>
-              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,transparent,${PC['B']})`}}/>
-              <div style={{fontSize:10,fontWeight:800,color:PC['B'],display:'flex',alignItems:'center',gap:3}}>
-                <span style={{fontSize:14}}>▼</span><span>{pname('B')}</span>
-              </div>
-              <div style={{flex:1,height:3,borderRadius:2,background:`linear-gradient(90deg,${PC['B']},transparent)`}}/>
-            </>
-          ):(
-            <div style={{flex:1,height:2,borderRadius:2,background:'var(--subtle)',opacity:0.2}}/>
-          )}
+        </div>
+        <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?PC['B']:'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
+          <span className="ln"/>
+          {rMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
+          {rMap==='duel'&&<span className="nm2">{pname('B').toUpperCase()}</span>}
+          <span className="ln"/>
         </div>
 
         {/* Legende Wandfarben */}
@@ -9223,15 +9469,15 @@ function App(){
       )}
 
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:360,marginBottom:12}}>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{width:28,height:28,borderRadius:9,
-            background:'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:COLS*CELL+26,marginBottom:13}}>
+        <div style={{display:'flex',alignItems:'center',gap:11}}>
+          <div style={{width:36,height:36,borderRadius:11,
+            background:'linear-gradient(145deg,#7c3aed,#6366f1 48%,#3b82f6)',
             display:'flex',alignItems:'center',justifyContent:'center',
-            boxShadow:'0 2px 8px rgba(99,102,241,0.3)'}}>
-            <BrickWallIcon size={16} light/>
+            boxShadow:'0 5px 16px rgba(99,102,241,0.5),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -3px 6px rgba(49,46,129,0.6)'}}>
+            <BrickWallIcon size={20} light/>
           </div>
-          <div style={{fontSize:15,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('title')}</div>
+          <div style={{fontSize:19,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('title')}</div>
         </div>
         {!winner&&(
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -9247,13 +9493,16 @@ function App(){
               </div>
             )}
             <button onClick={handleGiveUp} style={{
-              padding:'6px 15px',fontSize:11,fontWeight:800,cursor:'pointer',
-              background:giveUpArmed?'#ef4444':'var(--card)',
-              color:giveUpArmed?'white':'var(--subtle)',
-              border:'1.5px solid '+(giveUpArmed?'#ef4444':'var(--border)'),
-              borderRadius:20,transition:'all 0.2s',boxShadow:giveUpArmed?'0 2px 10px rgba(239,68,68,0.35)':'var(--shadow-soft)',
+              height:48,padding:'0 16px',cursor:'pointer',
+              display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,
+              background:giveUpArmed?'#ef4444':(darkMode?'linear-gradient(180deg,#1b2438,#141c2d)':'linear-gradient(180deg,#f3f6fb,#ffffff)'),
+              color:giveUpArmed?'#fff':'var(--muted)',
+              border:'1px solid '+(giveUpArmed?'#ef4444':'var(--border)'),
+              borderRadius:14,transition:'transform 0.14s cubic-bezier(0.34,1.56,0.64,1)',
+              boxShadow:giveUpArmed?'0 2px 10px rgba(239,68,68,0.35)':(darkMode?'0 5px 14px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.06)':'0 5px 14px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.9)'),
               fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {giveUpArmed?t('sure'):t('giveUp')}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-1.5 3.5L16 11H5"/></svg>
+              <span style={{fontSize:8,fontWeight:800,letterSpacing:0.3}}>{giveUpArmed?t('sure'):t('giveUp')}</span>
             </button>
           </div>
         )}
@@ -9298,65 +9547,58 @@ function App(){
 
       {/* Score cards */}
       {oppProfileModal&&<OppProfileModal data={oppProfileModal} onClose={()=>setOppProfileModal(null)} darkMode={darkMode} t={t}/>}
-      <div style={{display:'flex',gap:8,marginBottom:10,width:'100%',maxWidth:360}}>
-        {(gameMode==='online'&&onlineRole==='B'?['B','A']:['A','B']).map(p=>{
+      <div className="ww-players" style={{width:COLS*CELL+26,marginBottom:9}}>
+        {(gameMode==='online'&&onlineRole==='B'?['B','A']:['A','B']).map((p,idx)=>{
           const active=turn===p&&!winner;
           const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
           const canTapProfile=isOpp&&oppAccountKey;
           const eyeCol=p==='A'?'#ef4444':'#3b82f6';
+          const classic=gameTimeMode&&gameTimeMode.indexOf('classic-')===0;
           return(
-            <div key={p} onClick={canTapProfile?openOppProfile:undefined}
-              style={{flex:1,padding:'9px 13px',borderRadius:13,position:'relative',
-              background:active?PC[p]:'var(--score-bg)',
-              border:`1.5px solid ${active?'transparent':'var(--score-border)'}`,
-              boxShadow:active?`0 5px 0 rgba(0,0,0,0.18),0 8px 24px ${PC[p]}55`:'0 3px 0 rgba(0,0,0,0.07),0 2px 8px rgba(0,0,0,0.04)',
-              transition:'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',display:'flex',alignItems:'center',gap:9,
-              cursor:canTapProfile?'pointer':'default',overflow:'hidden'}}>
-              {active&&<div style={{position:'absolute',top:0,left:0,right:0,height:'45%',
-                background:'linear-gradient(180deg,rgba(255,255,255,0.14),transparent)',
-                borderRadius:'15px 15px 0 0',pointerEvents:'none'}}/>}
+            <React.Fragment key={p}>
+            <div onClick={canTapProfile?openOppProfile:undefined}
+              className={"ww-pcard p"+p+(active?" live":" dim")}
+              style={{cursor:canTapProfile?'pointer':'default'}}>
+              <div className="ww-sheen2"/>
               {spectatorCount>0&&gameMode==='online'&&(
-                <div style={{position:'absolute',top:-7,right:6,
+                <div style={{position:'absolute',top:5,right:7,zIndex:6,
                   display:'flex',alignItems:'center',gap:2,
                   background:eyeCol,borderRadius:10,padding:'2px 5px',
-                  boxShadow:'0 2px 8px '+eyeCol+'60',zIndex:5}}>
+                  boxShadow:'0 2px 8px '+eyeCol+'60'}}>
                   <EyeIcon size={9} color="#fff"/>
                   <span style={{fontSize:10,fontWeight:900,color:'#fff'}}>{spectatorCount}</span>
                 </div>
               )}
-              <div style={{width:28,height:28,borderRadius:'50%',flexShrink:0,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                background:active?'rgba(255,255,255,0.22)':'var(--bg)',
-                border:active?'1.5px solid rgba(255,255,255,0.5)':`1.5px solid ${PC[p]}40`,
-                boxShadow:active?'0 2px 6px rgba(0,0,0,0.12)':'none'}}>
-                <div style={{width:14,height:14,borderRadius:'50%',
-                  background:active?'#fff':PC[p],
-                  border:active?'none':`2px solid ${PD[p]}`}}/>
-              </div>
-              <div style={{minWidth:0,flex:1}}>
-                <div style={{fontSize:10,fontWeight:800,letterSpacing:0.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                  color:active?'rgba(255,255,255,0.82)':'var(--subtle)'}}>
-                  {pname(p)}{canTapProfile?<span style={{opacity:0.5,marginLeft:3,fontSize:9}}>↗</span>:null}
-                </div>
-                <div style={{fontSize:13,fontWeight:900,display:'flex',alignItems:'center',gap:4,marginTop:1,
-                  color:active?'white':'var(--text)'}}>
-                  <BrickMini size={12}/>{barrLeft[p]}
+              <div className="ww-figslot">
+                <div className="ww-stone" style={{width:38,height:38,position:'relative'}}>
+                  <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
+                    background:`radial-gradient(circle at 38% 32%, ${PC[p]}, ${PD[p]} 100%)`,
+                    boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 3px 6px rgba(0,0,0,0.4)`}}/>
+                  <div className="ww-stone-tex"/>
+                  <div className="ww-stone-sheen"/>
                 </div>
               </div>
-              {gameTimeMode&&gameTimeMode.indexOf('classic-')===0&&(
-                <div style={{fontSize:13,fontWeight:900,letterSpacing:0.3,flexShrink:0,
-                  fontVariantNumeric:'tabular-nums',
-                  color:active?'white':(timeLeft[p]<=30?'#ef4444':'var(--text)')}}>
-                  {Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}
+              <div className="ww-pinfo">
+                <div className="ww-pname">{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
+                <div className="ww-pwalls">
+                  <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
+                  {barrLeft[p]}
                 </div>
-              )}
-              {active&&!winner&&!(gameTimeMode&&gameTimeMode.indexOf('classic-')===0)&&(
-                <div style={{flexShrink:0,fontSize:8,letterSpacing:0.8,textAlign:'right',
-                  color:'rgba(255,255,255,0.82)',fontWeight:800,textTransform:'uppercase',lineHeight:1.2}}>
-                  {isOnlineWait&&p===turn?t('statusWait'):aiThinking&&p==='B'?t('statusThink'):t('statusTurn')}
+              </div>
+              {classic&&(
+                <div className="ww-pclock">
+                  <div className="ww-ptime" style={{color:timeLeft[p]<=30?'#fde047':'#fff'}}>{Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}</div>
+                  <div className="ww-pcap">{t('timeLabel')}</div>
                 </div>
               )}
             </div>
+            {idx===0&&(
+              <div className="ww-vs">
+                <div className="ww-vt">VS</div>
+                <div className="ww-vd"><i/><i/><i/></div>
+              </div>
+            )}
+            </React.Fragment>
           );
         })}
       </div>
@@ -9380,51 +9622,58 @@ function App(){
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
       {/* Goal-Richtungsanzeige oben */}
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,width:COLS*CELL}}>
-        {selectedMap==='duel'?(
-          <>
-            <div style={{flex:1,height:3,borderRadius:2,
-              background:`linear-gradient(90deg,transparent,${PC['A']})`}}/>
-            <div style={{fontSize:10,fontWeight:800,color:PC['A'],letterSpacing:1,display:'flex',alignItems:'center',gap:3}}>
-              <span style={{fontSize:14,lineHeight:1}}>▲</span>
-              <span>{pname('A')}</span>
-            </div>
-            <div style={{flex:1,height:3,borderRadius:2,
-              background:`linear-gradient(90deg,${PC['A']},transparent)`}}/>
-          </>
-        ):(
-          <div style={{flex:1,height:2,borderRadius:2,background:'#16a34a',opacity:0.4}}/>
-        )}
+      <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?PC['A']:'#16a34a'}}>
+        <span className="ln"/>
+        <span className="ar">{'\u25b2'}</span>
+        {selectedMap==='duel'&&<span className="nm2">{pname('A').toUpperCase()}</span>}
+        <span className="ln"/>
       </div>
 
       {/* Grid */}
-      <div key={gameNum} style={{animation:'game-enter 0.46s cubic-bezier(0.22,1,0.36,1) backwards'}}>
+      <div key={gameNum} style={{position:'relative',width:COLS*CELL+26,margin:'0 auto',borderRadius:24,padding:13,
+        background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
+        boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)',
+        animation:'game-enter 0.46s cubic-bezier(0.22,1,0.36,1) backwards'}}>
+      <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
+      <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+      <div className="ww-stud ww-stud-l"/>
+      <div className="ww-stud ww-stud-r"/>
       {(()=>{
         const boardFlip=gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel';
+        const gcGoal=selectedMap==='duel'?'#ef4444':'#22c55e';
         return(
       <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'auto',...sGrid,
+        background:darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
+        border:'none',
+        boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)',
         transform:boardFlip?'scaleY(-1)':'none'}}>
+        <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:darkMode?0.12:0.4}}/>
+        <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
+          background:`linear-gradient(180deg,${gcGoal}28 0%,${gcGoal}12 60%,transparent 100%)`,
+          boxShadow:`inset 0 0 0 1.5px ${gcGoal}55,inset 0 2px 10px ${gcGoal}33`,
+          animation:'ww-goalpulse 3s ease-in-out infinite'}}/>
+        {selectedMap==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
+          background:'linear-gradient(0deg,rgba(59,130,246,0.16) 0%,rgba(59,130,246,0.07) 60%,transparent 100%)',
+          boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.33),inset 0 -2px 10px rgba(59,130,246,0.2)',
+          animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
+          backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
+          backgroundSize:`${CELL}px ${CELL}px,${CELL}px ${CELL}px,${CELL}px ${CELL}px`}}/>
         {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){
           const isA=pA.r===r&&pA.c===c,isB=pB.r===r&&pB.c===c;
           const vDot=validDot(r,c);
           const duel=selectedMap==='duel';
           const isGoal=r===0,isStart=r===ROWS-1;
-          let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
-          if(isGoal)bg='var(--goal)';
-          if(isStart)bg=duel?'var(--goal)':'var(--start)';
+          let bg='transparent';
           return(
             <div key={r+'-'+c} data-r={r} data-c={c} onClick={()=>handleCellClick(r,c)}
               style={{position:'absolute',left:c*CELL,top:r*CELL,width:CELL,height:CELL,
-                background:bg,border:'1px solid var(--cell-line)',
+                background:bg,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
-              {isGoal&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,
-                background:'linear-gradient(90deg,#16a34a,#22c55e)',
-                pointerEvents:'none'}}/>}
-              {isStart&&duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,
-                background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
-              {isStart&&!duel&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'var(--border)',pointerEvents:'none'}}/>}
-              {vDot&&!isA&&!isB&&<div style={{width:10,height:10,borderRadius:'50%',background:color,opacity:0.32,pointerEvents:'none'}}/>}
+              {vDot&&!isA&&!isB&&<div style={{width:Math.round(CELL*0.26),height:Math.round(CELL*0.26),borderRadius:'50%',pointerEvents:'none',background:`radial-gradient(circle at 40% 34%,rgba(255,255,255,0.6),${color} 62%,${PD[turn]})`,boxShadow:`0 0 8px ${color}aa,0 1px 2px rgba(0,0,0,0.32),inset 0 1px 1px rgba(255,255,255,0.4)`,animation:'ww-dotb 1.7s ease-in-out infinite'}}/>}
             </div>
           );
         });})}
@@ -9458,16 +9707,18 @@ function App(){
           </div>
         ))}
         {['A','B'].map(function(p){
-          const pos=p==='A'?pA:pB;const sz=30,off=(CELL-sz)/2;
+          const pos=p==='A'?pA:pB;const sz=Math.round(CELL*0.66),off=(CELL-sz)/2;
           const isActive=turn===p&&!winner;
           return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,
               width:sz,height:sz,
-              transition:'left 0.18s cubic-bezier(0.25,0.46,0.45,0.94),top 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
+              transition:'left 0.25s cubic-bezier(0.34,1.3,0.5,1),top 0.25s cubic-bezier(0.34,1.3,0.5,1)',
               zIndex:20,pointerEvents:'none',transform:boardFlip?'scaleY(-1)':'none'}}>
               {isActive&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',
                 background:PC[p],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
-              <Piece color={PC[p]} dark={PD[p]}/>
+              <div key={'land'+pos.r+'-'+pos.c} style={{position:'absolute',inset:-3,borderRadius:'50%',
+                border:'2px solid '+PC[p],animation:'ww-land 0.5s ease-out forwards',pointerEvents:'none'}}/>
+              <Piece color={PC[p]} dark={PD[p]} size={sz}/>
             </div>
           );
         })}
@@ -9477,21 +9728,11 @@ function App(){
       </div>{/* /game-enter wrapper */}
 
       {/* Goal-Richtungsanzeige unten */}
-      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,width:COLS*CELL}}>
-        {selectedMap==='duel'?(
-          <>
-            <div style={{flex:1,height:3,borderRadius:2,
-              background:`linear-gradient(90deg,transparent,${PC['B']})`}}/>
-            <div style={{fontSize:10,fontWeight:800,color:PC['B'],letterSpacing:1,display:'flex',alignItems:'center',gap:3}}>
-              <span style={{fontSize:14,lineHeight:1}}>▼</span>
-              <span>{pname('B')}</span>
-            </div>
-            <div style={{flex:1,height:3,borderRadius:2,
-              background:`linear-gradient(90deg,${PC['B']},transparent)`}}/>
-          </>
-        ):(
-          <div style={{flex:1,height:2,borderRadius:2,background:'var(--subtle)',opacity:0.2}}/>
-        )}
+      <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?PC['B']:'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
+        <span className="ln"/>
+        {selectedMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
+        {selectedMap==='duel'&&<span className="nm2">{pname('B').toUpperCase()}</span>}
+        <span className="ln"/>
       </div>
 
       {!winner&&gameTimeMode&&((gameTimeMode.indexOf('classic-')===0&&turnTimeLeft<=30)||gameTimeMode.indexOf('blitz-')===0)&&(
@@ -9566,32 +9807,39 @@ function App(){
         </div>
       )}
 
-      {/* Floating barricade chips */}
-      {!winner&&myTurn&&!isOnlineWait&&(
-        <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
-          display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
-          <div style={{position:'absolute',bottom:'100%',marginBottom:5,
-            fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
-            background:darkMode?'rgba(20,30,50,0.7)':'rgba(255,255,255,0.72)',backdropFilter:'blur(8px)',
-            padding:'2px 10px',borderRadius:20,border:`1px solid ${darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)'}`}}>
-            {barrLeft[turn]} {t('wallsLeft')}
-          </div>
-          {[['H'],['V']].map(([orient])=>(
-            <div key={orient}
-              onMouseDown={e=>startDrag(e,orient)}
-              onTouchStart={e=>startDrag(e,orient)}
-              style={{pointerEvents:'all',
-                width:orient==='H'?84:42,height:orient==='V'?54:42,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                cursor:canDrag?'grab':'not-allowed',touchAction:'none',
-                borderRadius:12,background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
-                backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-                border:`1px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.85)'}`,
-                boxShadow:'0 4px 14px rgba(0,0,0,0.1)',opacity:canDrag?1:0.35}}>
-              <div style={{width:orient==='H'?58:WW,height:orient==='V'?28:WW,
-                background:canDrag?(darkMode?'#e2e8f0':'#1e293b'):(darkMode?'#475569':'#aaa'),borderRadius:3,pointerEvents:'none'}}/>
+      {/* Untere Steuerleiste: Chat + Wand-Steuerung (Drag bleibt) */}
+      {!winner&&screen==='game'&&(
+        <div className={"ww-bottombar pos-"+wallBarPos} style={{position:'fixed',zIndex:200,
+          left:'50%',transform:'translateX(-50%)',
+          width:'min('+(COLS*CELL+26)+'px, calc(100vw - 20px))',
+          bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',pointerEvents:'none',
+          opacity:dragging?0:1,transition:'opacity 0.12s ease'}}>
+          <button onClick={()=>!emoteCooldown&&setEmotePicker(p=>!p)} disabled={emoteCooldown}
+            className="ww-iconbtn chat"
+            style={{pointerEvents:dragging?'none':'auto',opacity:emoteCooldown?0.5:1,
+              animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite'}}>
+            <BubbleIcon size={24} color="#6366f1"/>
+          </button>
+          <div className="ww-wallctl" style={{pointerEvents:'none'}}>
+            <div className="wl">
+              <svg width="12" height="12" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2" y="4" width="9" height="6" rx="1"/><rect x="13" y="4" width="9" height="6" rx="1"/><rect x="7" y="12" width="10" height="6" rx="1"/></g></svg>
+              <span>{barrLeft[turn]} {t('wallsLeft')}</span>
             </div>
-          ))}
+            <div className="tools">
+              {[['H'],['V']].map(([orient])=>(
+                <div key={orient}
+                  className={"ww-wtool"+(canDrag?" armed":"")}
+                  onMouseDown={canDrag?e=>startDrag(e,orient):undefined}
+                  onTouchStart={canDrag?e=>startDrag(e,orient):undefined}
+                  style={{pointerEvents:dragging?'none':'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
+                    cursor:canDrag?'grab':'not-allowed',opacity:canDrag?1:0.4}}>
+                  <div style={{width:orient==='H'?34:WW,height:orient==='V'?22:WW,
+                    background:canDrag?(darkMode?'#e2e8f0':'#1e293b'):(darkMode?'#475569':'#94a3b8'),
+                    borderRadius:3,pointerEvents:'none',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -9637,7 +9885,9 @@ function App(){
         <div onClick={()=>setEmotePicker(false)} style={{
           position:'fixed',inset:0,zIndex:480}}>
           <div onClick={e=>e.stopPropagation()} style={{
-            position:'fixed',left:14,bottom:74,
+            position:'fixed',bottom:74,
+            left:wallBarPos==='left'?'auto':'calc(14px + env(safe-area-inset-left, 0px))',
+            right:wallBarPos==='left'?'calc(14px + env(safe-area-inset-right, 0px))':'auto',
             background:darkMode?'rgba(22,30,51,0.96)':'rgba(255,255,255,0.97)',
             borderRadius:18,padding:10,
             display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,
@@ -9754,25 +10004,6 @@ function App(){
         </div>
       )}
 
-      {/* Sprachblase-Button unten links */}
-      {!winner&&screen==='game'&&(
-        <button onClick={()=>!emoteCooldown&&setEmotePicker(p=>!p)}
-          disabled={emoteCooldown}
-          style={{
-            position:'fixed',left:14,bottom:16,zIndex:200,
-            width:48,height:48,borderRadius:'50%',
-            background:darkMode?'rgba(30,41,68,0.75)':'rgba(255,255,255,0.78)',
-            backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-            border:`1px solid ${darkMode?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.85)'}`,
-            boxShadow:'0 4px 14px rgba(0,0,0,0.12)',
-            cursor:emoteCooldown?'not-allowed':'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            fontSize:22,opacity:emoteCooldown?0.45:1,
-            animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite',
-            fontFamily:'system-ui,-apple-system,sans-serif'}}>
-          <BubbleIcon size={24} color={darkMode?'#c4b5fd':'#8b5cf6'}/>
-        </button>
-      )}
     </div>
   );
 }
@@ -10104,12 +10335,14 @@ function Confetti({color}){
   </div>;
 }
 
-function Piece({color,dark}){
-  return <div style={{width:30,height:30,borderRadius:'50%',
-    background:`radial-gradient(circle at 30% 30%, ${color}, ${dark})`,
-    border:'2.5px solid rgba(255,255,255,0.55)',
-    boxShadow:`0 3px 12px ${color}70,inset 0 1px 0 rgba(255,255,255,0.35)`,
-    position:'relative',pointerEvents:'none'}}/>;
+function Piece({color,dark,size=30}){
+  return <div className="ww-stone" style={{width:size,height:size}}>
+    <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
+      background:`radial-gradient(circle at 38% 32%, ${color}, ${dark} 100%)`,
+      boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 4px 7px rgba(0,0,0,0.4),0 2px 3px rgba(0,0,0,0.28)`}}/>
+    <div className="ww-stone-tex"/>
+    <div className="ww-stone-sheen"/>
+  </div>;
 }
 function ModeGlyph({kind,size,color}){
   const s=size||12;const c=color||'currentColor';
@@ -10334,12 +10567,15 @@ function Wall({wkey,color,opacity,animate,golden,steel,steelColor}){
   const goldenAnim=isH
     ?'golden-drop-h 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite'
     :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
+  const wallOverlay='linear-gradient(180deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0) 30%,rgba(0,0,0,0) 62%,rgba(0,0,0,0.3) 73%,rgba(0,0,0,0.1) 100%), ';
   return <div style={{position:'absolute',...p,
-    background:golden?goldenBg:color,
-    borderRadius:WW/2,zIndex:10,pointerEvents:'none',opacity:opacity!==undefined?opacity:1,
-    boxShadow:golden?'none':'0 2px 8px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.15)',
+    background:golden?goldenBg:(wallOverlay+color),
+    borderRadius:4,zIndex:10,pointerEvents:'none',opacity:opacity!==undefined?opacity:1,overflow:'hidden',
+    boxShadow:golden?'none':'inset 0 1.5px 1px rgba(255,255,255,0.28),inset 0 -2px 3px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.5),0 2px 3px rgba(0,0,0,0.35)',
     transformOrigin:'center center',
-    animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}/>;
+    animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}>
+    {!golden&&<div className="ww-wall-gloss"/>}
+  </div>;
 }
 function Wall2({wkey,color,opacity,animate}){
   const p=wallPos2(wkey,CELL2);
@@ -10650,57 +10886,137 @@ function MapAura({map,dark}){
   const c=duel?'139,92,246':'59,130,246';
   // Nur subtiler Oberkante-Schimmer — unterscheidbar ohne aufdringlich zu sein
   return <div style={{position:'fixed',top:0,left:0,right:0,height:'32%',pointerEvents:'none',zIndex:0,
-    background:`radial-gradient(ellipse 85% 100% at 50% 0%, rgba(${c},0.17) 0%, transparent 100%)`,
+    background:`radial-gradient(ellipse 85% 100% at 50% 0%, rgba(${c},0.09) 0%, transparent 100%)`,
     transition:'background 0.55s ease'}}/>;
 }
+function DecoStone({hi,mid,lo,wall,rim,size,dark,style}){
+  var s=size||50;
+  return <div style={{position:'absolute',width:s,height:s*0.82,pointerEvents:'none',...style}}>
+    <div style={{position:'absolute',bottom:-3,left:'8%',right:'8%',height:'36%',borderRadius:'50%',filter:'blur(6px)',
+      background:dark?'rgba(0,0,0,0.6)':'rgba(40,50,70,0.28)'}}/>
+    <div style={{position:'absolute',left:'3%',right:'3%',bottom:'6%',height:'46%',borderRadius:'50%',background:wall}}/>
+    <div style={{position:'absolute',left:0,right:0,top:0,height:'78%',borderRadius:'50%',
+      background:'radial-gradient(ellipse 120% 120% at 50% 120%,'+rim+' 0%,transparent 40%),radial-gradient(ellipse 75% 70% at 42% 34%,'+hi+' 0%,'+mid+' 45%,'+lo+' 100%)',
+      boxShadow:'inset 0 -2px 5px rgba(0,0,0,0.3),inset 0 2px 3px rgba(255,255,255,0.25)'}}/>
+    <div style={{position:'absolute',top:'14%',left:'26%',width:'30%',height:'22%',borderRadius:'50%',filter:'blur(1px)',
+      background:'radial-gradient(ellipse at center,rgba(255,255,255,0.85),transparent 70%)'}}/>
+  </div>;
+}
+function MatchSearch({dark,t,lang}){
+  var[sec,setSec]=React.useState(0);
+  React.useEffect(function(){
+    var id=setInterval(function(){setSec(function(s){return s+1;});},1000);
+    return function(){clearInterval(id);};
+  },[]);
+  var mm=Math.floor(sec/60),ss=sec%60;
+  var clock=mm+':'+(ss<10?'0':'')+ss;
+  var ringCol=dark?'rgba(139,92,246,0.55)':'rgba(124,58,237,0.4)';
+  var subText=lang==='de'?'Suche nach einem Gegner':lang==='tr'?'Rakip aranıyor':lang==='fr'?'Recherche d\u2019un adversaire':'Searching for an opponent';
+  var titleText=lang==='de'?'Match suchen':lang==='tr'?'Maç aranıyor':lang==='fr'?'Recherche de match':'Finding Match';
+  var hint=sec<8?(lang==='de'?'Verbinde mit dem Server\u2026':lang==='tr'?'Sunucuya ba\u011flan\u0131l\u0131yor\u2026':lang==='fr'?'Connexion au serveur\u2026':'Connecting to server\u2026')
+    :(lang==='de'?'Gleich geht\u2019s los\u2026':lang==='tr'?'Birazdan ba\u015fl\u0131yor\u2026':lang==='fr'?'Bient\u00f4t pr\u00eat\u2026':'Almost there\u2026');
+  return <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%',animation:'ms-fade 0.5s ease'}}>
+    {/* Puls-Kreis mit Sonar */}
+    <div style={{position:'relative',width:200,height:200,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:34}}>
+      {[0,1,2].map(function(i){
+        return <div key={i} style={{position:'absolute',width:150,height:150,borderRadius:'50%',
+          border:'2px solid '+ringCol,
+          animation:'ms-sonar 2.8s ease-out infinite',animationDelay:(i*0.9)+'s'}}/>;
+      })}
+      {/* rotierender Lade-Ring */}
+      <div style={{position:'absolute',width:172,height:172,borderRadius:'50%',
+        background:'conic-gradient(from 0deg,transparent 0deg,transparent 250deg,'+(dark?'#8b5cf6':'#7c3aed')+' 340deg,transparent 360deg)',
+        WebkitMask:'radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))',
+        mask:'radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))',
+        animation:'ms-rotate 2.2s linear infinite'}}/>
+      {/* zentraler Herzschlag-Kreis */}
+      <div style={{width:128,height:128,borderRadius:'50%',
+        background:'linear-gradient(150deg,#8b5cf6 0%,#7c3aed 55%,#6d28d9 100%)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        boxShadow:'0 10px 34px rgba(124,58,237,0.5),0 0 50px rgba(124,58,237,0.45),inset 0 2px 6px rgba(255,255,255,0.3),inset 0 -6px 12px rgba(0,0,0,0.25)',
+        animation:'ms-heartbeat 1.5s ease-in-out infinite'}}>
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+          <path d="M5 5l9 9M19 5l-9 9M14 14l5 5M10 14l-5 5"/>
+        </svg>
+      </div>
+    </div>
+
+    {/* Timer */}
+    <div style={{fontSize:46,fontWeight:900,letterSpacing:1,color:'var(--text)',fontVariantNumeric:'tabular-nums',lineHeight:1}}>
+      {clock}
+    </div>
+
+    {/* Titel + Punkte */}
+    <div style={{fontSize:19,fontWeight:900,color:'var(--text)',marginTop:14,letterSpacing:-0.3,display:'inline-flex',alignItems:'center'}}>
+      {titleText}
+      <span style={{display:'inline-flex',marginLeft:3}}>
+        {[0,1,2].map(function(i){return <span key={i} style={{animation:'ms-dots 1.4s ease-in-out infinite',animationDelay:(i*0.2)+'s'}}>.</span>;})}
+      </span>
+    </div>
+    <div style={{fontSize:13,fontWeight:600,color:'var(--subtle)',marginTop:6}}>{subText}</div>
+
+    {/* Status-Hinweis */}
+    <div style={{marginTop:20,padding:'8px 16px',borderRadius:20,
+      background:dark?'rgba(139,92,246,0.12)':'rgba(124,58,237,0.08)',
+      border:'1px solid '+(dark?'rgba(139,92,246,0.25)':'rgba(124,58,237,0.18)'),
+      display:'inline-flex',alignItems:'center',gap:8}}>
+      <span style={{width:7,height:7,borderRadius:'50%',background:'#22c55e',
+        boxShadow:'0 0 8px rgba(34,197,94,0.8)',animation:'mbg-gp 1.4s ease-in-out infinite'}}/>
+      <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{hint}</span>
+    </div>
+  </div>;
+}
+function DecoCube({dark,size,style}){
+  var s=size||28;
+  var t=dark?'#1c2438':'#ffffff',l=dark?'#111727':'#e9edf5',d=dark?'#0a0f18':'#d2d8e6';
+  var cp='polygon(50% 0,100% 27%,100% 73%,50% 100%,0 73%,0 27%)';
+  return <div style={{position:'absolute',width:s,height:s*1.14,pointerEvents:'none',...style}}>
+    <div style={{position:'absolute',inset:0,clipPath:cp,WebkitClipPath:cp,
+      background:'conic-gradient(from -90deg at 50% 40%,'+l+' 0deg 120deg,'+d+' 120deg 240deg,'+t+' 240deg 360deg)'}}/>
+  </div>;
+}
 function MenuBG({dark}){
-  // Treibende Mauer-Segmente (Peripherie, nicht im Zentrum) – thematisch zum Spielbrett
-  const bars=[
-    {o:'h',top:'12%',left:'6%',len:84,anim:'mbg-float-a',dur:13,delay:0},
-    {o:'v',top:'18%',left:'88%',len:74,anim:'mbg-float-b',dur:16,delay:1.5},
-    {o:'h',top:'34%',left:'80%',len:64,anim:'mbg-float-c',dur:15,delay:3},
-    {o:'v',top:'6%',left:'70%',len:60,anim:'mbg-float-a',dur:18,delay:2.2},
-    {o:'h',top:'78%',left:'10%',len:78,anim:'mbg-float-b',dur:14,delay:0.8},
-    {o:'v',top:'70%',left:'90%',len:80,anim:'mbg-float-c',dur:17,delay:2.8},
-    {o:'h',top:'88%',left:'62%',len:70,anim:'mbg-float-a',dur:15,delay:4},
-    {o:'v',top:'52%',left:'4%',len:66,anim:'mbg-float-b',dur:19,delay:1.2},
-    {o:'h',top:'60%',left:'34%',len:56,anim:'mbg-float-c',dur:20,delay:3.5},
-  ];
-  const barCol=dark?'rgba(226,232,240,0.06)':'rgba(15,23,42,0.05)';
-  const gridCol=dark?'rgba(148,163,184,0.06)':'rgba(15,23,42,0.035)';
-  return <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',overflow:'hidden'}}>
-    {/* Brett-Raster, das sanft nach oben (Richtung Ziel) wandert */}
-    <div style={{position:'absolute',inset:'-40px 0',
-      backgroundImage:`linear-gradient(${gridCol} 1px,transparent 1px),linear-gradient(90deg,${gridCol} 1px,transparent 1px)`,
-      backgroundSize:'40px 40px',
-      animation:'mbg-grid-pan 6s linear infinite'}}/>
-    {/* Ziel-Schimmer oben (grün) */}
-    <div style={{position:'absolute',top:0,left:'-5%',width:'110%',height:'22%',
-      background:`radial-gradient(ellipse at 50% 0%,${dark?'rgba(34,197,94,0.13)':'rgba(34,197,94,0.10)'},transparent 70%)`,
-      animation:'mbg-goalwash 7s ease-in-out infinite',transformOrigin:'center top'}}/>
-    {/* Start-Schimmer unten (blau, dezent) */}
-    <div style={{position:'absolute',bottom:0,left:'-5%',width:'110%',height:'20%',
-      background:`radial-gradient(ellipse at 50% 100%,${dark?'rgba(59,130,246,0.10)':'rgba(59,130,246,0.07)'},transparent 70%)`}}/>
-    {/* Treibende Mauern */}
-    {bars.map((b,i)=>(
-      <div key={i} style={{position:'absolute',top:b.top,left:b.left,
-        width:b.o==='h'?b.len:WW,height:b.o==='h'?WW:b.len,
-        background:barCol,borderRadius:WW/2,
-        animation:`${b.anim} ${b.dur}s ease-in-out ${b.delay}s infinite`}}/>
-    ))}
-    {/* Spieler-Tokens, langsam treibend */}
-    <div style={{position:'absolute',top:'66%',left:'22%',
-      animation:'mbg-token-r 22s ease-in-out infinite'}}>
-      <div style={{width:18,height:18,borderRadius:'50%',background:'#ef4444',
-        boxShadow:'0 0 14px 3px rgba(239,68,68,0.45)',opacity:0.55,
-        animation:'mbg-glow 4s ease-in-out infinite'}}/>
-    </div>
-    <div style={{position:'absolute',top:'30%',left:'74%',
-      animation:'mbg-token-b 26s ease-in-out infinite'}}>
-      <div style={{width:18,height:18,borderRadius:'50%',background:'#3b82f6',
-        boxShadow:'0 0 14px 3px rgba(59,130,246,0.45)',opacity:0.55,
-        animation:'mbg-glow 5s ease-in-out 1s infinite'}}/>
-    </div>
+  var gc=dark?'rgba(150,180,235,0.07)':'rgba(20,30,60,0.04)';
+  return <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',overflow:'hidden',
+    background:dark
+      ?'linear-gradient(180deg,#0d1422 0%,#080d18 50%,#03060d 100%)'
+      :'linear-gradient(180deg,#eef1f7 0%,#e4e9f1 55%,#d9e0ec 100%)'}}>
+    <div className="ww-board-tex" style={{mixBlendMode:dark?'screen':'multiply',opacity:dark?0.06:0.14}}/>
+    {/* Violetter Glow oben hinterm Logo */}
+    <div style={{position:'absolute',inset:0,
+      background:dark
+        ?'radial-gradient(90% 38% at 50% 4%,rgba(124,92,246,0.22) 0%,transparent 50%)'
+        :'radial-gradient(115% 50% at 50% 0%,rgba(255,255,255,0.85) 0%,transparent 52%)'}}/>
+    {dark
+      ? <div style={{position:'absolute',left:'-30%',right:'-30%',bottom:0,height:'62%',
+          transform:'perspective(420px) rotateX(62deg)',transformOrigin:'50% 100%',
+          backgroundImage:'linear-gradient('+gc+' 1px,transparent 1px),linear-gradient(90deg,'+gc+' 1px,transparent 1px)',
+          backgroundSize:'40px 40px',
+          maskImage:'linear-gradient(to top,#000 0%,transparent 85%)',
+          WebkitMaskImage:'linear-gradient(to top,#000 0%,transparent 85%)',
+          animation:'mbg-grid-pan 18s linear infinite'}}/>
+      : <div style={{position:'absolute',inset:'-50px 0 0',
+          backgroundImage:'linear-gradient('+gc+' 1px,transparent 1px),linear-gradient(90deg,'+gc+' 1px,transparent 1px)',
+          backgroundSize:'46px 46px',
+          maskImage:'radial-gradient(125% 90% at 50% 25%,#000 40%,transparent 92%)',
+          WebkitMaskImage:'radial-gradient(125% 90% at 50% 25%,#000 40%,transparent 92%)',
+          animation:'mbg-grid-pan 16s linear infinite'}}/>}
+    {/* Ziel-Zone rot oben */}
+    <div style={{position:'absolute',top:0,left:'-10%',right:'-10%',height:'30%',
+      background:dark
+        ?'radial-gradient(ellipse 75% 100% at 50% 0%,rgba(225,70,60,0.18) 0%,transparent 70%)'
+        :'radial-gradient(ellipse 75% 100% at 50% 0%,rgba(225,70,60,0.1) 0%,transparent 70%)',
+      animation:'mbg-gp 6s ease-in-out infinite'}}/>
+    {/* Start-Zone blau unten */}
+    <div style={{position:'absolute',bottom:0,left:'-10%',right:'-10%',height:'30%',
+      background:dark
+        ?'radial-gradient(ellipse 75% 100% at 50% 100%,rgba(50,125,235,0.2) 0%,transparent 70%)'
+        :'radial-gradient(ellipse 75% 100% at 50% 100%,rgba(50,125,235,0.09) 0%,transparent 70%)',
+      animation:'mbg-gp 6s ease-in-out 3s infinite'}}/>
+    <div style={{position:'absolute',inset:0,
+      background:dark
+        ?'linear-gradient(to bottom,rgba(3,6,13,0.4) 0%,transparent 22%,transparent 60%,rgba(2,4,9,0.6) 100%)'
+        :'linear-gradient(to bottom,transparent 58%,rgba(80,100,135,0.1) 100%)'}}/>
   </div>;
 }
 function HammerIcon({size}){
@@ -10753,7 +11069,7 @@ function ScreenHead({icon,iconBg,title,sub}){
     </div>
   );
 }
-function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg,pulse}){
+function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg,pulse,glowColor}){
   return(
     <div style={{position:'relative'}}>
       <button onClick={onClick} className={highlight?'mi-btn mi-btn-hl':'mi-btn'} style={{
@@ -10762,8 +11078,8 @@ function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightB
         border:'1.5px solid '+(highlight?'transparent':'var(--border)'),
         display:'flex',alignItems:'center',gap:13,cursor:'pointer',
         boxShadow:highlight
-          ?'0 5px 0 rgba(0,0,0,0.22),0 8px 28px rgba(0,0,0,0.18)'
-          :'0 4px 0 rgba(0,0,0,0.08),0 2px 8px rgba(0,0,0,0.05)',
+          ?('0 2px 6px rgba(15,23,42,0.2),0 16px 38px rgba(15,23,42,0.3),inset 0 1px 0 rgba(255,255,255,0.28)'+(glowColor?(',0 6px 34px '+glowColor+',0 0 60px '+glowColor):''))
+          :'0 2px 6px rgba(15,23,42,0.12),0 14px 32px rgba(15,23,42,0.2),inset 0 1px 0 rgba(255,255,255,0.4)',
         opacity:off?0.45:1,fontFamily:'system-ui,-apple-system,sans-serif',
         animation:pulse&&!off?'highlightPulse 2.5s ease-in-out infinite':highlight?'highlightGlow 3s ease-in-out infinite':'none',
         overflow:'hidden'}}>
@@ -10771,6 +11087,8 @@ function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightB
           backgroundSize:'200% 100%',animation:'shimmer 2.5s ease-in-out infinite',pointerEvents:'none'}}/>}
         {highlight&&<div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
           background:'linear-gradient(180deg,rgba(255,255,255,0.12),transparent)',borderRadius:'18px 18px 0 0',pointerEvents:'none'}}/>}
+        {!highlight&&<div style={{position:'absolute',top:0,left:0,right:0,height:'46%',
+          background:'linear-gradient(180deg,rgba(255,255,255,0.07),transparent)',borderRadius:'18px 18px 0 0',pointerEvents:'none'}}/>}
         <div style={{width:highlight?44:40,height:highlight?44:40,borderRadius:13,flexShrink:0,
           background:highlight?'rgba(255,255,255,0.22)':iconBg||'var(--border)',
           display:'flex',alignItems:'center',justifyContent:'center',
@@ -10795,12 +11113,20 @@ function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightB
 }
 function MenuSection({label,children}){
   return(
-    <div style={{marginBottom:20}}>
-      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,paddingLeft:2}}>
-        <div style={{width:3,height:12,borderRadius:2,background:'var(--subtle)',opacity:0.5,flexShrink:0}}/>
-        <div style={{fontSize:10,fontWeight:800,letterSpacing:1.6,color:'var(--subtle)',textTransform:'uppercase'}}>{label}</div>
+    <div style={{marginBottom:18}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,marginBottom:11}}>
+        <span style={{width:4,height:4,background:'#8b5cf6',transform:'rotate(45deg)',opacity:0.75,flexShrink:0}}/>
+        <div style={{fontSize:10.5,fontWeight:800,letterSpacing:1.8,color:'#8b5cf6',textTransform:'uppercase',textAlign:'center'}}>{label}</div>
+        <span style={{width:4,height:4,background:'#8b5cf6',transform:'rotate(45deg)',opacity:0.75,flexShrink:0}}/>
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:9}}>{children}</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10,
+        padding:12,borderRadius:24,
+        background:'var(--msec-bg)',
+        border:'1px solid var(--msec-border)',
+        boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06),0 8px 28px rgba(15,23,42,0.08)',
+        WebkitBackdropFilter:'blur(6px)',backdropFilter:'blur(6px)'}}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -10839,8 +11165,9 @@ const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 
 
 // ── 2v2 (Beta) – eigenständige Komponente mit Online-Lobby ──
 function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
+  const[wallBarPos]=React.useState(function(){try{return localStorage.getItem('ww_wallbarpos')||'bottom';}catch(e){return 'bottom';}});
   const[sub,setSub]=React.useState('config');
-  const[tokens,setTokens]=React.useState({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+  const[tokens,setTokens]=React.useState({A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}});
   const[walls,setWalls]=React.useState(new Set());
   const[barr,setBarr]=React.useState({A:BARR2,B:BARR2});
   const[turn,setTurn]=React.useState('A1');
@@ -10905,6 +11232,8 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const gKey=c=>'barricade_2v2_game_'+c;
 
   const myTeam=myToken?TEAM_2V2(myToken):null;
+  // Perspektive: Team B startet oben -> Brett vertikal spiegeln, damit B sich (wie 1v1-Race) unten sieht.
+  const boardFlip=isOnline&&myTeam==='B';
   const team=TEAM_2V2(turn);
   const cur=tokens[turn];
   const others=ORDER_2V2.filter(id=>id!==turn&&tokens[id]&&!removed[id]).map(id=>tokens[id]);
@@ -10912,7 +11241,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const noMovesNow=myTurnNow&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2).length===0;
   const canPlace=myTurnNow&&barr[isOnline?(myTeam||team):team]>0;
   const teamName=tm=>tm==='A'?t('red'):t('blue');
-  const sz=Math.round(CELL2*0.74),off=(CELL2-sz)/2;
+  const sz=Math.round(CELL2*0.66),off=(CELL2-sz)/2;
 
   const triggerWin=tm=>{
     playSound('win');setWinner(tm);
@@ -11066,7 +11395,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     const pm={};pm[aP[0][0]]='A1';pm[aP[1][0]]='A2';pm[bP[0][0]]='B1';pm[bP[1][0]]='B2';
     const sTeam=Math.random()<0.5?'A':'B';
     const startToken=sTeam+'1';
-    const initTok={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
+    const initTok={A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}};
     const gs={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:startToken,winner:null,reached:{A1:false,A2:false,B1:false,B2:false},players:pm,startTeam:sTeam,votes:{},lastUpdated:Date.now()};
     await stoSet(gKey(lc),gs);
     stoSet(lKey(lc),{...data,status:'playing',playerMap:pm,lastUpdated:Date.now()});
@@ -11077,7 +11406,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const restartOnline=async(gs)=>{
     const lc=St.current.lobbyCode;
     const newStart=gs.startTeam==='A'?'B':'A';
-    const initTok={A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}};
+    const initTok={A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}};
     const ng={tokens:initTok,walls:[],barr:{A:BARR2,B:BARR2},turn:newStart+'1',winner:null,reached:{A1:false,A2:false,B1:false,B2:false},players:gs.players,startTeam:newStart,votes:{},lastUpdated:Date.now()};
     await stoSet(gKey(lc),ng);
   };
@@ -11129,7 +11458,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   // ── Lokal: Revanche (anderes Team beginnt) ──
   const rematchLocal=()=>{
     const newStart=startTeam==='A'?'B':'A';setStartTeam(newStart);
-    setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+    setTokens({A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}});
     setWalls(new Set());setBarr({A:BARR2,B:BARR2});setReached({A1:false,A2:false,B1:false,B2:false});
     setTurn(newStart+'1');setWinner(null);setFlash('');setCelebrating(false);
   };
@@ -11242,7 +11571,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         if(isOnline)doSync2v2({tokens:nt,walls,barr,turn:nextTurn,winner:tm,reached:newReached});
         triggerWin(tm);return;
       }
-      setFlash('🎯 Am Ziel! Teammate noch unterwegs...');
+      setFlash(t('tv2MateWait'));
       setTimeout(()=>setFlash(''),2800);
     }
     setTurn(nextTurn);
@@ -11275,24 +11604,25 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   React.useEffect(()=>{
     if(!dragging)return;
     const OFFSET=90;
-    const getRel=(x,y)=>{if(!gridRef.current)return null;const rect=gridRef.current.getBoundingClientRect();return{x:x-rect.left,y:y-rect.top};};
+    const getRel=(x,y)=>{if(!gridRef.current)return null;const rect=gridRef.current.getBoundingClientRect();let rx=x-rect.left,ry=y-rect.top;if(boardFlip)ry=ROWS2*CELL2-ry;return{x:rx,y:ry};};
     const onMove=(x,y)=>{
       setGhostPos({x,y});
       const rect=gridRef.current?gridRef.current.getBoundingClientRect():null;
-      const inZone=rect&&y<=rect.bottom+20;
+      const inZone=rect&&y<=rect.bottom+90&&y>=rect.top-20;
       const rel=getRel(x,y-OFFSET);
-      if(inZone&&rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=0&&rel.y<=ROWS2*CELL2){
+      if(inZone&&rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=-CELL2&&rel.y<=ROWS2*CELL2+CELL2){
         const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
         setPreviewKey(key);
         setPreviewValid(quickValidWall2(key,St.current.walls,St.current.tokens,ROWS2,COLS2));
         const wp=wallPos2(key,CELL2);
-        setSnapPos({x:rect.left+wp.left+wp.width/2,y:rect.top+wp.top+wp.height/2});
+        const dispTop=boardFlip?(ROWS2*CELL2-wp.top-wp.height):wp.top;
+        setSnapPos({x:rect.left+wp.left+wp.width/2,y:rect.top+dispTop+wp.height/2});
       }else{setPreviewKey(null);setSnapPos(null);}
     };
     const onEnd=(x,y)=>{
       if(snapPosRef.current){
         const rel=getRel(x,y-OFFSET);
-        if(rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=0&&rel.y<=ROWS2*CELL2){
+        if(rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=-CELL2&&rel.y<=ROWS2*CELL2+CELL2){
           const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
           const{walls:w,tokens:tk,barr:bl,turn:tn,isOnline:io}=St.current;
           const tmm=TEAM_2V2(tn);
@@ -11459,9 +11789,9 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
           <div style={{background:'var(--card)',borderRadius:16,padding:'14px 16px',border:'1.5px solid var(--border)',marginBottom:16,boxShadow:'var(--shadow-soft)'}}>
             <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
               <div style={{position:'relative',width:COLS2*9,height:ROWS2*9,borderRadius:8,overflow:'hidden',border:'1px solid var(--border)',background:'var(--grid-bg)'}}>
-                <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>
-                <div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)'}}/>
-                {[['A1',{r:ROWS2-1,c:2}],['A2',{r:0,c:2}],['B1',{r:ROWS2-1,c:COLS2-3}],['B2',{r:0,c:COLS2-3}]].map(function(en){
+                <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#ef4444,#f87171)'}}/>
+                <div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#3b82f6,#60a5fa)'}}/>
+                {[['A1',{r:ROWS2-1,c:3}],['A2',{r:ROWS2-1,c:5}],['B1',{r:0,c:3}],['B2',{r:0,c:5}]].map(function(en){
                   return <div key={en[0]} style={{position:'absolute',left:en[1].c*9+1,top:en[1].r*9+1,width:7,height:7,borderRadius:'50%',background:PC2[en[0]]}}/>;
                 })}
               </div>
@@ -11480,7 +11810,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               <GlobeIcon size={16}/>{t('onlineLobby4')}
             </button>
             <button onClick={()=>{
-              setIsOnline(false);setTokens({A1:{r:ROWS2-1,c:2},A2:{r:0,c:2},B1:{r:ROWS2-1,c:COLS2-3},B2:{r:0,c:COLS2-3}});
+              setIsOnline(false);setTokens({A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}});
               setWalls(new Set());setBarr({A:BARR2,B:BARR2});setReached({A1:false,A2:false,B1:false,B2:false});
               setTurn(Math.random()<0.5?'A1':'B1');setWinner(null);setFlash('');setCelebrating(false);
               setSub('game');
@@ -11759,35 +12089,55 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   // ── GAME ──
   const activeTm=isOnline?(myTurnNow?myTeam:TEAM_2V2(turn)):team;
   return(
-    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1}}>
+    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1,paddingBottom:'calc(104px + env(safe-area-inset-bottom, 0px))'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={()=>{if(isOnline)leaveLobby();else setSub('config');}} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       {/* Team-Status */}
-      <div style={{display:'flex',gap:8,marginBottom:8,marginTop:6,position:'relative',zIndex:1,width:Math.min(COLS2*CELL2,window.innerWidth-16),maxWidth:'96vw'}}>
-        {['A','B'].map(tm=>{
+      <div className="ww-players" style={{width:Math.min(COLS2*CELL2+26,window.innerWidth-16),maxWidth:'96vw',marginBottom:8,marginTop:6,position:'relative',zIndex:1}}>
+        {['A','B'].map((tm,idx)=>{
           const active=TEAM_2V2(turn)===tm&&!winner;
           const col=tm==='A'?'#ef4444':'#3b82f6';
+          const colD=tm==='A'?'#7f1d1d':'#1e3a5f';
           const isMy=isOnline&&myTeam===tm;
           return(
-            <div key={tm} style={{flex:1,padding:'7px 10px',borderRadius:12,
-              background:active?tm==='A'?'rgba(239,68,68,0.12)':'rgba(59,130,246,0.12)':'var(--card)',
-              border:'1.5px solid '+(active?col:'var(--border)'),
-              display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.2s'}}>
-              <span style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:800,color:col}}>
-                <span style={{width:8,height:8,borderRadius:'50%',background:col}}/>
-                {teamName(tm)}{isMy?' \u2605':''}
-                {active&&<span style={{fontSize:9,color:'var(--muted)',fontWeight:600}}> {turn[1]==='1'?('\u2191 '+t('tv2Bottom')):('\u2193 '+t('tv2Top'))}</span>}
-              </span>
-              <span style={{fontSize:11,fontWeight:800,color:'var(--text)',display:'flex',alignItems:'center',gap:2}}>{barr[tm]}<BrickMini size={10}/></span>
+            <React.Fragment key={tm}>
+            <div className={"ww-pcard p"+tm+(active?" live":" dim")}>
+              <div className="ww-sheen2"/>
+              <div className="ww-figslot">
+                <div className="ww-stone" style={{width:38,height:38,position:'relative'}}>
+                  <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
+                    background:`radial-gradient(circle at 38% 32%, ${col}, ${colD} 100%)`,
+                    boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 3px 6px rgba(0,0,0,0.4)`}}/>
+                  <div className="ww-stone-tex"/>
+                  <div className="ww-stone-sheen"/>
+                </div>
+              </div>
+              <div className="ww-pinfo">
+                <div className="ww-pname">{teamName(tm)}{isMy?' \u2605':''}</div>
+                <div className="ww-pwalls">
+                  <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
+                  {barr[tm]}
+                </div>
+              </div>
+              {active&&isOnline&&useWS&&tickSec>0&&(
+                <div className="ww-pclock">
+                  <div className="ww-ptime" style={{color:tickSec<=5?'#fde047':'#fff'}}>{tickSec}s</div>
+                  <div className="ww-pcap">{t('timeLabel')}</div>
+                </div>
+              )}
             </div>
+            {idx===0&&(
+              <div className="ww-vs"><div className="ww-vt">VS</div><div className="ww-vd"><i/><i/><i/></div></div>
+            )}
+            </React.Fragment>
           );
         })}
       </div>
 
       {isOnline&&!myTurnNow&&!winner&&!removedMeReason&&(
         <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:4,letterSpacing:0.5}}>
-          {(isOnline&&useWS&&wsNames[turn]?wsNames[turn]:(turn[1]==='1'?t('tv2Bottom'):t('tv2Top')))+' \u00b7 '+teamName(TEAM_2V2(turn))}...
+          {(isOnline&&useWS&&wsNames[turn]?wsNames[turn]:(TEAM_2V2(turn)==='A'?t('tv2Bottom'):t('tv2Top')))+' \u00b7 '+teamName(TEAM_2V2(turn))}...
         </div>
       )}
       {isOnline&&useWS&&!winner&&ORDER_2V2.some(function(id){return dcMap[id]&&!removed[id];})&&(
@@ -11799,32 +12149,52 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       {!winner&&(
         <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:'uppercase',
           marginBottom:4,padding:'4px 12px',borderRadius:8,display:'flex',alignItems:'center',gap:8,
-          background:turn[1]==='1'?'rgba(59,130,246,0.15)':'rgba(139,92,246,0.15)',
-          color:turn[1]==='1'?'#3b82f6':'#8b5cf6'}}>
-          <span>{turn[1]==='1'?('\u2191 '+t('tv2RoundBottom')):('\u2193 '+t('tv2RoundTop'))}</span>
+          background:TEAM_2V2(turn)==='A'?'rgba(239,68,68,0.15)':'rgba(59,130,246,0.15)',
+          color:TEAM_2V2(turn)==='A'?'#ef4444':'#3b82f6'}}>
+          <span>{TEAM_2V2(turn)==='A'?('\u2191 '+t('tv2RoundBottom')):('\u2193 '+t('tv2RoundTop'))}</span>
           {isOnline&&useWS&&tickSec>0&&(
             <span style={{fontWeight:900,color:tickSec<=5?'#ef4444':'inherit',minWidth:26,textAlign:'right'}}>{tickSec}s</span>
           )}
         </div>
       )}
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginBottom:2}}>{'\u25b2'} {t('tv2Goal')} {'\u25b2'}</div>
+      <div className="ww-goalext t" style={{width:Math.min(COLS2*CELL2+26,window.innerWidth-16),maxWidth:'96vw',color:boardFlip?'#3b82f6':'#ef4444',marginBottom:2}}>
+        <span className="ln"/>
+        <span className="ar">{'\u25b2'}</span>
+        <span className="nm2">{t('tv2Goal')}</span>
+        <span className="ln"/>
+      </div>
 
-      <div ref={gridRef} style={{position:'relative',width:COLS2*CELL2,height:ROWS2*CELL2,touchAction:'auto',...sGrid}}>
+      <div style={{position:'relative',width:COLS2*CELL2+26,margin:'0 auto',borderRadius:24,padding:13,
+        background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
+        boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
+        <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
+        <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+        <div className="ww-stud ww-stud-l"/>
+        <div className="ww-stud ww-stud-r"/>
+      <div ref={gridRef} style={{position:'relative',width:COLS2*CELL2,height:ROWS2*CELL2,touchAction:'auto',...sGrid,
+        background:darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
+        border:'none',
+        boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)',
+        transform:boardFlip?'scaleY(-1)':'none'}}>
+        <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:darkMode?0.12:0.4}}/>
+        <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
+          backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
+          backgroundSize:`${CELL2}px ${CELL2}px,${CELL2}px ${CELL2}px,${CELL2}px ${CELL2}px`}}/>
         {Array.from({length:ROWS2},function(_,r){return Array.from({length:COLS2},function(_,c){
           const vDot=validDot(r,c);
-          const isGoal=r===0||r===ROWS2-1;
-          let bg=(r+c)%2===0?'var(--cell-b)':'var(--cell-a)';
-          if(isGoal)bg='var(--goal)';
+          let bg='transparent';
           return(
             <div key={r+'-'+c} onClick={()=>moveTo(r,c)}
               style={{position:'absolute',left:c*CELL2,top:r*CELL2,width:CELL2,height:CELL2,
-                background:bg,border:'1px solid var(--cell-line)',
+                background:bg,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
-              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
-              {r===ROWS2-1&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#16a34a,#22c55e)',pointerEvents:'none'}}/>}
-              {vDot&&<div style={{width:9,height:9,borderRadius:'50%',background:PC2[turn],opacity:0.34,pointerEvents:'none'}}/>}
+              {r===0&&<div style={{position:'absolute',top:0,left:0,right:0,bottom:0,background:'linear-gradient(180deg,rgba(239,68,68,0.18) 0%,rgba(239,68,68,0.08) 60%,transparent 100%)',boxShadow:'inset 0 0 0 1.5px rgba(239,68,68,0.36),inset 0 2px 8px rgba(239,68,68,0.22)',pointerEvents:'none',animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+              {r===ROWS2-1&&<div style={{position:'absolute',top:0,left:0,right:0,bottom:0,background:'linear-gradient(0deg,rgba(59,130,246,0.18) 0%,rgba(59,130,246,0.08) 60%,transparent 100%)',boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.36),inset 0 -2px 8px rgba(59,130,246,0.22)',pointerEvents:'none',animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+              {vDot&&<div style={{width:Math.round(CELL2*0.26),height:Math.round(CELL2*0.26),borderRadius:'50%',pointerEvents:'none',background:`radial-gradient(circle at 40% 34%,rgba(255,255,255,0.6),${PC2[turn]} 62%,${PD2[turn]})`,boxShadow:`0 0 8px ${PC2[turn]}aa,0 1px 2px rgba(0,0,0,0.32),inset 0 1px 1px rgba(255,255,255,0.4)`,animation:'ww-dotb 1.7s ease-in-out infinite'}}/>}
             </div>
           );
         });})}
@@ -11836,10 +12206,12 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
           return(
             <div key={id} style={{position:'absolute',left:pos.c*CELL2+off,top:pos.r*CELL2+off,
               width:sz,height:sz,
-              transition:'left 0.18s cubic-bezier(0.25,0.46,0.45,0.94),top 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
-              zIndex:20,pointerEvents:'none'}}>
+              transition:'left 0.25s cubic-bezier(0.34,1.3,0.5,1),top 0.25s cubic-bezier(0.34,1.3,0.5,1)',
+              zIndex:20,pointerEvents:'none',transform:boardFlip?'scaleY(-1)':'none'}}>
               {active&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',background:PC2[id],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
-              <Piece color={PC2[id]} dark={PD2[id]}/>
+              <div key={'land'+pos.r+'-'+pos.c} style={{position:'absolute',inset:-3,borderRadius:'50%',
+                border:'2px solid '+PC2[id],animation:'ww-land 0.5s ease-out forwards',pointerEvents:'none'}}/>
+              <Piece color={PC2[id]} dark={PD2[id]} size={sz}/>
               <div style={{position:'absolute',right:-2,bottom:-2,width:13,height:13,borderRadius:'50%',
                 background:reached[id]?'#16a34a':'white',color:reached[id]?'white':PD2[id],fontSize:9,fontWeight:900,lineHeight:'13px',textAlign:'center',
                 boxShadow:'0 1px 3px rgba(0,0,0,0.3)',fontFamily:'system-ui,sans-serif'}}>{reached[id]?'✓':id[1]}</div>
@@ -11847,8 +12219,9 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
           );
         })}
       </div>
+      </div>
 
-      <div style={{fontSize:9,letterSpacing:3,color:'#16a34a',fontWeight:700,textTransform:'uppercase',marginTop:2}}>{'\u25bc'} {t('tv2Goal')} {'\u25bc'}</div>
+      <div style={{fontSize:9,letterSpacing:3,color:boardFlip?'#ef4444':'#3b82f6',fontWeight:700,textTransform:'uppercase',marginTop:2}}>{'\u25bc'} {t('tv2Goal')} {'\u25bc'}</div>
 
       {flash&&<div style={{position:'fixed',bottom:120,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
         <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
@@ -11937,63 +12310,59 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       })()}
 
       {!winner&&(
-        <div style={{position:'fixed',bottom:'calc(16px + env(safe-area-inset-bottom, 0px))',left:0,right:0,zIndex:200,
-          display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,pointerEvents:'none'}}>
+        <div style={{position:'fixed',bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',
+          left:'50%',transform:'translateX(-50%)',
+          width:'min('+(COLS2*CELL2+26)+'px, calc(100vw - 20px))',zIndex:200,
+          display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',
+          gap:6,pointerEvents:'none',opacity:dragging?0:1,transition:'opacity 0.12s ease'}}>
           {myTurnNow&&(reached[turn]||noMovesNow)?(
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,pointerEvents:'all'}}>
-              <div style={{fontSize:10,color:'#16a34a',fontWeight:700,letterSpacing:0.5}}>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,pointerEvents:'none'}}>
+              <div style={{fontSize:10,color:'#16a34a',fontWeight:800,letterSpacing:0.5,pointerEvents:'none'}}>
                 {reached[turn]?t('tv2AtGoal'):t('tv2Stuck')}
               </div>
-              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <div className="ww-wallctl" style={{pointerEvents:'none',display:'flex',alignItems:'center',gap:9,padding:'7px 11px'}}>
                 {['H','V'].map(function(orient){
-                  const col=isOnline?myTeam:team;
+                  const col=isOnline?myTeam:team;const colHex=col==='A'?'#ef4444':'#3b82f6';
                   return(
-                    <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
-                      style={{width:orient==='H'?84:42,height:orient==='V'?54:42,
-                        display:'flex',alignItems:'center',justifyContent:'center',
-                        cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
-                        background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
-                        backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-                        border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
-                        opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
-                      <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
-                        width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
+                    <div key={orient} className={"ww-wtool"+(canPlace?" armed":"")}
+                      onMouseDown={canPlace?function(e){return startDrag(e,orient);}:undefined} onTouchStart={canPlace?function(e){return startDrag(e,orient);}:undefined}
+                      style={{pointerEvents:'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
+                        cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,borderColor:canPlace?colHex+'99':undefined}}>
+                      <div style={{background:colHex,borderRadius:3,width:orient==='H'?34:WW2,height:orient==='V'?22:WW2,
+                        boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
                     </div>
                   );
                 })}
-                <button onClick={skipTurn} style={{padding:'10px 16px',borderRadius:12,
-                  background:darkMode?'rgba(30,41,68,0.85)':'rgba(255,255,255,0.85)',
-                  border:'1.5px solid var(--border)',cursor:'pointer',
-                  fontWeight:700,fontSize:12,color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif',
-                  backdropFilter:'blur(12px)',boxShadow:'var(--shadow-soft)'}}>
+                <button onClick={skipTurn} style={{pointerEvents:'auto',padding:'9px 14px',borderRadius:11,
+                  background:darkMode?'rgba(30,41,68,0.9)':'rgba(255,255,255,0.92)',
+                  border:'1px solid var(--border)',cursor:'pointer',fontWeight:800,fontSize:12,color:'var(--text)',
+                  fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'var(--shadow-soft)'}}>
                   {t('tv2SkipBtn')} {'\u2192'}
                 </button>
               </div>
             </div>
           ):(
-            <div style={{display:'flex',justifyContent:'center',alignItems:'flex-end',gap:12,pointerEvents:'none'}}>
-              <div style={{position:'absolute',bottom:'100%',marginBottom:5,fontSize:9,color:'var(--muted)',fontWeight:600,letterSpacing:1,
-                background:darkMode?'rgba(20,30,50,0.7)':'rgba(255,255,255,0.72)',backdropFilter:'blur(8px)',
-                padding:'2px 10px',borderRadius:20,border:'1px solid '+(darkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)')}}>
-                {canPlace?teamName(isOnline?myTeam:team)+': '+barr[isOnline?myTeam:team]+' '+t('wallsLeft'):t('opponentTurn')}
+            <div className="ww-wallctl" style={{pointerEvents:'none'}}>
+              <div className="wl">
+                <svg width="12" height="12" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2" y="4" width="9" height="6" rx="1"/><rect x="13" y="4" width="9" height="6" rx="1"/><rect x="7" y="12" width="10" height="6" rx="1"/></g></svg>
+                <span>{canPlace?teamName(isOnline?myTeam:team)+': '+barr[isOnline?myTeam:team]+' '+t('wallsLeft'):t('opponentTurn')}</span>
               </div>
-              {['H','V'].map(function(orient){
-                const col=isOnline?myTeam:team;
-                return(
-                  <div key={orient} onMouseDown={function(e){return startDrag(e,orient);}} onTouchStart={function(e){return startDrag(e,orient);}}
-                    style={{pointerEvents:'all',width:orient==='H'?84:42,height:orient==='V'?54:42,
-                      display:'flex',alignItems:'center',justifyContent:'center',
-                      cursor:canPlace?'grab':'not-allowed',touchAction:'none',borderRadius:12,
-                      background:darkMode?'rgba(30,41,68,0.7)':'rgba(255,255,255,0.7)',
-                      backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-                      border:'1.5px solid '+(canPlace?col==='A'?'#ef4444':'#3b82f6':'var(--border)'),
-                      opacity:canPlace?1:0.35,boxShadow:'var(--shadow-soft)'}}>
-                    <div style={{background:col==='A'?'#ef4444':'#3b82f6',borderRadius:3,
-                      width:orient==='H'?54:WW2,height:orient==='V'?32:WW2}}/>
-                  </div>
-                );
-              })}
+              <div className="tools">
+                {['H','V'].map(function(orient){
+                  const col=isOnline?myTeam:team;const colHex=col==='A'?'#ef4444':'#3b82f6';
+                  return(
+                    <div key={orient} className={"ww-wtool"+(canPlace?" armed":"")}
+                      onMouseDown={canPlace?function(e){return startDrag(e,orient);}:undefined} onTouchStart={canPlace?function(e){return startDrag(e,orient);}:undefined}
+                      style={{pointerEvents:'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
+                        cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,
+                        borderColor:canPlace?colHex+'99':undefined}}>
+                      <div style={{background:colHex,borderRadius:3,
+                        width:orient==='H'?34:WW2,height:orient==='V'?22:WW2,
+                        boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -12046,7 +12415,7 @@ function ModeDemo({kind,dark}){
       border:'1px solid var(--cell-line)',boxSizing:'border-box'}}/>);
   }
   const Tok=(r,c,col,dk,id)=>(<div key={id} style={{position:'absolute',left:c*CL+4,top:r*CL+4,width:CL-8,height:CL-8,zIndex:5,
-    transition:'left 0.45s cubic-bezier(.25,.46,.45,.94),top 0.45s cubic-bezier(.25,.46,.45,.94)'}}><Piece color={col} dark={dk}/></div>);
+    transition:'left 0.45s cubic-bezier(.25,.46,.45,.94),top 0.45s cubic-bezier(.25,.46,.45,.94)'}}><Piece color={col} dark={dk} size={CL-8}/></div>);
   const Wall=(key,dk)=>{
     const a=key.split('-');const ty=a[0],r=+a[1],c=+a[2];
     const p=ty==='H'?{left:c*CL,top:(r+1)*CL-WW/2,width:2*CL,height:WW,anim:'wall-enter-h'}:{left:(c+1)*CL-WW/2,top:r*CL,width:WW,height:2*CL,anim:'wall-enter-v'};
@@ -12156,7 +12525,7 @@ function TutBoard({step,dark}){
       background:isGoal?'var(--goal)':((r+c)%2===0?'var(--cell-b)':'var(--cell-a)'),
       border:'1px solid var(--cell-line)',boxSizing:'border-box'}}/>);
   }
-  const tok=(r,c,col,dk)=>(<div style={{position:'absolute',left:c*CL+5,top:r*CL+5,width:CL-10,height:CL-10,zIndex:5}}><Piece color={col} dark={dk}/></div>);
+  const tok=(r,c,col,dk)=>(<div style={{position:'absolute',left:c*CL+5,top:r*CL+5,width:CL-10,height:CL-10,zIndex:5}}><Piece color={col} dark={dk} size={CL-10}/></div>);
   const dot=(r,c)=>(<div key={'d'+r+'-'+c} style={{position:'absolute',left:c*CL+CL/2-4,top:r*CL+CL/2-4,width:8,height:8,borderRadius:'50%',background:'#ef4444',opacity:0.4,zIndex:4}}/>);
   const hWall=(r,c)=>(<div key={'h'+r+'-'+c} style={{position:'absolute',left:c*CL,top:(r+1)*CL-WW/2,width:2*CL,height:WW,background:dark?'#e2e8f0':'#1e293b',borderRadius:WW/2,zIndex:6}}/>);
   const vWall=(r,c)=>(<div key={'v'+r+'-'+c} style={{position:'absolute',left:(c+1)*CL-WW/2,top:r*CL,width:WW,height:2*CL,background:dark?'#e2e8f0':'#1e293b',borderRadius:WW/2,zIndex:6}}/>);
