@@ -638,6 +638,13 @@
   .ww-pcard.dim .ww-pclock{opacity:0.78;}
   .ww-ptime{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0.5px;line-height:1;}
   .ww-pcap{font-size:7px;font-weight:800;letter-spacing:1px;opacity:0.75;}
+  .ww-ptimetop{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;max-width:100%;
+    font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0.3px;line-height:1;
+    background:rgba(0,0,0,0.24);border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:3px 8px;margin-bottom:5px;
+    transition:background 0.3s,box-shadow 0.3s;}
+  .ww-pcard.live .ww-ptimetop{background:rgba(0,0,0,0.32);box-shadow:0 0 0 1.5px rgba(255,255,255,0.28),inset 0 1px 2px rgba(0,0,0,0.3);}
+  .ww-pcard.dim .ww-ptimetop{opacity:0.82;}
+  .ww-ptcap{font-size:7px;font-weight:800;letter-spacing:1px;opacity:0.7;}
   .ww-vs{width:36px;flex-shrink:0;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     background:linear-gradient(180deg,#f3f6fb,#ffffff);border:1px solid rgba(15,23,42,0.07);box-shadow:0 6px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.9);}
   body.dark .ww-vs,html.dark .ww-vs{background:linear-gradient(180deg,#1b2438,#141c2d);border:1px solid rgba(255,255,255,0.08);box-shadow:0 6px 16px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.06);}
@@ -9579,18 +9586,19 @@ function App(){
                 </div>
               </div>
               <div className="ww-pinfo">
+                {classic&&(
+                  <div className="ww-ptimetop" style={{color:timeLeft[p]<=30?'#fde047':'#fff'}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.9,flexShrink:0}}><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                    <span>{Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}</span>
+                    <span className="ww-ptcap">{t('timeLabel')}</span>
+                  </div>
+                )}
                 <div className="ww-pname">{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
                 <div className="ww-pwalls">
                   <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
                   {barrLeft[p]}
                 </div>
               </div>
-              {classic&&(
-                <div className="ww-pclock">
-                  <div className="ww-ptime" style={{color:timeLeft[p]<=30?'#fde047':'#fff'}}>{Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}</div>
-                  <div className="ww-pcap">{t('timeLabel')}</div>
-                </div>
-              )}
             </div>
             {idx===0&&(
               <div className="ww-vs">
