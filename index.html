@@ -2524,7 +2524,35 @@ async function adminResetAllRanked(){
   }));
   if(errors.length>0)throw new Error(errors.join(' | '));
   return keys.length;
-}async function registerAccount(email,name,pw,color){
+}
+async function adminFixLeaderboardNames(){
+  // Liest alle Leaderboard-Eintraege, wo name==='Spieler', und ersetzt mit echtem Profil-Namen
+  const snap=await window.db.ref('ww_leaderboard').once('value');
+  const lb=snap.val();
+  if(!lb)return 0;
+  const uids=Object.keys(lb).filter(function(k){return lb[k]&&lb[k].name==='Spieler';});
+  if(uids.length===0)return 0;
+  var fixed=0;
+  var errors=[];
+  await Promise.all(uids.map(async function(uid){
+    try{
+      const ps=await window.db.ref('ww_profiles/'+uid).once('value');
+      var raw=ps.val();
+      var prof=null;
+      try{prof=(typeof raw==='string')?JSON.parse(raw):raw;}catch(_){}
+      var name=(prof&&typeof prof.name==='string'&&prof.name)?prof.name:null;
+      var color=(prof&&typeof prof.color==='string'&&prof.color)?prof.color:null;
+      if(!name)return;
+      var upd={name:name};
+      if(color)upd.color=color;
+      await window.db.ref('ww_leaderboard/'+uid).update(upd);
+      fixed++;
+    }catch(e){errors.push(uid+': '+(e&&e.message?e.message:e));}
+  }));
+  if(errors.length>0)throw new Error(errors.join(' | '));
+  return fixed;
+}
+async function registerAccount(email,name,pw,color){
   const key=normUser(name);
   if(key.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(key))return{err:'badChars'};
@@ -3445,6 +3473,31 @@ function AdminConfirmAction({label,confirmLabel,btnLabel,danger,active,onConfirm
     </button>
   );
 }
+function FixNamesAdmin(){
+  const[busy,setBusy]=React.useState(false);
+  const[result,setResult]=React.useState(null);
+  const[err,setErr]=React.useState('');
+  const doFix=async()=>{
+    setBusy(true);setResult(null);setErr('');
+    try{
+      const n=await adminFixLeaderboardNames();
+      setResult(n);
+      setTimeout(()=>setResult(null),5000);
+    }catch(e){setErr(e&&e.message?e.message:'Fehler');}
+    setBusy(false);
+  };
+  return(
+    <div style={{marginTop:8}}>
+      {result!==null&&<div style={{fontSize:12,color:'#16a34a',fontWeight:700,marginBottom:6}}>✓ {result} Namen korrigiert</div>}
+      {err&&<div style={{fontSize:11,color:'#ef4444',marginBottom:6,wordBreak:'break-all'}}>{err}</div>}
+      <button onClick={doFix} disabled={busy} style={{width:'100%',padding:'10px',borderRadius:10,
+        background:'var(--bg)',color:'#3b82f6',border:'1.5px solid #3b82f644',cursor:busy?'wait':'pointer',
+        fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',opacity:busy?0.6:1}}>
+        {busy?'⏳ Läuft…':'🔧 Spieler-Namen im Leaderboard fixen'}
+      </button>
+    </div>
+  );
+}
 function RankedResetAdmin({t}){
   const[step,setStep]=React.useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=busy, 4=done, 5=error
   const[errMsg,setErrMsg]=React.useState('');
@@ -3460,11 +3513,14 @@ function RankedResetAdmin({t}){
     }
   };
   if(step===0)return(
-    <button onClick={()=>setStep(1)} style={{width:'100%',padding:'11px',borderRadius:10,
-      background:'var(--bg)',color:'#f59e0b',border:'1.5px solid #f59e0b44',cursor:'pointer',
-      fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-      <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrophySmIcon size={15} color="#f59e0b"/>{t('adminResetRanked')}</span>
-    </button>
+    <div>
+      <button onClick={()=>setStep(1)} style={{width:'100%',padding:'11px',borderRadius:10,
+        background:'var(--bg)',color:'#f59e0b',border:'1.5px solid #f59e0b44',cursor:'pointer',
+        fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+        <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrophySmIcon size={15} color="#f59e0b"/>{t('adminResetRanked')}</span>
+      </button>
+      <FixNamesAdmin/>
+    </div>
   );
   if(step===1)return(
     <div style={{background:'rgba(245,158,11,0.08)',border:'1.5px solid #f59e0b',borderRadius:10,padding:'12px 14px'}}>
