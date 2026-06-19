@@ -2552,6 +2552,31 @@ async function adminFixLeaderboardNames(){
   if(errors.length>0)throw new Error(errors.join(' | '));
   return fixed;
 }
+async function adminMigrateStats(fromUid,toUid){
+  // Kopiert Stats + ELO vom alten Konto (fromUid) ins neue Konto (toUid).
+  // Name, Farbe und Friends des neuen Kontos bleiben unveraendert.
+  // Wird verwendet wenn ein Nutzer versehentlich ein Duplikat-Konto erstellt hat.
+  if(!fromUid||!toUid||fromUid===toUid)throw new Error('Ungueltige UIDs');
+  const parseRaw=r=>{const v=r.val();return v?(typeof v==='string'?JSON.parse(v):v):null;};
+  const[oldProfSnap,newProfSnap,oldLbSnap]=await Promise.all([
+    window.db.ref('ww_profiles/'+fromUid).once('value'),
+    window.db.ref('ww_profiles/'+toUid).once('value'),
+    window.db.ref('ww_leaderboard/'+fromUid).once('value'),
+  ]);
+  const oldProf=parseRaw(oldProfSnap);
+  const newProf=parseRaw(newProfSnap);
+  const oldLb=oldLbSnap.val();
+  if(!oldProf)throw new Error('Alt-Profil nicht gefunden: '+fromUid);
+  if(!newProf)throw new Error('Ziel-Profil nicht gefunden: '+toUid);
+  const mergedProf={...newProf,stats:oldProf.stats||{}};
+  await window.db.ref('ww_profiles/'+toUid).set(JSON.stringify(mergedProf));
+  if(oldLb){
+    const parsedLb=typeof oldLb==='string'?JSON.parse(oldLb):oldLb;
+    parsedLb.name=newProf.name;parsedLb.color=newProf.color;
+    await window.db.ref('ww_leaderboard/'+toUid).set(parsedLb);
+  }
+  return{ok:true,from:oldProf.name||fromUid,to:newProf.name||toUid};
+}
 async function registerAccount(email,name,pw,color){
   const key=normUser(name);
   if(key.length<3)return{err:'tooShort'};
@@ -2622,7 +2647,13 @@ async function loginAccount(email,pw){
 }
 async function getGoogleProfile(googleUser){
   const uid=googleUser.uid;
-  const prof=await stoGet(PROFILE_KEY(uid));
+  // Strict-Read: Firebase-Fehler werfen statt null zurueckgeben.
+  // stoGet() gibt bei Netzwerkfehler null zurueck — das wuerde faelschlicherweise den
+  // "neuer Nutzer"-Flow ausloesen und ein Duplikat-Konto mit leeren Stats erstellen.
+  let raw;
+  try{raw=(await window.db.ref(PROFILE_KEY(uid)).once('value')).val();}
+  catch(fbErr){const e=new Error('fb_read');e.isFbError=true;throw e;}
+  const prof=raw?(typeof raw==='string'?JSON.parse(raw):raw):null;
   if(!prof)return null;
   // Profil-Reparatur: fehlende Pflichtfelder ergaenzen
   if(!prof.stats||!prof.name){
@@ -2637,8 +2668,11 @@ async function createGoogleProfile(googleUser,name,color){
   if(nameKey.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(nameKey))return{err:'badChars'};
   const uid=googleUser.uid;
-  // Race-Condition-Schutz: Profil bereits vorhanden?
-  const alreadyExists=await stoGet(PROFILE_KEY(uid));
+  // Race-Condition-Schutz: Profil bereits vorhanden? Strict-Read: bei Firebase-Fehler ABBRUCH statt
+  // null-Rueckgabe, die das Ueberschreiben eines bestehenden Profils ausloesen wuerde.
+  let alreadyExists;
+  try{const _s=await window.db.ref(PROFILE_KEY(uid)).once('value');const _r=_s.val();alreadyExists=_r?(typeof _r==='string'?JSON.parse(_r):_r):null;}
+  catch(e){return{err:'network'};}
   if(alreadyExists)return{prof:{...alreadyExists,key:uid,isGoogle:true}};
   const existing=await stoGet(USERNAME_KEY(nameKey));
   if(existing&&existing.uid!==uid)return{err:'taken'};
@@ -4884,6 +4918,10 @@ function App(){
   const[bcDays,setBcDays]=useState(7);
   const[adminAccounts,setAdminAccounts]=useState(null);
   const[adminAccountsLoading,setAdminAccountsLoading]=useState(false);
+  const[adminMigrateFrom,setAdminMigrateFrom]=useState('');
+  const[adminMigrateTo,setAdminMigrateTo]=useState('');
+  const[adminMigrateResult,setAdminMigrateResult]=useState('');
+  const[adminMigrateBusy,setAdminMigrateBusy]=useState(false);
   const[announceDur,setAnnounceDur]=useState(0);
   const[announceVisible,setAnnounceVisible]=useState(true);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
@@ -7817,6 +7855,38 @@ function App(){
               )}
             </AdminSection>
 
+            {/* ── KONTO-MIGRATION ── */}
+            <AdminSection label="KONTO-MIGRATION (STATS-TRANSFER)">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                Wenn ein Nutzer versehentlich ein Duplikat-Konto erstellt hat: Stats + ELO vom alten Konto ins neue übertragen. Name/Farbe bleiben unberührt.
+              </div>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:4}}>ALTES KONTO (UID aus der Liste oben)</div>
+              <input value={adminMigrateFrom} onChange={e=>setAdminMigrateFrom(e.target.value.trim())}
+                placeholder="Alt-UID (Quelle)"
+                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:4}}>NEUES KONTO (Ziel-UID, behält seinen Namen)</div>
+              <input value={adminMigrateTo} onChange={e=>setAdminMigrateTo(e.target.value.trim())}
+                placeholder="Neu-UID (Ziel)"
+                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:10}}/>
+              {adminMigrateResult&&<div style={{fontSize:12,color:adminMigrateResult.startsWith('Fehler')?'#ef4444':'#16a34a',fontWeight:700,marginBottom:8,textAlign:'center'}}>{adminMigrateResult}</div>}
+              <button disabled={adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo} onClick={async function(){
+                if(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)return;
+                if(!window.confirm('Stats von "'+adminMigrateFrom+'" nach "'+adminMigrateTo+'" übertragen? Dies überschreibt die Stats des Ziel-Kontos.'))return;
+                setAdminMigrateBusy(true);setAdminMigrateResult('');
+                try{
+                  const r=await adminMigrateStats(adminMigrateFrom,adminMigrateTo);
+                  setAdminMigrateResult('Fertig: '+r.from+' → '+r.to);
+                  setAdminMigrateFrom('');setAdminMigrateTo('');
+                }catch(e){setAdminMigrateResult('Fehler: '+(e&&e.message?e.message:String(e)));}
+                setAdminMigrateBusy(false);
+              }} style={{width:'100%',padding:'11px',borderRadius:10,
+                background:(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)?'var(--border)':'#dc2626',
+                color:'white',border:'none',cursor:(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)?'default':'pointer',
+                fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {adminMigrateBusy?'Überträgt...':'Stats übertragen'}
+              </button>
+            </AdminSection>
+
             {/* ── NACHRICHTEN ── */}
             <AdminSection label="NACHRICHTEN (POSTKASTEN)">
               <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>TITEL (optional)</div>
@@ -8493,19 +8563,29 @@ function App(){
 
   const doGoogleSignIn=()=>{
     const provider=new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).then(function(result){
+    // KRITISCH: Immer Account-Auswahl erzwingen — ohne dies waehlt Google silently den zuletzt
+    // verwendeten Account, was zu unbeabsichtigten Logins und Duplikat-Konten fuehren kann.
+    provider.setCustomParameters({prompt:'select_account'});
+    firebase.auth().signInWithPopup(provider).then(async function(result){
       if(!result||!result.user)return;
-      return getGoogleProfile(result.user).then(function(existing){
-        if(existing){
-          setAccount(existing);setNavDir('back');setScreen('menu');
-        }else{
-          setPendingGoogleUser(result.user);
-          var suggested=(result.user.displayName||'').replace(/\s+/g,'_').slice(0,16);
-          setGoogleName(suggested);
-        }
-      });
+      let existing;
+      try{existing=await getGoogleProfile(result.user);}
+      catch(e){
+        // Firebase-Verbindungsfehler: KEIN Username-Modal anzeigen (wuerde Duplikat-Konto erstellen).
+        if(e&&e.isFbError){try{firebase.auth().signOut();}catch(_){}setAuthErr(t('auth_network'));return;}
+        throw e;
+      }
+      if(existing){
+        setAccount(existing);setNavDir('back');setScreen('menu');
+      }else{
+        setPendingGoogleUser(result.user);
+        var suggested=(result.user.displayName||'').replace(/\s+/g,'_').slice(0,16);
+        setGoogleName(suggested);
+      }
     }).catch(function(e){
-      if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
+      if(e.code==='auth/account-exists-with-different-credential'){
+        setAuthErr('Diese E-Mail ist bereits per E-Mail/Passwort registriert. Bitte dort anmelden.');
+      }else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
         setAuthErr('Google Login fehlgeschlagen');
       }
     });
@@ -8642,6 +8722,9 @@ function App(){
                 <div style={{textAlign:'center',marginBottom:18}}>
                   <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('chooseUsername')}</div>
                   <div style={{fontSize:12,color:'var(--subtle)',marginTop:5}}>{t('usernameHint')}</div>
+                  <div style={{fontSize:11,color:'#f59e0b',marginTop:8,padding:'6px 10px',background:'rgba(245,158,11,0.1)',borderRadius:8,fontWeight:600,lineHeight:1.4}}>
+                    Schon ein Konto? → Abbrechen und mit E-Mail/Passwort anmelden.
+                  </div>
                 </div>
                 <input value={googleName} onChange={e=>setGoogleName(e.target.value)}
                   placeholder={t('username')} maxLength={16} autoCapitalize="off" autoCorrect="off"
