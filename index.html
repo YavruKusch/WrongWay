@@ -4030,19 +4030,29 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
     var now=Date.now();
     if(!force&&_lbCache.data&&(now-_lbCache.ts)<300000){setRaw(_lbCache.data);setLoading(false);return;}
     setLoading(true);
+    var loaded=false;
     try{
-      if(!window.db){setLoading(false);return;}
-      // Nur Top 100 je Modus laden statt des KOMPLETTEN Knotens (massive Download-Kosten
-      // bei vielen registrierten Spielern). Benoetigt .indexOn in den Firebase-Regeln!
-      const [s1,s2]=await Promise.all([
-        window.db.ref('ww_leaderboard').orderByChild('classic/rating').limitToLast(100).once('value'),
-        window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value')
-      ]);
-      var merged=Object.assign({},s1.val()||{},s2.val()||{});
-      _lbCache={data:merged,ts:Date.now()};
-      setRaw(merged);
-      dlTrack('ww_leaderboard',s1.val());dlTrack('ww_leaderboard',s2.val());
-    }catch(e){console.warn('Leaderboard load error',e);}
+      var resp=await fetch(WW_URL.replace('wss://','https://').replace('ws://','http://')+'/leaderboard');
+      if(resp.ok){
+        var data=await resp.json();
+        _lbCache={data:data,ts:Date.now()};
+        setRaw(data);
+        loaded=true;
+      }
+    }catch(e){}
+    if(!loaded&&window.db){
+      // Fallback: direkt Firebase (Server nicht erreichbar)
+      try{
+        const [s1,s2]=await Promise.all([
+          window.db.ref('ww_leaderboard').orderByChild('classic/rating').limitToLast(100).once('value'),
+          window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value')
+        ]);
+        var merged=Object.assign({},s1.val()||{},s2.val()||{});
+        _lbCache={data:merged,ts:Date.now()};
+        setRaw(merged);
+        dlTrack('ww_leaderboard',s1.val());dlTrack('ww_leaderboard',s2.val());
+      }catch(e2){console.warn('Leaderboard load error',e2);}
+    }
     setLoading(false);
   };
   React.useEffect(()=>{load();},[]);
