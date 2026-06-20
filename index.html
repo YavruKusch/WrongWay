@@ -9601,6 +9601,7 @@ function App(){
               title={t('menu')} desc="Zurück zum Hauptmenü"
               onClick={()=>{
                 if(gameMode==='online'&&myRematch)declineRematch();
+                try{WSNET.leaveRoom();}catch(e){}
                 try{WSNET.close();}catch(e){}
                 setScreen('menu');setGameMode(null);setLobbyId(null);
               }}/>
