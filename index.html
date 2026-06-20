@@ -5160,6 +5160,7 @@ function App(){
   const[rematchA,setRematchA]=useState(false);
   const[rematchB,setRematchB]=useState(false);
   const[rematchDeclined,setRematchDeclined]=useState(null);
+  const[oppLeft,setOppLeft]=useState(false);
   const[gameNum,setGameNum]=useState(0);
   const[oppCountdown,setOppCountdown]=useState(null);
   const oppLastSeenRef=useRef(0);
@@ -5188,7 +5189,7 @@ function App(){
   const savedScroll=useRef(0);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
 
@@ -5471,6 +5472,8 @@ function App(){
       if(d.countdown)setFlash('Gegner getrennt - gewinnt in '+d.countdown+'s');
     }else if(d.type==='opponent_back'){
       setFlash('');
+    }else if(d.type==='opponent_left'){
+      setOppLeft(true);
     }else if(d.type==='rematch_state'){
       setRematchA(!!(d.req&&d.req[0]));
       setRematchB(!!(d.req&&d.req[1]));
@@ -5483,7 +5486,7 @@ function App(){
       if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
       setWinner(null);setCelebrating(false);setGaveUp(null);
-      setRematchA(false);setRematchB(false);setRematchDeclined(null);
+      setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
       setMoveHist([]);
       setGameNum((S.current.gameNum||1)+1);
       winnerFiredRef.current=false;
@@ -5587,7 +5590,7 @@ function App(){
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
     setAddFriendSent(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
-    setRematchA(false);setRematchB(false);setRematchDeclined(null);
+    setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
     setChatMsgs([]);setChatInput('');
     setGameNum(0);
     if(mode!=='online')setPlayerNames({A:null,B:null});
@@ -9521,14 +9524,21 @@ function App(){
               </div>
             </div>
           )}
-          {gameMode==='online'&&otherDeclined&&(
+          {gameMode==='online'&&oppLeft&&(
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
+              background:'rgba(239,68,68,0.08)',border:'1.5px solid rgba(239,68,68,0.2)',borderRadius:12}}>
+              <span style={{fontSize:14,color:'#ef4444'}}>✕</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#ef4444'}}>{t('reconnectFail')}</span>
+            </div>
+          )}
+          {gameMode==='online'&&!oppLeft&&otherDeclined&&(
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
               background:'rgba(239,68,68,0.08)',border:'1.5px solid rgba(239,68,68,0.2)',borderRadius:12}}>
               <span style={{fontSize:14}}>✗</span>
               <span style={{fontSize:13,fontWeight:700,color:'#ef4444'}}>{t('rematchDeclined')}</span>
             </div>
           )}
-          {gameMode==='online'&&!otherDeclined&&myRematch&&!otherRematch&&(
+          {gameMode==='online'&&!oppLeft&&!otherDeclined&&myRematch&&!otherRematch&&(
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
               background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.2)',borderRadius:12}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',
@@ -9536,7 +9546,7 @@ function App(){
               <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>{t('rematchWaiting')}</span>
             </div>
           )}
-          {gameMode==='online'&&!otherDeclined&&!myRematch&&otherRematch&&(
+          {gameMode==='online'&&!oppLeft&&!otherDeclined&&!myRematch&&otherRematch&&(
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
               background:'rgba(22,163,74,0.08)',border:'1.5px solid rgba(22,163,74,0.2)',borderRadius:12}}>
               <span style={{fontSize:14}}>↻</span>
@@ -9553,7 +9563,7 @@ function App(){
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
                 onClick={()=>initGame(gameMode,'A',null,true)}/>
             )}
-            {gameMode==='online'&&!otherDeclined&&!myRematch&&(
+            {gameMode==='online'&&!oppLeft&&!otherDeclined&&!myRematch&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
                 title={t('rematch')} desc={t('rematchDescOnline')||'Challenge opponent to rematch'}
