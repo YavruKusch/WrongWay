@@ -31,7 +31,7 @@
     background-image:linear-gradient(rgba(148,163,184,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.06) 1px,transparent 1px);
     background-size:40px 40px;
   }
-  body{min-height:100%;overscroll-behavior:none;background:#f8f9fa;}
+  body{min-height:100%;overscroll-behavior:contain;background:#f8f9fa;}
   body.dark{background:#070c16;}
   a{color:inherit;text-decoration:none;pointer-events:none;}
   :not(input):not(textarea){-webkit-touch-callout:none;}
@@ -59,11 +59,15 @@
     --menu-grid-line:rgba(148,163,184,0.065);
     --msec-bg:rgba(255,255,255,0.035);--msec-border:rgba(150,180,235,0.1);
   }
-  html,body{width:100%;overflow-x:hidden;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;
-    background-color:var(--bg);
+  html{overflow-x:hidden;touch-action:pan-y;background-color:var(--bg);
     background-image:linear-gradient(var(--menu-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--menu-grid-line) 1px,transparent 1px);
     background-size:40px 40px;
     font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;transition:background-color 0.25s;}
+  body{width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+    background-color:var(--bg);
+    background-image:linear-gradient(var(--menu-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--menu-grid-line) 1px,transparent 1px);
+    background-size:40px 40px;
+    font-family:system-ui,-apple-system,sans-serif;transition:background-color 0.25s;}
   html.dark{background-color:#0a1020;}
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;background:transparent;}
@@ -934,7 +938,7 @@ var WSNET={
         try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
         // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
         // Nur wenn der Server pong unterstuetzt (sonst alter Server -> keine Fehlausloesung).
-        if(self.pongSeen&&(Date.now()-self.lastRecv>14000)){ self.lastRecv=Date.now(); try{ self.sock.close(); }catch(e){} }
+        if(self.pongSeen&&(Date.now()-self.lastRecv>8000)){ self.lastRecv=Date.now(); try{ self.sock.close(); }catch(e){} }
       }else{ self._open(); }
     },6000);
   },
@@ -5226,7 +5230,7 @@ function App(){
         saveReplayToHistory({
           ts:Date.now(),winner:p,moveHist:mh,
           map:s.selectedMap||'classic',duelSize:s.duelSize||'standard',
-          nameA:pA,nameB:pB,gameMode:s.gameMode||'local'
+          nameA:pA,nameB:pB,gameMode:s.gameMode||'local',myRole:s.onlineRole||null
         });
       }
     }catch(e){}
@@ -9223,6 +9227,7 @@ function App(){
     const rPname=p=>p==='A'?rNameA:rNameB;
     const rWinner=rEntry?rEntry.winner:winner;
     const isEnd=replayStep>=rMoves.length;
+    const rBoardFlip=rEntry?(rEntry.myRole==='B'&&rEntry.map==='duel'):(gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel');
     // Emote aus aktuellem Move
     const curEmote=curMove&&curMove.type==='emote'?curMove:null;
     // Emote aus vorherigem Move (bleibt kurz sichtbar)
@@ -9284,7 +9289,8 @@ function App(){
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid,
           background:darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
           border:'none',
-          boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)'}}>
+          boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)',
+          transform:rBoardFlip?'scaleY(-1)':'none'}}>
           <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:darkMode?0.12:0.4}}/>
           <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
           <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
@@ -9320,7 +9326,8 @@ function App(){
             <div key={replayStep+'e'} style={{position:'absolute',
               left:(activeEmote.p==='A'?rs.pA.c:rs.pB.c)*CELL+CELL+4,
               top:(activeEmote.p==='A'?rs.pA.r:rs.pB.r)*CELL-18,
-              zIndex:30,pointerEvents:'none',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+              zIndex:30,pointerEvents:'none',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+              transform:rBoardFlip?'scaleY(-1)':'none'}}>
               <EmoteChar color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote}/>
             </div>
           )}
@@ -10086,7 +10093,7 @@ function App(){
                   onMouseDown={canDrag?e=>startDrag(e,orient):undefined}
                   onTouchStart={canDrag?e=>startDrag(e,orient):undefined}
                   style={{pointerEvents:dragging?'none':'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
-                    cursor:canDrag?'grab':'not-allowed',opacity:canDrag?1:0.4}}>
+                    cursor:canDrag?'grab':'not-allowed',opacity:canDrag?1:0.4,touchAction:canDrag?'none':'pan-y'}}>
                   <div style={{width:orient==='H'?34:WW,height:orient==='V'?22:WW,
                     background:canDrag?(darkMode?'#e2e8f0':'#1e293b'):(darkMode?'#475569':'#94a3b8'),
                     borderRadius:3,pointerEvents:'none',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
@@ -12581,7 +12588,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                     <div key={orient} className={"ww-wtool"+(canPlace?" armed":"")}
                       onMouseDown={canPlace?function(e){return startDrag(e,orient);}:undefined} onTouchStart={canPlace?function(e){return startDrag(e,orient);}:undefined}
                       style={{pointerEvents:'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
-                        cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,borderColor:canPlace?colHex+'99':undefined}}>
+                        cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,borderColor:canPlace?colHex+'99':undefined,touchAction:canPlace?'none':'pan-y'}}>
                       <div style={{background:colHex,borderRadius:3,width:orient==='H'?34:WW2,height:orient==='V'?22:WW2,
                         boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
                     </div>
@@ -12609,7 +12616,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                       onMouseDown={canPlace?function(e){return startDrag(e,orient);}:undefined} onTouchStart={canPlace?function(e){return startDrag(e,orient);}:undefined}
                       style={{pointerEvents:'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,
                         cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,
-                        borderColor:canPlace?colHex+'99':undefined}}>
+                        borderColor:canPlace?colHex+'99':undefined,touchAction:canPlace?'none':'pan-y'}}>
                       <div style={{background:colHex,borderRadius:3,
                         width:orient==='H'?34:WW2,height:orient==='V'?22:WW2,
                         boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
