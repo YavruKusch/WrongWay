@@ -949,6 +949,7 @@ var WSNET={
   timeout:function(){ this._send({type:'timeout'}); },
   skipTurn:function(){ this._send({type:'skip'}); },
   requestSync:function(){ this._send({type:'sync'}); },
+  breakWall:function(key){ this._send({type:'break',key:key}); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
@@ -4820,8 +4821,7 @@ function App(){
     const code=randId(4);
     if(WS_ENABLED){
       // Privater WS-Raum; Einladung weiter ueber Firebase (ww_invites)
-      const fbm=(chaosMode||hammerMode||dropMode)?1:0;
-      WSNET.openLobby(code,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:1},{name:account.name,akey:account.key},wsLobbyTrampRef.current);
+      WSNET.openLobby(code,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:0,priv:1},{name:account.name,akey:account.key},wsLobbyTrampRef.current);
     }else{
       const lobby={host:SESSION,players:{},status:'waiting',map:selectedMap,duelSize:duelSize,tm:gameTimeMode,ch:chaosMode,br:gameBarr,dp:dropMode,hm:hammerMode,hd:hammerDrops,lastUpdated:Date.now()};
       lobby.players[SESSION]={name:account.name,joinedAt:Date.now()};
@@ -5419,6 +5419,11 @@ function App(){
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
       if(d.walls){ setWalls(new Set(d.walls)); }
       if(d.barr){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
+      if(d.hammers!==undefined){ setHammers(d.hammers); }
+      if(d.held){ setHammerHeld(d.held); }
+      if(d.used){ setHammerUsed(d.used); }
+      if(d.golden){ if(d.golden.length>(S.current.goldenWalls?S.current.goldenWalls.size:0))playSound('wall'); setGoldenWalls(new Set(d.golden)); }
+      if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); setChaosItem(d.chaosItem); }
       if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
       if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
@@ -5430,10 +5435,13 @@ function App(){
       var mh=S.current.moveHist;
       if(d.lm){
         const lp=d.lm.p===0?'A':'B';
-        const ent=d.lm.type==='wall'?{type:'wall',p:lp,k:d.lm.k}:{type:'move',p:lp,r:d.lm.r,c:d.lm.c};
-        mh=(S.current.moveHist||[]).concat([ent]);
+        var lmEnt;
+        if(d.lm.type==='wall')lmEnt={type:'wall',p:lp,k:d.lm.k};
+        else if(d.lm.type==='break')lmEnt={type:'break',p:lp,k:d.lm.k};
+        else lmEnt={type:'move',p:lp,r:d.lm.r,c:d.lm.c};
+        mh=(S.current.moveHist||[]).concat([lmEnt]);
         setMoveHist(mh);
-        if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':'move');
+        if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':d.lm.type==='break'?'break':'move');
       }
       if(d.winner!==undefined&&d.winner!==null&&!S.current.winner){
         const wRole=d.winner===0?'A':'B';
@@ -5482,6 +5490,12 @@ function App(){
       pendingWsRef.current=null;
       setGiveUpArmed(false);setFlash('');
       setEloChange(null);
+      if(d.hammers!==undefined){setHammers(d.hammers);}else{setHammers([]);}
+      if(d.held){setHammerHeld(d.held);}else{setHammerHeld({A:false,B:false});}
+      if(d.used){setHammerUsed(d.used);}else{setHammerUsed(freshHammerUsed());}
+      if(d.golden!==undefined){setGoldenWalls(new Set(d.golden||[]));}else{setGoldenWalls(new Set());}
+      if(d.chaosItem!==undefined){setChaosItem(d.chaosItem);}else{setChaosItem(null);}
+      hammerWave2Ref.current=false;hammerWave1ClearedRef.current=null;
       setScreen('game');
     }else if(d.type==='ws_open'){
       setWsConn(true);
@@ -5715,7 +5729,7 @@ function App(){
   useEffect(()=>{
     if(!chaosMode||isRanked||winner||screen!=='game'||chaosItem)return;
     if(moveHist.length<chaosSpawnRef.current)return;
-    // Online: nur der Host spawnt, syncs via doSync; Guest übernimmt aus gs.chaosItem
+    if(gameMode==='online'&&WSNET.roomId)return;
     if(gameMode==='online'&&onlineRole!=='A')return;
     const pos=pickChaosPos(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(pos){
@@ -5826,6 +5840,7 @@ function App(){
     }
     // Warte 50 Züge seit Wave-1-Abschluss
     if(moveHist.length-hammerWave1ClearedRef.current<50)return;
+    if(gameMode==='online'&&WSNET.roomId)return;
     if(gameMode==='online'&&onlineRole!=='A')return;
     const wave=makeHammersWave2(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(wave.length){
@@ -5843,7 +5858,8 @@ function App(){
   useEffect(()=>{
     if(!dropMode||isRanked||winner||screen!=='game')return;
     if(moveHist.length<dropNextRef.current)return;
-    if(gameMode==='online'&&onlineRole!=='A')return; // nur Host dropt, syncs via walls
+    if(gameMode==='online'&&WSNET.roomId)return;
+    if(gameMode==='online'&&onlineRole!=='A')return;
     const key=pickFairDropWall(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(key){
       const next=new Set([...walls,key]);
@@ -6641,8 +6657,7 @@ function App(){
     if(WS_ENABLED){
       // WS-Modus: Raum auf dem Server, Code = Raum-ID (privat kurz, oeffentlich lang)
       const id=isPrivate?randId(4):randId(6);
-      const fbm=(chaosMode||hammerMode||dropMode)?1:0;
-      WSNET.openLobby(id,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:fbm,priv:isPrivate?1:0},{name:getDisplayName(account),akey:account?account.key:null},wsLobbyTrampRef.current);
+      WSNET.openLobby(id,{map:selectedMap,size:duelSize,barr:gameBarr,tm:gameTimeMode,ch:chaosMode?1:0,dp:dropMode,hm:hammerMode?1:0,hd:hammerDrops,fb:0,priv:isPrivate?1:0},{name:getDisplayName(account),akey:account?account.key:null},wsLobbyTrampRef.current);
       setLobbyId(id);setOnlineRole('A');
       setPrivateCode(isPrivate?id:null);
       setScreen('waiting');
@@ -7005,7 +7020,8 @@ function App(){
         const nm=[...S.current.moveHist,{type:'break',p:me,k}];setMoveHist(nm);
         setBreakingWall(k);setTimeout(()=>setBreakingWall(null),450);
         playSound('break');
-        doSync({pA:S.current.pA,pB:S.current.pB,walls:w2,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:nm,chaosItem:S.current.chaosItem,hammers:S.current.hammers,hammerHeld:newHeld});
+        if(gameMode==='online'&&WSNET.roomId){ try{WSNET.breakWall(k);}catch(e){} }
+        else doSync({pA:S.current.pA,pB:S.current.pB,walls:w2,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:nm,chaosItem:S.current.chaosItem,hammers:S.current.hammers,hammerHeld:newHeld});
         setTimeout(()=>window.scrollTo(0,savedScroll.current),0);
       }
       setHammerDrag(false);setHammerTarget(null);
