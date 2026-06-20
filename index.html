@@ -10111,11 +10111,11 @@ function App(){
       )}
 
       {/* Untere Steuerleiste: Chat + Wand-Steuerung (Drag bleibt) */}
-      {!winner&&screen==='game'&&(
+      {!winner&&screen==='game'&&!isOnlineWait&&(
         <div className={"ww-bottombar pos-"+wallBarPos} style={{position:'fixed',zIndex:200,
           left:'50%',transform:'translateX(-50%)',
           width:'min('+(COLS*CELL+26)+'px, calc(100vw - 20px))',
-          bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',pointerEvents:'none',
+          bottom:'calc(30px + env(safe-area-inset-bottom, 0px))',pointerEvents:'none',
           opacity:dragging?0:1,transition:'opacity 0.12s ease'}}>
           <button onClick={()=>!emoteCooldown&&setEmotePicker(p=>!p)} disabled={emoteCooldown}
             className="ww-iconbtn chat"
