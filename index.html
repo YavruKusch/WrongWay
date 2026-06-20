@@ -747,7 +747,7 @@
   // Fehler sichtbar anzeigen (kein DevTools nötig)
   window.onerror = function(msg,src,line){
     var m=document.getElementById('loader-msg');
-    if(m)m.innerHTML='<span style="color:#ef4444">Fehler Zeile '+line+':<br>'+msg+'</span>';
+    if(m){m.style.color='#ef4444';m.textContent='Fehler Zeile '+line+': '+msg;}
   };
   // Nach 12s: Hinweis wenn noch loading
   setTimeout(function(){
@@ -2557,6 +2557,140 @@ async function adminFixLeaderboardNames(){
   if(errors.length>0)throw new Error(errors.join(' | '));
   return fixed;
 }
+async function adminFlagWsCmd(flag, value){
+  return new Promise(function(resolve,reject){
+    var ws=new WebSocket(WW_URL);
+    var authed=false,done=false;
+    var tmr=setTimeout(function(){if(!done){done=true;try{ws.close();}catch(e){}reject(new Error('Timeout'));}},10000);
+    ws.onopen=function(){
+      firebase.auth().currentUser.getIdToken(true).then(function(tok){
+        if(done)return;
+        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+      }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
+    };
+    ws.onmessage=function(ev){
+      if(done)return;
+      var d;try{d=JSON.parse(ev.data);}catch(e){return;}
+      if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify({type:'admin_set_flag',flag:flag,value:value}));return;}
+      if(d.type==='admin_flag_ok'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
+      if(d.type==='error'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.grund||'Fehler'));}
+    };
+    ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
+    ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
+  });
+}
+function AdminFlagsPanel(){
+  var[flags,setFlags]=React.useState({XP_SYSTEM:false,COIN_SYSTEM:false});
+  var[busy,setBusy]=React.useState('');
+  var[msg,setMsg]=React.useState('');
+  React.useEffect(function(){
+    if(!window.db)return;
+    var ref=window.db.ref('ww_flags');
+    ref.on('value',function(snap){
+      var v=snap.val()||{};
+      setFlags({XP_SYSTEM:!!v.XP_SYSTEM,COIN_SYSTEM:!!v.COIN_SYSTEM});
+    });
+    return function(){ref.off('value');};
+  },[]);
+  function toggle(flag){
+    var newVal=!flags[flag];
+    setBusy(flag);setMsg('');
+    adminFlagWsCmd(flag,newVal).then(function(){
+      setMsg(flag+' = '+newVal);setBusy('');
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy('');});
+  }
+  return(
+    <div>
+      {[['XP_SYSTEM','XP-System (Level)','#7c3aed'],['COIN_SYSTEM','Coin-System','#f59e0b']].map(function(f){
+        var on=flags[f[0]];
+        return(
+          <button key={f[0]} onClick={function(){toggle(f[0]);}} disabled={busy===f[0]}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'10px 12px',borderRadius:9,background:'var(--card)',
+              border:'1.5px solid '+(on?f[2]+'66':'var(--border)'),cursor:'pointer',
+              fontFamily:'system-ui,sans-serif',width:'100%',marginBottom:7,
+              opacity:busy===f[0]?0.6:1}}>
+            <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{f[1]}</span>
+            <span style={{fontSize:11,fontWeight:800,color:on?f[2]:'var(--subtle)',
+              background:on?f[2]+'22':'var(--bg)',borderRadius:6,padding:'3px 8px'}}>
+              {busy===f[0]?'...':(on?'AN':'AUS')}
+            </span>
+          </button>
+        );
+      })}
+      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
+    </div>
+  );
+}
+async function adminCoinsWsCmd(msg){
+  return new Promise(function(resolve,reject){
+    var ws=new WebSocket(WW_URL);
+    var authed=false,done=false;
+    var tmr=setTimeout(function(){if(!done){done=true;try{ws.close();}catch(e){}reject(new Error('Timeout'));}},12000);
+    ws.onopen=function(){
+      firebase.auth().currentUser.getIdToken(true).then(function(tok){
+        if(done)return;
+        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+      }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
+    };
+    ws.onmessage=function(ev){
+      if(done)return;
+      var d;try{d=JSON.parse(ev.data);}catch(e){return;}
+      if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify(msg));return;}
+      if(d.type==='admin_coins_ok'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
+      if(d.type==='error'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.grund||'Server-Fehler'));}
+    };
+    ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
+    ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
+  });
+}
+function AdminCoinsPanel(){
+  var[uid,setUid]=React.useState('');
+  var[amt,setAmt]=React.useState('');
+  var[res,setRes]=React.useState(null);
+  var[busy,setBusy]=React.useState(false);
+  var inpSt={width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,
+    background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+    fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none'};
+  var doCmd=function(action){
+    if(busy||!uid.trim())return;
+    var uidV=uid.trim();
+    var amtV=parseInt(amt,10);
+    if(action!=='get'&&isNaN(amtV)){setRes({ok:false,msg:'Betrag eingeben'});return;}
+    setBusy(true);setRes(null);
+    var msgObj={type:'admin_coins_'+action,uid:uidV};
+    if(action!=='get')msgObj.amount=amtV;
+    adminCoinsWsCmd(msgObj).then(function(r){
+      var extra=r.added!==undefined?(' ('+r.added+')'):'';
+      setRes({ok:true,msg:uidV+': '+r.balance+' Coins'+extra});
+      setBusy(false);
+    }).catch(function(e){
+      setRes({ok:false,msg:e&&e.message?e.message:'Fehler'});
+      setBusy(false);
+    });
+  };
+  var btnBase={padding:'9px 6px',borderRadius:9,border:'none',fontWeight:700,fontSize:12,
+    fontFamily:'system-ui,-apple-system,sans-serif',cursor:'pointer'};
+  var canAmt=!busy&&!!uid.trim()&&!!amt;
+  return (
+    <div>
+      <input value={uid} onChange={function(e){setUid(e.target.value.trim());}} placeholder="Firebase UID" style={Object.assign({},inpSt,{marginBottom:8})}/>
+      <input value={amt} onChange={function(e){setAmt(e.target.value);}} placeholder="Betrag (z.B. 100)" style={Object.assign({},inpSt,{marginBottom:10})}/>
+      {res&&<div style={{fontSize:12,color:res.ok?'#16a34a':'#ef4444',fontWeight:700,marginBottom:8,wordBreak:'break-all'}}>{res.msg}</div>}
+      <div style={{display:'flex',gap:6}}>
+        <button disabled={busy||!uid.trim()} onClick={function(){doCmd('get');}} style={Object.assign({},btnBase,{flex:1,background:(busy||!uid.trim())?'var(--bg)':'#3b82f6',color:(busy||!uid.trim())?'var(--subtle)':'white'})}>
+          {busy?'…':'Abrufen'}
+        </button>
+        <button disabled={!canAmt} onClick={function(){doCmd('set');}} style={Object.assign({},btnBase,{flex:1,background:canAmt?'#f59e0b':'var(--bg)',color:canAmt?'white':'var(--subtle)'})}>
+          {busy?'…':'Setzen'}
+        </button>
+        <button disabled={!canAmt} onClick={function(){doCmd('add');}} style={Object.assign({},btnBase,{flex:1,background:canAmt?'#16a34a':'var(--bg)',color:canAmt?'white':'var(--subtle)'})}>
+          {busy?'…':'Hinzufügen'}
+        </button>
+      </div>
+    </div>
+  );
+}
 async function adminMigrateStats(fromUid,toUid){
   // Kopiert Stats + ELO vom alten Konto (fromUid) ins neue Konto (toUid).
   // Name, Farbe und Friends des neuen Kontos bleiben unveraendert.
@@ -3600,7 +3734,7 @@ function RankedResetAdmin({t}){
   );
   return <div style={{textAlign:'center',padding:'12px',color:'#16a34a',fontSize:13,fontWeight:700}}>✓ {t('adminResetRankedDone')}</div>;
 }
-function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
+function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins}){
   const[showNC,setShowNC]=React.useState(false);
   const[ncInput,setNcInput]=React.useState('');
   const[ncErr,setNcErr]=React.useState('');
@@ -3754,6 +3888,21 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
               <span style={{fontSize:12,color:muted,fontWeight:600}}>Farbe</span>
               <div style={{width:22,height:22,borderRadius:'50%',background:account.color,boxShadow:'0 2px 6px '+account.color+'88'}}/>
             </div>
+            {xp!==null&&xp>0&&(
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:12,color:muted,fontWeight:600}}>Level</span>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{background:'#7c3aed',borderRadius:6,padding:'2px 8px',fontSize:12,fontWeight:800,color:'white'}}>{'Lv. '}{levelAusXp(xp)}</div>
+                  <span style={{fontSize:11,color:muted}}>{xp} XP</span>
+                </div>
+              </div>
+            )}
+            {coins!==null&&coins>0&&(
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:12,color:muted,fontWeight:600}}>Coins</span>
+                <span style={{fontSize:13,fontWeight:800,color:'#f59e0b'}}>{'●'} {coins}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -4477,6 +4626,9 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
     </div>
   );
 }
+// XP → Level (identische Formel wie Server: XP fuer Level n = 25*n^2)
+function levelAusXp(totalXp){var lv=0;var rem=typeof totalXp==='number'?totalXp:0;while(lv<100){var needed=25*(lv+1)*(lv+1);if(rem<needed)break;rem-=needed;lv++;}return lv;}
+
 function App(){
   const[screen,setScreen]=useState('menu');
   const[legalTab,setLegalTab]=useState('impressum');
@@ -4605,6 +4757,30 @@ function App(){
       else localStorage.removeItem('ww_account');
     }catch(e){}
   },[account]);
+  // Coins-Balance live aus Firebase laden (read-only fuer Client)
+  useEffect(function(){
+    if(!window.db)return;
+    var uid=account?account.key:null;
+    if(!uid){setCoins(null);return;}
+    var ref=window.db.ref('ww_coins/'+uid);
+    ref.on('value',function(snap){
+      var v=snap.val();
+      setCoins(typeof v==='number'?v:0);
+    });
+    return function(){ref.off('value');};
+  },[account?account.key:null]);
+  // XP live aus Firebase laden
+  useEffect(function(){
+    if(!window.db)return;
+    var uid=account?account.key:null;
+    if(!uid){setXp(null);return;}
+    var ref=window.db.ref('ww_xp/'+uid);
+    ref.on('value',function(snap){
+      var v=snap.val();
+      setXp(typeof v==='number'?v:0);
+    });
+    return function(){ref.off('value');};
+  },[account?account.key:null]);
   const doAuth=async()=>{
     if(authBusy)return;
     setAuthErr('');setAuthBusy(true);setShowResend(false);
@@ -4941,6 +5117,8 @@ function App(){
   const[adminMigrateTo,setAdminMigrateTo]=useState('');
   const[adminMigrateResult,setAdminMigrateResult]=useState('');
   const[adminMigrateBusy,setAdminMigrateBusy]=useState(false);
+  const[coins,setCoins]=useState(null);
+  const[xp,setXp]=useState(null);
   const[announceDur,setAnnounceDur]=useState(0);
   const[announceVisible,setAnnounceVisible]=useState(true);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
@@ -5313,7 +5491,7 @@ function App(){
                   confirmed=true;
                   clearTimeout(fallbackTimer);
                   window.db.ref(confirmKey).off('value');
-                  window.db.ref('ww_flags/'+acc.key).push({
+                  window.db.ref('ww_elo_reports/'+acc.key).push({
                     type:'elo_mismatch',lobbyId:S.current.lobbyId,
                     ts:Date.now(),mine:mine.winner,opp:opp.winner
                   });
@@ -5399,6 +5577,14 @@ function App(){
   // ── Init game ──
   // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
   const applyServerState=(d)=>{
+    if(d&&d.type==='coins_update'){
+      if(typeof d.balance==='number')setCoins(function(prev){return Math.max(prev===null?0:prev,d.balance);});
+      return;
+    }
+    if(d&&d.type==='xp_update'){
+      if(typeof d.xp==='number')setXp(function(prev){return Math.max(prev===null?0:prev,d.xp);});
+      return;
+    }
     if(d&&d.type==='elo_update'){
       setEloChange({change:d.change,newRating:d.newRating,won:d.won});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
@@ -7893,6 +8079,27 @@ function App(){
               )}
             </AdminSection>
 
+            {/* ── FEATURE FLAGS ── */}
+            <AdminSection label="FEATURE FLAGS">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                XP- und Coin-System live ein-/ausschalten. Wirkt sofort auf den Server.
+              </div>
+              <AdminFlagsPanel/>
+            </AdminSection>
+
+            {/* ── COINS & SHOP ── */}
+            <AdminSection label="COINS & SHOP">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                Coins direkt vergeben oder korrigieren. Nur Server darf ww_coins schreiben — Verbindung zum WS-Server nötig.
+              </div>
+              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>COIN-VERWALTUNG (UID aus der Liste oben)</div>
+              <AdminCoinsPanel/>
+              <div style={{marginTop:14,padding:'12px 14px',borderRadius:10,background:'var(--bg)',border:'1.5px solid var(--border)',textAlign:'center'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'var(--subtle)',marginBottom:3}}>Shop</div>
+                <div style={{fontSize:11,color:'var(--subtle)'}}>Coming Soon — Shop wird später freigeschaltet</div>
+              </div>
+            </AdminSection>
+
             {/* ── KONTO-MIGRATION ── */}
             <AdminSection label="KONTO-MIGRATION (STATS-TRANSFER)">
               <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
@@ -8806,7 +9013,8 @@ function App(){
     return <ProfileScreen account={account}
       onUpdate={acc=>{setAccount(acc);}}
       onLogout={doLogout}
-      t={t} darkMode={darkMode} goBack={goBack}/>;
+      t={t} darkMode={darkMode} goBack={goBack}
+      xp={xp} coins={coins}/>;
   }
 
   // ── DIFFICULTY ──────────────────────────────────────────
