@@ -4011,10 +4011,11 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack}){
     </div>
   );
 }
+var _lbCache={data:null,ts:0};
 function LeaderboardScreen({t,darkMode,goBack,account}){
   const[mode,setMode]=React.useState('classic');
-  const[raw,setRaw]=React.useState({});
-  const[loading,setLoading]=React.useState(true);
+  const[raw,setRaw]=React.useState(_lbCache.data||{});
+  const[loading,setLoading]=React.useState(!_lbCache.data);
   const dk=darkMode;
   const bg=dk?'#0a1020':'#f8f9fa';
   const card=dk?'#161e33':'#ffffff';
@@ -4025,7 +4026,9 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
 
   // Einmal laden (gesamter Node), danach clientseitig nach Modus filtern/sortieren.
   // Vorher wurde bei JEDEM Tab-Wechsel (Classic/Duel) der komplette Node neu heruntergeladen.
-  const load=async()=>{
+  const load=async(force)=>{
+    var now=Date.now();
+    if(!force&&_lbCache.data&&(now-_lbCache.ts)<300000){setRaw(_lbCache.data);setLoading(false);return;}
     setLoading(true);
     try{
       if(!window.db){setLoading(false);return;}
@@ -4035,7 +4038,9 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         window.db.ref('ww_leaderboard').orderByChild('classic/rating').limitToLast(100).once('value'),
         window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value')
       ]);
-      setRaw(Object.assign({},s1.val()||{},s2.val()||{}));
+      var merged=Object.assign({},s1.val()||{},s2.val()||{});
+      _lbCache={data:merged,ts:Date.now()};
+      setRaw(merged);
       dlTrack('ww_leaderboard',s1.val());dlTrack('ww_leaderboard',s2.val());
     }catch(e){console.warn('Leaderboard load error',e);}
     setLoading(false);
