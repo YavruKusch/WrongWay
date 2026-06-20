@@ -5420,10 +5420,10 @@ function App(){
       if(d.walls){ setWalls(new Set(d.walls)); }
       if(d.barr){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
       if(d.hammers!==undefined){ setHammers(d.hammers); }
-      if(d.held){ setHammerHeld(d.held); }
+      if(d.held){ var ph=S.current.hammerHeld||{A:false,B:false}; if((d.held.A&&!ph.A)||(d.held.B&&!ph.B))playSound('pickup'); setHammerHeld(d.held); }
       if(d.used){ setHammerUsed(d.used); }
       if(d.golden){ if(d.golden.length>(S.current.goldenWalls?S.current.goldenWalls.size:0))playSound('wall'); setGoldenWalls(new Set(d.golden)); }
-      if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); setChaosItem(d.chaosItem); }
+      if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); if(!d.chaosItem&&S.current.chaosItem&&!d.winner)playSound('wall'); setChaosItem(d.chaosItem); }
       if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
       if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
