@@ -7967,14 +7967,14 @@ function App(){
 
           {/* Action buttons */}
           <div style={{display:'flex',flexDirection:'column',gap:9}}>
-            {gameMode!=='online'&&(
+            {gameMode!=='online'&&!isRanked&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
                 title={t('rematch')} desc={t('rematchDescLocal')||'Same mode, new round'}
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
                 onClick={()=>initGame(gameMode,'A',null,true)}/>
             )}
-            {gameMode==='online'&&!oppLeft&&!otherDeclined&&!myRematch&&(
+            {gameMode==='online'&&!isRanked&&!oppLeft&&!otherDeclined&&!myRematch&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
                 title={t('rematch')} desc={t('rematchDescOnline')||'Challenge opponent to rematch'}
