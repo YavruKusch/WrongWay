@@ -8522,7 +8522,7 @@ function App(){
       )}
 
       {/* Untere Steuerleiste: Chat + Wand-Steuerung (Drag bleibt) */}
-      {!winner&&screen==='game'&&!isOnlineWait&&(
+      {!winner&&screen==='game'&&(
         <div className={"ww-bottombar pos-"+wallBarPos} style={{position:'fixed',zIndex:200,
           left:'50%',transform:'translateX(-50%)',
           width:'min('+(COLS*CELL+26)+'px, calc(100vw - 20px))',
@@ -8534,7 +8534,7 @@ function App(){
               animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite'}}>
             <BubbleIcon size={24} color="#6366f1"/>
           </button>
-          <div className="ww-wallctl" style={{pointerEvents:'none'}}>
+          {!isOnlineWait&&<div className="ww-wallctl" style={{pointerEvents:'none'}}>
             <div className="wl">
               <svg width="12" height="12" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2" y="4" width="9" height="6" rx="1"/><rect x="13" y="4" width="9" height="6" rx="1"/><rect x="7" y="12" width="10" height="6" rx="1"/></g></svg>
               <span>{barrLeft[turn]} {t('wallsLeft')}</span>
@@ -8553,7 +8553,7 @@ function App(){
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
       )}
 
