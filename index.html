@@ -860,6 +860,7 @@ var WSNET={
   startRanked:function(mode,rating,meta,onState){
     this.rankedOn=true; this.rankedMode=mode; this.rankedRating=rating; this.meta=meta||null;
     this.roomId=null; this.role=null; this.token=null; this.settings=null; this.onState=onState;
+    this.rankedQueuedAt=Date.now();
     this.lastRecv=Date.now(); this._dbg('ranked queue '+mode); this._open(); this._startHb();
   },
   cancelRanked:function(){
@@ -900,7 +901,7 @@ var WSNET={
     try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
     self.sock.onopen=function(){
       self._dbg('socket offen'); self.lastRecv=Date.now();
-      try{ var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null; var _rq=function(tok){ if(self.rankedOn&&!self.roomId){ try{ self._send({type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler')}); }catch(e){} } }; if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} _rq(tok); }).catch(function(){ _rq(null); }); } else { _rq(null); } }catch(e){} // Identitaet verifizieren + Ranked-Queue (mit Token; Server lehnt ohne verifizierte Anmeldung ab)
+      try{ var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null; var _rq=function(tok){ if(self.rankedOn&&!self.roomId){ try{ self._send({type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}); }catch(e){} } }; if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} _rq(tok); }).catch(function(){ _rq(null); }); } else { _rq(null); } }catch(e){} // Identitaet verifizieren + Ranked-Queue (mit Token; Server lehnt ohne verifizierte Anmeldung ab)
       if(self.onState)self.onState({type:'ws_open'});
       if(self.roomId){
         if(self.token){ self._send({type:'reconnect',token:self.token}); }
@@ -924,6 +925,7 @@ var WSNET={
       if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
       if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
+      if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self.rankedOn=false; }
       if(self.onState)self.onState(d);
     };
     self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn){ setTimeout(function(){ self._open(); },1500); } };
@@ -5739,6 +5741,7 @@ function App(){
   wsLobbyMsgRef.current=function(d){
     if(!d||!d.type)return;
     if(d.type==='ranked_denied'){ try{WSNET.cancelRanked();}catch(e){} setNavDir('back'); setScreen('menu'); return; }
+    if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
       var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
