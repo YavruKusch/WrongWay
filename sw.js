@@ -1,10 +1,10 @@
 // Wrong Way PWA Service Worker
-const CACHE = 'wrongway-v73';
+const CACHE = 'wrongway-v74';
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(['/', '/index.html']))
+      .then(c => c.addAll(['/', '/index.html', '/js/i18n.js', '/js/game-logic.js', '/js/ai.js', '/js/sound.js']))
       .then(() => self.skipWaiting())
   );
 });
