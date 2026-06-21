@@ -688,10 +688,11 @@
   body.dark .ww-wallctl,html.dark .ww-wallctl{background:linear-gradient(180deg,#1b2438,#141c2d);box-shadow:0 6px 16px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.06),inset 0 -2px 5px rgba(0,0,0,0.26);}
   .ww-wallctl .wl{font-size:9px;font-weight:900;letter-spacing:0.8px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px;}
   .ww-wallctl .tools{display:flex;justify-content:center;align-items:center;gap:9px;}
-  .ww-wtool{border-radius:13px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;
+  .ww-wtool{border-radius:13px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:pan-y;
     background:linear-gradient(180deg,#eef2f8,#d2d9e4);border:1px solid rgba(0,0,0,0.06);
     box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),0 3px 7px rgba(0,0,0,0.18);transition:transform 0.14s,box-shadow 0.2s,opacity 0.2s;}
   body.dark .ww-wtool,html.dark .ww-wtool{background:linear-gradient(180deg,#27344b,#0e131d);border:1px solid rgba(255,255,255,0.07);box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 3px 7px rgba(0,0,0,0.42);}
+  .ww-wtool.armed{touch-action:none;}
   .ww-wtool.armed:active{transform:scale(0.94);}
   @keyframes ww-goalpulse{0%,100%{opacity:0.3;}50%{opacity:0.7;}}
 </style>
@@ -7567,7 +7568,7 @@ function App(){
             style={{width:'min(300px,88vw)',height:'100%',background:'var(--card)',
               boxShadow:'-4px 0 32px rgba(0,0,0,0.22)',display:'flex',flexDirection:'column',
               animation:'slide-in-right 0.28s cubic-bezier(0.25,1,0.5,1) both',
-              overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+              overflowY:'auto',WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehavior:'contain'}}>
             {/* Header */}
             <div style={{paddingTop:'calc(env(safe-area-inset-top) + 18px)',paddingLeft:20,paddingRight:16,paddingBottom:14,
               borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
@@ -7802,7 +7803,7 @@ function App(){
                 fontFamily:'system-ui,-apple-system,sans-serif'}}>x</button>
             </div>
             {/* Messages */}
-            <div style={{overflowY:'auto',flex:1,padding:'10px 14px 18px',WebkitOverflowScrolling:'touch'}}>
+            <div style={{overflowY:'auto',flex:1,padding:'10px 14px 18px',WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehavior:'contain'}}>
               {broadcasts.length===0?(
                 <div style={{textAlign:'center',padding:'40px 0',fontFamily:'system-ui,-apple-system,sans-serif'}}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}>
@@ -7866,7 +7867,7 @@ function App(){
           background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',
           zIndex:650,padding:16}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:20,
-            padding:'20px 18px 18px',width:'100%',maxWidth:360,maxHeight:'90vh',overflowY:'auto',
+            padding:'20px 18px 18px',width:'100%',maxWidth:360,maxHeight:'90vh',overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch',
             boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
 
             {/* Header */}
@@ -7995,7 +7996,7 @@ function App(){
                   <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,marginBottom:8}}>
                     {adminAccounts.length} Accounts gesamt
                   </div>
-                  <div style={{maxHeight:320,overflowY:'auto',WebkitOverflowScrolling:'touch',
+                  <div style={{maxHeight:320,overflowY:'auto',WebkitOverflowScrolling:'touch',touchAction:'pan-y',
                     border:'1px solid var(--border)',borderRadius:10,background:'var(--bg)'}}>
                     {adminAccounts.length===0?(
                       <div style={{padding:'20px',textAlign:'center',color:'var(--subtle)',fontSize:12}}>Keine Accounts</div>
@@ -9109,6 +9110,7 @@ function App(){
         {/* Scrollable lobby list */}
         <div style={{
           width:'100%',maxHeight:240,overflowY:'auto',overflowX:'hidden',
+          touchAction:'pan-y',
           borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',
           WebkitOverflowScrolling:'touch',
           boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
@@ -10402,6 +10404,7 @@ function App(){
 
           <div ref={chatScrollRef} style={{
             width:'100%',height:160,overflowY:'auto',overflowX:'hidden',
+            touchAction:'pan-y',
             borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',
             WebkitOverflowScrolling:'touch',
             boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)',
@@ -12351,7 +12354,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
                 {listLoading?t('loading'):t('noLobbiesCreate')}
               </div>
             ):(
-              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:180,overflowY:'auto'}}>
+              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:180,overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch'}}>
                 {openLobbies.map(function(lob){
                   return(
                     <button key={lob.code} onClick={function(){joinByCode(lob.code);}} disabled={lobbyLoading}
