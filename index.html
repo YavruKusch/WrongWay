@@ -63,13 +63,12 @@
     background-image:linear-gradient(var(--menu-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--menu-grid-line) 1px,transparent 1px);
     background-size:40px 40px;
     font-family:system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%;transition:background-color 0.25s;}
-  body{width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+  body{width:100%;overflow:hidden;touch-action:pan-y;
     background-color:var(--bg);
     background-image:linear-gradient(var(--menu-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--menu-grid-line) 1px,transparent 1px);
     background-size:40px 40px;
     font-family:system-ui,-apple-system,sans-serif;transition:background-color 0.25s;}
   html.dark{background-color:#0a1020;}
-  body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   #root{width:100%;min-height:100vh;min-height:100dvh;background:transparent;}
   input,button{-webkit-appearance:none;font-family:inherit;}
   button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);touch-action:manipulation;}
@@ -3565,6 +3564,7 @@ function App(){
   const snapPosRef=useRef(null);
   const hammerTargetRef=useRef(null);
   const savedScroll=useRef(0);
+  const gameContainerRef=useRef(null);
   const lastOnlineTs=useRef(0);
   const S=useRef({});
   S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
@@ -5362,7 +5362,7 @@ function App(){
               const nm=[...mh,{type:'wall',p:curT,k:key}];setMoveHist(nm);
               const newTurn=curT==='A'?'B':'A';setTurn(newTurn);setFlash('');
               doSync({pA:a,pB:b,walls:next,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:S.current.chaosItem});
-              setTimeout(()=>window.scrollTo(0,savedScroll.current),0);
+              setTimeout(()=>{if(gameContainerRef.current)gameContainerRef.current.scrollTop=savedScroll.current;},0);
             }else setFlash(t('invalidPos'));
           }
         }
@@ -5413,7 +5413,7 @@ function App(){
         playSound('break');
         if(gameMode==='online'&&WSNET.roomId){ try{WSNET.breakWall(k);}catch(e){} }
         else doSync({pA:S.current.pA,pB:S.current.pB,walls:w2,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:nm,chaosItem:S.current.chaosItem,hammers:S.current.hammers,hammerHeld:newHeld});
-        setTimeout(()=>window.scrollTo(0,savedScroll.current),0);
+        setTimeout(()=>{if(gameContainerRef.current)gameContainerRef.current.scrollTop=savedScroll.current;},0);
       }
       setHammerDrag(false);setHammerTarget(null);
     };
@@ -5430,7 +5430,7 @@ function App(){
     if(winner||aiThinking||!myTurn||screen!=='game')return;
     if(!(hammerMode&&hammerHeld[meRole]&&meRole===turn))return;
     if(!e.touches)e.preventDefault();
-    savedScroll.current=window.scrollY;
+    savedScroll.current=gameContainerRef.current?gameContainerRef.current.scrollTop:0;
     const x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;
     setHammerDrag(true);setGhostPos({x,y});setHammerTarget(null);setFlash('');
   };
@@ -5438,7 +5438,7 @@ function App(){
   const startDrag=(e,orient)=>{
     if(!canDrag)return;
     if(!e.touches)e.preventDefault(); // nur Maus: kein Text-Select
-    savedScroll.current=window.scrollY;
+    savedScroll.current=gameContainerRef.current?gameContainerRef.current.scrollTop:0;
     const x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;
     setDragging({orient,dragPlayer:turn});setGhostPos({x,y});setPreviewKey(null);setSnapPos(null);setFlash('');
   };
@@ -8036,7 +8036,7 @@ function App(){
     :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' / '+t('perTurn')
     :'';
   return (
-    <div style={{...sCont,paddingBottom:'calc(100px + env(safe-area-inset-bottom, 0px))'}}>
+    <div ref={gameContainerRef} style={{...sCont,paddingBottom:'calc(100px + env(safe-area-inset-bottom, 0px))'}}>
 
       {/* ── Match-Opening (Clash-Royale-Style) ── */}
       {matchIntro&&(
@@ -9858,14 +9858,17 @@ function GBtn({onClick,children,dark,blue,outline}){
 const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',color:dis?'var(--subtle)':'white',
   border:'none',borderRadius:10,cursor:dis?'not-allowed':'pointer',fontWeight:700,fontSize:16,
   fontFamily:'system-ui,-apple-system,sans-serif'});
-const sPage={minHeight:'100dvh',background:'transparent',display:'flex',flexDirection:'column',
+const sPage={height:'100dvh',boxSizing:'border-box',background:'transparent',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'flex-start',
   paddingTop:'calc(env(safe-area-inset-top) + 20px)',
   paddingBottom:60,paddingLeft:20,paddingRight:20,
-  fontFamily:'system-ui,-apple-system,sans-serif'};
-const sCont={minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',
-  alignItems:'center',padding:'12px 8px',fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
-  touchAction:'pan-y'};
+  fontFamily:'system-ui,-apple-system,sans-serif',
+  overflowY:'auto',touchAction:'pan-y'};
+const sCont={height:'100dvh',boxSizing:'border-box',background:'var(--bg)',display:'flex',flexDirection:'column',
+  alignItems:'center',
+  paddingTop:'calc(env(safe-area-inset-top) + 12px)',paddingLeft:8,paddingRight:8,paddingBottom:8,
+  fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
+  touchAction:'pan-y',overflowY:'auto'};
 // Stretch-Helper damit kein weißer Bereich beim Scrollen sichtbar wird
 const scrollStretch={minHeight:'calc(100dvh + 1px)',display:'flex',flexDirection:'column',alignItems:'center',width:'100%'};
 const sGrid={background:'var(--grid-bg)',borderRadius:14,overflow:'hidden',
