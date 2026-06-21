@@ -924,7 +924,7 @@ var WSNET={
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
       if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
-      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; }
+      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; try{ self._send({type:'ranked_confirm'}); }catch(e){} }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
       if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self.rankedOn=false; }
       if(self.onState)self.onState(d);
@@ -5743,6 +5743,7 @@ function App(){
     if(!d||!d.type)return;
     if(d.type==='ranked_denied'){ try{WSNET.cancelRanked();}catch(e){} setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
+    if(d.type==='resync'&&!d.gestartet&&WSNET.roomId&&d.settings&&d.settings.ranked){ try{WSNET._send({type:'ranked_confirm'});}catch(e){} return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
       var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
