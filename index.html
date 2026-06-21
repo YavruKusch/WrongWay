@@ -4832,55 +4832,21 @@ function App(){
   const[globalStats,setGlobalStats]=useState({online:0,inGame:0});
   const[spectateId,setSpectateId]=useState(null);
   const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG); // frueh deklariert: wird unten in useEffect-Deps genutzt (sonst Safari TDZ)
-  // Spielerzähler: liest nur einen winzigen Zaehler-Knoten (ww_stats), NICHT mehr den ganzen
-  // Presence-Knoten. Jeder Client zaehlt sich selbst hoch/runter (siehe Heartbeat-Effekt).
-  // Das verhindert die O(N^2)-Download-Kosten, die auch ohne Spielen anfielen.
   useEffect(()=>{
-    if(!window.db||screen!=='menu')return;
+    if(screen!=='menu')return;
     if(adminCfg.maintenance&&!isAdmin())return;
     let cancelled=false;
     const load=async()=>{
+      if(document.hidden)return;
       try{
-        // Cache: innerhalb von 30s nicht neu laden (Menü-Rückkehr loest sonst jedes Mal Downloads aus)
-        if(Date.now()-PVCACHE.ts<30000){
-          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
-          return;
-        }
-        if(document.hidden)return; // Tab im Hintergrund: nichts laden
-        // Stufe 1: winziges Aggregat lesen — FIXE Groesse, egal ob 40 oder 10.000 online sind.
-        // Verhindert das quadratische Wachstum (mehr Spieler x groesserer Knoten) bei Skalierung.
-        const cnt=await stoGet('ww_count');
-        const cntFrisch=cnt&&typeof cnt.online==='number'&&Date.now()-(cnt.ts||0)<45000&&(cnt.ts||0)-Date.now()<60000;
-        if(cntFrisch){
-          PVCACHE={ts:Date.now(),online:cnt.online,inGame:cnt.inGame||0};
-          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
-          return;
-        }
-        // Stufe 2: Aggregat veraltet -> EIN Client zaehlt fuer alle. Zufalls-Verzoegerung + Re-Check
-        // verhindert, dass viele Clients gleichzeitig den grossen Knoten laden.
-        await new Promise(function(r){setTimeout(r,Math.floor(Math.random()*2500));});
-        if(cancelled||document.hidden)return;
-        const cnt2=await stoGet('ww_count');
-        if(cnt2&&typeof cnt2.online==='number'&&Date.now()-(cnt2.ts||0)<45000&&(cnt2.ts||0)-Date.now()<60000){
-          PVCACHE={ts:Date.now(),online:cnt2.online,inGame:cnt2.inGame||0};
-          setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
-          return;
-        }
-        const [snapPv,snapIg]=await Promise.all([
-          window.db.ref('ww_pv2').once('value'),
-          window.db.ref('ww_ig').once('value')
-        ]);
+        var resp=await fetch(WW_URL.replace('wss://','https://').replace('ws://','http://')+'/stats');
         if(cancelled)return;
-        const pv=snapPv.val()||{};
-        const ig=snapIg.val()||{};
-        dlTrack('ww_pv2',pv);dlTrack('ww_ig',ig);
-        PVCACHE={ts:Date.now(),online:Object.keys(pv).length,inGame:Object.keys(ig).length};
-        setGlobalStats({online:PVCACHE.online,inGame:PVCACHE.inGame});
-        stoSet('ww_count',{online:PVCACHE.online,inGame:PVCACHE.inGame,ts:Date.now()}); // fuer alle anderen
+        var data=await resp.json();
+        if(!cancelled)setGlobalStats({online:data.online||0,inGame:data.inGame||0});
       }catch(e){}
     };
     load();
-    const iv=setInterval(load,60000);
+    const iv=setInterval(load,30000);
     return()=>{cancelled=true;clearInterval(iv);};
   },[screen,adminCfg.maintenance]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
@@ -4891,12 +4857,6 @@ function App(){
     const name=getDisplayName(account);
     setPresence(key,true,name);
     try{window.db.ref(PRESENCE_KEY(key)).onDisconnect().remove();}catch(e){}
-    // Zuverlässiger Online-Zähler: jede Browser-Session schreibt einen eigenen Eintrag
-    // ww_pv2/SESSION = true, mit onDisconnect().remove().
-    // Kein increment/decrement → kein Drift bei Reconnects oder Crashes.
-    var pvRef=window.db.ref('ww_pv2/'+SESSION);
-    try{pvRef.onDisconnect().remove();}catch(e){}
-    try{pvRef.set(true);}catch(e){}
     const iv=setInterval(()=>{
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
@@ -4907,22 +4867,8 @@ function App(){
       var u=firebase.auth().currentUser;
       const k=account?account.key:(u?u.uid:GUEST_ID);
       setPresence(k,false,getDisplayName(account));
-      try{pvRef.onDisconnect().cancel();}catch(e){}
-      try{pvRef.remove();}catch(e){}
     };
   },[account,adminCfg.maintenance]);
-  // "In Runde"-Zaehler: Session-Presence-Ansatz, kein Drift
-  useEffect(()=>{
-    if(adminCfg.maintenance&&!isAdmin())return;
-    if(!window.db||gameMode!=='online'||(screen!=='game'&&screen!=='end'))return;
-    var igRef=window.db.ref('ww_ig/'+SESSION);
-    try{igRef.onDisconnect().remove();}catch(e){}
-    try{igRef.set(true);}catch(e){}
-    return()=>{
-      try{igRef.onDisconnect().cancel();}catch(e){}
-      try{igRef.remove();}catch(e){}
-    };
-  },[gameMode,screen,adminCfg.maintenance]);
   useEffect(()=>{
     if(WS_ENABLED)return; // WS-Modus: Trampolin uebernimmt den Match-Start
     if(!friendLobbyState||!window.db)return;
