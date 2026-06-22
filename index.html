@@ -5622,20 +5622,12 @@ function App(){
       :t('noTimer');
     return(
     <div style={{...sPage,position:'relative',zIndex:1,
+      paddingBottom:'calc(70px + env(safe-area-inset-bottom, 0px))',
       animation:navDir==='back'?'slide-in-left 0.32s cubic-bezier(0.25,1,0.5,1) backwards':'none'}}>
       <MenuBG dark={darkMode}/>
       <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={()=>{setOptionsTab('main');setShowOptions(true);}} style={{
-        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
-        width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
-        cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'var(--shadow-soft)',zIndex:100}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="2.2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
       <button onClick={()=>{setNavDir('fwd');setScreen('friends');}} style={{
-        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:62,
+        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:14,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
         cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
         boxShadow:'var(--shadow-soft)',zIndex:100,overflow:'visible'}}>
@@ -5649,7 +5641,7 @@ function App(){
         )}
       </button>
       <button onClick={()=>setShowInbox(true)} style={{
-        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:110,
+        position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',right:62,
         width:40,height:40,borderRadius:'50%',background:'var(--card)',border:'1.5px solid var(--border)',
         cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
         boxShadow:'var(--shadow-soft)',zIndex:100,overflow:'visible',
@@ -5862,16 +5854,6 @@ function App(){
               </div>
             </button>
           </div>
-        )}
-
-        {/* RANGLISTE */}
-        {feat('ranked')&&(
-          <MenuItem
-            icon={<TrophySmIcon size={20} color="#fff"/>}
-            iconBg="linear-gradient(135deg,#f59e0b,#d97706)"
-            title={t('leaderboardTitle')}
-            desc={t('leaderboardDesc')}
-            onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}/>
         )}
 
         {/* ONLINE SPIELEN — 2-Spalten-Grid */}
@@ -6697,6 +6679,47 @@ function App(){
       </button>
 
 
+
+      {/* BOTTOM NAVIGATION BAR */}
+      <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:250,
+        background:'var(--card)',borderTop:'1px solid var(--border)',
+        boxShadow:'0 -2px 16px rgba(0,0,0,0.08)',
+        paddingBottom:'env(safe-area-inset-bottom, 0px)',
+        display:'flex',alignItems:'stretch'}}>
+        {/* Home */}
+        <button style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:2,background:'none',border:'none',cursor:'default',padding:'10px 0',minHeight:54}}>
+          <HomeIcon size={22} color="#8b5cf6"/>
+          <span style={{fontSize:9,fontWeight:900,color:'#8b5cf6',letterSpacing:0.3}}>{'Home'}</span>
+        </button>
+        {/* Leaderboard */}
+        <button onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}
+          style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+            gap:2,background:'none',border:'none',cursor:'pointer',padding:'10px 0',minHeight:54}}>
+          <TrophySmIcon size={22} color="var(--subtle)"/>
+          <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.3,textAlign:'center',lineHeight:1.2}}>{t('leaderboardTitle')}</span>
+        </button>
+        {/* Profile */}
+        <button onClick={()=>{setNavDir('fwd');setScreen(account?'profile':'auth');}}
+          style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+            gap:2,background:'none',border:'none',cursor:'pointer',padding:'10px 0',minHeight:54}}>
+          {account
+            ?<div style={{width:26,height:26,borderRadius:'50%',background:account.color,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                boxShadow:'0 2px 6px '+account.color+'66'}}>
+                <span style={{fontSize:11,fontWeight:900,color:'#fff',lineHeight:1}}>{account.name.slice(0,1).toUpperCase()}</span>
+              </div>
+            :<PeopleIcon size={22} color="var(--subtle)"/>}
+          <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.3}}>{t('profile')}</span>
+        </button>
+        {/* Settings */}
+        <button onClick={()=>{setOptionsTab('main');setShowOptions(true);}}
+          style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+            gap:2,background:'none',border:'none',cursor:'pointer',padding:'10px 0',minHeight:54}}>
+          <GearIcon size={22} color="var(--subtle)"/>
+          <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.3}}>{t('options')}</span>
+        </button>
+      </div>
 
       {/* Cookie Banner */}
       {!cookieConsent&&(
