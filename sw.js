@@ -1,5 +1,5 @@
 // Wrong Way PWA Service Worker
-const CACHE = 'wrongway-v81';
+const CACHE = 'wrongway-v82';
 
 self.addEventListener('install', e => {
   e.waitUntil(

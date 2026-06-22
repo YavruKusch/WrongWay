@@ -3657,12 +3657,7 @@ function App(){
       pendingXpUpdateRef.current=null;
     } else if(screen==='end'){
       var pending=pendingXpUpdateRef.current;
-      if(pending&&typeof pending.newXpVal==='number'){
-        var nxv=pending.newXpVal;var pxv=pending.prevXpVal;
-        var g=typeof pxv==='number'?nxv-pxv:0;
-        setXpGainAnim({gained:g>0?g:0,lvBefore:typeof pxv==='number'?levelAusXp(pxv):levelAusXp(nxv),lvAfter:levelAusXp(nxv),xpAfter:nxv});
-        pendingXpUpdateRef.current=null;
-      }
+      if(pending){setXpGainAnim(pending);pendingXpUpdateRef.current=null;}
     }
   },[screen]);
 
@@ -3878,14 +3873,14 @@ function App(){
     }
     if(d&&d.type==='xp_update'){
       var newXpVal=typeof d.xp==='number'?d.xp:0;
+      var earnedXp=typeof d.earned==='number'&&d.earned>0?d.earned:0;
       setXp(function(prev){return Math.max(prev===null?0:prev,newXpVal);});
+      var prevForLv=newXpVal-earnedXp;
+      var xpAnimData={gained:earnedXp,lvBefore:levelAusXp(prevForLv>=0?prevForLv:0),lvAfter:levelAusXp(newXpVal),xpAfter:newXpVal};
       if(S.current.screen==='end'){
-        var prevXpVal=xpBeforeMatchRef.current;
-        var gainedXp=typeof prevXpVal==='number'?newXpVal-prevXpVal:0;
-        var lvBefore=typeof prevXpVal==='number'?levelAusXp(prevXpVal):levelAusXp(newXpVal);
-        setXpGainAnim({gained:gainedXp>0?gainedXp:0,lvBefore:lvBefore,lvAfter:levelAusXp(newXpVal),xpAfter:newXpVal});
+        setXpGainAnim(xpAnimData);
       } else if(S.current.screen==='game'){
-        pendingXpUpdateRef.current={newXpVal:newXpVal,prevXpVal:xpBeforeMatchRef.current};
+        pendingXpUpdateRef.current=xpAnimData;
       }
       return;
     }
