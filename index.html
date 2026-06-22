@@ -668,16 +668,19 @@
   @keyframes ww-xp-bar-in{from{transform:scaleX(0);}to{transform:scaleX(1);}}
   @keyframes ww-lvup-pulse{0%{transform:scale(1);}40%{transform:scale(1.28);box-shadow:0 0 0 10px rgba(168,85,247,0.32),0 2px 14px rgba(124,58,237,0.7);}70%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(168,85,247,0.16);}100%{transform:scale(1);}}
   @keyframes ww-xp-glow{0%,100%{box-shadow:0 0 8px rgba(168,85,247,0.45);}50%{box-shadow:0 0 22px rgba(168,85,247,0.85),0 0 36px rgba(139,92,246,0.38);}}
-  .ww-lvbadge{display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#7c3aed,#6366f1);border-radius:5px;color:#fff;font-weight:900;line-height:1;box-shadow:0 2px 6px rgba(124,58,237,0.48),inset 0 1px 0 rgba(255,255,255,0.22);}
-  .ww-lvbadge.sm{font-size:9px;padding:2px 5px;letter-spacing:0.1px;}
-  .ww-lvbadge.md{font-size:11px;padding:3px 8px;letter-spacing:0.2px;}
-  .ww-lvbadge.lg{font-size:16px;padding:5px 13px;letter-spacing:0.3px;}
-  .ww-lvbadge.lvup{animation:ww-lvup-pulse 0.75s cubic-bezier(0.34,1.56,0.64,1) 1.5s both;}
-  .ww-xp-section{padding:14px 18px;border-radius:14px;background:rgba(124,58,237,0.07);border:1.5px solid rgba(124,58,237,0.18);margin-bottom:12px;position:relative;overflow:hidden;}
-  .ww-xp-bar-outer{height:10px;border-radius:6px;background:rgba(124,58,237,0.14);border:1px solid rgba(124,58,237,0.18);overflow:hidden;margin-top:8px;}
-  .ww-xp-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#7c3aed,#a855f7,#c084fc);transform-origin:left center;animation:ww-xp-bar-in 1.1s cubic-bezier(0.22,1,0.36,1) 0.6s both;}
-  .ww-xp-bar-fill.glow{animation:ww-xp-bar-in 1.1s cubic-bezier(0.22,1,0.36,1) 0.6s both,ww-xp-glow 1.5s ease 1.8s infinite;}
-  .ww-xp-float-txt{position:absolute;right:18px;top:12px;font-size:22px;font-weight:900;color:#a855f7;pointer-events:none;text-shadow:0 2px 10px rgba(168,85,247,0.55);animation:ww-xp-float 2.2s cubic-bezier(0.16,1,0.3,1) 0.3s both;}
+  .ww-lvbadge{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;color:#fff;font-weight:900;line-height:1;flex-shrink:0;}
+  .ww-lvbadge.sm{font-size:9px;padding:2px 6px;letter-spacing:0.3px;}
+  .ww-lvbadge.md{font-size:12px;padding:3px 9px;letter-spacing:0.4px;}
+  .ww-lvbadge.lg{font-size:19px;padding:7px 16px;letter-spacing:0.6px;border-radius:10px;font-variant-numeric:tabular-nums;}
+  .ww-lvbadge.lvup{animation:ww-lvup-pulse 0.8s cubic-bezier(0.34,1.56,0.64,1) 1.5s both;}
+  .ww-xp-section{border-radius:18px;background:var(--card);border:1.5px solid var(--border);margin-bottom:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.08);}
+  .ww-xp-section-body{padding:16px 18px 15px;}
+  .ww-xp-bar-outer{height:13px;border-radius:8px;background:rgba(0,0,0,0.07);overflow:hidden;margin-top:10px;}
+  body.dark .ww-xp-bar-outer,html.dark .ww-xp-bar-outer{background:rgba(255,255,255,0.07);}
+  .ww-xp-bar-fill{height:100%;border-radius:7px;transform-origin:left center;animation:ww-xp-bar-in 1.2s cubic-bezier(0.22,1,0.36,1) 0.55s both;}
+  .ww-xp-bar-fill.glow{animation:ww-xp-bar-in 1.2s cubic-bezier(0.22,1,0.36,1) 0.55s both,ww-xp-glow 1.5s ease 1.8s infinite;}
+  .ww-xp-gain-txt{font-size:26px;font-weight:900;letter-spacing:-0.5px;line-height:1;animation:ww-xp-float 2.4s cubic-bezier(0.16,1,0.3,1) 0.25s both;}
+  .ww-xp-levelup-lbl{font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase;animation:ww-xp-float 2s ease 1.8s both;}
   /* ===== Design v8: Ziel-Glühlinien (Preview) ===== */
   .ww-goalext{display:flex;align-items:center;justify-content:center;gap:8px;}
   .ww-goalext.t{margin-bottom:6px;} .ww-goalext.b{margin-top:6px;}
@@ -2001,7 +2004,7 @@ function RankedResetAdmin({t}){
   );
   return <div style={{textAlign:'center',padding:'12px',color:'#16a34a',fontSize:13,fontWeight:700}}>✓ {t('adminResetRankedDone')}</div>;
 }
-function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins}){
+function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpSystemOn}){
   const[showNC,setShowNC]=React.useState(false);
   const[ncInput,setNcInput]=React.useState('');
   const[ncErr,setNcErr]=React.useState('');
@@ -2155,12 +2158,12 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins}){
               <span style={{fontSize:12,color:muted,fontWeight:600}}>Farbe</span>
               <div style={{width:22,height:22,borderRadius:'50%',background:account.color,boxShadow:'0 2px 6px '+account.color+'88'}}/>
             </div>
-            {xp!==null&&xp>0&&(
+            {xpSystemOn&&xp!==null&&xp>0&&(
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{fontSize:12,color:muted,fontWeight:600}}>Level</span>
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <div style={{background:'#7c3aed',borderRadius:6,padding:'2px 8px',fontSize:12,fontWeight:800,color:'white'}}>{'Lv. '}{levelAusXp(xp)}</div>
-                  <span style={{fontSize:11,color:muted}}>{xp} XP</span>
+                <div style={{display:'flex',alignItems:'center',gap:7}}>
+                  <LevelBadge level={levelAusXp(xp)} size='md'/>
+                  <span style={{fontSize:11,color:muted,fontWeight:700}}>{xp+' XP'}</span>
                 </div>
               </div>
             )}
@@ -2905,10 +2908,25 @@ function xpProgress(totalXp){
   return {level:lv,current:rem,needed:needed2,pct:pct};
 }
 
+// Tier-Farbe je Level (Bronze → Silber → Gold → Platin → Diamond → Master → Legend)
+function levelTier(level){
+  if(level>=100)return {color:'#f43f5e',glow:'rgba(244,63,94,0.6)'};
+  if(level>=75)return {color:'#ec4899',glow:'rgba(236,72,153,0.55)'};
+  if(level>=50)return {color:'#8b5cf6',glow:'rgba(139,92,246,0.55)'};
+  if(level>=25)return {color:'#f59e0b',glow:'rgba(245,158,11,0.5)'};
+  if(level>=10)return {color:'#94a3b8',glow:'rgba(148,163,184,0.42)'};
+  return {color:'#b5824a',glow:'rgba(181,130,74,0.5)'};
+}
+
 function LevelBadge(props){
   var level=props.level;var size=props.size||'sm';var levelUp=props.levelUp;
+  var tier=levelTier(level);
   var cls='ww-lvbadge '+size+(levelUp?' lvup':'');
-  return <span className={cls}>{'Lv. '+level}</span>;
+  var sty={
+    background:'linear-gradient(145deg,'+tier.color+','+tier.color+'bb)',
+    boxShadow:'0 2px 9px '+tier.glow+',inset 0 1px 0 rgba(255,255,255,0.28),inset 0 -1px 0 rgba(0,0,0,0.15)'
+  };
+  return <span className={cls} style={sty}>{'Lv.'+level}</span>;
 }
 
 function App(){
@@ -3063,6 +3081,13 @@ function App(){
     });
     return function(){ref.off('value');};
   },[account?account.key:null]);
+  // XP-System-Flag live aus Firebase laden
+  useEffect(function(){
+    if(!window.db)return;
+    var ref=window.db.ref('ww_flags/XP_SYSTEM');
+    ref.on('value',function(snap){setXpSystemOn(snap.val()===true);});
+    return function(){ref.off('value');};
+  },[]);
   const doAuth=async()=>{
     if(authBusy)return;
     setAuthErr('');setAuthBusy(true);setShowResend(false);
@@ -3348,6 +3373,7 @@ function App(){
   const[coins,setCoins]=useState(null);
   const[xp,setXp]=useState(null);
   const[xpGainAnim,setXpGainAnim]=useState(null);
+  const[xpSystemOn,setXpSystemOn]=useState(false);
   const[announceDur,setAnnounceDur]=useState(0);
   const[announceVisible,setAnnounceVisible]=useState(true);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
@@ -5616,7 +5642,7 @@ function App(){
           ?<span style={{fontSize:17,fontWeight:900,color:'#fff',lineHeight:1}}>{account.name.slice(0,1).toUpperCase()}</span>
           :<PeopleIcon size={18} color="var(--muted)"/>}
       </button>
-      {account&&xp!==null&&(
+      {account&&xp!==null&&xpSystemOn&&(
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top)+58px)',left:14,
           width:40,display:'flex',justifyContent:'center',zIndex:100,pointerEvents:'none'}}>
           <LevelBadge level={levelAusXp(xp)} size='sm'/>
@@ -7263,7 +7289,7 @@ function App(){
       onUpdate={acc=>{setAccount(acc);}}
       onLogout={doLogout}
       t={t} darkMode={darkMode} goBack={goBack}
-      xp={xp} coins={coins}/>;
+      xp={xp} coins={coins} xpSystemOn={xpSystemOn}/>;
   }
 
   // ── DIFFICULTY ──────────────────────────────────────────
@@ -7900,9 +7926,10 @@ function App(){
     const otherDeclined=rematchDeclined&&rematchDeclined!==onlineRole;
     const isLoss=isOwnLoss(winner);
     const canAddFriend=gameMode==='online'&&account&&oppAccountKey&&oppAccountKey!==account.key&&!addFriendSent;
-    var xpProg=xp!==null?xpProgress(xp):null;
+    var xpProg=xpSystemOn&&xp!==null?xpProgress(xp):null;
     var xpGainedEnd=xpGainAnim?xpGainAnim.gained:0;
     var didLevelUp=xpGainAnim?xpGainAnim.lvBefore<xpGainAnim.lvAfter:false;
+    var xpTier=xpProg?levelTier(xpProg.level):{color:'#8b5cf6',glow:'rgba(139,92,246,0.5)'};
     return (
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
         background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
@@ -7955,17 +7982,39 @@ function App(){
           {/* XP-Sektion */}
           {xpProg&&(
             <div className="ww-xp-section">
-              {xpGainedEnd>0&&<div className="ww-xp-float-txt">{'+'+(xpGainedEnd)+' XP'}</div>}
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:'rgba(168,85,247,0.82)',textTransform:'uppercase'}}>XP</div>
-                <LevelBadge level={xpProg.level} size='md' levelUp={didLevelUp}/>
-              </div>
-              <div className="ww-xp-bar-outer">
-                <div className={'ww-xp-bar-fill'+(didLevelUp?' glow':'')} style={{width:xpProg.pct+'%'}}/>
-              </div>
-              <div style={{display:'flex',justifyContent:'space-between',marginTop:5,fontSize:10,fontWeight:700,color:'rgba(168,85,247,0.62)'}}>
-                <span>{xpProg.current+' / '+xpProg.needed+' XP'}</span>
-                <span>{'Next Level'}</span>
+              {/* Tier-Farbstreifen oben */}
+              <div style={{height:5,background:'linear-gradient(90deg,'+xpTier.color+'44,'+xpTier.color+','+xpTier.color+'44)'}}/>
+              <div className="ww-xp-section-body">
+                {/* Level + Gewinn-Zeile */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                    <div style={{fontSize:10,fontWeight:800,letterSpacing:1.8,textTransform:'uppercase',color:'var(--subtle)'}}>{'Level'}</div>
+                    <LevelBadge level={xpProg.level} size='lg' levelUp={didLevelUp}/>
+                  </div>
+                  {xpGainedEnd>0&&(
+                    <div style={{textAlign:'right',display:'flex',flexDirection:'column',gap:4}}>
+                      <div style={{fontSize:10,fontWeight:800,letterSpacing:1.8,textTransform:'uppercase',color:'var(--subtle)'}}>{'Verdient'}</div>
+                      <div className="ww-xp-gain-txt" style={{color:xpTier.color,textShadow:'0 0 18px '+xpTier.glow}}>
+                        {'+'+xpGainedEnd}
+                        <span style={{fontSize:13,fontWeight:800,marginLeft:4,opacity:0.9}}>{'XP'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* XP-Bar */}
+                <div className="ww-xp-bar-outer">
+                  <div className={'ww-xp-bar-fill'+(didLevelUp?' glow':'')}
+                    style={{width:xpProg.pct+'%',
+                      background:'linear-gradient(90deg,'+xpTier.color+'cc,'+xpTier.color+','+xpTier.color+'ee)',
+                      boxShadow:'0 0 10px '+xpTier.glow}}/>
+                </div>
+                {/* Fortschritts-Labels */}
+                <div style={{display:'flex',justifyContent:'space-between',marginTop:7,fontSize:10,fontWeight:700,color:'var(--subtle)'}}>
+                  <span>{xpProg.current+' / '+xpProg.needed+' XP'}</span>
+                  {didLevelUp
+                    ?<span className="ww-xp-levelup-lbl" style={{color:xpTier.color,fontWeight:900}}>{'LEVEL UP!'}</span>
+                    :<span>{'Next Level'}</span>}
+                </div>
               </div>
             </div>
           )}
@@ -8371,7 +8420,7 @@ function App(){
                 <div className="ww-pwalls">
                   <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
                   {barrLeft[p]}
-                  {!isOpp&&xp!==null&&<LevelBadge level={levelAusXp(xp)} size='sm'/>}
+                  {!isOpp&&xp!==null&&xpSystemOn&&<LevelBadge level={levelAusXp(xp)} size='sm'/>}
                 </div>
               </div>
             </div>
