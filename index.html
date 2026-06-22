@@ -2903,9 +2903,9 @@ function levelAusXp(totalXp){var lv=0;var rem=typeof totalXp==='number'?totalXp:
 function xpProgress(totalXp){
   var lv=0;var rem=typeof totalXp==='number'?totalXp:0;
   while(lv<100){var needed=25*(lv+1)*(lv+1);if(rem<needed)break;rem-=needed;lv++;}
-  var needed2=lv<100?25*(lv+1)*(lv+1):1;
+  var needed2=lv>=100?0:25*(lv+1)*(lv+1);
   var pct=lv>=100?100:Math.min(100,Math.round(rem/needed2*100));
-  return {level:lv,current:rem,needed:needed2,pct:pct};
+  return {level:lv,current:lv>=100?0:rem,needed:needed2,pct:pct};
 }
 
 // Tier-Farbe je Level (Bronze → Silber → Gold → Platin → Diamond → Master → Legend)
@@ -3077,7 +3077,20 @@ function App(){
     var ref=window.db.ref('ww_xp/'+uid);
     ref.on('value',function(snap){
       var v=snap.val();
-      setXp(typeof v==='number'?v:0);
+      var newV=typeof v==='number'?v:0;
+      setXp(function(prev){return Math.max(prev===null?0:prev,newV);});
+      // Fallback-Animation: wenn xp_update per WS nicht ankam (Disconnect)
+      var sc=S.current?S.current.screen:null;
+      if(sc==='end'&&!pendingXpUpdateRef.current){
+        var pxv=xpBeforeMatchRef.current;
+        if(typeof pxv==='number'&&newV>pxv){
+          setXpGainAnim(function(prev){
+            if(prev&&prev.xpAfter>=newV)return prev;
+            var g=newV-pxv;
+            return {gained:g,lvBefore:levelAusXp(pxv),lvAfter:levelAusXp(newV),xpAfter:newV};
+          });
+        }
+      }
     });
     return function(){ref.off('value');};
   },[account?account.key:null]);
@@ -3623,12 +3636,25 @@ function App(){
   const gameContainerRef=useRef(null);
   const lastOnlineTs=useRef(0);
   const xpBeforeMatchRef=useRef(null);
+  const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
   S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
   useEffect(()=>{
-    if(screen==='game'){xpBeforeMatchRef.current=xp;setXpGainAnim(null);}
+    if(screen==='game'){
+      xpBeforeMatchRef.current=xp!==null?xp:0;
+      setXpGainAnim(null);
+      pendingXpUpdateRef.current=null;
+    } else if(screen==='end'){
+      var pending=pendingXpUpdateRef.current;
+      if(pending&&typeof pending.newXpVal==='number'){
+        var nxv=pending.newXpVal;var pxv=pending.prevXpVal;
+        var g=typeof pxv==='number'?nxv-pxv:0;
+        setXpGainAnim({gained:g>0?g:0,lvBefore:typeof pxv==='number'?levelAusXp(pxv):levelAusXp(nxv),lvAfter:levelAusXp(nxv),xpAfter:nxv});
+        pendingXpUpdateRef.current=null;
+      }
+    }
   },[screen]);
 
   // Audio-Context nach Tab-Wechsel/Hintergrund wieder aufwecken
@@ -3849,6 +3875,8 @@ function App(){
         var gainedXp=typeof prevXpVal==='number'?newXpVal-prevXpVal:0;
         var lvBefore=typeof prevXpVal==='number'?levelAusXp(prevXpVal):levelAusXp(newXpVal);
         setXpGainAnim({gained:gainedXp>0?gainedXp:0,lvBefore:lvBefore,lvAfter:levelAusXp(newXpVal),xpAfter:newXpVal});
+      } else if(S.current.screen==='game'){
+        pendingXpUpdateRef.current={newXpVal:newXpVal,prevXpVal:xpBeforeMatchRef.current};
       }
       return;
     }
@@ -8010,8 +8038,10 @@ function App(){
                 </div>
                 {/* Fortschritts-Labels */}
                 <div style={{display:'flex',justifyContent:'space-between',marginTop:7,fontSize:10,fontWeight:700,color:'var(--subtle)'}}>
-                  <span>{xpProg.current+' / '+xpProg.needed+' XP'}</span>
-                  {didLevelUp
+                  <span>{xpProg.needed===0?'MAX LEVEL':xpProg.current+' / '+xpProg.needed+' XP'}</span>
+                  {xpProg.needed===0
+                    ?<span style={{color:xpTier.color,fontWeight:900,fontSize:10,letterSpacing:2}}>{'LEGEND'}</span>
+                    :didLevelUp
                     ?<span className="ww-xp-levelup-lbl" style={{color:xpTier.color,fontWeight:900}}>{'LEVEL UP!'}</span>
                     :<span>{'Next Level'}</span>}
                 </div>
