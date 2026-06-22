@@ -8035,8 +8035,9 @@ function App(){
                 </div>
                 {/* XP-Bar */}
                 <div className="ww-xp-bar-outer">
-                  <div className={'ww-xp-bar-fill'+(didLevelUp?' glow':'')}
+                  <div className={'ww-xp-bar-fill'+(xpGainedEnd>0&&didLevelUp?' glow':'')}
                     style={{width:xpProg.pct+'%',
+                      animation:xpGainedEnd>0?undefined:'none',
                       background:'linear-gradient(90deg,'+xpTier.color+'cc,'+xpTier.color+','+xpTier.color+'ee)',
                       boxShadow:'0 0 10px '+xpTier.glow}}/>
                 </div>
