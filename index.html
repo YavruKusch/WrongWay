@@ -2128,12 +2128,31 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
         {/* Avatar */}
         <div style={{textAlign:'center',marginBottom:18}}>
-          <div style={{width:80,height:80,borderRadius:'50%',margin:'0 auto 12px',background:account.color,
-            display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px '+account.color+'55'}}>
-            <span style={{fontSize:36,fontWeight:900,color:'#fff'}}>{account.name.slice(0,1).toUpperCase()}</span>
+          <div style={{position:'relative',display:'inline-block',marginBottom:xpSystemOn&&xp!==null?18:12}}>
+            <div style={{width:90,height:90,borderRadius:'50%',background:account.color,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:'0 8px 24px '+account.color+'55,0 0 0 3px var(--card),0 0 0 5px '+account.color+'44'}}>
+              <span style={{fontSize:40,fontWeight:900,color:'#fff'}}>{account.name.slice(0,1).toUpperCase()}</span>
+            </div>
+            {xpSystemOn&&xp!==null&&(
+              <div style={{position:'absolute',bottom:-10,left:'50%',transform:'translateX(-50%)',zIndex:2}}>
+                <LevelBadge level={levelAusXp(xp)} size='md'/>
+              </div>
+            )}
           </div>
           <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{account.name}</div>
-          <div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>{t('accountHint')}</div>
+          {xpSystemOn&&xp!==null&&(
+            <div style={{fontSize:11,color:muted,fontWeight:700,marginTop:3}}>{xp+' XP'}</div>
+          )}
+          {coins!==null&&coins>0&&(
+            <div style={{display:'inline-flex',alignItems:'center',gap:5,marginTop:5,
+              padding:'3px 11px',borderRadius:12,
+              background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.25)'}}>
+              <span style={{fontSize:13,color:'#f59e0b',lineHeight:1}}>{'●'}</span>
+              <span style={{fontSize:12,fontWeight:800,color:'#f59e0b'}}>{coins}</span>
+            </div>
+          )}
+          {!xpSystemOn&&<div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>{t('accountHint')}</div>}
         </div>
 
         {/* Konto-Übersicht */}
@@ -2158,21 +2177,6 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
               <span style={{fontSize:12,color:muted,fontWeight:600}}>Farbe</span>
               <div style={{width:22,height:22,borderRadius:'50%',background:account.color,boxShadow:'0 2px 6px '+account.color+'88'}}/>
             </div>
-            {xpSystemOn&&xp!==null&&xp>0&&(
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:12,color:muted,fontWeight:600}}>Level</span>
-                <div style={{display:'flex',alignItems:'center',gap:7}}>
-                  <LevelBadge level={levelAusXp(xp)} size='md'/>
-                  <span style={{fontSize:11,color:muted,fontWeight:700}}>{xp+' XP'}</span>
-                </div>
-              </div>
-            )}
-            {coins!==null&&coins>0&&(
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:12,color:muted,fontWeight:600}}>Coins</span>
-                <span style={{fontSize:13,fontWeight:800,color:'#f59e0b'}}>{'●'} {coins}</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -5812,28 +5816,51 @@ function App(){
       </button>
 
       <div style={{width:280,position:'relative',zIndex:1}}>
-        {/* RANKED — prominent */}
+        {/* RANKED — Hero Card */}
         {feat('ranked')&&(
-          <div style={{marginBottom:18}}>
-            <MenuItem
-              highlight pulse
-              glowColor="rgba(239,68,68,0.5)"
-              highlightBg="linear-gradient(135deg,#f59e0b 0%,#ef4444 50%,#8b5cf6 100%)"
-              icon={<SwordsIcon size={19} color="#fff"/>}
-              iconBg="rgba(255,255,255,0.18)"
-              title="Ranked"
-              desc={t('rankedMenuDesc')}
-              off={!feat('ranked')}
-              onClick={()=>{setNavDir('fwd');setScreen('ranked');}}
-              right={account&&account.stats&&account.stats.ranked?(()=>{
-                const maxR=Math.max(
-                  (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                  (account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000);
-                const tier=rankTier(maxR);
-                return <span style={{fontSize:11,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
-                  padding:'3px 9px',borderRadius:10,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:4}}>
-                  <TierIcon icon={tier.icon} size={13}/> {maxR}</span>;
-              })():null}/>
+          <div style={{position:'relative',marginBottom:18}}>
+            <button onClick={()=>{setNavDir('fwd');setScreen('ranked');}} className="mi-btn"
+              style={{
+                width:'100%',padding:'16px 18px',minHeight:104,
+                background:'linear-gradient(135deg,#f59e0b 0%,#ef4444 52%,#8b5cf6 100%)',
+                border:'none',borderRadius:22,cursor:'pointer',
+                display:'flex',flexDirection:'column',gap:12,
+                boxShadow:'0 4px 10px rgba(15,23,42,0.22),0 18px 44px rgba(239,68,68,0.35),inset 0 1px 0 rgba(255,255,255,0.28)',
+                position:'relative',overflow:'hidden',
+                animation:'highlightPulse 2.5s ease-in-out infinite',
+                fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left'}}>
+              <div style={{position:'absolute',inset:0,
+                background:'linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.12) 50%,transparent 62%)',
+                backgroundSize:'200% 100%',animation:'shimmer 2.5s ease-in-out infinite',pointerEvents:'none'}}/>
+              <div style={{position:'absolute',top:0,left:0,right:0,height:'55%',
+                background:'linear-gradient(180deg,rgba(255,255,255,0.13),transparent)',borderRadius:'22px 22px 0 0',pointerEvents:'none'}}/>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{display:'flex',alignItems:'center',gap:13}}>
+                  <div style={{width:46,height:46,borderRadius:15,background:'rgba(255,255,255,0.2)',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    boxShadow:'0 2px 8px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3)'}}>
+                    <SwordsIcon size={22} color="#fff"/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:800,letterSpacing:2.5,color:'rgba(255,255,255,0.72)',textTransform:'uppercase',marginBottom:2}}>{'ELO · RANKED'}</div>
+                    <div style={{fontSize:22,fontWeight:900,color:'#fff',letterSpacing:-0.5,lineHeight:1}}>{'Ranked'}</div>
+                  </div>
+                </div>
+                {account&&account.stats&&account.stats.ranked?(()=>{
+                  const maxR=Math.max(
+                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
+                    (account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000);
+                  const tier=rankTier(maxR);
+                  return <span style={{fontSize:13,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
+                    padding:'5px 11px',borderRadius:12,flexShrink:0,display:'inline-flex',alignItems:'center',gap:4}}>
+                    <TierIcon icon={tier.icon} size={13}/> {maxR}</span>;
+                })():<span style={{fontSize:20,color:'rgba(255,255,255,0.7)',fontWeight:700}}>{'›'}</span>}
+              </div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.72)'}}>{t('rankedMenuDesc')}</div>
+                {account&&account.stats&&account.stats.ranked&&<span style={{fontSize:18,color:'rgba(255,255,255,0.65)',fontWeight:700}}>{'›'}</span>}
+              </div>
+            </button>
           </div>
         )}
 
@@ -5847,28 +5874,89 @@ function App(){
             onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}/>
         )}
 
-        {/* ONLINE SPIELEN */}
+        {/* ONLINE SPIELEN — 2-Spalten-Grid */}
         {(feat('online')||feat('friend')||feat('twovtwo'))&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
-            {feat('online')&&<MenuItem
-              icon={<GlobeIcon size={19} color="#fff"/>}
-              iconBg={selectedMap==='duel'?'linear-gradient(135deg,#a855f7,#7c3aed)':'linear-gradient(135deg,#3b82f6,#4f46e5)'}
-              title={t('playOnline')||'Spielen'} desc={serverOnline?(t('createLobby')+' · '+t('joinExisting')):t('serverFull')}
-              off={!feat('online')}
-              highlight
-              glowColor={selectedMap==='duel'?'rgba(139,92,246,0.55)':'rgba(79,70,229,0.55)'}
-              highlightBg={selectedMap==='duel'?'linear-gradient(135deg,#a855f7 0%,#8b5cf6 52%,#6d28d9 100%)':'linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)'}
-              onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
-            {feat('friend')&&<MenuItem
-              icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
-              title={t('friendPlay')} desc={t('friendDesc')}
-              off={!feat('friend')}
-              onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
-            {feat('twovtwo')&&<MenuItem
-              icon={<PeopleIcon size={19}/>} iconBg="linear-gradient(135deg,#ef4444,#3b82f6)"
-              title="2 vs 2" desc={t('teamModeDesc')}
-              off={!feat('twovtwo')}
-              onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {feat('online')&&(
+                <button onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}
+                  className="mi-btn"
+                  style={{
+                    padding:'14px 12px',borderRadius:16,minHeight:90,
+                    background:selectedMap==='duel'
+                      ?'linear-gradient(135deg,#a855f7 0%,#8b5cf6 52%,#6d28d9 100%)'
+                      :'linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)',
+                    border:'none',cursor:feat('online')?'pointer':'not-allowed',
+                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
+                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(59,130,246,0.32),inset 0 1px 0 rgba(255,255,255,0.2)',
+                    position:'relative',overflow:'hidden',
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    opacity:feat('online')?1:0.45,textAlign:'left'}}>
+                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
+                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
+                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
+                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
+                    <GlobeIcon size={17} color="#fff"/>
+                  </div>
+                  <div style={{position:'relative',zIndex:1}}>
+                    <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{t('playOnline')||'Online'}</div>
+                    <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{serverOnline?t('createLobby'):t('serverFull')}</div>
+                  </div>
+                </button>
+              )}
+              {feat('friend')&&(
+                <button onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}
+                  className="mi-btn"
+                  style={{
+                    padding:'14px 12px',borderRadius:16,minHeight:90,
+                    background:'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+                    border:'none',cursor:'pointer',
+                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
+                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(139,92,246,0.3),inset 0 1px 0 rgba(255,255,255,0.2)',
+                    position:'relative',overflow:'hidden',
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    opacity:feat('friend')?1:0.45,textAlign:'left'}}>
+                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
+                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
+                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
+                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
+                    <PeopleIcon size={17} color="#fff"/>
+                  </div>
+                  <div style={{position:'relative',zIndex:1}}>
+                    <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{t('friendPlay')}</div>
+                    <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{t('friendDesc')}</div>
+                  </div>
+                </button>
+              )}
+              {feat('twovtwo')&&(
+                <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}
+                  className="mi-btn"
+                  style={{
+                    padding:'14px 12px',borderRadius:16,minHeight:90,
+                    background:'linear-gradient(135deg,#ef4444 0%,#8b5cf6 100%)',
+                    border:'none',cursor:'pointer',
+                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
+                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(239,68,68,0.22),inset 0 1px 0 rgba(255,255,255,0.2)',
+                    position:'relative',overflow:'hidden',
+                    fontFamily:'system-ui,-apple-system,sans-serif',
+                    gridColumn:'span 2',
+                    opacity:feat('twovtwo')?1:0.45,textAlign:'left'}}>
+                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
+                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
+                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
+                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
+                    <PeopleIcon size={17} color="#fff"/>
+                  </div>
+                  <div style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%'}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{'2 vs 2'}</div>
+                      <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{t('teamModeDesc')}</div>
+                    </div>
+                    <span style={{fontSize:18,color:'rgba(255,255,255,0.6)',fontWeight:700}}>{'›'}</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </MenuSection>
         )}
 
@@ -7977,22 +8065,26 @@ function App(){
             {/* Animated top stripe */}
             <div style={{height:8,background:winner?`linear-gradient(90deg,${PC[winner]},${PC[winner]}99,${PC[winner]}cc,${PC[winner]})`:'var(--border)',
               backgroundSize:'200% 100%',animation:winner?'rankGlow 2s ease infinite':'none'}}/>
-            <div style={{background:isLoss?'var(--bg)':'var(--card)',padding:'28px 20px',textAlign:'center'}}>
+            <div style={{background:isLoss?'var(--bg)':'var(--card)',padding:'24px 20px',textAlign:'center',position:'relative'}}>
+              {winner&&!isLoss&&<div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 0%, '+PC[winner]+'18 0%, transparent 65%)',pointerEvents:'none'}}/>}
               {/* Icon */}
-              <div style={{marginBottom:14,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',
-                filter:winner&&!isLoss?`drop-shadow(0 4px 16px ${PC[winner]}80)`:'none'}}>
-                {winner&&isLoss?<SadIcon size={56}/>:<TrophyIcon size={56}/>}
+              <div style={{marginBottom:8,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',
+                position:'relative',zIndex:1,
+                filter:winner&&!isLoss?'drop-shadow(0 6px 20px '+PC[winner]+'80)':'none'}}>
+                {winner&&isLoss?<SadIcon size={68}/>:<TrophyIcon size={68}/>}
               </div>
-              {/* Result text */}
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,textTransform:'uppercase',
-                color:winner?PC[winner]:'var(--subtle)',marginBottom:6,opacity:0.7}}>
+              {/* Result text — BIG */}
+              <div style={{fontSize:40,fontWeight:900,letterSpacing:-1.5,textTransform:'uppercase',lineHeight:1,
+                color:winner?PC[winner]:'var(--subtle)',marginBottom:6,position:'relative',zIndex:1,
+                textShadow:winner&&!isLoss?'0 0 40px '+PC[winner]+'50':'none',
+                animation:winner&&!isLoss?'trophy-pop 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both':'none'}}>
                 {winner?(isLoss?t('lossLabel'):t('victoryLabel')):t('giveUpLabel')}
               </div>
-              <div style={{fontSize:28,fontWeight:900,letterSpacing:-1,lineHeight:1.1,
-                color:winner?PC[winner]:'var(--text)',marginBottom:4}}>
+              <div style={{fontSize:18,fontWeight:800,letterSpacing:-0.3,lineHeight:1.2,
+                color:winner?PC[winner]+'cc':'var(--subtle)',marginBottom:3,position:'relative',zIndex:1}}>
                 {winner?pname(winner):t('givenUp')}
               </div>
-              <div style={{fontSize:13,fontWeight:600,color:'var(--subtle)',marginBottom:gaveUp?10:0}}>
+              <div style={{fontSize:12,fontWeight:600,color:'var(--subtle)',marginBottom:gaveUp?10:0,position:'relative',zIndex:1}}>
                 {winner&&!isLoss?t('wins'):''}
                 {winner&&isLoss?t('lossSubtitle'):''}
               </div>
