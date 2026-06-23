@@ -8157,6 +8157,11 @@ function App(){
     var xpGainedEnd=xpGainAnim?xpGainAnim.gained:0;
     var didLevelUp=xpGainAnim?xpGainAnim.lvBefore<xpGainAnim.lvAfter:false;
     var xpTier=xpProg?levelTier(xpProg.level):{color:'#8b5cf6',glow:'rgba(139,92,246,0.5)'};
+    var mh=moveHist||[];
+    var statMovA=mh.filter(function(m){return m.type==='move'&&m.p==='A';}).length;
+    var statMovB=mh.filter(function(m){return m.type==='move'&&m.p==='B';}).length;
+    var statWallA=mh.filter(function(m){return m.type==='wall'&&m.p==='A';}).length;
+    var statWallB=mh.filter(function(m){return m.type==='wall'&&m.p==='B';}).length;
     return (
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
         background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
@@ -8209,6 +8214,66 @@ function App(){
               )}
             </div>
           </div>
+
+          {/* Spieler-Vergleich */}
+          {mh.filter(function(m){return m.type!=='emote';}).length>0&&(
+            <div style={{marginBottom:12,borderRadius:16,background:'var(--card)',border:'1.5px solid var(--border)',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'stretch'}}>
+                {/* Player A */}
+                <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderRight:'1px solid var(--border)'}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
+                    background:'radial-gradient(circle at 38% 32%, '+PC.A+', '+PD.A+' 100%)',
+                    boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
+                  <div style={{fontSize:11,fontWeight:800,color:PC.A,letterSpacing:0.3,
+                    whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
+                    {pname('A')}
+                  </div>
+                  {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:PC.A,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
+                  {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
+                </div>
+                {/* Stats middle */}
+                <div style={{flex:1.4,padding:'12px 8px',display:'flex',flexDirection:'column',gap:8,justifyContent:'center'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
+                    <span style={{fontSize:14,fontWeight:900,color:statMovA>statMovB?PC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statMovA}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{t('movesLabel')||'Züge'}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statMovB>statMovA?PC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statMovB}</span>
+                  </div>
+                  <div style={{height:1,background:'var(--border)',opacity:0.5}}/>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
+                    <span style={{fontSize:14,fontWeight:900,color:statWallA>statWallB?PC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statWallA}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{t('wallsLabel')||'Mauern'}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statWallB>statWallA?PC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statWallB}</span>
+                  </div>
+                  {isRanked&&rankedMyRating&&rankedOppRating&&(
+                    <div>
+                      <div style={{height:1,background:'var(--border)',opacity:0.5,marginBottom:8}}/>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
+                        <span style={{fontSize:14,fontWeight:900,color:'var(--text)',minWidth:22,textAlign:'right'}}>
+                          {onlineRole==='A'?rankedMyRating:rankedOppRating}
+                        </span>
+                        <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{'ELO'}</span>
+                        <span style={{fontSize:14,fontWeight:900,color:'var(--text)',minWidth:22,textAlign:'left'}}>
+                          {onlineRole==='B'?rankedMyRating:rankedOppRating}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Player B */}
+                <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderLeft:'1px solid var(--border)'}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
+                    background:'radial-gradient(circle at 38% 32%, '+PC.B+', '+PD.B+' 100%)',
+                    boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
+                  <div style={{fontSize:11,fontWeight:800,color:PC.B,letterSpacing:0.3,
+                    whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
+                    {pname('B')}
+                  </div>
+                  {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:PC.B,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
+                  {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* XP-Sektion */}
           {xpProg&&(
