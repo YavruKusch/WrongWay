@@ -8759,10 +8759,10 @@ function App(){
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
       {/* Goal-Richtungsanzeige oben */}
-      <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?PC['A']:'#16a34a'}}>
+      <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?PC['B']:PC['A']):'#16a34a'}}>
         <span className="ln"/>
         <span className="ar">{'\u25b2'}</span>
-        {selectedMap==='duel'&&<span className="nm2">{pname('A').toUpperCase()}</span>}
+        {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'B':'A').toUpperCase()}</span>}
         <span className="ln"/>
       </div>
 
@@ -8865,10 +8865,10 @@ function App(){
       </div>{/* /game-enter wrapper */}
 
       {/* Goal-Richtungsanzeige unten */}
-      <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?PC['B']:'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
+      <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?PC['A']:PC['B']):'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
         <span className="ln"/>
         {selectedMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
-        {selectedMap==='duel'&&<span className="nm2">{pname('B').toUpperCase()}</span>}
+        {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'A':'B').toUpperCase()}</span>}
         <span className="ln"/>
       </div>
 
