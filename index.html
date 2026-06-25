@@ -3971,7 +3971,7 @@ function App(){
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
       setWalls(new Set(d.walls||[]));
       if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
-      var csR=(gameTimeMode==='classic-3')?180:(gameTimeMode==='classic-5')?300:(gameTimeMode==='classic-8')?480:0; setTimeLeft({A:csR,B:csR}); // Classic-Uhr bei Revanche wieder auf voll
+      var csRtm=S.current.gameTimeMode||''; var csR=(csRtm==='classic-3')?180:(csRtm==='classic-5')?300:(csRtm==='classic-8')?480:0; setTimeLeft({A:csR,B:csR}); // Classic-Uhr bei Revanche wieder auf voll
       if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
       setWinner(null);setCelebrating(false);setGaveUp(null);
@@ -6975,7 +6975,6 @@ function App(){
             <TimeBtn val="none" label={t('noTimer')}/>
             <TimeBtn val="classic-3" label={'3 '+t('minLabel')} disabled={!feat('classicTime3')}/>
             <TimeBtn val="classic-5" label={'5 '+t('minLabel')} disabled={!feat('classicTime5')}/>
-            <TimeBtn val="classic-8" label={'8 '+t('minLabel')} disabled={!feat('classicTime8')}/>
             <HelpDot onClick={()=>setHelpKey('classic')}/>
           </div>
 
