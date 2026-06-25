@@ -164,7 +164,8 @@ en:{
   replayHistSub:'Last 10 games',replayEmpty:'No games saved yet.',
   rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move',
   whatsappInvite:'Play Wrong Way with me! Code: ',
-  lossLabel:'DEFEAT',lossSubtitle:'has won',movesPlayed:'moves',movesLabel:'Moves',wallsLabel:'Walls',maintenanceTitle:'Maintenance',victoryLabel:'VICTORY',giveUpLabel:'GIVEN UP'
+  lossLabel:'DEFEAT',lossSubtitle:'has won',movesPlayed:'moves',movesLabel:'Moves',wallsLabel:'Walls',maintenanceTitle:'Maintenance',victoryLabel:'VICTORY',giveUpLabel:'GIVEN UP',
+  noEloLimit:'No ELO',noEloLimitSub:'Daily limit – too many matches vs. this opponent'
 },
 de:{
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
@@ -220,7 +221,8 @@ de:{
   replayHistSub:'Letzte 10 Spiele',replayEmpty:'Noch keine Spiele gespeichert.',
   rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen',
   whatsappInvite:'Spiel mit mir Wrong Way! Code: ',
-  lossLabel:'NIEDERLAGE',lossSubtitle:'hat gewonnen',movesPlayed:'Züge',movesLabel:'Züge',wallsLabel:'Mauern',maintenanceTitle:'Wartung',victoryLabel:'SIEG',giveUpLabel:'AUFGEGEBEN'
+  lossLabel:'NIEDERLAGE',lossSubtitle:'hat gewonnen',movesPlayed:'Züge',movesLabel:'Züge',wallsLabel:'Mauern',maintenanceTitle:'Wartung',victoryLabel:'SIEG',giveUpLabel:'AUFGEGEBEN',
+  noEloLimit:'Kein ELO',noEloLimitSub:'Tageslimit – zu viele Matches gegen diesen Gegner'
 },
 tr:{
   viewProfile:'Profili gör',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
@@ -276,7 +278,8 @@ tr:{
   replayHistSub:'Son 10 oyun',replayEmpty:'Henüz kayıtlı oyun yok.',
   rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle',
   whatsappInvite:'Benimle Wrong Way oyna! Kod: ',
-  lossLabel:'YENILDIN',lossSubtitle:'kazandı',movesPlayed:'hamle',movesLabel:'Hamle',wallsLabel:'Duvar',maintenanceTitle:'Bakım',victoryLabel:'ZAFER',giveUpLabel:'PES ETTI'
+  lossLabel:'YENILDIN',lossSubtitle:'kazandı',movesPlayed:'hamle',movesLabel:'Hamle',wallsLabel:'Duvar',maintenanceTitle:'Bakım',victoryLabel:'ZAFER',giveUpLabel:'PES ETTI',
+  noEloLimit:'ELO yok',noEloLimitSub:'Günlük limit – bu rakibe karşı çok fazla maç'
 },
 fr:{
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
@@ -332,7 +335,8 @@ fr:{
   replayHistSub:'10 dernières parties',replayEmpty:'Aucune partie sauvegardée.',
   rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup',
   whatsappInvite:'Joue à Wrong Way avec moi ! Code : ',
-  lossLabel:'DÉFAITE',lossSubtitle:'a gagné',movesPlayed:'coups',movesLabel:'Coups',wallsLabel:'Murs',maintenanceTitle:'Maintenance',victoryLabel:'VICTOIRE',giveUpLabel:'ABANDONNÉ'
+  lossLabel:'DÉFAITE',lossSubtitle:'a gagné',movesPlayed:'coups',movesLabel:'Coups',wallsLabel:'Murs',maintenanceTitle:'Maintenance',victoryLabel:'VICTOIRE',giveUpLabel:'ABANDONNÉ',
+  noEloLimit:'Pas d\'ELO',noEloLimitSub:'Limite quotidienne – trop de matchs contre cet adversaire'
 }
 };
 function getInitialLang(){try{var s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch(e){}return 'en';}

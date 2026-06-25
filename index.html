@@ -3888,6 +3888,10 @@ function App(){
       }
       return;
     }
+    if(d&&d.type==='ranked_not_rated'){
+      setEloChange({change:0,newRating:null,won:d.won,reason:d.reason});
+      return;
+    }
     if(d&&d.type==='elo_update'){
       setEloChange({change:d.change,newRating:d.newRating,won:d.won});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
@@ -8339,14 +8343,23 @@ function App(){
           {isRanked&&eloChange&&(
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 16px',marginBottom:12,
               borderRadius:14,
-              background:eloChange.won?'rgba(22,163,74,0.10)':'rgba(239,68,68,0.08)',
-              border:'1.5px solid '+(eloChange.won?'rgba(22,163,74,0.25)':'rgba(239,68,68,0.2)')}}>
+              background:eloChange.reason==='pair_limit'?'rgba(120,120,120,0.08)':eloChange.won?'rgba(22,163,74,0.10)':'rgba(239,68,68,0.08)',
+              border:'1.5px solid '+(eloChange.reason==='pair_limit'?'rgba(120,120,120,0.2)':eloChange.won?'rgba(22,163,74,0.25)':'rgba(239,68,68,0.2)')}}>
               <div style={{textAlign:'center'}}>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,marginBottom:2}}>RANKED ELO</div>
-                <div style={{fontSize:22,fontWeight:900,color:eloChange.won?'#16a34a':'#ef4444',letterSpacing:-0.5}}>
-                  {eloChange.change>=0?'+':''}{eloChange.change}
-                </div>
-                <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginTop:1}}>{eloChange.newRating} ELO</div>
+                {eloChange.reason==='pair_limit' ? (
+                  <div>
+                    <div style={{fontSize:16,fontWeight:800,color:'var(--subtle)'}}>{t('noEloLimit')}</div>
+                    <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500,marginTop:3}}>{t('noEloLimitSub')}</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{fontSize:22,fontWeight:900,color:eloChange.won?'#16a34a':'#ef4444',letterSpacing:-0.5}}>
+                      {eloChange.change>=0?'+':''}{eloChange.change}
+                    </div>
+                    <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginTop:1}}>{eloChange.newRating} ELO</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
