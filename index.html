@@ -946,7 +946,7 @@ var WSNET={
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
       if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
-      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
+      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; self._lastOppRating=d.oppRating||1000; self._lastRankedMode=d.rankedMode||d.mode||'classic'; if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
       if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; if(d.grund!=='declined') self.rankedOn=false; }
       if(self.onState)self.onState(d);
@@ -4182,7 +4182,13 @@ function App(){
       setOppAccountKey(role==='A'?(ak[1]||null):(ak[0]||null));
       setPendingInvite(null);setFriendLobbyState(null);setPrivateCode(null);setFlash('');
       setNavDir('fwd');
-      if(st.ranked)setRankedMode(st.rankedMode==='duel'?'duel':'classic');
+      if(st.ranked){
+        var _rm=st.rankedMode==='duel'?'duel':'classic';
+        setRankedMode(_rm);
+        setRankedOppRating(WSNET._lastOppRating||1000);
+        var _acc=accRef.current;
+        setRankedMyRating((_acc&&_acc.stats&&_acc.stats.ranked&&_acc.stats.ranked[_rm]&&_acc.stats.ranked[_rm].rating)||1000);
+      }
       initGame('online',role,WSNET.roomId,false,tmS,!!st.ranked,mapS,sizeS,d.amZug===0?'A':'B',true);
       applyServerState(d); return;
     }
@@ -8764,6 +8770,8 @@ function App(){
           const canTapProfile=isOpp&&oppAccountKey;
           const eyeCol=p==='A'?'#ef4444':'#3b82f6';
           const classic=gameTimeMode&&gameTimeMode.indexOf('classic-')===0;
+          var _eloVal=isRanked?(isOpp?rankedOppRating:rankedMyRating):0;
+          var _eloTier=_eloVal?rankTier(_eloVal):{color:'#94a3b8'};
           return(
             <React.Fragment key={p}>
             <div onClick={canTapProfile?openOppProfile:undefined}
@@ -8802,6 +8810,7 @@ function App(){
                   </div>
                 )}
                 <div className="ww-pname">{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
+                {isRanked&&_eloVal&&(<div style={{fontSize:9,fontWeight:800,color:_eloTier.color,letterSpacing:0.3,marginTop:1,lineHeight:1}}>{_eloVal+' ELO'}</div>)}
                 <div className="ww-pwalls">
                   <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
                   {barrLeft[p]}
