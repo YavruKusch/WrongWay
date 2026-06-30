@@ -1693,7 +1693,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     if(!account)return;
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
     var localRouter=function(d){
-      if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
+      if(d&&d.type==='ranked_found'){ setPreMatch(d); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
       wsRouter(d);
     };
@@ -1756,7 +1756,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
   },[queue]);
 
   React.useEffect(function(){
-    if(!preMatch)return;
+    if(!preMatch||!preMatch.isLargeGap)return;
     var secs=15;var cancelled=false;
     var tick=setInterval(function(){
       if(cancelled)return;
