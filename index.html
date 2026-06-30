@@ -783,7 +783,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js"></script>
+<script src="js/i18n.js?v=92"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -889,6 +889,8 @@ var WSNET={
     try{ this._send({type:'ranked_cancel'}); }catch(e){}
     if(!this.roomId&&!this.browseOn){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
+  confirmRanked:function(){ try{ this._send({type:'ranked_confirm'}); }catch(e){} },
+  declineRanked:function(){ try{ this._send({type:'ranked_decline'}); }catch(e){} this.roomId=null; this.token=null; this.role=null; this.rankedOn=true; },
   _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
   _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
   // Warteraum bewusst verlassen: Server raeumt sofort auf, Code wird frei
@@ -944,9 +946,9 @@ var WSNET={
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token)self.token=d.token; }
       if(d.type==='reconnect_failed'){ self.token=null; } // toter Token: nie wieder damit reconnecten
-      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; try{ self._send({type:'ranked_confirm'}); }catch(e){} }
+      if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
-      if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self.rankedOn=false; }
+      if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; if(d.grund!=='declined') self.rankedOn=false; }
       if(self.onState)self.onState(d);
     };
     self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn){ setTimeout(function(){ self._open(); },1500); } };
@@ -1653,24 +1655,31 @@ async function lobbyIndexList2(){
 
 // ── App ─────────────────────────────────────────────────────
 function rankTier(r){
-  if(r>=1600)return{icon:'crown',name:'Master',color:'#60a5fa'};
-  if(r>=1400)return{icon:'diamond',name:'Diamant',color:'#a78bfa'};
-  if(r>=1200)return{icon:'gold',name:'Gold',color:'#f59e0b'};
-  if(r>=1000)return{icon:'silver',name:'Silber',color:'#94a3b8'};
-  return{icon:'bronze',name:'Bronze',color:'#b45309'};
+  if(r>=1800)return{icon:'champion',name:'Champion',color:'#a855f7',label:'Champion'};
+  if(r>=1600)return{icon:'diamond',name:'Diamant',color:'#60a5fa',label:'Diamond'};
+  if(r>=1400)return{icon:'platinum',name:'Platin',color:'#22d3ee',label:'Platinum'};
+  if(r>=1200)return{icon:'gold',name:'Gold',color:'#f59e0b',label:'Gold'};
+  if(r>=1000)return{icon:'silver',name:'Silber',color:'#94a3b8',label:'Silver'};
+  if(r>=800)return{icon:'bronze',name:'Bronze',color:'#b45309',label:'Bronze'};
+  return{icon:'wood',name:'Holz',color:'#78716c',label:'Wood'};
 }
-function TierIcon({icon,size}){
+function TierIcon({icon,size,color}){
   const s=size||16;
-  if(icon==='crown')return <CrownIcon size={s} color="#60a5fa"/>;
-  if(icon==='diamond')return <DiamondIcon size={s} color="#a78bfa"/>;
+  if(icon==='champion')return <CrownIcon size={s} color="#a855f7"/>;
+  if(icon==='diamond')return <DiamondIcon size={s} color="#60a5fa"/>;
+  if(icon==='platinum')return <DiamondIcon size={s} color="#22d3ee"/>;
   if(icon==='gold')return <MedalIcon size={s} color="#f59e0b" letter="1"/>;
   if(icon==='silver')return <MedalIcon size={s} color="#94a3b8" letter="2"/>;
-  return <MedalIcon size={s} color="#b45309" letter="3"/>;
+  if(icon==='bronze')return <MedalIcon size={s} color="#b45309" letter="3"/>;
+  return <MedalIcon size={s} color="#78716c" letter="4"/>;
 }
 function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
   const[queue,setQueue]=React.useState(null);
   const[elapsed,setElapsed]=React.useState(0);
   const[foundMsg,setFoundMsg]=React.useState('');
+  const[showRules,setShowRules]=React.useState(false);
+  const[preMatch,setPreMatch]=React.useState(null);
+  const[preMatchTimer,setPreMatchTimer]=React.useState(15);
   const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
   const feat=features||{ranked:true,rankedClassic:true,rankedDuel:true};
 
@@ -1683,12 +1692,17 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
   const joinQueue=function(mode){
     if(!account)return;
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
-    WSNET.startRanked(mode,r,{name:account.name,akey:account.key},wsRouter); // WS-Warteschlange (Stufe 2) - Server paart
+    var localRouter=function(d){
+      if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
+      if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
+      wsRouter(d);
+    };
+    WSNET.startRanked(mode,r,{name:account.name,akey:account.key},localRouter);
     setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
   };
   const leaveQueue=function(){
     try{WSNET.cancelRanked();}catch(e){}
-    setQueue(null);setElapsed(0);setFoundMsg('');
+    setQueue(null);setElapsed(0);setFoundMsg('');setPreMatch(null);setPreMatchTimer(15);
   };
 
   React.useEffect(function(){
@@ -1741,6 +1755,19 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     return function(){cancelled=true;clearInterval(tick);clearInterval(poll);};
   },[queue]);
 
+  React.useEffect(function(){
+    if(!preMatch)return;
+    var secs=15;var cancelled=false;
+    var tick=setInterval(function(){
+      if(cancelled)return;
+      secs--;setPreMatchTimer(secs);
+      if(secs<=0){clearInterval(tick);if(!cancelled){WSNET.confirmRanked();setPreMatch(null);setPreMatchTimer(15);}}
+    },1000);
+    return function(){cancelled=true;clearInterval(tick);};
+  },[preMatch]);
+
+  var tierName=function(tier){ return t('tier'+tier.label)||tier.name; };
+
   var renderCard=function(mode,label,icon){
     var r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
     var tier=rankTier(r.rating);
@@ -1760,7 +1787,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
           <div style={{fontSize:12,fontWeight:800,color:muted,letterSpacing:1,display:'flex',alignItems:'center',gap:4}}><span style={{display:'flex'}}>{icon}</span> {label.toUpperCase()}</div>
           <div style={{fontSize:11,fontWeight:700,color:tier.color,background:tier.color+'18',
             padding:'3px 9px',borderRadius:20,display:'flex',alignItems:'center',gap:4}}>
-            <TierIcon icon={tier.icon} size={13}/> {tier.name}</div>
+            <TierIcon icon={tier.icon} size={13}/> {tierName(tier)}</div>
         </div>
         <div style={{fontSize:46,fontWeight:900,color:tier.color,letterSpacing:-2,lineHeight:1,marginBottom:4}}>{r.rating}</div>
         <div style={{fontSize:11,color:muted,marginBottom:16}}>{r.wins}W · {r.losses}L · {wr}%</div>
@@ -1813,10 +1840,11 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
         zIndex:100,color:txt,fontWeight:700,fontFamily:'system-ui,-apple-system,sans-serif'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
 
       <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
-        <div style={{textAlign:'center',marginBottom:24,paddingTop:8}}>
+        <div style={{textAlign:'center',marginBottom:24,paddingTop:8,position:'relative'}}>
           <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><SwordsIcon size={13} color={muted}/> RANKED</div>
           <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>{t('rankedTitle')}</div>
           <div style={{fontSize:12,color:muted,marginTop:6}}>{t('rankedSubtitle')}</div>
+          <button onClick={function(){setShowRules(true);}} style={{position:'absolute',right:0,top:0,width:28,height:28,borderRadius:'50%',cursor:'pointer',background:dk?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)',border:'1.5px solid '+(dk?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.12)'),color:dk?'#94a3b8':'#64748b',fontSize:13,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'system-ui,-apple-system,sans-serif'}}>{'?'}</button>
         </div>
         {!account?(
           <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border}}>
@@ -1836,6 +1864,47 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
           </div>
         )}
       </div>
+
+      {showRules&&(
+        <div style={{position:'fixed',inset:0,zIndex:400,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end'}} onClick={function(){setShowRules(false);}}>
+          <div onClick={function(e){e.stopPropagation();}} style={{width:'100%',maxHeight:'82vh',overflowY:'auto',borderRadius:'22px 22px 0 0',background:dk?'#0f172a':'#ffffff',border:'1.5px solid '+(dk?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)'),padding:'20px 20px calc(env(safe-area-inset-bottom,0px) + 24px)'}}>
+            <div style={{width:36,height:4,borderRadius:2,background:dk?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',margin:'0 auto 20px'}}/>
+            <div style={{fontSize:17,fontWeight:900,color:dk?'#f1f5f9':'#0f172a',marginBottom:20,textAlign:'center'}}>{t('rankedRulesTitle')}</div>
+            {[{title:t('rankedRulesTiers'),body:t('rankedRulesTiersDesc')},{title:t('rankedRulesPoints'),body:t('rankedRulesPointsDesc')},{title:t('rankedRulesUnequal'),body:t('rankedRulesUnequalDesc')},{title:t('rankedRulesValidity'),body:t('rankedRulesValidityDesc')}].map(function(sec,i){
+              return(<div key={i} style={{marginBottom:18}}><div style={{fontSize:11,fontWeight:900,letterSpacing:1,textTransform:'uppercase',color:'#fbbf24',marginBottom:5}}>{sec.title}</div><div style={{fontSize:13,lineHeight:1.6,color:dk?'rgba(255,255,255,0.7)':'#475569'}}>{sec.body}</div></div>);
+            })}
+            <button onClick={function(){setShowRules(false);}} style={{width:'100%',marginTop:8,padding:'13px',borderRadius:13,cursor:'pointer',background:dk?'rgba(255,255,255,0.08)':'#f1f5f9',border:'1.5px solid '+(dk?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.08)'),color:dk?'#94a3b8':'#64748b',fontWeight:700,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('close')||'Schliessen'}</button>
+          </div>
+        </div>
+      )}
+
+      {preMatch&&(
+        <div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}}>
+          <div style={{width:'100%',maxWidth:360,borderRadius:22,background:dk?'#0f172a':'#ffffff',border:'1.5px solid rgba(251,191,36,0.4)',boxShadow:'0 8px 40px rgba(0,0,0,0.5)',padding:'28px 22px'}}>
+            <div style={{textAlign:'center',marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:900,letterSpacing:2,color:'#fbbf24',textTransform:'uppercase',marginBottom:6}}>{t('rankedPreMatchTitle')}</div>
+              {preMatch.isLargeGap&&(<div style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 12px',borderRadius:20,background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',fontSize:11,fontWeight:700,color:'#ef4444'}}>{'⚠ '+t('rankedLargeGapWarning')}</div>)}
+            </div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-around',marginBottom:24}}>
+              {[{label:t('you')||'Du',rating:(ranked[preMatch.mode]&&ranked[preMatch.mode].rating)||1000,win:preMatch.expectedWin,loss:preMatch.expectedLoss},{label:t('opponent')||'Gegner',rating:preMatch.oppRating,win:preMatch.oppExpectedWin,loss:preMatch.oppExpectedLoss}].map(function(side,idx){
+                var tier=rankTier(side.rating);
+                return(<div key={idx} style={{textAlign:'center',flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:dk?'rgba(255,255,255,0.4)':'#94a3b8',marginBottom:4,letterSpacing:1,textTransform:'uppercase'}}>{side.label}</div>
+                  <div style={{fontSize:32,fontWeight:900,color:tier.color,letterSpacing:-1}}>{side.rating}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:tier.color,marginBottom:10}}>{tierName(tier)}</div>
+                  <div style={{fontSize:12,color:'#22c55e',fontWeight:700}}>{t('rankedIfWin')}: {side.win>0?'+'+side.win:side.win}</div>
+                  <div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{t('rankedIfLoss')}: {side.loss}</div>
+                </div>);
+              })}
+            </div>
+            {preMatch.isLargeGap&&(<div style={{display:'flex',gap:10}}>
+              <button onClick={function(){WSNET.declineRanked();setPreMatch(null);setPreMatchTimer(15);setQueue(null);}} style={{flex:1,padding:'13px',borderRadius:13,cursor:'pointer',background:'transparent',border:'1.5px solid '+(dk?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)'),color:dk?'#64748b':'#94a3b8',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('rankedDecline')}</button>
+              <button onClick={function(){WSNET.confirmRanked();setPreMatch(null);setPreMatchTimer(15);}} style={{flex:1,padding:'13px',borderRadius:13,cursor:'pointer',background:'linear-gradient(135deg,#fbbf24,#f59e0b)',border:'none',borderBottom:'3px solid #b45309',color:'#0f172a',fontWeight:900,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('rankedAccept')} ({preMatchTimer}s)</button>
+            </div>)}
+            {!preMatch.isLargeGap&&(<div style={{textAlign:'center',fontSize:13,color:dk?'rgba(255,255,255,0.4)':'#94a3b8'}}>{'Startet automatisch...'}</div>)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

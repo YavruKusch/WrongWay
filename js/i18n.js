@@ -165,7 +165,9 @@ en:{
   rematchDescLocal:'Same mode, new round',rematchDescOnline:'Challenge opponent to rematch',replayDesc:'Watch game move by move',
   whatsappInvite:'Play Wrong Way with me! Code: ',
   lossLabel:'DEFEAT',lossSubtitle:'has won',movesPlayed:'moves',movesLabel:'Moves',wallsLabel:'Walls',maintenanceTitle:'Maintenance',victoryLabel:'VICTORY',giveUpLabel:'GIVEN UP',
-  noEloLimit:'No ELO',noEloLimitSub:'Daily limit – too many matches vs. this opponent'
+  noEloLimit:'No ELO',noEloLimitSub:'Daily limit – too many matches vs. this opponent',
+  tierWood:'Wood',tierBronze:'Bronze',tierSilver:'Silver',tierGold:'Gold',tierPlatinum:'Platinum',tierDiamond:'Diamond',tierChampion:'Champion',
+  rankedRulesTitle:'Ranked Rules',rankedRulesTiers:'Ranks & Rating',rankedRulesTiersDesc:'Wood 0-799 · Bronze 800-999 · Silver 1000-1199 · Gold 1200-1399 · Platinum 1400-1599 · Diamond 1600-1799 · Champion 1800+',rankedRulesPoints:'How many points?',rankedRulesPointsDesc:'Before every match you see exactly how many points you win or lose. Depends on your opponent\'s rating.',rankedRulesUnequal:'Unequal Match',rankedRulesUnequalDesc:'With a gap of more than 250 points, reduced stakes apply. You can decline and keep searching.',rankedRulesValidity:'Rating Rules',rankedRulesValidityDesc:'Min. 3 moves + 25 seconds played · Max. 2 rated matches per opponent per day · Leave without a move = ELO loss, opponent gains nothing · Forfeit = loss, always rated',rankedPreMatchTitle:'Ranked Match Found',rankedLargeGapWarning:'Large Rating Gap',rankedIfWin:'If you win',rankedIfLoss:'If you lose',rankedAccept:'Play',rankedDecline:'Keep Searching'
 },
 de:{
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
@@ -222,7 +224,9 @@ de:{
   rematchDescLocal:'Gleicher Modus, neue Runde',rematchDescOnline:'Gegner zur Revanche auffordern',replayDesc:'Spiel Zug für Zug ansehen',
   whatsappInvite:'Spiel mit mir Wrong Way! Code: ',
   lossLabel:'NIEDERLAGE',lossSubtitle:'hat gewonnen',movesPlayed:'Züge',movesLabel:'Züge',wallsLabel:'Mauern',maintenanceTitle:'Wartung',victoryLabel:'SIEG',giveUpLabel:'AUFGEGEBEN',
-  noEloLimit:'Kein ELO',noEloLimitSub:'Tageslimit – zu viele Matches gegen diesen Gegner'
+  noEloLimit:'Kein ELO',noEloLimitSub:'Tageslimit – zu viele Matches gegen diesen Gegner',
+  tierWood:'Holz',tierBronze:'Bronze',tierSilver:'Silber',tierGold:'Gold',tierPlatinum:'Platin',tierDiamond:'Diamant',tierChampion:'Champion',
+  rankedRulesTitle:'Ranked Regeln',rankedRulesTiers:'Raenge & Rating',rankedRulesTiersDesc:'Holz 0-799 · Bronze 800-999 · Silber 1000-1199 · Gold 1200-1399 · Platin 1400-1599 · Diamant 1600-1799 · Champion 1800+',rankedRulesPoints:'Wie viele Punkte?',rankedRulesPointsDesc:'Vor jedem Match siehst du genau wie viele Punkte du gewinnst oder verlierst. Haengt vom Rating deines Gegners ab.',rankedRulesUnequal:'Ungleiches Match',rankedRulesUnequalDesc:'Bei einem Abstand von mehr als 250 Punkten gelten reduzierte Einsetze. Du kannst ablehnen und weitersuchen.',rankedRulesValidity:'Wertungsregeln',rankedRulesValidityDesc:'Mind. 3 Zuege + 25 Sekunden gespielt · Max. 2 gewertete Matches pro Gegner/Tag · App verlassen ohne Zug = ELO-Verlust, Gegner bekommt nichts · Aufgeben = Niederlage, immer gewertet',rankedPreMatchTitle:'Ranked Match Gefunden',rankedLargeGapWarning:'Grosser Rating-Abstand',rankedIfWin:'Wenn du gewinnst',rankedIfLoss:'Wenn du verlierst',rankedAccept:'Antreten',rankedDecline:'Weitersuchen'
 },
 tr:{
   viewProfile:'Profili gör',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
@@ -279,7 +283,9 @@ tr:{
   rematchDescLocal:'Aynı mod, yeni tur',rematchDescOnline:'Rakibe rövanş teklif et',replayDesc:'Oyunu adım adım izle',
   whatsappInvite:'Benimle Wrong Way oyna! Kod: ',
   lossLabel:'YENILDIN',lossSubtitle:'kazandı',movesPlayed:'hamle',movesLabel:'Hamle',wallsLabel:'Duvar',maintenanceTitle:'Bakım',victoryLabel:'ZAFER',giveUpLabel:'PES ETTI',
-  noEloLimit:'ELO yok',noEloLimitSub:'Günlük limit – bu rakibe karşı çok fazla maç'
+  noEloLimit:'ELO yok',noEloLimitSub:'Günlük limit – bu rakibe karşı çok fazla maç',
+  tierWood:'Tahta',tierBronze:'Bronz',tierSilver:'Gumus',tierGold:'Altin',tierPlatinum:'Platin',tierDiamond:'Elmas',tierChampion:'Sampiyon',
+  rankedRulesTitle:'Ranked Kurallari',rankedRulesTiers:'Dereceler & Rating',rankedRulesTiersDesc:'Tahta 0-799 · Bronz 800-999 · Gumus 1000-1199 · Altin 1200-1399 · Platin 1400-1599 · Elmas 1600-1799 · Sampiyon 1800+',rankedRulesPoints:'Kac puan?',rankedRulesPointsDesc:'Her mactan once kac puan kazanacagini veya kaybedeceginizi tam olarak gorursun. Rakibinin ratingine baglidir.',rankedRulesUnequal:'Esitsiz Mac',rankedRulesUnequalDesc:'250 puandan fazla fark varsa azaltilmis bahisler gecerlidir. Reddedebilir ve aramaya devam edebilirsin.',rankedRulesValidity:'Puanlama Kurallari',rankedRulesValidityDesc:'En az 3 hamle + 25 saniye oynandi · Rakip basina gunde max. 2 puanli mac · Hamle yapmadan cikmak = ELO kaybi, rakip kazanmaz · Teslim olmak = yenilgi, her zaman puanlanir',rankedPreMatchTitle:'Ranked Mac Bulundu',rankedLargeGapWarning:'Buyuk Rating Farki',rankedIfWin:'Kazanirsan',rankedIfLoss:'Kaybedersen',rankedAccept:'Oyna',rankedDecline:'Aramaya Devam'
 },
 fr:{
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
@@ -336,7 +342,9 @@ fr:{
   rematchDescLocal:'Même mode, nouvelle manche',rematchDescOnline:'Proposer une revanche',replayDesc:'Revoir la partie coup par coup',
   whatsappInvite:'Joue à Wrong Way avec moi ! Code : ',
   lossLabel:'DÉFAITE',lossSubtitle:'a gagné',movesPlayed:'coups',movesLabel:'Coups',wallsLabel:'Murs',maintenanceTitle:'Maintenance',victoryLabel:'VICTOIRE',giveUpLabel:'ABANDONNÉ',
-  noEloLimit:'Pas d\'ELO',noEloLimitSub:'Limite quotidienne – trop de matchs contre cet adversaire'
+  noEloLimit:'Pas d\'ELO',noEloLimitSub:'Limite quotidienne – trop de matchs contre cet adversaire',
+  tierWood:'Bois',tierBronze:'Bronze',tierSilver:'Argent',tierGold:'Or',tierPlatinum:'Platine',tierDiamond:'Diamant',tierChampion:'Champion',
+  rankedRulesTitle:'Regles Classees',rankedRulesTiers:'Rangs & Rating',rankedRulesTiersDesc:'Bois 0-799 · Bronze 800-999 · Argent 1000-1199 · Or 1200-1399 · Platine 1400-1599 · Diamant 1600-1799 · Champion 1800+',rankedRulesPoints:'Combien de points?',rankedRulesPointsDesc:'Avant chaque match, tu vois exactement combien de points tu gagnes ou perds. Depend du rating de ton adversaire.',rankedRulesUnequal:'Match Inegal',rankedRulesUnequalDesc:'Un ecart de plus de 250 points entraine des enjeux reduits. Tu peux refuser et continuer a chercher.',rankedRulesValidity:'Regles de Notation',rankedRulesValidityDesc:'Min. 3 coups + 25 secondes jouees · Max. 2 matchs notes par adversaire/jour · Quitter sans coup = perte ELO, adversaire ne gagne rien · Abandon = defaite, toujours note',rankedPreMatchTitle:'Match Classe Trouve',rankedLargeGapWarning:'Grand Ecart de Rating',rankedIfWin:'Si tu gagnes',rankedIfLoss:'Si tu perds',rankedAccept:'Jouer',rankedDecline:'Continuer'
 }
 };
 function getInitialLang(){try{var s=localStorage.getItem('ww_lang');if(s&&I18N[s])return s;}catch(e){}return 'en';}
