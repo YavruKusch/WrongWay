@@ -3765,6 +3765,7 @@ function App(){
   const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs)
   const wsSkipForRef=useRef(0); // WS-Blitz: fuer welche Deadline schon ein skip gesendet wurde (Doppelsende-Schutz)
   const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
+  const clkAnchorRef=useRef(null); // Ranked: {at, rem:[ms0,ms1], active} — Server-Uhr-Anker; Anzeige wird daraus abgeleitet
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
     if(winnerFiredRef.current||S.current.winner)return;
@@ -3989,6 +3990,8 @@ function App(){
       if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); if(!d.chaosItem&&S.current.chaosItem&&!d.winner)playSound('wall'); setChaosItem(d.chaosItem); }
       if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      // Ranked-Uhr-Anker vom Server: Anzeige wird hieraus abgeleitet (keine Drift, kein Freeze-Fehler)
+      if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; }
       if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
         // Eigener Zug ist per Blitz-Timer verfallen -> kurzes Feedback
         setFlash(t('turnSkipped'));
@@ -4493,6 +4496,18 @@ function App(){
     }
     const iv=setInterval(()=>{
       if(S.current.winner||S.current.screen!=='game')return;
+      // RANKED: Uhr-Anzeige aus dem Server-Anker ableiten. Keine lokale Uhr, kein Selbst-Beenden.
+      // Wert = Server-Rest minus Wanduhrzeit seit dem Anker -> driftet nie, friert auf Handy nie falsch ein.
+      // Die Server-Schachuhr beendet das Spiel autoritativ (kommt als state mit winner zurueck).
+      if(S.current.isRanked){
+        const a=clkAnchorRef.current;
+        if(a){
+          let r0=a.rem[0],r1=a.rem[1];const el=Date.now()-a.at;
+          if(a.active===0)r0=Math.max(0,r0-el);else if(a.active===1)r1=Math.max(0,r1-el);
+          setTimeLeft({A:Math.ceil(r0/1000),B:Math.ceil(r1/1000)});
+        }
+        return;
+      }
       let turnExpired=false;
       setTurnTimeLeft(tt=>{
         if(tt<=0)return 0;
