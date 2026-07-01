@@ -783,7 +783,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=92"></script>
+<script src="js/i18n.js?v=93"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -3962,7 +3962,7 @@ function App(){
       return;
     }
     if(d&&d.type==='elo_update'){
-      setEloChange({change:d.change,newRating:d.newRating,won:d.won});
+      setEloChange({change:d.change,newRating:d.newRating,won:d.won,oppChange:d.oppChange,oppNewRating:d.oppNewRating});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
       var euMode=d.mode||'classic';
       var euAcc=accRef.current;
@@ -8428,11 +8428,23 @@ function App(){
                     <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500,marginTop:3}}>{t('noEloLimitSub')}</div>
                   </div>
                 ) : (
-                  <div>
-                    <div style={{fontSize:22,fontWeight:900,color:eloChange.won?'#16a34a':'#ef4444',letterSpacing:-0.5}}>
-                      {eloChange.change>=0?'+':''}{eloChange.change}
+                  <div style={{width:'100%'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                      <span style={{fontSize:12,fontWeight:700,color:'var(--subtle)'}}>{t('you')||'Du'}</span>
+                      <span style={{display:'flex',alignItems:'baseline',gap:5}}>
+                        <span style={{fontSize:20,fontWeight:900,color:eloChange.won?'#16a34a':'#ef4444',letterSpacing:-0.5}}>{eloChange.change>=0?'+':''}{eloChange.change}</span>
+                        <span style={{fontSize:11,color:'var(--subtle)',fontWeight:600}}>{eloChange.newRating} ELO</span>
+                      </span>
                     </div>
-                    <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginTop:1}}>{eloChange.newRating} ELO</div>
+                    {typeof eloChange.oppChange==='number'&&(
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:4,borderTop:'1px solid '+(true?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)')}}>
+                        <span style={{fontSize:12,fontWeight:700,color:'var(--subtle)'}}>{t('opponent')||'Gegner'}</span>
+                        <span style={{display:'flex',alignItems:'baseline',gap:5}}>
+                          <span style={{fontSize:20,fontWeight:900,color:eloChange.oppChange>=0?'#16a34a':'#ef4444',letterSpacing:-0.5}}>{eloChange.oppChange>=0?'+':''}{eloChange.oppChange}</span>
+                          <span style={{fontSize:11,color:'var(--subtle)',fontWeight:600}}>{eloChange.oppNewRating} ELO</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
