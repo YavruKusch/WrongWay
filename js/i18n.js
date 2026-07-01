@@ -110,6 +110,7 @@ var I18N={
 // ── Erweiterte i18n-Keys (alle neuen UI-Strings, viersprachig) ──
 var I18N_EXT={
 en:{
+  lostOnTime:'Time ran out',
   viewProfile:'View profile',viewProfileDesc:'Opponent stats',opponent:'Opponent',
   copyLink:'Copy link',
   email:'Email',emailPh:'you@example.com',forgotPw:'Forgot password?',
@@ -170,6 +171,7 @@ en:{
   rankedRulesTitle:'Ranked Rules',rankedRulesTiers:'Ranks & Rating',rankedRulesTiersDesc:'Wood 0-799 · Bronze 800-999 · Silver 1000-1199 · Gold 1200-1399 · Platinum 1400-1599 · Diamond 1600-1799 · Champion 1800+',rankedRulesPoints:'How are points calculated?',rankedRulesPointsDesc:'The stronger your opponent, the more you gain \u2014 the less you lose. Examples (approx.): Equal (1000 vs 1000) \u2192 Win +16, Loss \u221216 \xb7 You weaker (1000 vs 1200) \u2192 Win +24, Loss \u22128 \xb7 You stronger (1200 vs 1000) \u2192 Win +8, Loss \u221224. New players (first 10 matches) have bigger swings, experienced players (100+ matches) more stable changes.',rankedRulesUnequal:'Rating Gap Protection',rankedRulesUnequalDesc:'150+ point gap: ELO gains and losses are capped. 250+ point gap: you can decline the match and keep searching.',rankedRulesValidity:'Rating Rules',rankedRulesValidityDesc:'Min. 3 moves + 25 seconds played · Max. 2 rated matches per opponent per 6h · Leave without a move = ELO loss, opponent gains nothing · Forfeit = loss, always rated · New players (<10 matches): your loss against them is capped at −8',rankedPreMatchTitle:'Ranked Match Found',rankedLargeGapWarning:'Large Rating Gap',rankedIfWin:'If you win',rankedIfLoss:'If you lose',rankedAccept:'Play',rankedDecline:'Keep Searching'
 },
 de:{
+  lostOnTime:'Zeit abgelaufen',
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
   copyLink:'Link kopieren',
   email:'E-Mail',emailPh:'du@beispiel.de',forgotPw:'Passwort vergessen?',
@@ -229,6 +231,7 @@ de:{
   rankedRulesTitle:'Ranked Regeln',rankedRulesTiers:'Raenge & Rating',rankedRulesTiersDesc:'Holz 0-799 · Bronze 800-999 · Silber 1000-1199 · Gold 1200-1399 · Platin 1400-1599 · Diamant 1600-1799 · Champion 1800+',rankedRulesPoints:'Wie werden Punkte berechnet?',rankedRulesPointsDesc:'Je staerker dein Gegner, desto mehr gewinnst du \u2014 desto weniger verlierst du. Beispiele (ca.): Gleich stark (1000 vs 1000) \u2192 Sieg +16, Niederlage \u221216 \xb7 Du schwaecher (1000 vs 1200) \u2192 Sieg +24, Niederlage \u22128 \xb7 Du staerker (1200 vs 1000) \u2192 Sieg +8, Niederlage \u221224. Neue Spieler (erste 10 Partien) groessere Schwankungen, Erfahrene (100+ Partien) stabilere Werte.',rankedRulesUnequal:'ELO-Schutz bei Abstand',rankedRulesUnequalDesc:'Ab 150 Punkten Abstand: ELO-Gewinne und -Verluste werden begrenzt. Ab 250 Punkten: du kannst das Match ablehnen und weitersuchen.',rankedRulesValidity:'Wertungsregeln',rankedRulesValidityDesc:'Mind. 3 Zuege + 25 Sekunden gespielt · Max. 2 gewertete Matches pro Gegner/6h · App verlassen ohne Zug = ELO-Verlust, Gegner bekommt nichts · Aufgeben = Niederlage, immer gewertet · Neue Spieler (<10 Partien): dein Verlust gegen sie ist auf −8 begrenzt',rankedPreMatchTitle:'Ranked Match Gefunden',rankedLargeGapWarning:'Grosser Rating-Abstand',rankedIfWin:'Wenn du gewinnst',rankedIfLoss:'Wenn du verlierst',rankedAccept:'Antreten',rankedDecline:'Weitersuchen'
 },
 tr:{
+  lostOnTime:'Süre doldu',
   viewProfile:'Profili gör',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
   copyLink:'Bağlantıyı kopyala',
   email:'E-posta',emailPh:'siz@ornek.com',forgotPw:'Şifremi unuttum?',
@@ -288,6 +291,7 @@ tr:{
   rankedRulesTitle:'Ranked Kurallari',rankedRulesTiers:'Dereceler & Rating',rankedRulesTiersDesc:'Tahta 0-799 · Bronz 800-999 · Gumus 1000-1199 · Altin 1200-1399 · Platin 1400-1599 · Elmas 1600-1799 · Sampiyon 1800+',rankedRulesPoints:'Puanlar nasil hesaplanir?',rankedRulesPointsDesc:'Rakibin ne kadar guclusse, o kadar cok kazanirsin \u2014 o kadar az kaybedersin. Ornekler (yaklasik): Esit (1000 vs 1000) \u2192 Galibiyet +16, Maglubiyet \u221216 \xb7 Sen daha zayif (1000 vs 1200) \u2192 Galibiyet +24, Maglubiyet \u22128 \xb7 Sen daha guclu (1200 vs 1000) \u2192 Galibiyet +8, Maglubiyet \u221224. Yeni oyuncular (ilk 10 mac) daha buyuk dalgalanmalar, tecrubliler (100+ mac) daha kararli degisimler.',rankedRulesUnequal:'ELO Koruma',rankedRulesUnequalDesc:'150+ puan fark: ELO kazanc ve kayiplari sinirlanir. 250+ puan fark: maci reddedebilir ve aramaya devam edebilirsin.',rankedRulesValidity:'Puanlama Kurallari',rankedRulesValidityDesc:'En az 3 hamle + 25 saniye oynandi · Rakip basina 6 saatte max. 2 puanli mac · Hamle yapmadan cikmak = ELO kaybi, rakip kazanmaz · Teslim olmak = yenilgi, her zaman puanlanir · Yeni oyuncular (<10 mac): onlara karsi kaybiniz maks. −8',rankedPreMatchTitle:'Ranked Mac Bulundu',rankedLargeGapWarning:'Buyuk Rating Farki',rankedIfWin:'Kazanirsan',rankedIfLoss:'Kaybedersen',rankedAccept:'Oyna',rankedDecline:'Aramaya Devam'
 },
 fr:{
+  lostOnTime:'Temps écoulé',
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
   copyLink:'Copier le lien',
   email:'E-mail',emailPh:'vous@exemple.fr',forgotPw:'Mot de passe oublié ?',

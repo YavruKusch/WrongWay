@@ -783,7 +783,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=95"></script>
+<script src="js/i18n.js?v=96"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -3679,6 +3679,7 @@ function App(){
   const[aiThinking,setAiThinking]=useState(false);
   const[giveUpArmed,setGiveUpArmed]=useState(false);
   const[gaveUp,setGaveUp]=useState(null);
+  const[lossReason,setLossReason]=useState(null); // 'timeout' etc. — klarer Grund im Endscreen (kein "aufgegeben"-Missverstaendnis)
   const[dragging,setDragging]=useState(null);
   const[ghostPos,setGhostPos]=useState({x:0,y:0});
   const[previewKey,setPreviewKey]=useState(null);
@@ -4011,10 +4012,12 @@ function App(){
       }
       if(d.winner!==undefined&&d.winner!==null&&!S.current.winner){
         const wRole=d.winner===0?'A':'B';
+        if(d.reason)setLossReason(d.reason);
         triggerWin(wRole,false,mh);
       }
       // Verlorenen eigenen Zug automatisch erneut senden (Anti-Verlust auf wackeliger Verbindung)
       if(d.winner===undefined||d.winner===null){
+        setLossReason(null); // laufendes Spiel -> Grund zuruecksetzen (kein stale beim naechsten Spiel)
         var myRoleP=(typeof d.deineNummer==='number')?(d.deineNummer===0?'A':'B'):S.current.onlineRole;
         var myNumP=myRoleP==='A'?0:1;
         var srvTurnP=(typeof d.amZug==='number')?(d.amZug===0?'A':'B'):S.current.turn;
@@ -4035,8 +4038,10 @@ function App(){
       if(d.from!==myNrEmo)showEmote(d.from===0?'A':'B',d.emote);
     }else if(d.type==='opponent_disconnected'){
       if(d.countdown)setFlash('Gegner getrennt - gewinnt in '+d.countdown+'s');
+      if(clkAnchorRef.current)clkAnchorRef.current.active=null; // Uhr einfrieren solange Gegner weg (Server pausiert sie)
     }else if(d.type==='opponent_back'){
       setFlash('');
+      try{WSNET.requestSync();}catch(e){} // frische Uhr holen -> Anzeige laeuft korrekt weiter
     }else if(d.type==='opponent_left'){
       setOppLeft(true);
     }else if(d.type==='rematch_state'){
@@ -8305,6 +8310,12 @@ function App(){
                 <div style={{fontSize:12,fontWeight:700,color:'#ef4444',
                   background:'rgba(239,68,68,0.09)',padding:'5px 12px',borderRadius:10,display:'inline-block',marginTop:6}}>
                   {pname(gaveUp)} {t('lostGiveUp')}
+                </div>
+              )}
+              {!gaveUp&&winner&&isLoss&&lossReason==='timeout'&&(
+                <div style={{fontSize:12,fontWeight:700,color:'#f59e0b',
+                  background:'rgba(245,158,11,0.10)',padding:'5px 12px',borderRadius:10,display:'inline-block',marginTop:6}}>
+                  {t('lostOnTime')}
                 </div>
               )}
             </div>
