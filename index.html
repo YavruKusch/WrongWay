@@ -2,6 +2,7 @@
 <html lang="de" translate="no">
 <head>
 <meta charset="UTF-8">
+<script>try{if(localStorage.getItem('ww_dark')==='1')document.documentElement.classList.add('dark');}catch(e){}</script>
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -856,7 +857,19 @@ function dlTrack(key,val){
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000,
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
+  // Zuschauer: eigener State-Kanal ueber denselben Socket, ruehrt roomId/role/token nicht an.
+  watchRoom:function(code,onSpectate){
+    this.spectateCode=code; this.onSpectate=onSpectate;
+    if(this.sock&&this.sock.readyState===1){ this._send({type:'spectate_join',code:code}); }
+    else{ this._open(); }
+    this._startHb();
+  },
+  unwatchRoom:function(){
+    if(this.spectateCode){ try{ this._send({type:'spectate_leave',code:this.spectateCode}); }catch(e){} }
+    this.spectateCode=null; this.onSpectate=null;
+    if(!this.roomId&&!this.browseOn&&!this.rankedOn){ this._stopHb(); if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  },
   connect:function(roomId,role,onState,settings){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
@@ -919,7 +932,7 @@ var WSNET={
   },
   _open:function(){
     var self=this;
-    if(!self.roomId&&!self.browseOn&&!self.rankedOn)return;
+    if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
     if(self.sock&&(self.sock.readyState===0||self.sock.readyState===1))return;
     try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
     self.sock.onopen=function(){
@@ -932,12 +945,15 @@ var WSNET={
         else { self._send(self._joinMsg()); }
       }
       if(self.browseOn){ var lm={type:'list_lobbies'}; if(self.browseMode)lm.mode=self.browseMode; self._send(lm); }
+      if(self.spectateCode){ self._send({type:'spectate_join',code:self.spectateCode}); }
       // ranked_queue wird oben im Token-Callback gesendet (mit idToken)
     };
     self.sock.onmessage=function(ev){
       self.lastRecv=Date.now();
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
       if(d.type==='pong'){ self.pongSeen=true; return; }
+      if(d.type==='spectate_state'||d.type==='spectate_denied'||d.type==='spectate_end'){ if(self.onSpectate)self.onSpectate(d); return; }
+      if(d.type==='spectate_relay'){ if(self.onSpectate)self.onSpectate(d.payload||{}); return; }
       if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
       if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId&&!self._jr){ self._jr=true; setTimeout(function(){ if(self.roomId&&self.role==='B')self._send(self._joinMsg()); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
@@ -951,14 +967,14 @@ var WSNET={
       if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; if(d.grund!=='declined') self.rankedOn=false; }
       if(self.onState)self.onState(d);
     };
-    self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn){ setTimeout(function(){ self._open(); },1500); } };
+    self.sock.onclose=function(){ self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
   },
   _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
   _startHb:function(){
     var self=this;
     if(self._hb)return;
     self._hb=setInterval(function(){
-      if(!self.roomId&&!self.browseOn&&!self.rankedOn)return;
+      if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
       if(self.sock&&self.sock.readyState===1){
         try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
         // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
@@ -978,10 +994,10 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this._stopHb(); if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
+  close:function(){ this._stopHb(); if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; this.spectateCode=null; this.onSpectate=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn&&!WSNET.rankedOn)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn&&!WSNET.rankedOn&&!WSNET.spectateCode)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else if(WSNET.spectateCode){ try{ WSNET._send({type:'spectate_join',code:WSNET.spectateCode}); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
 
 // ── 2v2 (Beta) ─────────────────────────────────────────────
 const COLS2=9,ROWS2=9,WW2=8,BARR2=10,MIN_PATHS_2V2=2;
@@ -1545,13 +1561,41 @@ const FLIST_KEY=u=>'ww_friends/'+u;
 const FR_KEY=u=>'ww_freq/'+u;
 const PRESENCE_KEY=u=>'ww_presence/'+u;
 const INVITE_KEY=u=>'ww_invites/'+u;
+// ww_friends/$uid/$friendUid:true (Kindknoten statt JSON-Array) — jede Seite schreibt
+// nur die eigene UID als Schluessel, dadurch keine Cross-User-Permission-Denied mehr
+// (Firebase-Regel erlaubte frueher nur auth.uid===$uid, ein zweiter User konnte die
+// Liste des ersten also nie beschreiben -> einseitige/kaputte Freundschaften).
+async function getFriendKeys(uid){
+  let v;
+  try{const snap=await window.db.ref(FLIST_KEY(uid)).once('value');v=snap.val();}
+  catch(e){return[];}
+  dlTrack(FLIST_KEY(uid),v);
+  if(!v)return[];
+  if(typeof v==='string'){
+    // Alt-Format (JSON-String-Array) -> einmalig auf Kindknoten migrieren (best-effort)
+    let arr=[];try{arr=JSON.parse(v)||[];}catch(e){}
+    if(!Array.isArray(arr))arr=[];
+    try{
+      if(arr.length){
+        const updates={};arr.forEach(k=>{updates[k]=true;});
+        await window.db.ref(FLIST_KEY(uid)).set(updates);
+      }else{
+        await window.db.ref(FLIST_KEY(uid)).remove();
+      }
+    }catch(e){/* Migration best-effort: Liste trotzdem zurueckgeben */}
+    return arr;
+  }
+  return Object.keys(v);
+}
+async function hasFriend(uid,otherUid){
+  return (await getFriendKeys(uid)).indexOf(otherUid)>=0;
+}
 async function sendFriendRequestByKey(fromKey,toKey){
   if(!toKey||!fromKey)return{err:'friends_notFound'};
   if(toKey===fromKey)return{err:'friends_self'};
   const target=await stoGet(PROFILE_KEY(toKey));
   if(!target)return{err:'friends_notFound'};
-  const myList=await stoGet(FLIST_KEY(fromKey))||[];
-  if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
+  if(await hasFriend(fromKey,toKey))return{err:'friends_already'};
   // Prüfen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
   const existing=await stoGet(FR_KEY(toKey)+'/'+fromKey);
   if(existing)return{err:'friends_alreadySent'};
@@ -1563,8 +1607,7 @@ async function sendFriendRequest(fromKey,toName){
   const toKey=rec&&rec.uid?rec.uid:null;
   if(!toKey)return{err:'friends_notFound'};
   if(toKey===fromKey)return{err:'friends_self'};
-  const myList=await stoGet(FLIST_KEY(fromKey))||[];
-  if(myList.indexOf(toKey)>=0)return{err:'friends_already'};
+  if(await hasFriend(fromKey,toKey))return{err:'friends_already'};
   // Pruefen ob wir IHNEN bereits eine Anfrage geschickt haben (korrekte Richtung)
   const existing=await stoGet(FR_KEY(toKey)+'/'+fromKey);
   if(existing)return{err:'friends_alreadySent'};
@@ -1572,12 +1615,8 @@ async function sendFriendRequest(fromKey,toName){
   return{ok:true};
 }
 async function acceptFriendRequest(myKey,fromKey){
-  const myList=await stoGet(FLIST_KEY(myKey))||[];
-  const theirList=await stoGet(FLIST_KEY(fromKey))||[];
-  if(myList.indexOf(fromKey)<0)myList.push(fromKey);
-  if(theirList.indexOf(myKey)<0)theirList.push(myKey);
-  await stoSet(FLIST_KEY(myKey),myList);
-  await stoSet(FLIST_KEY(fromKey),theirList);
+  await window.db.ref(FLIST_KEY(myKey)+'/'+fromKey).set(true);
+  await window.db.ref(FLIST_KEY(fromKey)+'/'+myKey).set(true);
   await stoDel(FR_KEY(myKey)+'/'+fromKey);
   return{ok:true};
 }
@@ -1585,10 +1624,8 @@ async function declineFriendRequest(myKey,fromKey){
   await stoDel(FR_KEY(myKey)+'/'+fromKey);
 }
 async function removeFriend(myKey,friendKey){
-  const myList=((await stoGet(FLIST_KEY(myKey)))||[]).filter(k=>k!==friendKey);
-  const theirList=((await stoGet(FLIST_KEY(friendKey)))||[]).filter(k=>k!==myKey);
-  await stoSet(FLIST_KEY(myKey),myList);
-  await stoSet(FLIST_KEY(friendKey),theirList);
+  await window.db.ref(FLIST_KEY(myKey)+'/'+friendKey).remove();
+  await window.db.ref(FLIST_KEY(friendKey)+'/'+myKey).remove();
 }
 async function setPresence(key,online,name){
   try{await window.db.ref(PRESENCE_KEY(key)).update({online:online,lastSeen:Date.now(),name:name||null});}catch(e){}
@@ -2734,17 +2771,24 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const myName=account?account.name:GUEST_ID;
   React.useEffect(()=>{
     if(!lobbyId||!window.db)return;
-    // Spielstand live verfolgen
-    const gRef=window.db.ref('barricade_game_'+lobbyId);
-    const gCb=gRef.on('value',snap=>{
-      const raw=snap.val();
-      if(!raw){setGone(true);return;}
-      let g;
-      try{g=typeof raw==='string'?JSON.parse(raw):raw;}catch{return;}
-      // Brett-Größe ans aktuelle Spiel anpassen (Duell vs Race)
-      if(g.map){applyBoardSize(g.map,g.duelSize||'standard');}
-      setGs(g);
-    });
+    // Spielstand live ueber WS verfolgen (Race/Classic/Duell/Blitz laufen server-autoritativ
+    // ueber WebSocket, nicht mehr ueber barricade_game_<id> in Firebase — der alte Firebase-
+    // Listener sah dadurch nie ein Update, das Brett stand fuer Zuschauer still).
+    if(WS_ENABLED){
+      WSNET.watchRoom(lobbyId,d=>{
+        if(d.type==='spectate_denied'){setGone(true);return;}
+        const st=d.settings||{};
+        const g={
+          pA:(d.pos&&d.pos[0])||{r:ROWS-1,c:2}, pB:(d.pos&&d.pos[1])||{r:ROWS-1,c:6},
+          walls:d.walls||[], barrLeft:{A:(d.barr&&d.barr[0])||0,B:(d.barr&&d.barr[1])||0},
+          turn:d.amZug===0?'A':'B', winner:d.winner===0?'A':d.winner===1?'B':null,
+          nameA:(d.namen&&d.namen[0])||'', nameB:(d.namen&&d.namen[1])||'',
+          map:st.map==='duel'?'duel':'classic', duelSize:st.size==='blitz'?'blitz':'standard'
+        };
+        applyBoardSize(g.map,g.duelSize);
+        setGs(g);
+      });
+    }
     // Anwesenheit registrieren
     const sRef=window.db.ref('ww_spec/'+lobbyId+'/'+myKey);
     sRef.set({ts:Date.now(),name:myName});
@@ -2763,7 +2807,7 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
       setTimeout(()=>setOtherEmotes(prev=>prev.filter(e=>e.id!==id)),3000);
     });
     return()=>{
-      gRef.off('value',gCb);
+      if(WS_ENABLED)WSNET.unwatchRoom();
       scRef.off('value',scCb);
       eRef.off('value',eCb);
       sRef.remove();
@@ -3310,11 +3354,13 @@ function App(){
     });
     return()=>{cancelled=true;ref.off('value',cb);};
   },[friendLobbyState]);
-  // Einladungen: Push-Listener statt 5s-Poll (nur im Menü).
+  // Einladungen: Push-Listener statt 5s-Poll. Laeuft die ganze Session (nicht nur im
+  // Menü) — sonst verpasst man Einladungen, die eintreffen waehrend man z.B. im
+  // Profil/Freunde-Screen ist; das Popup selbst wird ohnehin nur im Menü gerendert.
   // Read nur beim Anhaengen + wenn wirklich eine Einladung kommt/verschwindet.
   // Der 60s-Ablauf wird rein lokal per Timer ausgeblendet (kein DB-Read).
   useEffect(()=>{
-    if(!account||screen!=='menu'||!window.db)return;
+    if(!account||!window.db)return;
     const ref=window.db.ref(INVITE_KEY(account.key));
     let expireTimer=null;
     const cb=ref.on('value',snap=>{
@@ -3331,7 +3377,7 @@ function App(){
       }
     });
     return()=>{ref.off('value',cb);if(expireTimer)clearTimeout(expireTimer);};
-  },[account,screen]);
+  },[account]);
   // Freundschaftsanfragen: Push-Listener statt 12s-Poll (Badge im Menü).
   // on('value') laedt nur beim Anhaengen + bei echten Aenderungen. Der alte Poll
   // klopfte alle 12s bei Firebase an — jeder Read kostet Verbindungs-Overhead,
@@ -9879,12 +9925,35 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
   const[addMsg,setAddMsg]=React.useState({type:'',text:''});
   const[addBusy,setAddBusy]=React.useState(false);
   const[loading,setLoading]=React.useState(true);
+  const[searchResults,setSearchResults]=React.useState([]);
+  const[searching,setSearching]=React.useState(false);
+
+  // Prefix-Suche ab 2 Zeichen (wie Instagram) — debounced, max 8 Treffer, kein neuer
+  // Index noetig (orderByKey ist immer indiziert). Bei exaktem Vollnamen bleibt durch
+  // den Präfix-Bereich automatisch nur der eine Treffer übrig.
+  React.useEffect(()=>{
+    const q=normUser(addInput);
+    if(q.length<2||!window.db){setSearchResults([]);setSearching(false);return;}
+    let cancelled=false;
+    setSearching(true);
+    const h=setTimeout(async()=>{
+      try{
+        const snap=await window.db.ref('ww_usernames').orderByKey().startAt(q).endAt(q+String.fromCharCode(0xf8ff)).limitToFirst(8).once('value');
+        const v=snap.val()||{};
+        if(!cancelled){
+          setSearchResults(Object.keys(v).map(k=>v[k]).filter(r=>r&&r.uid&&r.uid!==account.key).map(r=>({key:r.uid,name:r.name||'?'})));
+          setSearching(false);
+        }
+      }catch(e){if(!cancelled){setSearchResults([]);setSearching(false);}}
+    },250);
+    return()=>{cancelled=true;clearTimeout(h);};
+  },[addInput,account.key]);
 
   React.useEffect(()=>{
     if(!account)return;
     let cancelled=false;
     const load=async()=>{
-      const keys=(await stoGet(FLIST_KEY(account.key)))||[];
+      const keys=await getFriendKeys(account.key);
       const reqs=await stoGetChildren(FR_KEY(account.key));
       const fps=await Promise.all(keys.map(k=>stoGet(PROFILE_KEY(k)).then(p=>p?Object.assign({},p,{key:k}):null)));
       const presence=await getPresenceMany(keys);
@@ -9909,7 +9978,15 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
     const res=await sendFriendRequest(account.key,addInput.trim());
     setAddBusy(false);
     if(res.err)setAddMsg({type:'err',text:t(res.err)||res.err});
-    else{setAddMsg({type:'ok',text:t('friends_sent')});setAddInput('');}
+    else{setAddMsg({type:'ok',text:t('friends_sent')});setAddInput('');setSearchResults([]);}
+  };
+  const doAddByKey=async(key)=>{
+    if(addBusy)return;
+    setAddBusy(true);setAddMsg({type:'',text:''});
+    const res=await sendFriendRequestByKey(account.key,key);
+    setAddBusy(false);
+    if(res.err)setAddMsg({type:'err',text:t(res.err)||res.err});
+    else{setAddMsg({type:'ok',text:t('friends_sent')});setAddInput('');setSearchResults([]);}
   };
   const doAccept=async fromKey=>{
     await acceptFriendRequest(account.key,fromKey);
@@ -10072,6 +10149,23 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
                       cursor:addBusy?'default':'pointer',fontWeight:800,fontSize:15,
                       fontFamily:'system-ui,-apple-system,sans-serif'}}>{addBusy?'…':'+'}</button>
                   </div>
+                  {normUser(addInput).length>=2&&(
+                    <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
+                      {searching?(
+                        <div style={{fontSize:12,color:muted,padding:'8px 0',textAlign:'center'}}>…</div>
+                      ):searchResults.length===0?(
+                        <div style={{fontSize:12,color:muted,padding:'8px 0',textAlign:'center'}}>{t('friends_notFound')}</div>
+                      ):searchResults.map(r=>(
+                        <div key={r.key} onClick={()=>!addBusy&&doAddByKey(r.key)} style={{display:'flex',alignItems:'center',gap:10,
+                          padding:'8px 10px',borderRadius:9,border:'1.5px solid '+border,background:card,
+                          cursor:addBusy?'default':'pointer'}}>
+                          <Av prof={{name:r.name}} sz={30}/>
+                          <div style={{flex:1,fontSize:13,fontWeight:700,color:text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</div>
+                          <PlusIcon size={14} color={muted}/>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {addMsg.text&&(
                     <div style={{marginTop:10,padding:'10px 14px',borderRadius:9,fontSize:13,fontWeight:600,textAlign:'center',
                       background:addMsg.type==='ok'?'rgba(22,163,74,0.1)':'rgba(239,68,68,0.1)',
