@@ -784,7 +784,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=100"></script>
+<script src="js/i18n.js?v=101"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -1576,12 +1576,16 @@ async function getFriendKeys(uid){
     let arr=[];try{arr=JSON.parse(v)||[];}catch(e){}
     if(!Array.isArray(arr))arr=[];
     try{
+      // update() statt set(): die neue ww_friends-Regel hat KEIN .write am $uid-Parent,
+      // set()/remove() dort werden immer abgelehnt. update() ist ein Multi-Path-Write,
+      // Firebase prueft jede Kind-Regel ($friendUid) einzeln -> Migration klappt.
+      // Ohne diese Migration wuerde der naechste accept-Kind-Write den Alt-String
+      // ueberschreiben und die komplette alte Freundesliste zerstoeren.
       if(arr.length){
         const updates={};arr.forEach(k=>{updates[k]=true;});
-        await window.db.ref(FLIST_KEY(uid)).set(updates);
-      }else{
-        await window.db.ref(FLIST_KEY(uid)).remove();
+        await window.db.ref(FLIST_KEY(uid)).update(updates);
       }
+      // leeres Alt-Format: String bleibt stehen (Parent-Delete waere denied) — harmlos
     }catch(e){/* Migration best-effort: Liste trotzdem zurueckgeben */}
     return arr;
   }
@@ -1730,6 +1734,8 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     if(!account)return;
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
     var localRouter=function(d){
+      // Match gefunden: hoerbar + fuehlbar machen, sonst verpassen Spieler den Start
+      if(d&&d.type==='ranked_found'){ try{playSound('pickup');}catch(e){} try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){} }
       if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
       wsRouter(d);
@@ -1809,7 +1815,8 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     var r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
     var tier=rankTier(r.rating);
     var inQueue=queue&&queue.mode===mode;
-    var range=elapsed<15?50:elapsed<30?100:200;
+    // Muss den Server-Stufen entsprechen (index.js rankedRange): 50/100/200/300/400/500
+    var range=elapsed<15?50:elapsed<30?100:elapsed<45?200:elapsed<60?300:elapsed<75?400:500;
     var wr=r.games>0?Math.round(r.wins/r.games*100):0;
     var modeEnabled=mode==='classic'?feat.rankedClassic:feat.rankedDuel;
     return(
@@ -1847,6 +1854,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
                 {foundMsg?foundMsg:(t('rankedSearching')+' '+elapsed+'s · \u00b1'+range+' ELO')}
               </span>
             </div>
+            <div style={{fontSize:10,color:muted,textAlign:'center',marginTop:-4,marginBottom:10}}>{t('rankedRangeHint')}</div>
             <button onClick={leaveQueue} style={{width:'100%',padding:'10px',borderRadius:10,
               background:'transparent',border:'1.5px solid '+border,color:muted,cursor:'pointer',
               fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif'}}>
@@ -2775,15 +2783,24 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
     // ueber WebSocket, nicht mehr ueber barricade_game_<id> in Firebase — der alte Firebase-
     // Listener sah dadurch nie ein Update, das Brett stand fuer Zuschauer still).
     if(WS_ENABLED){
+      // Namen/Map/Groesse kommen NUR im spectate_state-Snapshot mit; die relayten
+      // Folge-Updates (type:'state') tragen nur pos/walls/barr/amZug/winner -> Meta aus
+      // dem Snapshot merken und mit jedem Zug mischen. Alle anderen Relay-Typen
+      // (Chat, Emotes, Rematch, ...) ignorieren — sonst wuerde jedes dieser Pakete
+      // das Brett auf Startpositionen zuruecksetzen.
+      let meta={nameA:'',nameB:'',map:'classic',duelSize:'standard'};
       WSNET.watchRoom(lobbyId,d=>{
-        if(d.type==='spectate_denied'){setGone(true);return;}
-        const st=d.settings||{};
+        if(d.type==='spectate_denied'||d.type==='spectate_end'){setGone(true);return;}
+        if(d.type==='spectate_state'){
+          const st=d.settings||{};
+          meta={nameA:(d.namen&&d.namen[0])||'',nameB:(d.namen&&d.namen[1])||'',
+            map:st.map==='duel'?'duel':'classic',duelSize:st.size==='blitz'?'blitz':'standard'};
+        }else if(d.type!=='state'){return;}
         const g={
           pA:(d.pos&&d.pos[0])||{r:ROWS-1,c:2}, pB:(d.pos&&d.pos[1])||{r:ROWS-1,c:6},
           walls:d.walls||[], barrLeft:{A:(d.barr&&d.barr[0])||0,B:(d.barr&&d.barr[1])||0},
           turn:d.amZug===0?'A':'B', winner:d.winner===0?'A':d.winner===1?'B':null,
-          nameA:(d.namen&&d.namen[0])||'', nameB:(d.namen&&d.namen[1])||'',
-          map:st.map==='duel'?'duel':'classic', duelSize:st.size==='blitz'?'blitz':'standard'
+          nameA:meta.nameA, nameB:meta.nameB, map:meta.map, duelSize:meta.duelSize
         };
         applyBoardSize(g.map,g.duelSize);
         setGs(g);
@@ -3363,6 +3380,7 @@ function App(){
     if(!account||!window.db)return;
     const ref=window.db.ref(INVITE_KEY(account.key));
     let expireTimer=null;
+    let hadInvite=false;
     const cb=ref.on('value',snap=>{
       const raw=snap.val();
       dlTrack('ww_invites/x',raw);
@@ -3370,9 +3388,13 @@ function App(){
       if(expireTimer){clearTimeout(expireTimer);expireTimer=null;}
       const age=inv?Date.now()-inv.ts:1e9;
       if(inv&&age<60000){
+        // Hoerbares Feedback nur beim ERSTEN Eintreffen (nicht bei jedem Listener-Refire)
+        if(!hadInvite){try{playSound('pickup');}catch(e){}try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}}
+        hadInvite=true;
         setPendingInvite(inv);
         expireTimer=setTimeout(function(){setPendingInvite(null);},60000-age);
       }else{
+        hadInvite=false;
         setPendingInvite(null);
       }
     });
@@ -7297,6 +7319,8 @@ function App(){
     return <FriendsScreen account={account} t={t} darkMode={darkMode} goBack={goBack}
       onInvite={doInviteFriend} onSpectate={lid=>{setSpectateId(lid);setNavDir('fwd');setScreen('spectate');}}
       friendLobbyState={friendLobbyState} onCancelInvite={doCancelFriendInvite}
+      pendingInvite={pendingInvite} onAcceptInvite={doAcceptInvite}
+      onDeclineInvite={()=>{clearInvite(account.key);setPendingInvite(null);}}
       showPresence={adminCfg.features.showPresence} showInGame={adminCfg.features.showInGame}/>;
   }
   // ── SPECTATE ─────────────────────────────────────────────
@@ -9917,7 +9941,7 @@ function StatCard({label,value,color}){
     </div>
   );
 }
-function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobbyState,onCancelInvite,showPresence=true,showInGame=true}){
+function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobbyState,onCancelInvite,pendingInvite,onAcceptInvite,onDeclineInvite,showPresence=true,showInGame=true}){
   const[tab,setTab]=React.useState('list');
   const[friends,setFriends]=React.useState([]);
   const[requests,setRequests]=React.useState([]);
@@ -9941,7 +9965,8 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
         const snap=await window.db.ref('ww_usernames').orderByKey().startAt(q).endAt(q+String.fromCharCode(0xf8ff)).limitToFirst(8).once('value');
         const v=snap.val()||{};
         if(!cancelled){
-          setSearchResults(Object.keys(v).map(k=>v[k]).filter(r=>r&&r.uid&&r.uid!==account.key).map(r=>({key:r.uid,name:r.name||'?'})));
+          // Werte sind JSON-Strings (per stoSet geschrieben) -> erst parsen, sonst 0 Treffer
+          setSearchResults(Object.keys(v).map(k=>{let r=v[k];if(typeof r==='string'){try{r=JSON.parse(r);}catch(e){r=null;}}return r;}).filter(r=>r&&r.uid&&r.uid!==account.key).map(r=>({key:r.uid,name:r.name||'?'})));
           setSearching(false);
         }
       }catch(e){if(!cancelled){setSearchResults([]);setSearching(false);}}
@@ -10041,6 +10066,29 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
           <div style={{fontSize:21,fontWeight:900,color:text2,letterSpacing:-0.5,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><PeopleIcon size={22} color={text2}/> {t('friends')}</div>
         </div>
 
+        {pendingInvite&&(
+          <div style={{width:'100%',marginBottom:14,borderRadius:14,
+            background:card,border:'1.5px solid #8b5cf644',boxShadow:'0 4px 14px rgba(99,102,241,0.18)',overflow:'hidden'}}>
+            <div style={{background:'linear-gradient(90deg,#8b5cf6,#3b82f6)',height:3}}/>
+            <div style={{padding:'12px 14px'}}>
+              <div style={{fontSize:13,fontWeight:800,color:text2,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+                <GamepadIcon size={15} color={text2}/> <b>{pendingInvite.fromName}</b> {t('friends_incomingInvite')}
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button onClick={onAcceptInvite} style={{flex:1,padding:'9px',borderRadius:9,
+                  background:'linear-gradient(135deg,#8b5cf6,#3b82f6)',color:'#fff',border:'none',
+                  cursor:'pointer',fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {t('friends_join')}
+                </button>
+                <button onClick={onDeclineInvite} style={{flex:1,padding:'9px',borderRadius:9,
+                  background:'transparent',border:'1.5px solid '+border,color:muted,
+                  cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {t('friends_decline')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {friendLobbyState&&(
           <div style={{background:card,borderRadius:16,border:'1.5px solid #8b5cf644',padding:'16px',marginBottom:14,textAlign:'center'}}>
             <div style={{fontSize:11,color:muted,fontWeight:700,marginBottom:4}}>{t('friends_waitingFor').toUpperCase()}</div>
