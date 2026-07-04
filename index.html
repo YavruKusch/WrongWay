@@ -1443,12 +1443,21 @@ async function registerAccount(email,name,pw,color){
   // Benutzername noch frei?
   const taken=await stoGet(USERNAME_KEY(key));
   if(taken)return{err:'taken'};
-  // Firebase Auth Konto anlegen (Passwort wird serverseitig gehasht, verlaesst nie den Server)
+  // Firebase Auth Konto anlegen (Passwort wird serverseitig gehasht, verlaesst nie den Server).
+  // Gast-Session (anonyme UID) wird dabei UPGEGRADET statt ersetzt: gleiche UID behaelt
+  // serverseitige Coins/XP/Inventar — sonst strandet der Gast-Fortschritt auf der alten UID.
   let cred;
-  try{cred=await firebase.auth().createUserWithEmailAndPassword(em,pw);}
+  try{
+    const curU=firebase.auth().currentUser;
+    if(curU&&curU.isAnonymous){
+      cred=await curU.linkWithCredential(firebase.auth.EmailAuthProvider.credential(em,pw));
+    }else{
+      cred=await firebase.auth().createUserWithEmailAndPassword(em,pw);
+    }
+  }
   catch(e){
     const c=e&&e.code?e.code:'';
-    if(c==='auth/email-already-in-use')return{err:'emailTaken'};
+    if(c==='auth/email-already-in-use'||c==='auth/credential-already-in-use')return{err:'emailTaken'};
     if(c==='auth/invalid-email')return{err:'emailInvalid'};
     if(c==='auth/weak-password')return{err:'pwShort'};
     if(c==='auth/operation-not-allowed')return{err:'authDisabled'};
@@ -7406,7 +7415,17 @@ function App(){
     // KRITISCH: Immer Account-Auswahl erzwingen — ohne dies waehlt Google silently den zuletzt
     // verwendeten Account, was zu unbeabsichtigten Logins und Duplikat-Konten fuehren kann.
     provider.setCustomParameters({prompt:'select_account'});
-    firebase.auth().signInWithPopup(provider).then(async function(result){
+    // Gast-Session (anonyme UID) upgraden statt ersetzen: gleiche UID behaelt Coins/XP/Inventar.
+    // Ist das Google-Konto schon ein bestehender Nutzer -> dort einloggen (kein Auto-Merge,
+    // der Gast-Stand dieser Session verfaellt dann wie bisher).
+    const curU=firebase.auth().currentUser;
+    const signInP=(curU&&curU.isAnonymous)
+      ?curU.linkWithPopup(provider).catch(function(e){
+          if(e&&e.code==='auth/credential-already-in-use'&&e.credential){return firebase.auth().signInWithCredential(e.credential);}
+          throw e;
+        })
+      :firebase.auth().signInWithPopup(provider);
+    signInP.then(async function(result){
       if(!result||!result.user)return;
       let existing;
       try{existing=await getGoogleProfile(result.user);}
@@ -7423,7 +7442,7 @@ function App(){
         setGoogleName(suggested);
       }
     }).catch(function(e){
-      if(e.code==='auth/account-exists-with-different-credential'){
+      if(e.code==='auth/account-exists-with-different-credential'||e.code==='auth/email-already-in-use'){
         setAuthErr('Diese E-Mail ist bereits per E-Mail/Passwort registriert. Bitte dort anmelden.');
       }else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
         setAuthErr('Google Login fehlgeschlagen');
