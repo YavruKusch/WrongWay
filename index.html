@@ -1274,6 +1274,32 @@ async function adminFixLeaderboardNames(){
   if(errors.length>0)throw new Error(errors.join(' | '));
   return fixed;
 }
+// Loescht die write-geschuetzten Server-Pfade (Coins/XP/Level/Inventar/Kaeufe/Receipts/
+// Elo-Reports/Tag/PlayerID), die der Client wegen der Firebase-Regeln nie selbst loeschen
+// kann. Gleiches Muster wie im Vite-Client (ProfileScreen.jsx) — muss VOR dem Auth-Delete
+// erfolgreich sein, sonst blieben diese Pfade fuer immer verwaist stehen.
+async function accountDeleteWsCmd(){
+  return new Promise(function(resolve,reject){
+    var ws=new WebSocket(WW_URL);
+    var authed=false,done=false;
+    var tmr=setTimeout(function(){if(!done){done=true;try{ws.close();}catch(e){}reject(new Error('Timeout'));}},8000);
+    ws.onopen=function(){
+      firebase.auth().currentUser.getIdToken(true).then(function(tok){
+        if(done)return;
+        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+      }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
+    };
+    ws.onmessage=function(ev){
+      if(done)return;
+      var d;try{d=JSON.parse(ev.data);}catch(e){return;}
+      if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify({type:'account_delete'}));return;}
+      if(d.type==='account_delete_ok'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(true);return;}
+      if(d.type==='account_delete_err'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.reason||'Fehler'));}
+    };
+    ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
+    ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
+  });
+}
 async function adminFlagWsCmd(flag, value){
   return new Promise(function(resolve,reject){
     var ws=new WebSocket(WW_URL);
@@ -2157,13 +2183,29 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
     const user=firebase.auth().currentUser;
     if(!user){setDeleteBusy(false);setDeleteErr(t('auth_notFound')||'Fehler');return;}
     try{
-      // Reauth: Google-Konten direkt loeschen (kein Passwort), E-Mail-Konten mit Passwort
-      if(!account.isGoogle){
+      // Reauth ZUERST fuer beide Konto-Typen: ohne frischen Login wirft currentUser.delete()
+      // spaeter auth/requires-recent-login — dann waeren Server-/Client-Daten schon geloescht,
+      // das Auth-Konto selbst aber nicht (Daten-Verlust ohne echte Loeschung).
+      if(account.isGoogle){
+        const provider=new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({prompt:'select_account'});
+        await user.reauthenticateWithPopup(provider);
+      }else{
         const pwVal=deletePw.trim();
         const cred=firebase.auth.EmailAuthProvider.credential(user.email,pwVal);
         await user.reauthenticateWithCredential(cred);
       }
-      // Alle Nutzer-Daten einzeln loeschen
+      // ZUERST der Server: loescht die write-geschuetzten Pfade (Coins/XP/Level/Inventar/
+      // Kaeufe/Receipts/Elo-Reports/Tag/PlayerID). Ohne Server-Bestaetigung abbrechen —
+      // sonst blieben diese Pfade nach dem Auth-Delete fuer immer verwaist stehen.
+      try{
+        await accountDeleteWsCmd();
+      }catch(e){
+        setDeleteBusy(false);
+        setDeleteErr(t('deleteAccountServerErr')||'Server-Loeschung fehlgeschlagen — bitte erneut versuchen');
+        return;
+      }
+      // Danach die Pfade, die nur der Client loeschen kann (Owner-write laut Rules)
       const uid=user.uid;
       const nameKey=normUser(account.name||'');
       const paths=[
@@ -2187,7 +2229,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
       const c=e&&e.code?e.code:'';
       if(c==='auth/wrong-password'||c==='auth/invalid-credential')setDeleteErr(t('auth_wrongLogin')||'Falsches Passwort');
       else if(c==='auth/requires-recent-login')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
-      else if(c==='auth/popup-blocked'||c==='auth/popup-closed-by-user')setDeleteErr('Bitte abmelden, neu anmelden und dann sofort loeschen');
+      else if(c==='auth/popup-blocked'||c==='auth/popup-closed-by-user')setDeleteErr('Google-Anmeldung abgebrochen oder Popup blockiert — bitte erneut versuchen');
       else setDeleteErr('Fehler: '+(c||e.message||'unbekannt'));
       setDeleteBusy(false);
     }
