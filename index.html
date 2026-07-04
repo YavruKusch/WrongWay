@@ -4163,7 +4163,7 @@ function App(){
       var myNrEmo=onlineRole==='A'?0:1;
       if(d.from!==myNrEmo)showEmote(d.from===0?'A':'B',d.emote);
     }else if(d.type==='opponent_disconnected'){
-      if(d.countdown)setFlash('Gegner getrennt - gewinnt in '+d.countdown+'s');
+      if(d.countdown)setFlash(t('oppDisconnectedWinsIn')+' '+d.countdown+t('secLabel'));
       if(clkAnchorRef.current)clkAnchorRef.current.active=null; // Uhr einfrieren solange Gegner weg (Server pausiert sie)
     }else if(d.type==='opponent_back'){
       setFlash('');
@@ -7595,13 +7595,13 @@ function App(){
               <div style={{marginTop:12,padding:'12px 14px',borderRadius:12,
                 background:'rgba(245,158,11,0.1)',border:'1.5px solid rgba(245,158,11,0.3)'}}>
                 <div style={{fontSize:12,fontWeight:700,color:'#d97706',textAlign:'center',lineHeight:1.5}}>
-                  Google Login funktioniert nicht im Instagram-Browser.
+                  {t('instaNoGoogle')}
                 </div>
                 <button onClick={()=>window.open('https://wrongway.app','_blank')} style={{
                   width:'100%',marginTop:8,padding:'11px',borderRadius:10,
                   background:'#f59e0b',color:'white',border:'none',cursor:'pointer',
                   fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  In Safari öffnen
+                  {t('openInSafari')}
                 </button>
               </div>
             ):(
