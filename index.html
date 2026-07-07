@@ -762,11 +762,54 @@
       }
     });
   }
-  // Fehler sichtbar anzeigen (kein DevTools nötig)
-  window.onerror = function(msg,src,line){
+  // Fehler sichtbar anzeigen (kein DevTools nötig) + Fehler-Report nach Firebase
+  // (ww_error_reports/<uid>/slot_0..9, Ring — Details: wrongway-server Spec 2026-07-07)
+  window._wwErrBuf=[];window._wwErrSeen={};window._wwErrCount=0;window._wwSwVer='';
+  if(window.caches&&caches.keys){caches.keys().then(function(ks){
+    for(var i=0;i<ks.length;i++){if(ks[i].indexOf('wrongway-')===0)window._wwSwVer=ks[i];}
+  }).catch(function(){});}
+  function wwBuildErr(type,msg,src,line,stack){
+    return {type:type,msg:String(msg||'?').slice(0,300),src:String(src||'').slice(0,200),
+      line:line|0,stack:String(stack||'').slice(0,1200),
+      ua:String(navigator.userAgent||'').slice(0,300),ver:window._wwSwVer||'?',ts:Date.now()};
+  }
+  function wwSendErr(e){
+    try{
+      var u=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+      if(!u||!window.db)return;
+      var i=parseInt(localStorage.getItem('ww_err_slot')||'0',10)%10;
+      localStorage.setItem('ww_err_slot',String((i+1)%10));
+      window.db.ref('ww_error_reports/'+u.uid+'/slot_'+i).set(e).then(function(){
+        console.log('[ww-err] reported slot_'+i);
+      }).catch(function(err){console.warn('[ww-err] failed',err&&err.message);});
+    }catch(x){}
+  }
+  function wwReportErr(e){
+    try{
+      // ponytail: 1x pro Fehlertext und max. 5 Reports pro Sitzung — reicht, um jeden Bug zu sehen
+      if(window._wwErrSeen[e.msg]||window._wwErrCount>=5)return;
+      window._wwErrSeen[e.msg]=true;window._wwErrCount++;
+      var u=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+      if(u&&window.db){wwSendErr(e);}
+      else if(window._wwErrBuf.length<5){window._wwErrBuf.push(e);}
+    }catch(x){}
+  }
+  if(window.firebase&&firebase.auth){
+    firebase.auth().onAuthStateChanged(function(u){
+      if(!u)return;
+      var b=window._wwErrBuf;window._wwErrBuf=[];
+      for(var i=0;i<b.length;i++)wwSendErr(b[i]);
+    });
+  }
+  window.onerror = function(msg,src,line,col,errObj){
     var m=document.getElementById('loader-msg');
     if(m){m.style.color='#ef4444';m.textContent='Fehler Zeile '+line+': '+msg;}
+    wwReportErr(wwBuildErr('error',msg,src,line,errObj&&errObj.stack));
   };
+  window.addEventListener('unhandledrejection',function(ev){
+    var r=ev&&ev.reason;
+    wwReportErr(wwBuildErr('rejection',(r&&r.message)||String(r),'',0,r&&r.stack));
+  });
   // Nach 12s: Hinweis wenn noch loading
   setTimeout(function(){
     var l=document.getElementById('loader');
@@ -1348,6 +1391,87 @@ async function adminFlagWsCmd(flag, value){
     ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
     ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
   });
+}
+function AdminErrorsPanel(){
+  var[rows,setRows]=React.useState(null);
+  var[busy,setBusy]=React.useState(false);
+  var[msg,setMsg]=React.useState('');
+  var[open,setOpen]=React.useState(-1);
+  var[confirmDel,setConfirmDel]=React.useState(false);
+  function load(){
+    if(!window.db)return;
+    setBusy(true);setMsg('');setOpen(-1);setConfirmDel(false);
+    window.db.ref('ww_error_reports').once('value').then(function(snap){
+      var v=snap.val()||{};var list=[];
+      Object.keys(v).forEach(function(uid){
+        Object.keys(v[uid]||{}).forEach(function(slot){
+          var e=v[uid][slot];if(e&&e.msg){e=Object.assign({},e);e._uid=uid;list.push(e);}
+        });
+      });
+      var g={};
+      list.forEach(function(e){
+        var k=e.msg;
+        if(!g[k])g[k]={msg:k,n:0,uids:{},last:0,sample:e};
+        g[k].n++;g[k].uids[e._uid]=1;
+        if((e.ts||0)>=g[k].last){g[k].last=e.ts||0;g[k].sample=e;}
+      });
+      var arr=Object.keys(g).map(function(k){return g[k];});
+      arr.sort(function(a,b){return b.last-a.last;});
+      setRows(arr);setBusy(false);
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
+  }
+  function clearAll(){
+    if(!confirmDel){setConfirmDel(true);return;}
+    if(!window.db)return;
+    setBusy(true);
+    window.db.ref('ww_error_reports').set(null).then(function(){
+      setRows([]);setBusy(false);setConfirmDel(false);setMsg('Alle geloescht');
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);setConfirmDel(false);});
+  }
+  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
+    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
+    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
+  var rowsUi=null;
+  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Fehler-Reports.</div>;
+  if(rows&&rows.length>0)rowsUi=rows.map(function(r,idx){
+    var s=r.sample;var users=Object.keys(r.uids).length;
+    var when=new Date(r.last).toLocaleString();
+    var det=null;
+    if(open===idx)det=(
+      <div style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-all',
+        marginTop:5,padding:7,background:'var(--bg)',borderRadius:7}}>
+        {'typ: '+s.type+'\nver: '+(s.ver||'?')+'\nsrc: '+(s.src||'?')+' Z.'+(s.line||0)+
+         '\nua: '+(s.ua||'?')+'\nuid: '+s._uid+'\n\n'+(s.stack||'(kein Stack)')}
+      </div>
+    );
+    return(
+      <div key={r.msg} onClick={function(){setOpen(open===idx?-1:idx);}}
+        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
+          border:'1.5px solid var(--border)',marginBottom:6,cursor:'pointer'}}>
+        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',wordBreak:'break-all'}}>{r.msg}</div>
+        <div style={{fontSize:10,color:'var(--subtle)',marginTop:2}}>
+          {r.n+'x bei '+users+' Spieler(n), zuletzt '+when}
+        </div>
+        {det}
+      </div>
+    );
+  });
+  return(
+    <div>
+      <div style={{display:'flex',gap:7,marginBottom:8}}>
+        <button onClick={load} disabled={busy} style={btnSt}>
+          {busy?'...':(rows===null?'Reports laden':'Aktualisieren')}
+        </button>
+        {rows&&rows.length>0&&
+          <button onClick={clearAll} disabled={busy}
+            style={Object.assign({},btnSt,{borderColor:'#ef4444',color:'#ef4444'})}>
+            {confirmDel?'Wirklich ALLE loeschen?':'Alle loeschen'}
+          </button>}
+      </div>
+      {rowsUi}
+      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
+    </div>
+  );
 }
 function AdminFlagsPanel(){
   var[flags,setFlags]=React.useState({XP_SYSTEM:false,COIN_SYSTEM:false});
@@ -6741,6 +6865,14 @@ function App(){
                 XP- und Coin-System live ein-/ausschalten. Wirkt sofort auf den Server.
               </div>
               <AdminFlagsPanel/>
+            </AdminSection>
+
+            {/* ── FEHLER-REPORTS ── */}
+            <AdminSection label="FEHLER-REPORTS">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                JS-Fehler der Spieler (ww_error_reports). Laden nur auf Klick, kein Dauer-Listener.
+              </div>
+              <AdminErrorsPanel/>
             </AdminSection>
 
             {/* ── COINS & SHOP ── */}
