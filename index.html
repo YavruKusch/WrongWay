@@ -614,6 +614,22 @@
   .ww-stone-tex{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;pointer-events:none;mix-blend-mode:soft-light;opacity:0.5;background-size:cover;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='wwsg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wwsg)'/%3E%3C/svg%3E");}
   .ww-stone-sheen{position:absolute;left:22%;top:14%;width:48%;height:36%;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,255,255,0.4),transparent);filter:blur(1.5px);}
+  /* Eigen-Markierung im Online-Match: rotierender Orbit-Ring (identisch zur App) */
+  .ww-me-orbit{
+    position:absolute;top:-20%;left:-20%;width:140%;height:140%;
+    border-radius:50%;border:2px solid rgba(255,255,255,0.85);
+    box-shadow:0 0 6px 1px rgba(255,255,255,0.5),inset 0 0 4px rgba(255,255,255,0.3);
+    animation:spin 3s linear infinite;pointer-events:none;
+  }
+  .ww-me-orbit::before{
+    content:'';position:absolute;top:-4px;left:50%;margin-left:-3.5px;
+    width:7px;height:7px;border-radius:50%;background:#fff;
+    box-shadow:0 0 6px 2px rgba(255,255,255,0.9);
+  }
+  @media (prefers-reduced-motion:reduce){
+    .ww-me-orbit{animation:none;}
+    .ww-me-orbit::before{display:none;}
+  }
   .ww-wall-gloss{position:absolute;left:7%;right:7%;top:1.5px;height:28%;border-radius:4px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.34),transparent);}
   .ww-board-tex{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;background-size:150px 150px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='wwbn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wwbn)' opacity='0.5'/%3E%3C/svg%3E");}
@@ -861,6 +877,19 @@ function goalRowOf(player,map){
   return 0;
 }
 const PC={A:'#ef4444',B:'#3b82f6'},PD={A:'#7f1d1d',B:'#1e3a5f'};
+// Skin-Presets — IDs identisch mit SHOP_CATALOG (Server) und skins.js (App). Reine Daten, keine Assets.
+const STONE_SKINS={
+  stone_red:{c:'#ef4444',d:'#7f1d1d'},stone_blue:{c:'#3b82f6',d:'#1e3a5f'},
+  stone_black:{c:'#3f4654',d:'#0b0e14'},stone_white:{c:'#f8fafc',d:'#94a3b8'},
+  stone_green:{c:'#22c55e',d:'#14532d'},stone_brown:{c:'#92400e',d:'#3f1d07'},
+  stone_orange:{c:'#f97316',d:'#7c2d12'},stone_pink:{c:'#ec4899',d:'#831843'},
+  stone_purple:{c:'#8b5cf6',d:'#4c1d95'},stone_cyan:{c:'#06b6d4',d:'#164e63'},
+  stone_yellow:{c:'#eab308',d:'#713f12'},stone_gray:{c:'#94a3b8',d:'#334155'}
+};
+const BOARD_SKINS={
+  board_midnight:{bg:'linear-gradient(170deg,#101426,#0a0d1c 52%,#05070f)',line:'rgba(140,160,220,0.10)'},
+  board_forest:{bg:'linear-gradient(170deg,#12291c,#0c2015 52%,#071409)',line:'rgba(160,220,180,0.10)'}
+};
 const SESSION=Math.random().toString(36).slice(2,10);
 const GUEST_ID=(()=>{try{let n=localStorage.getItem('ww_guest_id');if(!n){n='User'+Math.floor(1000+Math.random()*9000);localStorage.setItem('ww_guest_id',n);}return n;}catch(e){return 'User'+Math.floor(1000+Math.random()*9000);}})();
 function getDisplayName(account){return account?account.name:GUEST_ID;}
@@ -900,7 +929,7 @@ function dlTrack(key,val){
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
   // Zuschauer: eigener State-Kanal ueber denselben Socket, ruehrt roomId/role/token nicht an.
   watchRoom:function(code,onSpectate){
     this.spectateCode=code; this.onSpectate=onSpectate;
@@ -947,8 +976,8 @@ var WSNET={
   },
   confirmRanked:function(){ try{ this._send({type:'ranked_confirm'}); }catch(e){} },
   declineRanked:function(){ try{ this._send({type:'ranked_decline'}); }catch(e){} this.roomId=null; this.token=null; this.role=null; this.rankedOn=true; },
-  _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
-  _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } return m; },
+  _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
+  _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
   // Warteraum bewusst verlassen: Server raeumt sofort auf, Code wird frei
   leaveRoom:function(){
     try{ this._send({type:'leave_room'}); }catch(e){}
@@ -990,7 +1019,7 @@ var WSNET={
     self.sock.onopen=function(){
       clearTimeout(_connTmr);
       self._dbg('socket offen'); self.lastRecv=Date.now();
-      try{ var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null; var _rq=function(tok){ if(self.rankedOn&&!self.roomId){ try{ self._send({type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}); }catch(e){} } }; if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} _rq(tok); }).catch(function(){ _rq(null); }); } else { _rq(null); } }catch(e){} // Identitaet verifizieren + Ranked-Queue (mit Token; Server lehnt ohne verifizierte Anmeldung ab)
+      try{ var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null; var _rq=function(tok){ if(self.rankedOn&&!self.roomId){ try{ var _rm={type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}; if(self.equip)_rm.equip=self.equip; self._send(_rm); }catch(e){} } }; if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} _rq(tok); }).catch(function(){ _rq(null); }); } else { _rq(null); } }catch(e){} // Identitaet verifizieren + Ranked-Queue (mit Token; Server lehnt ohne verifizierte Anmeldung ab)
       if(self.onState)self.onState({type:'ws_open'});
       if(self.roomId){
         if(self.token){ self._send({type:'reconnect',token:self.token}); }
@@ -2477,6 +2506,9 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
               <span style={{fontSize:12,fontWeight:800,color:'#f59e0b'}}>{coins}</span>
             </div>
           )}
+          {coins!==null&&coins>0&&(
+            <div style={{fontSize:10,color:muted,fontWeight:600,marginTop:4}}>{t('shopTeaser')}</div>
+          )}
           {!xpSystemOn&&<div style={{fontSize:11,color:muted,fontWeight:600,marginTop:4}}>{t('accountHint')}</div>}
         </div>
 
@@ -3283,6 +3315,7 @@ function App(){
   const[navDir,setNavDir]=useState('fwd'); // Richtung für Seitenwechsel-Animation
   const[gameMode,setGameMode]=useState(null);
   const[onlineRole,setOnlineRole]=useState(null);
+  const[matchSkins,setMatchSkins]=useState(null); // vom Server besitz-validiert: [{stone,board},{stone,board}] je Spieler A/B
   const[playerNames,setPlayerNames]=useState({A:null,B:null});
   const[isRanked,setIsRanked]=useState(false);
   const[rankedMode,setRankedMode]=useState(null);
@@ -3356,6 +3389,8 @@ function App(){
   const[authBusy,setAuthBusy]=useState(false);
   const accRef=useRef(null);
   accRef.current=account;
+  // Equip-Praeferenz (aus dem Profil, von der App gesetzt) an den WS-Server melden — Besitz prueft der Server
+  WSNET.equip=(account&&account.equip)?account.equip:null;
   // Auto-Login: Firebase Auth ist die Quelle der Wahrheit, localStorage nur fuer Sofort-Anzeige
   useEffect(()=>{
     // Sofort-Anzeige aus localStorage (wird gleich von Firebase bestaetigt/ueberschrieben)
@@ -4227,7 +4262,15 @@ function App(){
     setCollecting(cs=>[...cs,it]);
     setTimeout(()=>setCollecting(cs=>cs.filter(x=>x.id!==it.id)),650);
   };
-  const color=PC[turn];
+  // Effektive Match-Steinfarben: Server-validierte Skins (nur online), sonst Defaults.
+  // Keine Kollisionsregel — beide tragen ihre echte Farbe, Eigen-Erkennung uebernimmt der Orbit-Ring.
+  var _skA=(gameMode==='online'&&matchSkins&&matchSkins[0]&&matchSkins[0].stone)?STONE_SKINS[matchSkins[0].stone]:null;
+  var _skB=(gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
+  const MC={A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
+  const MD={A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
+  var _mySkinEntry=(gameMode==='online'&&matchSkins)?matchSkins[onlineRole==='B'?1:0]:null;
+  const myBoardSkin=(_mySkinEntry&&_mySkinEntry.board&&BOARD_SKINS[_mySkinEntry.board])||null;
+  const color=MC[turn];
 
   // ── Init game ──
   // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
@@ -4270,6 +4313,7 @@ function App(){
       setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
       if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){WSNET._dbg('GEO-MISMATCH! Server '+d.cols+'x'+d.rows+' vs Client '+COLS+'x'+ROWS);}
+      if((d.type==='match_start'||d.type==='resync')&&d.skins!==undefined)setMatchSkins(d.skins||null);
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
       if(d.walls){ setWalls(new Set(d.walls)); }
@@ -4339,6 +4383,7 @@ function App(){
       setRematchB(!!(d.req&&d.req[1]));
     }else if(d.type==='rematch_start'){
       // Vollreset wie neue Runde
+      if(d.skins!==undefined)setMatchSkins(d.skins||null);
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
       setWalls(new Set(d.walls||[]));
       if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
@@ -4384,8 +4429,8 @@ function App(){
         try{WSNET.close();}catch(e){} // Match vorbei, Raum weg -> nichts mehr zu retten
       }else if(WSNET.roomId){
         // Warteraum: Raum auf dem (neu gestarteten) Server einfach frisch anlegen/beitreten
-        if(WSNET.role==='A')WSNET._send({type:'create_room',roomId:WSNET.roomId,settings:WSNET.settings||{}});
-        else WSNET._send({type:'join_room',code:WSNET.roomId});
+        if(WSNET.role==='A')WSNET._send(WSNET._createMsg());
+        else WSNET._send(WSNET._joinMsg());
       }
     }
   };
@@ -4471,6 +4516,7 @@ function App(){
     if(d.type==='resync'&&!d.gestartet&&WSNET.roomId&&d.settings&&d.settings.ranked){ try{WSNET._send({type:'ranked_confirm'});}catch(e){} return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
+      setMatchSkins(d.skins||null);
       var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
       var tmS=(st.tm!==undefined&&st.tm!==null)?st.tm:'none';
       var brS=parseInt(st.barr,10);if(!(brS>=1&&brS<=25))brS=10; setGameBarr(brS);
@@ -4492,6 +4538,7 @@ function App(){
     }
     if(d.type==='lobby_ready'){
       // Firebase-Modus-Match: Server hat gepaart, Raum geloescht — Match laeuft klassisch ueber barricade_game_
+      setMatchSkins(d.skins||null);
       var stF=d.settings||{};var nmF=d.namen||[];var akF=d.akeys||[];
       var codeF=d.code||WSNET.roomId; var myNr=d.deineNummer;
       try{WSNET.close();}catch(e){}
@@ -8588,34 +8635,34 @@ function App(){
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 32px)',
         background:'transparent',position:'relative',zIndex:1,animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
         <MenuBG dark={darkMode}/>
-        {winner&&!isLoss&&<Confetti color={PC[winner]}/>}
+        {winner&&!isLoss&&<Confetti color={MC[winner]}/>}
 
         {/* Winner Card */}
         <div style={{width:'100%',maxWidth:300,position:'relative',zIndex:1}}>
           <div style={{borderRadius:22,overflow:'hidden',
-            boxShadow:winner?`0 16px 48px ${PC[winner]}50,0 4px 16px rgba(0,0,0,0.15)`:'0 8px 24px rgba(0,0,0,0.12)',
+            boxShadow:winner?`0 16px 48px ${MC[winner]}50,0 4px 16px rgba(0,0,0,0.15)`:'0 8px 24px rgba(0,0,0,0.12)',
             marginBottom:16,
-            border:winner?`1.5px solid ${PC[winner]}30`:'1.5px solid var(--border)'}}>
+            border:winner?`1.5px solid ${MC[winner]}30`:'1.5px solid var(--border)'}}>
             {/* Animated top stripe */}
-            <div style={{height:8,background:winner?`linear-gradient(90deg,${PC[winner]},${PC[winner]}99,${PC[winner]}cc,${PC[winner]})`:'var(--border)',
+            <div style={{height:8,background:winner?`linear-gradient(90deg,${MC[winner]},${MC[winner]}99,${MC[winner]}cc,${MC[winner]})`:'var(--border)',
               backgroundSize:'200% 100%',animation:winner?'rankGlow 2s ease infinite':'none'}}/>
             <div style={{background:isLoss?'var(--bg)':'var(--card)',padding:'24px 20px',textAlign:'center',position:'relative'}}>
-              {winner&&!isLoss&&<div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 0%, '+PC[winner]+'18 0%, transparent 65%)',pointerEvents:'none'}}/>}
+              {winner&&!isLoss&&<div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 0%, '+MC[winner]+'18 0%, transparent 65%)',pointerEvents:'none'}}/>}
               {/* Icon */}
               <div style={{marginBottom:8,animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',
                 position:'relative',zIndex:1,
-                filter:winner&&!isLoss?'drop-shadow(0 6px 20px '+PC[winner]+'80)':'none'}}>
+                filter:winner&&!isLoss?'drop-shadow(0 6px 20px '+MC[winner]+'80)':'none'}}>
                 {winner&&isLoss?<SadIcon size={68}/>:<TrophyIcon size={68}/>}
               </div>
               {/* Result text — BIG */}
               <div style={{fontSize:40,fontWeight:900,letterSpacing:-1.5,textTransform:'uppercase',lineHeight:1,
-                color:winner?PC[winner]:'var(--subtle)',marginBottom:6,position:'relative',zIndex:1,
-                textShadow:winner&&!isLoss?'0 0 40px '+PC[winner]+'50':'none',
+                color:winner?MC[winner]:'var(--subtle)',marginBottom:6,position:'relative',zIndex:1,
+                textShadow:winner&&!isLoss?'0 0 40px '+MC[winner]+'50':'none',
                 animation:winner&&!isLoss?'trophy-pop 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both':'none'}}>
                 {winner?(isLoss?t('lossLabel'):t('victoryLabel')):t('giveUpLabel')}
               </div>
               <div style={{fontSize:18,fontWeight:800,letterSpacing:-0.3,lineHeight:1.2,
-                color:winner?PC[winner]+'cc':'var(--subtle)',marginBottom:3,position:'relative',zIndex:1}}>
+                color:winner?MC[winner]+'cc':'var(--subtle)',marginBottom:3,position:'relative',zIndex:1}}>
                 {winner?pname(winner):t('givenUp')}
               </div>
               <div style={{fontSize:12,fontWeight:600,color:'var(--subtle)',marginBottom:gaveUp?10:0,position:'relative',zIndex:1}}>
@@ -8650,27 +8697,27 @@ function App(){
                 {/* Player A */}
                 <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderRight:'1px solid var(--border)'}}>
                   <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
-                    background:'radial-gradient(circle at 38% 32%, '+PC.A+', '+PD.A+' 100%)',
+                    background:'radial-gradient(circle at 38% 32%, '+MC.A+', '+MD.A+' 100%)',
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
-                  <div style={{fontSize:11,fontWeight:800,color:PC.A,letterSpacing:0.3,
+                  <div style={{fontSize:11,fontWeight:800,color:MC.A,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
                     {pname('A')}
                   </div>
-                  {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:PC.A,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
+                  {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:MC.A,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
                   {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
                 </div>
                 {/* Stats middle */}
                 <div style={{flex:1.4,padding:'12px 8px',display:'flex',flexDirection:'column',gap:8,justifyContent:'center'}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
-                    <span style={{fontSize:14,fontWeight:900,color:statMovA>statMovB?PC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statMovA}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statMovA>statMovB?MC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statMovA}</span>
                     <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{t('movesLabel')||'Züge'}</span>
-                    <span style={{fontSize:14,fontWeight:900,color:statMovB>statMovA?PC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statMovB}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statMovB>statMovA?MC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statMovB}</span>
                   </div>
                   <div style={{height:1,background:'var(--border)',opacity:0.5}}/>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
-                    <span style={{fontSize:14,fontWeight:900,color:statWallA>statWallB?PC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statWallA}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statWallA>statWallB?MC.A:'var(--text)',minWidth:22,textAlign:'right'}}>{statWallA}</span>
                     <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{t('wallsLabel')||'Mauern'}</span>
-                    <span style={{fontSize:14,fontWeight:900,color:statWallB>statWallA?PC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statWallB}</span>
+                    <span style={{fontSize:14,fontWeight:900,color:statWallB>statWallA?MC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statWallB}</span>
                   </div>
                   {isRanked&&rankedMyRating&&rankedOppRating&&(
                     <div>
@@ -8690,13 +8737,13 @@ function App(){
                 {/* Player B */}
                 <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderLeft:'1px solid var(--border)'}}>
                   <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
-                    background:'radial-gradient(circle at 38% 32%, '+PC.B+', '+PD.B+' 100%)',
+                    background:'radial-gradient(circle at 38% 32%, '+MC.B+', '+MD.B+' 100%)',
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
-                  <div style={{fontSize:11,fontWeight:800,color:PC.B,letterSpacing:0.3,
+                  <div style={{fontSize:11,fontWeight:800,color:MC.B,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
                     {pname('B')}
                   </div>
-                  {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:PC.B,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
+                  {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:MC.B,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
                   {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
                 </div>
               </div>
@@ -8914,8 +8961,8 @@ function App(){
           {/* Gegner-Banner (oben) */}
           <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',overflow:'hidden',
             display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:78,
-            background:`linear-gradient(160deg,${PC[introOppRole]}40 0%,${PC[introOppRole]}10 60%,transparent 100%)`,
-            borderBottom:`2px solid ${PC[introOppRole]}55`,
+            background:`linear-gradient(160deg,${MC[introOppRole]}40 0%,${MC[introOppRole]}10 60%,transparent 100%)`,
+            borderBottom:`2px solid ${MC[introOppRole]}55`,
             animation:'intro-card-left 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
             <div style={{position:'absolute',top:'30%',left:'-30%',width:'80%',height:60,
               background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)',
@@ -8924,12 +8971,12 @@ function App(){
               animation:'intro-block-top 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s both'}}>
               <div style={{position:'relative',width:96,height:96,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <div style={{position:'absolute',inset:0,borderRadius:'50%',
-                  background:`radial-gradient(circle,${PC[introOppRole]}3a,transparent 68%)`}}/>
-                <div style={{position:'absolute',inset:-3,borderRadius:'50%',border:`3px solid ${PC[introOppRole]}`,
+                  background:`radial-gradient(circle,${MC[introOppRole]}3a,transparent 68%)`}}/>
+                <div style={{position:'absolute',inset:-3,borderRadius:'50%',border:`3px solid ${MC[introOppRole]}`,
                   animation:'intro-ring 0.9s ease-out 0.55s'}}/>
                 <div style={{position:'relative',animation:'intro-avatar-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.45s both',
-                  filter:`drop-shadow(0 12px 22px ${PC[introOppRole]}aa)`}}>
-                  <Piece color={PC[introOppRole]} dark={PD[introOppRole]} size={86}/>
+                  filter:`drop-shadow(0 12px 22px ${MC[introOppRole]}aa)`}}>
+                  <Piece color={MC[introOppRole]} dark={MD[introOppRole]} size={86}/>
                 </div>
               </div>
               <div style={{fontSize:21,fontWeight:800,color:'#fff',letterSpacing:-0.3,maxWidth:'78vw',
@@ -8940,8 +8987,8 @@ function App(){
           {/* Eigenes Banner (unten) */}
           <div style={{position:'absolute',bottom:0,left:0,right:0,height:'50%',overflow:'hidden',
             display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:78,
-            background:`linear-gradient(20deg,${PC[introMyRole]}40 0%,${PC[introMyRole]}10 60%,transparent 100%)`,
-            borderTop:`2px solid ${PC[introMyRole]}55`,
+            background:`linear-gradient(20deg,${MC[introMyRole]}40 0%,${MC[introMyRole]}10 60%,transparent 100%)`,
+            borderTop:`2px solid ${MC[introMyRole]}55`,
             animation:'intro-card-right 0.65s cubic-bezier(0.16,1,0.3,1) 0.2s both'}}>
             <div style={{position:'absolute',bottom:'30%',right:'-30%',width:'80%',height:60,
               background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)',
@@ -8952,17 +8999,17 @@ function App(){
                 textAlign:'center',textShadow:'0 2px 14px rgba(0,0,0,0.65)',display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
                 <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0}}>{pname(introMyRole)}</span>
                 {gameMode==='online'&&<span style={{flexShrink:0,fontSize:10,fontWeight:900,letterSpacing:0.5,
-                  background:PC[introMyRole],color:'#fff',padding:'3px 8px',borderRadius:8,
-                  boxShadow:`0 2px 8px ${PC[introMyRole]}80`}}>{t('you').toUpperCase()}</span>}
+                  background:MC[introMyRole],color:'#fff',padding:'3px 8px',borderRadius:8,
+                  boxShadow:`0 2px 8px ${MC[introMyRole]}80`}}>{t('you').toUpperCase()}</span>}
               </div>
               <div style={{position:'relative',width:96,height:96,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <div style={{position:'absolute',inset:0,borderRadius:'50%',
-                  background:`radial-gradient(circle,${PC[introMyRole]}3a,transparent 68%)`}}/>
-                <div style={{position:'absolute',inset:-3,borderRadius:'50%',border:`3px solid ${PC[introMyRole]}`,
+                  background:`radial-gradient(circle,${MC[introMyRole]}3a,transparent 68%)`}}/>
+                <div style={{position:'absolute',inset:-3,borderRadius:'50%',border:`3px solid ${MC[introMyRole]}`,
                   animation:'intro-ring 0.9s ease-out 0.55s'}}/>
                 <div style={{position:'relative',animation:'intro-avatar-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.45s both',
-                  filter:`drop-shadow(0 12px 22px ${PC[introMyRole]}aa)`}}>
-                  <Piece color={PC[introMyRole]} dark={PD[introMyRole]} size={86}/>
+                  filter:`drop-shadow(0 12px 22px ${MC[introMyRole]}aa)`}}>
+                  <Piece color={MC[introMyRole]} dark={MD[introMyRole]} size={86}/>
                 </div>
               </div>
             </div>
@@ -8970,7 +9017,7 @@ function App(){
           {/* Trennlinie auf Bildschirmmitte */}
           <div style={{position:'absolute',left:0,right:0,top:'calc(50% - 1px)',height:2,zIndex:1,
             transformOrigin:'center',pointerEvents:'none',
-            background:`linear-gradient(90deg,transparent,${PC[introOppRole]} 26%,#fff 50%,${PC[introMyRole]} 74%,transparent)`,
+            background:`linear-gradient(90deg,transparent,${MC[introOppRole]} 26%,#fff 50%,${MC[introMyRole]} 74%,transparent)`,
             boxShadow:'0 0 14px rgba(255,255,255,0.45)',
             animation:'intro-divider 0.6s ease-out 0.55s both'}}/>
           {/* VS in der Mitte */}
@@ -9157,7 +9204,7 @@ function App(){
                 )}
                 <div className="ww-stone" style={{width:43,height:43,position:'relative',zIndex:2}}>
                   <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
-                    background:'radial-gradient(circle at 38% 32%, '+PC[p]+', '+PD[p]+' 100%)',
+                    background:'radial-gradient(circle at 38% 32%, '+MC[p]+', '+MD[p]+' 100%)',
                     boxShadow:'inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 3px 6px rgba(0,0,0,0.4)'}}/>
                   <div className="ww-stone-tex"/>
                   <div className="ww-stone-sheen"/>
@@ -9229,26 +9276,26 @@ function App(){
       <div className="ww-stud ww-stud-r"/>
       {(()=>{
         const boardFlip=gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel';
-        const gcGoal=selectedMap==='duel'?'#ef4444':'#22c55e';
+        const gcGoal=selectedMap==='duel'?MC.A:'#22c55e';
         return(
       <div ref={gridRef} style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,touchAction:'auto',...sGrid,
-        background:darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)',
+        background:myBoardSkin?myBoardSkin.bg:(darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)'),
         border:'none',
         boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18),inset 0 -3px 9px rgba(0,0,0,0.1)',
         transform:boardFlip?'scaleY(-1)':'none'}}>
-        <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:darkMode?0.12:0.4}}/>
-        <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
+        <div className="ww-board-tex" style={{mixBlendMode:darkMode?'screen':'multiply',opacity:myBoardSkin?0:(darkMode?0.12:0.4)}}/>
+        <div className="ww-board-veins" style={{opacity:myBoardSkin?0:(darkMode?0.3:0.45)}}/>
         <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
         <div style={{position:'absolute',top:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
           background:`linear-gradient(180deg,${gcGoal}28 0%,${gcGoal}12 60%,transparent 100%)`,
           boxShadow:`inset 0 0 0 1.5px ${gcGoal}55,inset 0 2px 10px ${gcGoal}33`,
           animation:'ww-goalpulse 3s ease-in-out infinite'}}/>
         {selectedMap==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
-          background:'linear-gradient(0deg,rgba(59,130,246,0.16) 0%,rgba(59,130,246,0.07) 60%,transparent 100%)',
-          boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.33),inset 0 -2px 10px rgba(59,130,246,0.2)',
+          background:`linear-gradient(0deg,${MC.B}29 0%,${MC.B}12 60%,transparent 100%)`,
+          boxShadow:`inset 0 0 0 1.5px ${MC.B}55,inset 0 -2px 10px ${MC.B}33`,
           animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
         <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
-          backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
+          backgroundImage:`linear-gradient(${myBoardSkin?myBoardSkin.line:(darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)')} 1px,transparent 1px),linear-gradient(90deg,${myBoardSkin?myBoardSkin.line:(darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)')} 1px,transparent 1px),radial-gradient(circle at 0 0, ${myBoardSkin?myBoardSkin.line:(darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)')} 1.4px, transparent 2px)`,
           backgroundSize:`${CELL}px ${CELL}px,${CELL}px ${CELL}px,${CELL}px ${CELL}px`}}/>
         {Array.from({length:ROWS},function(_,r){return Array.from({length:COLS},function(_,c){
           const isA=pA.r===r&&pA.c===c,isB=pB.r===r&&pB.c===c;
@@ -9262,7 +9309,7 @@ function App(){
                 background:bg,
                 display:'flex',alignItems:'center',justifyContent:'center',
                 cursor:vDot&&!dragging?'pointer':'default',boxSizing:'border-box'}}>
-              {vDot&&!isA&&!isB&&<div style={{width:Math.round(CELL*0.26),height:Math.round(CELL*0.26),borderRadius:'50%',pointerEvents:'none',background:`radial-gradient(circle at 40% 34%,rgba(255,255,255,0.6),${color} 62%,${PD[turn]})`,boxShadow:`0 0 8px ${color}aa,0 1px 2px rgba(0,0,0,0.32),inset 0 1px 1px rgba(255,255,255,0.4)`,animation:'ww-dotb 1.7s ease-in-out infinite'}}/>}
+              {vDot&&!isA&&!isB&&<div style={{width:Math.round(CELL*0.26),height:Math.round(CELL*0.26),borderRadius:'50%',pointerEvents:'none',background:`radial-gradient(circle at 40% 34%,rgba(255,255,255,0.6),${color} 62%,${MD[turn]})`,boxShadow:`0 0 8px ${color}aa,0 1px 2px rgba(0,0,0,0.32),inset 0 1px 1px rgba(255,255,255,0.4)`,animation:'ww-dotb 1.7s ease-in-out infinite'}}/>}
             </div>
           );
         });})}
@@ -9304,10 +9351,11 @@ function App(){
               transition:'left 0.25s cubic-bezier(0.34,1.3,0.5,1),top 0.25s cubic-bezier(0.34,1.3,0.5,1)',
               zIndex:20,pointerEvents:'none',transform:boardFlip?'scaleY(-1)':'none'}}>
               {isActive&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',
-                background:PC[p],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
+                background:MC[p],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
               <div key={'land'+pos.r+'-'+pos.c} style={{position:'absolute',inset:-3,borderRadius:'50%',
-                border:'2px solid '+PC[p],animation:'ww-land 0.5s ease-out forwards',pointerEvents:'none'}}/>
-              <Piece color={PC[p]} dark={PD[p]} size={sz}/>
+                border:'2px solid '+MC[p],animation:'ww-land 0.5s ease-out forwards',pointerEvents:'none'}}/>
+              <Piece color={MC[p]} dark={MD[p]} size={sz}/>
+              {gameMode==='online'&&p===onlineRole&&<div className="ww-me-orbit"/>}
             </div>
           );
         })}
@@ -9364,7 +9412,7 @@ function App(){
         <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
           zIndex:500,pointerEvents:'none',background:'rgba(0,0,0,0.15)'}}>
           <div style={{animation:'person-grow 0.3s ease-out both'}}>
-            <WinnerPerson color={PC[winner]} dark={PD[winner]} speed={danceSpeed} dance={danceStyle}/>
+            <WinnerPerson color={MC[winner]} dark={MD[winner]} speed={danceSpeed} dance={danceStyle}/>
           </div>
         </div>
       )}
@@ -9374,16 +9422,16 @@ function App(){
           background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',
           display:'flex',alignItems:'center',justifyContent:'center',zIndex:500}}
           onClick={()=>setScreen('end')}>
-          {!isOwnLoss(winner)&&<Confetti color={PC[winner]}/>}
+          {!isOwnLoss(winner)&&<Confetti color={MC[winner]}/>}
           <div style={{background:'var(--card)',borderRadius:24,padding:'28px 32px',textAlign:'center',
-            boxShadow:`0 24px 64px ${PC[winner]}40, 0 8px 24px rgba(0,0,0,0.25)`,
+            boxShadow:`0 24px 64px ${MC[winner]}40, 0 8px 24px rgba(0,0,0,0.25)`,
             zIndex:9999,position:'relative',minWidth:220,
-            border:`1.5px solid ${PC[winner]}30`,
+            border:`1.5px solid ${MC[winner]}30`,
             animation:'trophy-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both'}}>
             <div style={{marginBottom:12,display:'flex',justifyContent:'center'}}>
               {isOwnLoss(winner)?<SadIcon size={52}/>:<TrophyIcon size={52}/>}
             </div>
-            <div style={{fontSize:24,fontWeight:900,color:PC[winner],
+            <div style={{fontSize:24,fontWeight:900,color:MC[winner],
               letterSpacing:-0.5,lineHeight:1.1,marginBottom:4}}>{pname(winner)}</div>
             <div style={{fontSize:15,fontWeight:700,color:'var(--text)',marginBottom:16}}>{t('wins')}</div>
             <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,
@@ -9464,7 +9512,7 @@ function App(){
             position:'fixed',...posStyle,
             zIndex:450,pointerEvents:'none',
             animation:'emote-pop 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}>
-            <EmoteChar color={PC[p]} dark={PD[p]} type={em.type}/>
+            <EmoteChar color={MC[p]} dark={MD[p]} type={em.type}/>
           </div>
         );
       })}
@@ -9491,8 +9539,8 @@ function App(){
               {k:'confused'}
             ].map(e=>{
               const myRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
-              const c=PC[myRole]||PC.A;
-              const d=PD[myRole]||PD.A;
+              const c=MC[myRole]||MC.A;
+              const d=MD[myRole]||MD.A;
               return(
                 <button key={e.k} onClick={()=>triggerEmote(e.k)}
                   disabled={emoteCooldown}
