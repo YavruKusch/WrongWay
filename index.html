@@ -800,8 +800,23 @@
       }).catch(function(err){console.warn('[ww-err] failed',err&&err.message);});
     }catch(x){}
   }
+  // Bekanntes Umgebungs-Rauschen nicht melden (haelt das Admin-Panel lesbar und spart Firebase-Writes):
+  // Safari bricht Requests beim Verlassen ab ("cancelled"/"Load failed"), iOS erlaubt Audio erst nach
+  // Geste, WebKit-IndexedDB-Meldungen kommen aus dem Firebase-SDK, "Script error." ist cross-origin
+  // maskiert (keine Info), webkit.messageHandlers/sendDataToNative = injizierte Skripte von
+  // In-App-Browsern (Instagram u.a.) — alles keine WrongWay-Bugs (Report-Auswertung 2026-07-08).
+  var WW_ERR_IGNORE=['cancelled','Load failed','Failed to start the audio device',
+    'Attempt to get records from database without an in-progress transaction',
+    'Database deleted by request of the user','Script error.','window.webkit.messageHandlers'];
+  function wwErrIgnorable(e){
+    var m=String((e&&e.msg)||''), s=String((e&&e.stack)||'');
+    for(var i=0;i<WW_ERR_IGNORE.length;i++){ if(m.indexOf(WW_ERR_IGNORE[i])!==-1)return true; }
+    return s.indexOf('sendDataToNative')!==-1||s.indexOf('sendPageHideMessage')!==-1;
+  }
+  window.wwErrIgnorable=wwErrIgnorable;
   function wwReportErr(e){
     try{
+      if(wwErrIgnorable(e))return;
       // ponytail: 1x pro Fehlertext und max. 5 Reports pro Sitzung — reicht, um jeden Bug zu sehen
       if(window._wwErrSeen[e.msg]||window._wwErrCount>=5)return;
       window._wwErrSeen[e.msg]=true;window._wwErrCount++;

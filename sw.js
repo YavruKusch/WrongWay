@@ -1,5 +1,5 @@
 // Wrong Way PWA Service Worker
-const CACHE = 'wrongway-v124';
+const CACHE = 'wrongway-v125';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -36,6 +36,13 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE).then(c => c.put(req, copy));
         return res;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('/index.html')))
+      .catch(() => caches.match(req, {ignoreSearch: true}).then(r => {
+        // ignoreSearch: index.html fragt z.B. js/i18n.js?v=102 an, der Precache speichert ohne ?v= —
+        // ohne diese Option matcht der Cache nie und jeder Offline-Start nach SW-Update bricht.
+        if (r) return r;
+        // HTML-Fallback NUR fuer Seiten-Aufrufe: eine JS-/Asset-Anfrage darf nie index.html bekommen
+        // (sonst SyntaxError "Unexpected token '<'" und die App startet nicht mehr).
+        return isHTML ? caches.match('/index.html') : Response.error();
+      }))
   );
 });
