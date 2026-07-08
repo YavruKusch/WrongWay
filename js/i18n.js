@@ -111,6 +111,7 @@ var I18N={
 var I18N_EXT={
 en:{
   lostOnTime:'Time ran out',
+  lostConnection:'Connection lost',
   viewProfile:'View profile',viewProfileDesc:'Opponent stats',opponent:'Opponent',
   copyLink:'Copy link',
   email:'Email',emailPh:'you@example.com',forgotPw:'Forgot password?',
@@ -172,6 +173,7 @@ en:{
 },
 de:{
   lostOnTime:'Zeit abgelaufen',
+  lostConnection:'Verbindung getrennt',
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
   copyLink:'Link kopieren',
   email:'E-Mail',emailPh:'du@beispiel.de',forgotPw:'Passwort vergessen?',
@@ -232,6 +234,7 @@ de:{
 },
 tr:{
   lostOnTime:'Süre doldu',
+  lostConnection:'Bağlantı koptu',
   viewProfile:'Profili gör',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
   copyLink:'Bağlantıyı kopyala',
   email:'E-posta',emailPh:'siz@ornek.com',forgotPw:'Şifremi unuttum?',
@@ -292,6 +295,7 @@ tr:{
 },
 fr:{
   lostOnTime:'Temps écoulé',
+  lostConnection:'Connexion perdue',
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
   copyLink:'Copier le lien',
   email:'E-mail',emailPh:'vous@exemple.fr',forgotPw:'Mot de passe oublié ?',
