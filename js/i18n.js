@@ -112,6 +112,10 @@ var I18N_EXT={
 en:{
   lostOnTime:'Time ran out',
   lostConnection:'Connection lost',
+  reportBtn:'Report a problem',reportTitle:'What happened?',reportPlaceholder:'Describe what went wrong...',
+  reportSend:'Send report',reportCancel:'Close',reportSent:'Thanks! Report sent.',
+  reportLimit:'Daily limit reached (3 per day)',reportNeedLogin:'Please sign in to send reports',
+  catConnection:'Connection',catUnfair:'Unfair loss',catDisplay:'Display bug',catOther:'Other',
   viewProfile:'View profile',viewProfileDesc:'Opponent stats',opponent:'Opponent',
   copyLink:'Copy link',
   email:'Email',emailPh:'you@example.com',forgotPw:'Forgot password?',
@@ -174,6 +178,10 @@ en:{
 de:{
   lostOnTime:'Zeit abgelaufen',
   lostConnection:'Verbindung getrennt',
+  reportBtn:'Problem melden',reportTitle:'Was ist passiert?',reportPlaceholder:'Beschreibe, was schiefgelaufen ist...',
+  reportSend:'Report senden',reportCancel:'Schliessen',reportSent:'Danke! Report gesendet.',
+  reportLimit:'Tageslimit erreicht (3 pro Tag)',reportNeedLogin:'Zum Melden bitte einloggen',
+  catConnection:'Verbindung',catUnfair:'Unfairer Verlust',catDisplay:'Anzeige-Fehler',catOther:'Sonstiges',
   viewProfile:'Profil ansehen',viewProfileDesc:'Stats des Gegners',opponent:'Gegner',
   copyLink:'Link kopieren',
   email:'E-Mail',emailPh:'du@beispiel.de',forgotPw:'Passwort vergessen?',
@@ -235,6 +243,10 @@ de:{
 tr:{
   lostOnTime:'Süre doldu',
   lostConnection:'Bağlantı koptu',
+  reportBtn:'Sorun bildir',reportTitle:'Ne oldu?',reportPlaceholder:'Neyin yanlış gittiğini anlat...',
+  reportSend:'Raporu gönder',reportCancel:'Kapat',reportSent:'Teşekkürler! Rapor gönderildi.',
+  reportLimit:'Günlük sınıra ulaşıldı (günde 3)',reportNeedLogin:'Bildirmek için giriş yap',
+  catConnection:'Bağlantı',catUnfair:'Haksız kayıp',catDisplay:'Görüntü hatası',catOther:'Diğer',
   viewProfile:'Profili gör',viewProfileDesc:'Rakip istatistikleri',opponent:'Rakip',
   copyLink:'Bağlantıyı kopyala',
   email:'E-posta',emailPh:'siz@ornek.com',forgotPw:'Şifremi unuttum?',
@@ -296,6 +308,10 @@ tr:{
 fr:{
   lostOnTime:'Temps écoulé',
   lostConnection:'Connexion perdue',
+  reportBtn:'Signaler un problème',reportTitle:'Que s\'est-il passé ?',reportPlaceholder:'Décris ce qui a mal tourné...',
+  reportSend:'Envoyer',reportCancel:'Fermer',reportSent:'Merci ! Rapport envoyé.',
+  reportLimit:'Limite quotidienne atteinte (3 par jour)',reportNeedLogin:'Connecte-toi pour signaler',
+  catConnection:'Connexion',catUnfair:'Défaite injuste',catDisplay:'Bug d\'affichage',catOther:'Autre',
   viewProfile:'Voir le profil',viewProfileDesc:"Stats de l'adversaire",opponent:'Adversaire',
   copyLink:'Copier le lien',
   email:'E-mail',emailPh:'vous@exemple.fr',forgotPw:'Mot de passe oublié ?',

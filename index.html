@@ -1085,6 +1085,7 @@ var WSNET={
   move:function(to){ this._send({type:'move',to:to}); },
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
+  bugReport:function(payload){ var m={type:'bug_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
   timeout:function(){ this._send({type:'timeout'}); },
   skipTurn:function(){ this._send({type:'skip'}); },
   requestSync:function(){ this._send({type:'sync'}); },
@@ -1497,6 +1498,100 @@ function AdminErrorsPanel(){
           {r.n+'x bei '+users+' Spieler(n), zuletzt '+when}
         </div>
         {det}
+      </div>
+    );
+  });
+  return(
+    <div>
+      <div style={{display:'flex',gap:7,marginBottom:8}}>
+        <button onClick={load} disabled={busy} style={btnSt}>
+          {busy?'...':(rows===null?'Reports laden':'Aktualisieren')}
+        </button>
+        {rows&&rows.length>0&&
+          <button onClick={clearAll} disabled={busy}
+            style={Object.assign({},btnSt,{borderColor:'#ef4444',color:'#ef4444'})}>
+            {confirmDel?'Wirklich ALLE loeschen?':'Alle loeschen'}
+          </button>}
+      </div>
+      {rowsUi}
+      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
+    </div>
+  );
+}
+function AdminBugsPanel(props){
+  var[rows,setRows]=React.useState(null);
+  var[busy,setBusy]=React.useState(false);
+  var[msg,setMsg]=React.useState('');
+  var[open,setOpen]=React.useState(-1);
+  var[confirmDel,setConfirmDel]=React.useState(false);
+  var KAT_LABEL={connection:'Verbindung',unfair:'Unfairer Verlust',display:'Anzeige',other:'Sonstiges'};
+  function load(){
+    if(!window.db)return;
+    setBusy(true);setMsg('');setOpen(-1);setConfirmDel(false);
+    window.db.ref('ww_bug_reports').once('value').then(function(snap){
+      var v=snap.val()||{};var list=[];
+      Object.keys(v).forEach(function(uid){
+        Object.keys(v[uid]||{}).forEach(function(pid){
+          var e=v[uid][pid];
+          if(e&&e.text){e=Object.assign({},e);e._uid=uid;e._id=pid;list.push(e);}
+        });
+      });
+      list.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+      setRows(list);setBusy(false);
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
+  }
+  function clearAll(){
+    if(!confirmDel){setConfirmDel(true);return;}
+    if(!window.db)return;
+    setBusy(true);
+    window.db.ref('ww_bug_reports').set(null).then(function(){
+      setRows([]);setBusy(false);setConfirmDel(false);setMsg('Alle geloescht');
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);setConfirmDel(false);});
+  }
+  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
+    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
+    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
+  var rowsUi=null;
+  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Bug-Reports.</div>;
+  if(rows&&rows.length>0)rowsUi=rows.map(function(r,idx){
+    var when=new Date(r.ts||0).toLocaleString();
+    var srv=null;
+    try{srv=r.server?JSON.stringify(r.server,null,1):'(Server-Sicht fehlt — Raum war schon weg)';}catch(e){srv='?';}
+    var cli=null;
+    try{cli=r.client?JSON.stringify(r.client,null,1):'(kein Client-Kontext)';}catch(e){cli='?';}
+    var det=null;
+    if(open===idx)det=(
+      <div style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-all',
+        marginTop:5,padding:7,background:'var(--bg)',borderRadius:7}}>
+        {'uid: '+r._uid+'\n\nCLIENT:\n'+cli+'\n\nSERVER:\n'+srv}
+      </div>
+    );
+    var replayBtn=null;
+    if(open===idx&&r.replay&&r.replay.moveHist&&props.onWatch){
+      replayBtn=(
+        <button onClick={function(ev){ev.stopPropagation();props.onWatch(r.replay);}}
+          style={{marginTop:6,padding:'7px 12px',borderRadius:9,border:'none',cursor:'pointer',
+            background:'#3b82f6',color:'white',fontSize:11,fontWeight:800,fontFamily:'system-ui,sans-serif'}}>
+          Replay ansehen ({(r.replay.moveHist||[]).length} Zuege)
+        </button>
+      );
+    }
+    return(
+      <div key={r._uid+'_'+r._id} onClick={function(){setOpen(open===idx?-1:idx);}}
+        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
+          border:'1.5px solid var(--border)',marginBottom:6,cursor:'pointer'}}>
+        <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:2}}>
+          <span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
+            background:'rgba(59,130,246,0.12)',color:'#3b82f6'}}>{KAT_LABEL[r.kat]||r.kat}</span>
+          {r.replay&&r.replay.moveHist?<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
+            background:'rgba(22,163,74,0.12)',color:'#16a34a'}}>REPLAY</span>:null}
+          {r.client&&r.client.ranked?<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
+            background:'rgba(245,158,11,0.12)',color:'#f59e0b'}}>RANKED</span>:null}
+        </div>
+        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',wordBreak:'break-word'}}>{r.text}</div>
+        <div style={{fontSize:10,color:'var(--subtle)',marginTop:2}}>{when}</div>
+        {det}
+        {replayBtn}
       </div>
     );
   });
@@ -4020,6 +4115,10 @@ function App(){
   const[giveUpArmed,setGiveUpArmed]=useState(false);
   const[gaveUp,setGaveUp]=useState(null);
   const[lossReason,setLossReason]=useState(null); // 'timeout' etc. — klarer Grund im Endscreen (kein "aufgegeben"-Missverstaendnis)
+  const[bugOpen,setBugOpen]=useState(false); // Bug-Report-Formular im Endscreen
+  const[bugKat,setBugKat]=useState('other');
+  const[bugText,setBugText]=useState('');
+  const[bugStatus,setBugStatus]=useState(null); // null|'sending'|'ok'|'limit'|'err'|'login'
   const[dragging,setDragging]=useState(null);
   const[ghostPos,setGhostPos]=useState({x:0,y:0});
   const[previewKey,setPreviewKey]=useState(null);
@@ -4061,7 +4160,7 @@ function App(){
   const xpBeforeMatchRef=useRef(null);
   const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen};
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
   useEffect(()=>{
@@ -4311,6 +4410,9 @@ function App(){
       setEloChange({change:0,newRating:null,won:d.won,reason:d.reason});
       return;
     }
+    if(d&&d.type==='bug_report_ok'){setBugStatus('ok');return;}
+    if(d&&d.type==='bug_report_limit'){setBugStatus('limit');return;}
+    if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.bugOpen){setBugStatus('login');return;}
     if(d&&d.type==='elo_update'){
       setEloChange({change:d.change,newRating:d.newRating,won:d.won,oppChange:d.oppChange,oppNewRating:d.oppNewRating});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
@@ -4367,6 +4469,7 @@ function App(){
       // Verlorenen eigenen Zug automatisch erneut senden (Anti-Verlust auf wackeliger Verbindung)
       if(d.winner===undefined||d.winner===null){
         setLossReason(null); // laufendes Spiel -> Grund zuruecksetzen (kein stale beim naechsten Spiel)
+        setBugOpen(false);setBugStatus(null); // Bug-Report-Formular gehoert nur zum Endscreen
         var myRoleP=(typeof d.deineNummer==='number')?(d.deineNummer===0?'A':'B'):S.current.onlineRole;
         var myNumP=myRoleP==='A'?0:1;
         var srvTurnP=(typeof d.amZug==='number')?(d.amZug===0?'A':'B'):S.current.turn;
@@ -6937,6 +7040,19 @@ function App(){
               <AdminErrorsPanel/>
             </AdminSection>
 
+            {/* ── BUG-REPORTS (SPIELER) ── */}
+            <AdminSection label="BUG-REPORTS (SPIELER)">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                Spieler-Meldungen vom Endscreen-Button (ww_bug_reports) — mit Replay + Server-Sicht. Laden nur auf Klick.
+              </div>
+              <AdminBugsPanel onWatch={function(entry){
+                try{applyBoardSize(entry.map||'classic',entry.duelSize||'standard');}catch(e){}
+                setReplayHistEntry(entry);
+                setReplayStep(0);
+                setScreen('replay');
+              }}/>
+            </AdminSection>
+
             {/* ── COINS & SHOP ── */}
             <AdminSection label="COINS & SHOP">
               <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
@@ -7647,10 +7763,10 @@ function App(){
         fr:['Mentions l\u00e9gales','Informations selon la loi n\u00b0 6563 (Turquie, commerce \u00e9lectronique)','Exploitant: [NOM DE LA SOCI\u00c9T\u00c9 \u2014 \u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Num\u00e9ro fiscal: [\u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Responsable du contenu: l\u2019exploitant','Contact: wrongwayapp.official@gmail.com']
       },
       privacy:{
-        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf, Coins, XP, Level, Inventar (Skins), Kaufhistorie.','Fehlerberichte: Bei technischen Fehlern speichert die App automatisch einen kurzen Bericht (Fehlermeldung, betroffene Code-Stelle, Browser-/Ger\u00e4tetyp, App-Version, Zeitpunkt) unter deiner Nutzer-ID \u2014 maximal 10 Eintr\u00e4ge pro Konto, nur zur Fehlerbehebung. Fehlerberichte werden mit der Kontol\u00f6schung gel\u00f6scht.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Chat & Moderation: Chat-Nachrichten werden zur Zustellung verarbeitet und automatisch gefiltert. Gemeldete Nachrichten (Melde-Funktion) werden zur Pr\u00fcfung gespeichert; Blockierlisten geh\u00f6ren zu deinem Konto.','Missbrauchsschutz: Meldungen anderer Spieler (inklusive der gemeldeten Nachricht) und Sperr-Eintr\u00e4ge bleiben auch nach der Kontol\u00f6schung gespeichert, damit Sperren nicht durch L\u00f6schen und Neuanlegen des Kontos umgangen werden k\u00f6nnen (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO).','Daten\u00fcbertragung ins Ausland (KVKK Art. 9): Verarbeitung auf Servern in der EU und den USA (Google Firebase, GitHub). Mit der Nutzung willigst du in diese \u00dcbertragung ausdr\u00fccklich ein.','Werbung (geplant): freiwillige Bonus-Videos (Rewarded Ads) \u00fcber Google AdMob. Vor Aktivierung erscheint ein Einwilligungs-Banner (Google UMP); ohne Zustimmung keine personalisierte Werbung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden. Ausnahme: Missbrauchsschutz-Daten (siehe oben).','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
-        en:['Privacy Policy (GDPR & KVKK)','Controller: wrongwayapp.official@gmail.com','Legal basis: Art. 6(1)(b) GDPR (contract performance) for accounts; Art. 6(1)(a) (consent) for advertising and analytics.','Data collected: email, username, password (hashed), game stats, ELO, game history, coins, XP, level, inventory (skins), purchase history.','Error reports: if a technical error occurs, the app automatically stores a short report (error message, affected code location, browser/device type, app version, time) under your user ID \u2014 at most 10 entries per account, used only to fix bugs. Error reports are deleted together with your account.','Anonymous sessions: Playing without an account generates anonymous Firebase IDs. Not personally identifiable.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). US transfers based on Standard Contractual Clauses (SCC).','Third parties: Google Firebase (Auth, Database) \u00b7 Google reCAPTCHA v3 (spam protection). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passwords hashed exclusively by Firebase. No access to plaintext passwords.','Cookies & storage: We use localStorage for settings and cookie consent. No tracking cookies without consent.','Chat & moderation: chat messages are processed for delivery and filtered automatically. Reported messages (report feature) are stored for review; block lists belong to your account.','Abuse prevention: reports from other players (including the reported message) and ban records are kept even after account deletion, so bans cannot be bypassed by deleting and re-creating an account (legitimate interest, Art. 6(1)(f) GDPR).','International transfers (KVKK Art. 9): processing on servers in the EU and USA (Google Firebase, GitHub). By using the app you expressly consent to this transfer.','Advertising (planned): optional reward videos (rewarded ads) via Google AdMob. A consent banner (Google UMP) appears before activation; no personalized ads without consent.','Retention: until account deletion. Accounts can be deleted anytime in profile settings. Exception: abuse-prevention data (see above).','Your rights (GDPR): access, rectification, erasure, restriction, portability, objection. Contact: wrongwayapp.official@gmail.com','Right to complain: You have the right to lodge a complaint with a data protection authority.','KVKK (Turkey): rights under Law No. 6698. Contact wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
-        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: wrongwayapp.official@gmail.com','Hukuki dayanak: Hesaplar i\u00e7in GDPR Madde 6/1-b (s\u00f6zle\u015fme); reklam i\u00e7in Madde 6/1-a (r\u0131za).','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO, oyun ge\u00e7mi\u015fi, coin, XP, seviye, envanter (skin), sat\u0131n alma ge\u00e7mi\u015fi.','Hata raporlar\u0131: Teknik bir hata olu\u015ftu\u011funda uygulama, kullan\u0131c\u0131 kimli\u011finize ba\u011fl\u0131 k\u0131sa bir rapor (hata mesaj\u0131, ilgili kod konumu, taray\u0131c\u0131/cihaz t\u00fcr\u00fc, uygulama s\u00fcr\u00fcm\u00fc, zaman) otomatik olarak kaydeder \u2014 hesap ba\u015f\u0131na en fazla 10 kay\u0131t, yaln\u0131zca hatalar\u0131 d\u00fczeltmek i\u00e7in. Hata raporlar\u0131 hesap silindi\u011finde birlikte silinir.','Anonim oturumlar: Hesaps\u0131z oynarken anonim Firebase kimlikleri olu\u015fturulur. Ki\u015fiye ba\u011flanamaz.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt). ABD transferleri SCC kapsam\u0131nda.','\u00dc\u00e7\u00fcnc\u00fc taraflar: Google Firebase \u00b7 Google reCAPTCHA v3. Google LLC, Mountain View, CA 94043, ABD.','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r. A\u00e7\u0131k metin \u015fifrelere eri\u015fim yoktur.','Depolama: Ayarlar i\u00e7in localStorage kullan\u0131l\u0131r. Onay olmadan takip \u00e7erezi kullan\u0131lmaz.','Sohbet & moderasyon: sohbet mesajlar\u0131 iletim i\u00e7in i\u015flenir ve otomatik filtrelenir. Bildirilen mesajlar (\u015fikayet \u00f6zelli\u011fi) inceleme i\u00e7in saklan\u0131r; engelleme listesi hesab\u0131n\u0131za ba\u011fl\u0131d\u0131r.','K\u00f6t\u00fcye kullan\u0131m korumas\u0131: Di\u011fer oyuncular\u0131n bildirimleri (bildirilen mesaj dahil) ve yasaklama kay\u0131tlar\u0131, yasaklar\u0131n hesab\u0131 silip yeniden a\u00e7arak a\u015f\u0131lmamas\u0131 i\u00e7in hesap silindikten sonra da saklan\u0131r (me\u015fru menfaat; KVKK m. 5/2-f, GDPR m. 6/1-f).','Yurt d\u0131\u015f\u0131na veri aktar\u0131m\u0131 (KVKK m. 9): veriler AB ve ABD sunucular\u0131nda i\u015flenir (Google Firebase, GitHub). Uygulamay\u0131 kullanarak bu aktar\u0131ma a\u00e7\u0131k r\u0131za vermi\u015f olursunuz.','Reklam (planlanan): iste\u011fe ba\u011fl\u0131 \u00f6d\u00fcll\u00fc videolar (rewarded ads), Google AdMob \u00fczerinden. Etkinle\u015ftirmeden \u00f6nce onay banner\u0131 (Google UMP) g\u00f6sterilir; r\u0131za olmadan ki\u015fiselle\u015ftirilmi\u015f reklam g\u00f6sterilmez.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan istedi\u011finiz zaman silinebilir. \u0130stisna: k\u00f6t\u00fcye kullan\u0131m korumas\u0131 verileri (yukar\u0131ya bak\u0131n).','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme, s\u0131n\u0131rlama, ta\u015f\u0131nabilirlik. wrongwayapp.official@gmail.com','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, itiraz. wrongwayapp.official@gmail.com','\u015eikayet hakk\u0131: KVKK Kurumu\'na \u015eikayet hakk\u0131n\u0131z bulunmaktad\u0131r. www.kvkk.gov.tr'],
-        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: wrongwayapp.official@gmail.com','Base l\u00e9gale: Art. 6(1)(b) RGPD (ex\u00e9cution du contrat) pour les comptes; Art. 6(1)(a) (consentement) pour la publicit\u00e9.','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO, historique de parties, pi\u00e8ces, XP, niveau, inventaire (skins), historique d\u2019achats.','Rapports d\u2019erreur : en cas d\u2019erreur technique, l\u2019application enregistre automatiquement un court rapport (message d\u2019erreur, emplacement du code concern\u00e9, type de navigateur/appareil, version de l\u2019app, horodatage) li\u00e9 \u00e0 votre identifiant \u2014 au maximum 10 entr\u00e9es par compte, uniquement pour corriger les bugs. Les rapports d\u2019erreur sont supprim\u00e9s avec le compte.','Sessions anonymes: jouer sans compte g\u00e9n\u00e8re des identifiants Firebase anonymes. Non rattachables \u00e0 une personne.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort). Transferts USA bas\u00e9s sur les CCT.','Tiers: Google Firebase (Auth, BDD) \u00b7 Google reCAPTCHA v3 (anti-spam). Google LLC, Mountain View, CA 94043, USA.','Mots de passe hach\u00e9s exclusivement par Firebase. Aucun acc\u00e8s aux mots de passe en clair.','Cookies & stockage: localStorage pour les pr\u00e9f\u00e9rences et le consentement. Pas de cookies de suivi sans accord.','Chat & mod\u00e9ration : les messages de chat sont trait\u00e9s pour la livraison et filtr\u00e9s automatiquement. Les messages signal\u00e9s sont conserv\u00e9s pour examen ; les listes de blocage sont li\u00e9es \u00e0 votre compte.','Protection contre les abus : les signalements d\u2019autres joueurs (y compris le message signal\u00e9) et les inscriptions de bannissement sont conserv\u00e9s m\u00eame apr\u00e8s la suppression du compte, afin que les bannissements ne puissent pas \u00eatre contourn\u00e9s en supprimant puis recr\u00e9ant un compte (int\u00e9r\u00eat l\u00e9gitime, art. 6(1)(f) RGPD).','Transferts internationaux (KVKK art. 9) : traitement sur des serveurs dans l\u2019UE et aux USA (Google Firebase, GitHub). En utilisant l\u2019app, vous consentez express\u00e9ment \u00e0 ce transfert.','Publicit\u00e9 (pr\u00e9vu) : vid\u00e9os bonus volontaires (rewarded ads) via Google AdMob. Un bandeau de consentement (Google UMP) appara\u00eet avant activation ; pas de publicit\u00e9 personnalis\u00e9e sans accord.','Conservation: jusqu\u2019\u00e0 la suppression du compte. Supprimable \u00e0 tout moment dans les param\u00e8tres. Exception : donn\u00e9es de protection contre les abus (voir ci-dessus).','Droits (RGPD): acc\u00e8s, rectification, effacement, limitation, portabilit\u00e9, opposition. wrongwayapp.official@gmail.com','Droit de r\u00e9clamation: vous pouvez saisir une autorit\u00e9 de protection des donn\u00e9es (ex. CNIL: cnil.fr).','KVKK (Turquie): droits selon loi n\u00b0 6698. wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr']
+        de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf, Coins, XP, Level, Inventar (Skins), Kaufhistorie.','Fehlerberichte: Bei technischen Fehlern speichert die App automatisch einen kurzen Bericht (Fehlermeldung, betroffene Code-Stelle, Browser-/Ger\u00e4tetyp, App-Version, Zeitpunkt) unter deiner Nutzer-ID \u2014 maximal 10 Eintr\u00e4ge pro Konto, nur zur Fehlerbehebung. Zus\u00e4tzlich kannst du nach einer Online-Runde freiwillig einen Problembericht senden (deine Beschreibung, Spielverlauf und technische Daten der Runde) \u2014 maximal 3 pro Tag. Fehlerberichte werden mit der Kontol\u00f6schung gel\u00f6scht.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Chat & Moderation: Chat-Nachrichten werden zur Zustellung verarbeitet und automatisch gefiltert. Gemeldete Nachrichten (Melde-Funktion) werden zur Pr\u00fcfung gespeichert; Blockierlisten geh\u00f6ren zu deinem Konto.','Missbrauchsschutz: Meldungen anderer Spieler (inklusive der gemeldeten Nachricht) und Sperr-Eintr\u00e4ge bleiben auch nach der Kontol\u00f6schung gespeichert, damit Sperren nicht durch L\u00f6schen und Neuanlegen des Kontos umgangen werden k\u00f6nnen (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO).','Daten\u00fcbertragung ins Ausland (KVKK Art. 9): Verarbeitung auf Servern in der EU und den USA (Google Firebase, GitHub). Mit der Nutzung willigst du in diese \u00dcbertragung ausdr\u00fccklich ein.','Werbung (geplant): freiwillige Bonus-Videos (Rewarded Ads) \u00fcber Google AdMob. Vor Aktivierung erscheint ein Einwilligungs-Banner (Google UMP); ohne Zustimmung keine personalisierte Werbung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden. Ausnahme: Missbrauchsschutz-Daten (siehe oben).','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        en:['Privacy Policy (GDPR & KVKK)','Controller: wrongwayapp.official@gmail.com','Legal basis: Art. 6(1)(b) GDPR (contract performance) for accounts; Art. 6(1)(a) (consent) for advertising and analytics.','Data collected: email, username, password (hashed), game stats, ELO, game history, coins, XP, level, inventory (skins), purchase history.','Error reports: if a technical error occurs, the app automatically stores a short report (error message, affected code location, browser/device type, app version, time) under your user ID \u2014 at most 10 entries per account, used only to fix bugs. You can also voluntarily send a problem report after an online match (your description, the match history and technical match data) — at most 3 per day. Error reports are deleted together with your account.','Anonymous sessions: Playing without an account generates anonymous Firebase IDs. Not personally identifiable.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). US transfers based on Standard Contractual Clauses (SCC).','Third parties: Google Firebase (Auth, Database) \u00b7 Google reCAPTCHA v3 (spam protection). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passwords hashed exclusively by Firebase. No access to plaintext passwords.','Cookies & storage: We use localStorage for settings and cookie consent. No tracking cookies without consent.','Chat & moderation: chat messages are processed for delivery and filtered automatically. Reported messages (report feature) are stored for review; block lists belong to your account.','Abuse prevention: reports from other players (including the reported message) and ban records are kept even after account deletion, so bans cannot be bypassed by deleting and re-creating an account (legitimate interest, Art. 6(1)(f) GDPR).','International transfers (KVKK Art. 9): processing on servers in the EU and USA (Google Firebase, GitHub). By using the app you expressly consent to this transfer.','Advertising (planned): optional reward videos (rewarded ads) via Google AdMob. A consent banner (Google UMP) appears before activation; no personalized ads without consent.','Retention: until account deletion. Accounts can be deleted anytime in profile settings. Exception: abuse-prevention data (see above).','Your rights (GDPR): access, rectification, erasure, restriction, portability, objection. Contact: wrongwayapp.official@gmail.com','Right to complain: You have the right to lodge a complaint with a data protection authority.','KVKK (Turkey): rights under Law No. 6698. Contact wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
+        tr:['Gizlilik Politikas\u0131 (KVKK & GDPR)','Veri sorumlusu: wrongwayapp.official@gmail.com','Hukuki dayanak: Hesaplar i\u00e7in GDPR Madde 6/1-b (s\u00f6zle\u015fme); reklam i\u00e7in Madde 6/1-a (r\u0131za).','Toplanan veriler: e-posta, kullan\u0131c\u0131 ad\u0131, \u015fifre (karma\u015f\u0131k), oyun istatistikleri, ELO, oyun ge\u00e7mi\u015fi, coin, XP, seviye, envanter (skin), sat\u0131n alma ge\u00e7mi\u015fi.','Hata raporlar\u0131: Teknik bir hata olu\u015ftu\u011funda uygulama, kullan\u0131c\u0131 kimli\u011finize ba\u011fl\u0131 k\u0131sa bir rapor (hata mesaj\u0131, ilgili kod konumu, taray\u0131c\u0131/cihaz t\u00fcr\u00fc, uygulama s\u00fcr\u00fcm\u00fc, zaman) otomatik olarak kaydeder \u2014 hesap ba\u015f\u0131na en fazla 10 kay\u0131t, yaln\u0131zca hatalar\u0131 d\u00fczeltmek i\u00e7in. Ayr\u0131ca bir \u00e7evrimi\u00e7i ma\u00e7tan sonra g\u00f6n\u00fcll\u00fc olarak sorun bildirimi g\u00f6nderebilirsin (a\u00e7\u0131klaman, ma\u00e7 ge\u00e7mi\u015fi ve teknik ma\u00e7 verileri) \u2014 g\u00fcnde en fazla 3. Hata raporlar\u0131 hesap silindi\u011finde birlikte silinir.','Anonim oturumlar: Hesaps\u0131z oynarken anonim Firebase kimlikleri olu\u015fturulur. Ki\u015fiye ba\u011flanamaz.','Bar\u0131nd\u0131rma: GitHub Pages (ABD) + Google Firebase AB (europe-west1, Frankfurt). ABD transferleri SCC kapsam\u0131nda.','\u00dc\u00e7\u00fcnc\u00fc taraflar: Google Firebase \u00b7 Google reCAPTCHA v3. Google LLC, Mountain View, CA 94043, ABD.','\u015eifreler yaln\u0131zca Firebase taraf\u0131ndan karma\u015f\u0131kla\u015ft\u0131r\u0131l\u0131r. A\u00e7\u0131k metin \u015fifrelere eri\u015fim yoktur.','Depolama: Ayarlar i\u00e7in localStorage kullan\u0131l\u0131r. Onay olmadan takip \u00e7erezi kullan\u0131lmaz.','Sohbet & moderasyon: sohbet mesajlar\u0131 iletim i\u00e7in i\u015flenir ve otomatik filtrelenir. Bildirilen mesajlar (\u015fikayet \u00f6zelli\u011fi) inceleme i\u00e7in saklan\u0131r; engelleme listesi hesab\u0131n\u0131za ba\u011fl\u0131d\u0131r.','K\u00f6t\u00fcye kullan\u0131m korumas\u0131: Di\u011fer oyuncular\u0131n bildirimleri (bildirilen mesaj dahil) ve yasaklama kay\u0131tlar\u0131, yasaklar\u0131n hesab\u0131 silip yeniden a\u00e7arak a\u015f\u0131lmamas\u0131 i\u00e7in hesap silindikten sonra da saklan\u0131r (me\u015fru menfaat; KVKK m. 5/2-f, GDPR m. 6/1-f).','Yurt d\u0131\u015f\u0131na veri aktar\u0131m\u0131 (KVKK m. 9): veriler AB ve ABD sunucular\u0131nda i\u015flenir (Google Firebase, GitHub). Uygulamay\u0131 kullanarak bu aktar\u0131ma a\u00e7\u0131k r\u0131za vermi\u015f olursunuz.','Reklam (planlanan): iste\u011fe ba\u011fl\u0131 \u00f6d\u00fcll\u00fc videolar (rewarded ads), Google AdMob \u00fczerinden. Etkinle\u015ftirmeden \u00f6nce onay banner\u0131 (Google UMP) g\u00f6sterilir; r\u0131za olmadan ki\u015fiselle\u015ftirilmi\u015f reklam g\u00f6sterilmez.','Saklama: hesap silinene kadar. Profil ayarlar\u0131ndan istedi\u011finiz zaman silinebilir. \u0130stisna: k\u00f6t\u00fcye kullan\u0131m korumas\u0131 verileri (yukar\u0131ya bak\u0131n).','Haklar\u0131n\u0131z (KVKK): bilgi alma, d\u00fczeltme, silme, s\u0131n\u0131rlama, ta\u015f\u0131nabilirlik. wrongwayapp.official@gmail.com','GDPR (AB): eri\u015fim, d\u00fczeltme, silme, itiraz. wrongwayapp.official@gmail.com','\u015eikayet hakk\u0131: KVKK Kurumu\'na \u015eikayet hakk\u0131n\u0131z bulunmaktad\u0131r. www.kvkk.gov.tr'],
+        fr:['Politique de confidentialit\u00e9 (RGPD & KVKK)','Responsable: wrongwayapp.official@gmail.com','Base l\u00e9gale: Art. 6(1)(b) RGPD (ex\u00e9cution du contrat) pour les comptes; Art. 6(1)(a) (consentement) pour la publicit\u00e9.','Donn\u00e9es collect\u00e9es: e-mail, pseudo, mot de passe (hach\u00e9), stats, ELO, historique de parties, pi\u00e8ces, XP, niveau, inventaire (skins), historique d\u2019achats.','Rapports d\u2019erreur : en cas d\u2019erreur technique, l\u2019application enregistre automatiquement un court rapport (message d\u2019erreur, emplacement du code concern\u00e9, type de navigateur/appareil, version de l\u2019app, horodatage) li\u00e9 \u00e0 votre identifiant \u2014 au maximum 10 entr\u00e9es par compte, uniquement pour corriger les bugs. Vous pouvez aussi envoyer volontairement un rapport de probl\u00e8me apr\u00e8s une partie en ligne (votre description, l\u2019historique de la partie et des donn\u00e9es techniques) \u2014 au maximum 3 par jour. Les rapports d\u2019erreur sont supprim\u00e9s avec le compte.','Sessions anonymes: jouer sans compte g\u00e9n\u00e8re des identifiants Firebase anonymes. Non rattachables \u00e0 une personne.','H\u00e9bergement: GitHub Pages (USA) + Google Firebase UE (europe-west1, Francfort). Transferts USA bas\u00e9s sur les CCT.','Tiers: Google Firebase (Auth, BDD) \u00b7 Google reCAPTCHA v3 (anti-spam). Google LLC, Mountain View, CA 94043, USA.','Mots de passe hach\u00e9s exclusivement par Firebase. Aucun acc\u00e8s aux mots de passe en clair.','Cookies & stockage: localStorage pour les pr\u00e9f\u00e9rences et le consentement. Pas de cookies de suivi sans accord.','Chat & mod\u00e9ration : les messages de chat sont trait\u00e9s pour la livraison et filtr\u00e9s automatiquement. Les messages signal\u00e9s sont conserv\u00e9s pour examen ; les listes de blocage sont li\u00e9es \u00e0 votre compte.','Protection contre les abus : les signalements d\u2019autres joueurs (y compris le message signal\u00e9) et les inscriptions de bannissement sont conserv\u00e9s m\u00eame apr\u00e8s la suppression du compte, afin que les bannissements ne puissent pas \u00eatre contourn\u00e9s en supprimant puis recr\u00e9ant un compte (int\u00e9r\u00eat l\u00e9gitime, art. 6(1)(f) RGPD).','Transferts internationaux (KVKK art. 9) : traitement sur des serveurs dans l\u2019UE et aux USA (Google Firebase, GitHub). En utilisant l\u2019app, vous consentez express\u00e9ment \u00e0 ce transfert.','Publicit\u00e9 (pr\u00e9vu) : vid\u00e9os bonus volontaires (rewarded ads) via Google AdMob. Un bandeau de consentement (Google UMP) appara\u00eet avant activation ; pas de publicit\u00e9 personnalis\u00e9e sans accord.','Conservation: jusqu\u2019\u00e0 la suppression du compte. Supprimable \u00e0 tout moment dans les param\u00e8tres. Exception : donn\u00e9es de protection contre les abus (voir ci-dessus).','Droits (RGPD): acc\u00e8s, rectification, effacement, limitation, portabilit\u00e9, opposition. wrongwayapp.official@gmail.com','Droit de r\u00e9clamation: vous pouvez saisir une autorit\u00e9 de protection des donn\u00e9es (ex. CNIL: cnil.fr).','KVKK (Turquie): droits selon loi n\u00b0 6698. wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr']
       },
       terms:{
         de:['Nutzungsbedingungen','Geltungsbereich: Wrong Way: Don\'t be mad, betrieben von wrongwayapp.official@gmail.com','Konten: kostenlos spielbar. Online erfordert g\u00fcltige E-Mail. Ein Konto pro Person.','Verbote: Cheating, Bots, Exploits f\u00fchren zur sofortigen Sperrung ohne R\u00fcckerstattung.','Altersgrenze: ab 13 Jahren. Unter 18 Jahren ist Elternzustimmung f\u00fcr Eink\u00e4ufe erforderlich.','In-App-K\u00e4ufe (zuk\u00fcnftig): Zahlung nur \u00fcber Google Play / Apple Store. Virtuelle G\u00fcter haben keinen Geldwert und sind nicht erstattungsf\u00e4hig.','Werbung: Personalisierte Werbung nur mit ausdr\u00fccklicher Einwilligung (Cookie-Banner).','Urheberrecht: Alle Inhalte, Grafiken und der Spielcode sind geistiges Eigentum des Betreibers.','Haftung: Keine Gew\u00e4hr f\u00fcr Verf\u00fcgbarkeit. Kein Ersatz bei Datenverlust durch Serverausf\u00e4lle.','K\u00fcndigung: Der Betreiber kann Konten bei Versto\u00df gegen diese Bedingungen jederzeit sperren.','Änderungen: \u00c4nderungen dieser Bedingungen werden 14 Tage im Voraus per In-App-Hinweis bekannt gegeben. Weitere Nutzung gilt als Zustimmung.','Widerruf (EU): 14 Tage Widerrufsrecht bei K\u00e4ufen. Beim Kauf virtueller G\u00fcter stimmst du der sofortigen Bereitstellung zu \u2014 damit erlischt das Widerrufsrecht (Art. 16 lit. m RL 2011/83/EU). Die Erstattungsregeln von Google Play / Apple bleiben unber\u00fchrt.','Melden & Blockieren: Anst\u00f6\u00dfige Inhalte oder Spieler kannst du direkt in der App melden oder blockieren. Beschwerden zus\u00e4tzlich an: wrongwayapp.official@gmail.com','Geltendes Recht: T\u00fcrkisches Recht. Zwingende EU-Verbraucherschutzregeln bleiben unber\u00fchrt.'],
@@ -8949,6 +9065,80 @@ function App(){
                 try{WSNET.close();}catch(e){}
                 setScreen('menu');setGameMode(null);setLobbyId(null);
               }}/>
+            {gameMode==='online'&&!bugOpen&&(
+              <button onClick={()=>{setBugOpen(true);setBugStatus(null);}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'6px 0 2px',
+                  fontSize:12,fontWeight:700,color:'var(--subtle)',textDecoration:'underline',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {t('reportBtn')}
+              </button>
+            )}
+            {gameMode==='online'&&bugOpen&&(
+              <div style={{padding:'12px 14px',borderRadius:14,background:'var(--card)',
+                border:'1.5px solid var(--border)',textAlign:'left'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'var(--text)',marginBottom:8}}>{t('reportTitle')}</div>
+                {bugStatus!=='ok'&&(
+                  <div>
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+                      {[['connection',t('catConnection')],['unfair',t('catUnfair')],['display',t('catDisplay')],['other',t('catOther')]].map(function(o){
+                        var selK=bugKat===o[0];
+                        return <button key={o[0]} onClick={()=>setBugKat(o[0])}
+                          style={{padding:'5px 10px',borderRadius:9,fontSize:11,fontWeight:700,cursor:'pointer',
+                            border:'1.5px solid '+(selK?'#3b82f6':'var(--border)'),
+                            background:selK?'rgba(59,130,246,0.12)':'var(--bg)',
+                            color:selK?'#3b82f6':'var(--subtle)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                          {o[1]}
+                        </button>;
+                      })}
+                    </div>
+                    <textarea value={bugText} onChange={e=>setBugText(e.target.value.slice(0,500))}
+                      placeholder={t('reportPlaceholder')} rows={3} maxLength={500}
+                      style={{width:'100%',padding:'9px 11px',borderRadius:10,fontSize:13,resize:'vertical',
+                        background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                        fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+                  </div>
+                )}
+                {bugStatus==='ok'&&<div style={{fontSize:12,fontWeight:700,color:'#16a34a',marginBottom:8}}>{'✓'} {t('reportSent')}</div>}
+                {bugStatus==='limit'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportLimit')}</div>}
+                {bugStatus==='login'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportNeedLogin')}</div>}
+                {bugStatus==='err'&&<div style={{fontSize:12,fontWeight:700,color:'#ef4444',marginBottom:8}}>{t('auth_network')}</div>}
+                <div style={{display:'flex',gap:7}}>
+                  {bugStatus!=='ok'&&(
+                    <button disabled={!bugText.trim()||bugStatus==='sending'} onClick={()=>{
+                      var txt=bugText.trim();
+                      if(!txt||bugStatus==='sending')return;
+                      setBugStatus('sending');
+                      var sB=S.current;
+                      var pNB=sB.playerNames||{};
+                      var repB={ts:Date.now(),winner:winner,moveHist:sB.moveHist||[],map:sB.selectedMap||'classic',
+                        duelSize:sB.duelSize||'standard',nameA:pNB.A||null,nameB:pNB.B||null,
+                        gameMode:'online',myRole:sB.onlineRole||null};
+                      var payloadB={text:txt,kat:bugKat,
+                        client:{ranked:!!sB.isRanked,lossReason:lossReason,gaveUp:sB.gaveUp||null,
+                          map:sB.selectedMap||'classic',duelSize:sB.duelSize||'standard'},
+                        replay:repB};
+                      try{
+                        if(JSON.stringify(payloadB).length>14000){payloadB.replay=null;payloadB.client.replayZuGross=true;}
+                      }catch(eB){payloadB.replay=null;}
+                      WSNET.bugReport(payloadB);
+                      setTimeout(function(){setBugStatus(function(stB){return stB==='sending'?'err':stB;});},6000);
+                    }}
+                      style={{flex:1,padding:'9px',borderRadius:10,border:'none',fontSize:12,fontWeight:800,
+                        background:(!bugText.trim()||bugStatus==='sending')?'var(--border)':'#3b82f6',
+                        color:'white',cursor:(!bugText.trim()||bugStatus==='sending')?'default':'pointer',
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      {bugStatus==='sending'?'...':t('reportSend')}
+                    </button>
+                  )}
+                  <button onClick={()=>{setBugOpen(false);setBugStatus(null);setBugText('');}}
+                    style={{flex:1,padding:'9px',borderRadius:10,fontSize:12,fontWeight:800,cursor:'pointer',
+                      background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                      fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {t('reportCancel')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
