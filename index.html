@@ -1086,6 +1086,7 @@ var WSNET={
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
   bugReport:function(payload){ var m={type:'bug_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
+  playerReport:function(payload){ var m={type:'player_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
   timeout:function(){ this._send({type:'timeout'}); },
   skipTurn:function(){ this._send({type:'skip'}); },
   requestSync:function(){ this._send({type:'sync'}); },
@@ -1130,6 +1131,7 @@ const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
 // Kein Hash, kein Passwort, kein URL-Parameter — serverseitig durch Firebase-Regel gesichert.
 // Die UID ist KEIN Geheimnis: sie nuetzt nur dem, der sich in genau diesen Account einloggen kann.
 const ADMIN_UID='mSonMcXmL8fktWt170Q1pYVduya2';
+const WARN_SECONDS=5; // Verwarnungs-Overlay: Countdown bis 'Verstanden' klickbar wird
 function isAdmin(){
   try{
     var u=firebase.auth().currentUser;
@@ -1612,6 +1614,263 @@ function AdminBugsPanel(props){
     </div>
   );
 }
+function WarnOverlay(props){
+  // Verwarnungs-Overlay mit 5s-'Verstanden'-Countdown. Eigene Komponente, damit der
+  // Countdown erst bei SICHTBARKEIT startet (Mount) — nicht schon beim App-Boot,
+  // wo Babel-Kompilierung/Config-Load die 5s unbemerkt auffressen wuerden.
+  var[cnt,setCnt]=React.useState(WARN_SECONDS);
+  React.useEffect(function(){
+    var iv=setInterval(function(){ setCnt(function(c){ return c>0?c-1:0; }); },1000);
+    return function(){clearInterval(iv);};
+  },[]);
+  var w=props.warn,t=props.t;
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:950,
+      display:'flex',alignItems:'center',justifyContent:'center',padding:20,
+      fontFamily:'system-ui,-apple-system,sans-serif'}}>
+      <div style={{width:'100%',maxWidth:340,background:'var(--card)',borderRadius:20,
+        border:'1.5px solid rgba(245,158,11,0.4)',boxShadow:'0 8px 30px rgba(245,158,11,0.18)',
+        padding:'26px 22px',textAlign:'center'}}>
+        <div style={{width:54,height:54,borderRadius:15,margin:'0 auto 12px',
+          background:'rgba(245,158,11,0.13)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div style={{fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:8}}>{t('warnTitle')}</div>
+        {w.reason?(
+          <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:8}}>
+            {t('bannedReason')}: <span style={{color:'#f59e0b'}}>{t(w.reason)}</span>
+          </div>
+        ):null}
+        <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:10}}>{t('warnNextBan')}</div>
+        <div style={{fontSize:11,color:'var(--subtle)',lineHeight:1.6,fontWeight:500,marginBottom:16,wordBreak:'break-word'}}>{t('bannedAppeal')}</div>
+        <button disabled={cnt>0} onClick={props.onOk}
+          style={{width:'100%',padding:'12px',borderRadius:12,border:'none',
+            background:cnt>0?'var(--border)':'#f59e0b',
+            color:cnt>0?'var(--subtle)':'white',
+            fontWeight:800,fontSize:14,cursor:cnt>0?'default':'pointer',
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>
+          {cnt>0?(t('warnUnderstood')+' ('+cnt+')'):t('warnUnderstood')}
+        </button>
+      </div>
+    </div>
+  );
+}
+function AdminReportsPanel(){
+  // Spieler-Meldungen (ww_reports) gruppiert nach gemeldetem Spieler + Ban-Werkzeug.
+  // Alle Reads on-demand (.once), Aktionen via adminWsCmd (Server prueft ADMIN_UID).
+  var[rows,setRows]=React.useState(null);      // null=nicht geladen, sonst [{uid,name,reports:[..]}]
+  var[busy,setBusy]=React.useState(false);
+  var[msg,setMsg]=React.useState('');
+  var[openUid,setOpenUid]=React.useState(null);
+  var[openName,setOpenName]=React.useState('');
+  var[banLog,setBanLog]=React.useState(null);  // ww_ban_log des aufgeklappten Ziels
+  var[lbInfo,setLbInfo]=React.useState(null);  // Rating des aufgeklappten Ziels
+  var[grund,setGrund]=React.useState('');
+  var[actBusy,setActBusy]=React.useState('');
+  var[actMsg,setActMsg]=React.useState('');
+  var[q,setQ]=React.useState('');
+  var[qRes,setQRes]=React.useState(null);
+  var RKAT={reportCheating:'Cheating',reportHateSpeech:'Beleidigung',reportSpam:'Spam',reportOther:'Sonstiges'};
+  var AKT_LABEL={verworfen:'Verworfen',beobachtet:'Beobachtet',verwarnt:'Verwarnt',entsperrt:'Entsperrt',gesperrt_perm:'Gesperrt (permanent)'};
+  function aktLabel(a){ if(AKT_LABEL[a])return AKT_LABEL[a]; if(a&&a.indexOf('gesperrt_')===0)return 'Gesperrt ('+a.slice(9)+')'; return a||'?'; }
+  function evidTxt(ev){
+    if(!ev)return '';
+    if(ev.kind==='chat')return 'CHAT-BEWEIS: "'+(ev.text||'')+'"';
+    if(ev.kind==='match'){
+      if(ev.live)return 'MATCH lief noch (kein Endstand)';
+      try{return 'MATCH: '+JSON.stringify({winner:ev.winner,winReason:ev.winReason,forfeitUsedMs:ev.forfeitUsedMs,dauerMs:ev.dauerMs,ranked:ev.ranked});}catch(e){return 'MATCH';}
+    }
+    return '';
+  }
+  function load(){
+    if(!window.db)return;
+    setBusy(true);setMsg('');setOpenUid(null);setBanLog(null);
+    window.db.ref('ww_reports').once('value').then(function(snap){
+      var v=snap.val()||{};var byUid={};
+      Object.keys(v).forEach(function(id){
+        var e=v[id];if(!e||!e.reported)return;
+        e=Object.assign({},e);e._id=id;
+        if(!byUid[e.reported])byUid[e.reported]={uid:e.reported,name:e.reportedName||'?',reports:[]};
+        byUid[e.reported].reports.push(e);
+        if(e.reportedName)byUid[e.reported].name=e.reportedName;
+      });
+      var list=Object.keys(byUid).map(function(k){var g=byUid[k];g.reports.sort(function(a,b){return (b.ts||0)-(a.ts||0);});return g;});
+      list.sort(function(a,b){return (b.reports[0].ts||0)-(a.reports[0].ts||0);});
+      setRows(list);setBusy(false);
+    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
+  }
+  function loadDetail(uid){
+    setBanLog(null);setLbInfo(null);
+    if(!window.db)return;
+    window.db.ref('ww_ban_log/'+uid).once('value').then(function(snap){
+      var v=snap.val()||{};
+      var list=Object.keys(v).map(function(k){return v[k]||{};});
+      list.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+      setBanLog(list);
+    }).catch(function(){setBanLog([]);});
+    window.db.ref('ww_leaderboard/'+uid).once('value').then(function(snap){
+      var v=snap.val();
+      if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
+      setLbInfo(v||{});
+    }).catch(function(){setLbInfo({});});
+  }
+  function toggle(uid,name,defaultGrund){
+    if(openUid===uid){setOpenUid(null);setBanLog(null);setLbInfo(null);return;}
+    setOpenUid(uid);setOpenName(name||'?');setActMsg('');
+    setGrund(defaultGrund||'');
+    loadDetail(uid);
+  }
+  function doAction(art,reportId){
+    if(actBusy||!openUid)return;
+    var uid=openUid,m=null,ok='';
+    if(art==='ban24'||art==='ban7'||art==='banperm'){
+      var dur=art==='ban24'?86400000:(art==='ban7'?604800000:null);
+      if(!window.confirm(openName+' ('+uid+') sperren: '+(art==='banperm'?'PERMANENT':(art==='ban24'?'24 Stunden':'7 Tage'))+'?'))return;
+      m={type:'admin_ban_set',uid:uid,reason:(grund.trim()||'other'),durationMs:dur,reportId:reportId||null};ok='admin_ban_ok';
+    }else if(art==='unban'){
+      if(!window.confirm(openName+' ('+uid+') entsperren?'))return;
+      m={type:'admin_unban',uid:uid};ok='admin_ban_ok';
+    }else{
+      m={type:'admin_report_action',uid:uid,aktion:art,grund:(grund.trim()||null),reportId:reportId||null};ok='admin_report_action_ok';
+    }
+    setActBusy(art);setActMsg('');
+    adminWsCmd(m,ok).then(function(){
+      setActBusy('');setActMsg('OK: '+art);
+      loadDetail(uid); // Historie sofort aktualisieren
+    }).catch(function(e){
+      setActBusy('');setActMsg('Fehler: '+(e&&e.message?e.message:'?'));
+    });
+  }
+  function doSearch(){
+    var qq=normUser(q);
+    if(qq.length<2||!window.db){setQRes([]);return;}
+    window.db.ref('ww_usernames').orderByKey().startAt(qq).endAt(qq+String.fromCharCode(0xf8ff)).limitToFirst(8).once('value').then(function(snap){
+      var v=snap.val()||{};
+      var list=Object.keys(v).map(function(k){var r=v[k];if(typeof r==='string'){try{r=JSON.parse(r);}catch(e){r=null;}}return r;})
+        .filter(function(r){return r&&r.uid;}).map(function(r){return {uid:r.uid,name:r.name||'?'};});
+      setQRes(list);
+    }).catch(function(e){setQRes([]);setMsg('Suche-Fehler: '+(e&&e.message));});
+  }
+  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
+    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
+    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
+  var aBtn=function(label,art,color,reportId){
+    var on=actBusy===art;
+    return <button key={art} disabled={!!actBusy} onClick={function(){doAction(art,reportId);}}
+      style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid '+color,background:'transparent',
+        color:color,fontSize:11,fontWeight:800,cursor:actBusy?'default':'pointer',
+        fontFamily:'system-ui,sans-serif',opacity:actBusy&&!on?0.5:1}}>
+      {on?'...':label}
+    </button>;
+  };
+  // Detail-Block (Aktionen + Historie) — fuer Meldungs-Gruppen UND Suchtreffer derselbe
+  var detailUi=function(reports){
+    var newestId=reports&&reports.length>0?reports[0]._id:null;
+    var ratingTxt='';
+    if(lbInfo){
+      var rc=lbInfo.classic&&lbInfo.classic.rating,rd=lbInfo.duel&&lbInfo.duel.rating;
+      ratingTxt=(typeof rc==='number'?('Classic '+rc):'')+(typeof rd==='number'?((rc?' | ':'')+'Duel '+rd):'');
+      if(!ratingTxt)ratingTxt='kein Rating';
+    }
+    return(
+      <div style={{marginTop:6}} onClick={function(ev){ev.stopPropagation();}}>
+        <div style={{fontSize:10,color:'var(--subtle)',marginBottom:6,wordBreak:'break-all'}}>
+          UID: {openUid}{lbInfo?(' | ELO: '+ratingTxt):''}
+        </div>
+        {(reports||[]).map(function(r,ri){
+          return(
+            <div key={r._id||ri} style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-word',
+              marginBottom:5,padding:7,background:'var(--bg)',borderRadius:7}}>
+              <span style={{fontWeight:800,color:'#ef4444'}}>{RKAT[r.reason]||r.reason}</span>
+              {' | '+new Date(r.ts||0).toLocaleString()+' | Melder: '+String(r.reporter||'?').slice(0,10)+'…'}
+              {r.text?('\nText: "'+r.text+'"'):''}
+              {r.evidence?('\n'+evidTxt(r.evidence)):''}
+            </div>
+          );
+        })}
+        <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'8px 0 4px'}}>HISTORIE (ww_ban_log)</div>
+        {banLog===null?<div style={{fontSize:10,color:'var(--subtle)'}}>laedt...</div>:
+          banLog.length===0?<div style={{fontSize:10,color:'var(--subtle)'}}>keine Eintraege</div>:
+          banLog.map(function(l,li){
+            return <div key={li} style={{fontSize:10,color:'var(--subtle)',marginBottom:2}}>
+              {new Date(l.ts||0).toLocaleString()+' — '+aktLabel(l.aktion)+(l.grund?(' ('+l.grund+')'):'')}
+            </div>;
+          })}
+        <input value={grund} onChange={function(e){setGrund(e.target.value);}} placeholder="Grund (Kategorie-Key wird beim Spieler uebersetzt)"
+          style={{width:'100%',padding:'8px 10px',borderRadius:9,fontSize:11,background:'var(--bg)',
+            border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
+            boxSizing:'border-box',outline:'none',margin:'8px 0 6px'}}/>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:5}}>
+          {aBtn('Verwerfen','verworfen','#64748b',newestId)}
+          {aBtn('Beobachten','beobachtet','#3b82f6',newestId)}
+          {aBtn('Verwarnen','verwarnt','#f59e0b',newestId)}
+        </div>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+          {aBtn('Sperren 24h','ban24','#ef4444',newestId)}
+          {aBtn('Sperren 7T','ban7','#ef4444',newestId)}
+          {aBtn('PERMANENT','banperm','#dc2626',newestId)}
+          {aBtn('Entsperren','unban','#16a34a',null)}
+        </div>
+        {actMsg&&<div style={{fontSize:11,fontWeight:700,marginTop:6,color:actMsg.indexOf('Fehler')===0?'#ef4444':'#16a34a'}}>{actMsg}</div>}
+      </div>
+    );
+  };
+  var rowsUi=null;
+  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Meldungen.</div>;
+  if(rows&&rows.length>0)rowsUi=rows.map(function(g){
+    var isOpen=openUid===g.uid;
+    return(
+      <div key={g.uid} onClick={function(){toggle(g.uid,g.name,g.reports[0]?g.reports[0].reason:'');}}
+        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
+          border:'1.5px solid '+(isOpen?'rgba(239,68,68,0.4)':'var(--border)'),marginBottom:6,cursor:'pointer'}}>
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
+            background:'rgba(239,68,68,0.12)',color:'#ef4444'}}>{g.reports.length}{'×'}</span>
+          <span style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{g.name}</span>
+          <span style={{fontSize:9,color:'var(--subtle)',marginLeft:'auto'}}>{new Date(g.reports[0].ts||0).toLocaleDateString()}</span>
+        </div>
+        {isOpen&&detailUi(g.reports)}
+      </div>
+    );
+  });
+  var qResUi=null;
+  if(qRes&&qRes.length===0)qResUi=<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>Kein Treffer.</div>;
+  if(qRes&&qRes.length>0)qResUi=qRes.map(function(r){
+    var isOpen=openUid===r.uid;
+    return(
+      <div key={r.uid} onClick={function(){toggle(r.uid,r.name,'');}}
+        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
+          border:'1.5px solid '+(isOpen?'rgba(59,130,246,0.4)':'var(--border)'),marginTop:6,cursor:'pointer'}}>
+        <div style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{r.name}</div>
+        {isOpen&&detailUi((rows||[]).filter(function(g){return g.uid===r.uid;}).reduce(function(acc,g){return acc.concat(g.reports);},[]))}
+      </div>
+    );
+  });
+  return(
+    <div>
+      <div style={{display:'flex',gap:7,marginBottom:8}}>
+        <button onClick={load} disabled={busy} style={btnSt}>
+          {busy?'...':(rows===null?'Meldungen laden':'Aktualisieren')}
+        </button>
+      </div>
+      {rowsUi}
+      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
+      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,margin:'12px 0 4px'}}>SPIELER-SUCHE (NAME {'→'} UID + HISTORIE)</div>
+      <div style={{display:'flex',gap:6}}>
+        <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Spielername"
+          onKeyDown={function(e){if(e.key==='Enter')doSearch();}}
+          style={{flex:1,padding:'8px 10px',borderRadius:9,fontSize:12,background:'var(--bg)',
+            border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
+            boxSizing:'border-box',outline:'none',minWidth:0}}/>
+        <button onClick={doSearch} style={btnSt}>Suchen</button>
+      </div>
+      {qResUi}
+    </div>
+  );
+}
 function AdminFlagsPanel(){
   var[flags,setFlags]=React.useState({XP_SYSTEM:false,COIN_SYSTEM:false});
   var[busy,setBusy]=React.useState('');
@@ -1655,7 +1914,7 @@ function AdminFlagsPanel(){
     </div>
   );
 }
-async function adminCoinsWsCmd(msg){
+async function adminWsCmd(msg,okType){ // dedizierter Kurz-WS: auth -> Admin-Befehl -> auf okType warten (Coins, Bans, Report-Aktionen)
   return new Promise(function(resolve,reject){
     var ws=new WebSocket(WW_URL);
     var authed=false,done=false;
@@ -1670,7 +1929,7 @@ async function adminCoinsWsCmd(msg){
       if(done)return;
       var d;try{d=JSON.parse(ev.data);}catch(e){return;}
       if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify(msg));return;}
-      if(d.type==='admin_coins_ok'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
+      if(d.type===okType){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
       if(d.type==='error'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.grund||'Server-Fehler'));}
     };
     ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
@@ -1693,7 +1952,7 @@ function AdminCoinsPanel(){
     setBusy(true);setRes(null);
     var msgObj={type:'admin_coins_'+action,uid:uidV};
     if(action!=='get')msgObj.amount=amtV;
-    adminCoinsWsCmd(msgObj).then(function(r){
+    adminWsCmd(msgObj,'admin_coins_ok').then(function(r){
       var extra=r.added!==undefined?(' ('+r.added+')'):'';
       setRes({ok:true,msg:uidV+': '+r.balance+' Coins'+extra});
       setBusy(false);
@@ -3466,6 +3725,7 @@ function App(){
   const[showOptions,setShowOptions]=useState(false);
   const[showInbox,setShowInbox]=useState(false);
   const[broadcasts,setBroadcasts]=useState([]);
+  const[warnings,setWarnings]=useState([]); // persoenliche Verwarnungen aus ww_warnings/<uid> (.once beim Login)
   const[readIds,setReadIds]=useState(()=>{try{var r=localStorage.getItem('ww_read_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
   const[dismissedIds,setDismissedIds]=useState(()=>{try{var r=localStorage.getItem('ww_dismissed_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
   const[afkTimeLeft,setAfkTimeLeft]=useState(0);
@@ -3559,6 +3819,21 @@ function App(){
       else localStorage.removeItem('ww_account');
     }catch(e){}
   },[account]);
+  // Persoenliche Verwarnungen (ww_warnings/<uid>): EIN .once() pro Login, meist leer — kein Dauer-Listener
+  useEffect(function(){
+    if(!window.db)return;
+    var uid=account?account.key:null;
+    if(!uid){setWarnings([]);return;}
+    var cancelled=false;
+    window.db.ref('ww_warnings/'+uid).once('value').then(function(snap){
+      if(cancelled)return;
+      var v=snap.val()||{};
+      var list=Object.keys(v).map(function(k){return {id:'warn_'+k,warn:true,reason:(v[k]&&v[k].reason)||null,ts:(v[k]&&v[k].ts)||0};});
+      list.sort(function(a,b){return b.ts-a.ts;});
+      setWarnings(list);
+    }).catch(function(){});
+    return function(){cancelled=true;};
+  },[account?account.key:null]);
   // Coins-Balance live aus Firebase laden (read-only fuer Client)
   useEffect(function(){
     if(!window.db)return;
@@ -4010,7 +4285,15 @@ function App(){
     }catch(e){}
   },[]);
   const t=k=>(I18N[lang]&&I18N[lang][k])||(I18N_EXT[lang]&&I18N_EXT[lang][k])||I18N.en[k]||(I18N_EXT.en&&I18N_EXT.en[k])||k;
-  var unreadCount=broadcasts.filter(function(b){return !readIds[b.id];}).length;
+  var unreadCount=broadcasts.filter(function(b){return !readIds[b.id];}).length
+    +warnings.filter(function(w){return !readIds[w.id];}).length; // Verwarnungen zaehlen mit (Pulse-Icon)
+  // Neueste UNGELESENE Verwarnung -> Vollbild-Overlay mit 5s-'Verstanden' (bewusste Bestaetigung, kein Eck-X)
+  var activeWarn=null;
+  for(var awI=0;awI<warnings.length;awI++){ if(!readIds[warnings[awI].id]){ activeWarn=warnings[awI]; break; } }
+  // Postfach: Broadcasts + Verwarnungen chronologisch gemischt (Verwarnung read-only, nicht wegwischbar)
+  var inboxItems=warnings.slice();
+  broadcasts.forEach(function(b){ if(!dismissedIds[b.id]) inboxItems.push(b); });
+  inboxItems.sort(function(a,b){ return ((b.createdAt||b.ts||0)-(a.createdAt||a.ts||0)); });
   var markBroadcastRead=function(id){
     var next=Object.assign({},readIds);
     next[id]=1;
@@ -4119,6 +4402,13 @@ function App(){
   const[bugKat,setBugKat]=useState('other');
   const[bugText,setBugText]=useState('');
   const[bugStatus,setBugStatus]=useState(null); // null|'sending'|'ok'|'limit'|'err'|'login'
+  const[repOpen,setRepOpen]=useState(false); // Spieler-Melde-Formular (Endscreen + Chat)
+  const[repReason,setRepReason]=useState('reportCheating');
+  const[repText,setRepText]=useState('');
+  const[repStatus,setRepStatus]=useState(null); // null|'sending'|'ok'|'limit'|'dupe'|'login'
+  const[repSrc,setRepSrc]=useState('end'); // 'end'|'chat' — Melde-Kontext
+  const[repChatTs,setRepChatTs]=useState(null); // ts der gemeldeten Chat-Nachricht (nur src='chat')
+  const[banInfo,setBanInfo]=useState(null); // {reason,until} vom Server-'banned' — rendert den Vollbild-Bann-Screen
   const[dragging,setDragging]=useState(null);
   const[ghostPos,setGhostPos]=useState({x:0,y:0});
   const[previewKey,setPreviewKey]=useState(null);
@@ -4160,7 +4450,16 @@ function App(){
   const xpBeforeMatchRef=useRef(null);
   const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen};
+  // UI-Testhaken (?uitest=ban|warn): rein lokale Dummy-Overlays fuer Design-Sichtung, keine Datenwege
+  useEffect(()=>{
+    try{
+      var uit=new URLSearchParams(window.location.search).get('uitest');
+      if(uit==='ban')setBanInfo({reason:'reportCheating',until:Date.now()+7*86400000});
+      if(uit==='banperm')setBanInfo({reason:'reportHateSpeech',until:null});
+      if(uit==='warn')setWarnings([{id:'warn_uitest',warn:true,reason:'reportHateSpeech',ts:Date.now()}]);
+    }catch(e){}
+  },[]);
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
   useEffect(()=>{
@@ -4413,6 +4712,12 @@ function App(){
     if(d&&d.type==='bug_report_ok'){setBugStatus('ok');return;}
     if(d&&d.type==='bug_report_limit'){setBugStatus('limit');return;}
     if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.bugOpen){setBugStatus('login');return;}
+    if(d&&d.type==='player_report_ok'){setRepStatus('ok');return;}
+    if(d&&d.type==='player_report_limit'){setRepStatus('limit');return;}
+    if(d&&d.type==='player_report_dupe'){setRepStatus('dupe');return;}
+    if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.repOpen){setRepStatus('login');return;}
+    if(d&&d.type==='error'&&d.grund==='nachricht nicht gefunden'&&S.current.repOpen){setRepStatus('gone');return;}
+    if(d&&d.type==='banned'){setBanInfo({reason:d.reason||null,until:(typeof d.until==='number')?d.until:null});return;}
     if(d&&d.type==='elo_update'){
       setEloChange({change:d.change,newRating:d.newRating,won:d.won,oppChange:d.oppChange,oppNewRating:d.oppNewRating});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
@@ -4470,6 +4775,7 @@ function App(){
       if(d.winner===undefined||d.winner===null){
         setLossReason(null); // laufendes Spiel -> Grund zuruecksetzen (kein stale beim naechsten Spiel)
         setBugOpen(false);setBugStatus(null); // Bug-Report-Formular gehoert nur zum Endscreen
+        setRepOpen(false);setRepStatus(null); // Spieler-Melde-Formular ebenso
         var myRoleP=(typeof d.deineNummer==='number')?(d.deineNummer===0?'A':'B'):S.current.onlineRole;
         var myNumP=myRoleP==='A'?0:1;
         var srvTurnP=(typeof d.amZug==='number')?(d.amZug===0?'A':'B'):S.current.turn;
@@ -6124,6 +6430,111 @@ function App(){
   const gW=dragging&&dragging.orient==='H'?CELL*2:WW;
   const gH=dragging&&dragging.orient==='V'?CELL*2:WW;
 
+  // ── Spieler-Melde-Panel: EINE Quelle fuer Endscreen (inline) UND Chat (Overlay) — kein Duplikat ──
+  var openChatReport=function(ts){
+    setRepSrc('chat');setRepChatTs(ts);setRepReason('reportHateSpeech');
+    setRepText('');setRepStatus(null);setRepOpen(true);
+  };
+  var repFormUi=repOpen?(
+              <div style={{padding:'12px 14px',borderRadius:14,background:'var(--card)',
+                border:'1.5px solid var(--border)',textAlign:'left'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'var(--text)',marginBottom:8}}>{repSrc==='chat'?t('reportChatBtn'):t('reportPlayerTitle')}</div>
+                {repStatus!=='ok'&&(
+                  <div>
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+                      {[['reportCheating',t('reportCheating')],['reportHateSpeech',t('reportHateSpeech')],['reportSpam',t('reportSpam')],['reportOther',t('reportOther')]].map(function(o){
+                        var selR=repReason===o[0];
+                        return <button key={o[0]} onClick={()=>setRepReason(o[0])}
+                          style={{padding:'5px 10px',borderRadius:9,fontSize:11,fontWeight:700,cursor:'pointer',
+                            border:'1.5px solid '+(selR?'#ef4444':'var(--border)'),
+                            background:selR?'rgba(239,68,68,0.12)':'var(--bg)',
+                            color:selR?'#ef4444':'var(--subtle)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                          {o[1]}
+                        </button>;
+                      })}
+                    </div>
+                    <textarea value={repText} onChange={e=>setRepText(e.target.value.slice(0,500))}
+                      placeholder={t('reportPlaceholder')} rows={3} maxLength={500}
+                      style={{width:'100%',padding:'9px 11px',borderRadius:10,fontSize:13,resize:'vertical',
+                        background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                        fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+                  </div>
+                )}
+                {repStatus==='ok'&&<div style={{fontSize:12,fontWeight:700,color:'#16a34a',marginBottom:8}}>{'✓'} {t('reportSent')}</div>}
+                {repStatus==='limit'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportLimitDay')}</div>}
+                {repStatus==='dupe'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportDupe')}</div>}
+                {repStatus==='login'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportNeedLogin')}</div>}
+                {repStatus==='gone'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportMsgGone')}</div>}
+                <div style={{display:'flex',gap:7}}>
+                  {repStatus!=='ok'&&(
+                    <button disabled={repStatus==='sending'} onClick={()=>{
+                      if(repStatus==='sending')return;
+                      setRepStatus('sending');
+                      var payloadR={src:repSrc,reason:repReason,text:repText.trim()};
+                      if(repSrc==='chat'&&repChatTs)payloadR.ts=repChatTs;
+                      WSNET.playerReport(payloadR);
+                      setTimeout(function(){setRepStatus(function(stR){return stR==='sending'?null:stR;});},8000);
+                    }}
+                      style={{flex:1,padding:'9px',borderRadius:10,border:'none',fontSize:12,fontWeight:800,
+                        background:repStatus==='sending'?'var(--border)':'#ef4444',
+                        color:'white',cursor:repStatus==='sending'?'default':'pointer',
+                        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      {repStatus==='sending'?'...':t('reportSend')}
+                    </button>
+                  )}
+                  <button onClick={()=>{setRepOpen(false);setRepStatus(null);setRepText('');}}
+                    style={{flex:1,padding:'9px',borderRadius:10,fontSize:12,fontWeight:800,cursor:'pointer',
+                      background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
+                      fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    {t('reportCancel')}
+                  </button>
+                </div>
+              </div>
+  ):null;
+  // Chat-Melden: gleiches Panel als Fixed-Overlay (Game- und End-Screen referenzieren es)
+  var repChatOverlayUi=(repOpen&&repSrc==='chat')?(
+    <div onClick={()=>{setRepOpen(false);setRepStatus(null);setRepText('');}}
+      style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:900,
+        display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:340}}>{repFormUi}</div>
+    </div>
+  ):null;
+
+  // ── BANN-SCREEN: Server hat 'banned' geschickt — ersetzt JEDEN Screen, kein Weg-Button (Sperre ist Sperre) ──
+  if(banInfo){
+    var banReasonTxt=banInfo.reason?t(banInfo.reason):null;
+    var banUntilTxt=banInfo.until?(t('bannedUntil')+': '+new Date(banInfo.until).toLocaleString()):t('bannedPermanent');
+    return(
+      <div style={{position:'fixed',inset:0,background:'var(--bg)',zIndex:9999,
+        display:'flex',alignItems:'center',justifyContent:'center',padding:20,
+        fontFamily:'system-ui,-apple-system,sans-serif'}}>
+        <div style={{width:'100%',maxWidth:340,background:'var(--card)',borderRadius:20,
+          border:'1.5px solid rgba(239,68,68,0.35)',boxShadow:'0 8px 30px rgba(239,68,68,0.15)',
+          padding:'28px 22px',textAlign:'center'}}>
+          <div style={{width:58,height:58,borderRadius:16,margin:'0 auto 14px',
+            background:'rgba(239,68,68,0.12)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <div style={{fontSize:19,fontWeight:900,color:'var(--text)',marginBottom:10}}>{t('bannedTitle')}</div>
+          {banReasonTxt&&(
+            <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:6}}>
+              {t('bannedReason')}: <span style={{color:'#ef4444'}}>{banReasonTxt}</span>
+            </div>
+          )}
+          <div style={{display:'inline-block',fontSize:12,fontWeight:800,color:'#ef4444',
+            background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',
+            borderRadius:9,padding:'5px 12px',marginBottom:14}}>{banUntilTxt}</div>
+          <div style={{fontSize:12,color:'var(--subtle)',lineHeight:1.6,fontWeight:500,wordBreak:'break-word'}}>
+            {t('bannedAppeal')}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── 2v2 (Beta) Mount ──
   if(screen==='twovtwo')return <TwoVTwo t={t} darkMode={darkMode} account={account} onRecordResult={(won)=>{const acc=accRef.current;if(!acc)return;const ns=applyMatchResult(acc.stats||freshAccountStats(),won,'2v2');const na={...acc,stats:ns};setAccount(na);saveAccountProfile(acc.key,{stats:ns});}} onExit={()=>{setNavDir('back');setScreen('menu');}}/>;
 
@@ -6759,6 +7170,7 @@ function App(){
           </div>
         </div>
       )}
+      {activeWarn&&<WarnOverlay key={activeWarn.id} warn={activeWarn} t={t} onOk={()=>{markBroadcastRead(activeWarn.id);}}/>}
       {showInbox&&(
         <div onClick={()=>{setShowInbox(false);markAllRead();}} style={{position:'fixed',inset:0,
           background:'rgba(0,0,0,0.45)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
@@ -6799,7 +7211,7 @@ function App(){
             </div>
             {/* Messages */}
             <div style={{overflowY:'auto',flex:1,padding:'10px 14px 18px',WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehavior:'contain'}}>
-              {broadcasts.length===0?(
+              {inboxItems.length===0?(
                 <div style={{textAlign:'center',padding:'40px 0',fontFamily:'system-ui,-apple-system,sans-serif'}}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}>
                     <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8"/>
@@ -6809,7 +7221,32 @@ function App(){
                     {lang==='de'?'Keine Nachrichten':lang==='tr'?'Mesaj yok':lang==='fr'?'Aucun message':'No messages'}
                   </div>
                 </div>
-              ):broadcasts.filter(function(b){return !dismissedIds[b.id];}).map(function(b){
+              ):inboxItems.map(function(b){
+                if(b.warn){ // Verwarnung: read-only, nicht wegwischbar (Missbrauchsschutz)
+                  var wUnread=!readIds[b.id];
+                  return(
+                    <div key={b.id} style={{marginBottom:10,borderRadius:14,overflow:'hidden',
+                      background:wUnread?'var(--bg)':'var(--card)',
+                      border:'1.5px solid '+(wUnread?'rgba(245,158,11,0.45)':'var(--border)'),position:'relative'}}>
+                      <div style={{height:3,background:'#f59e0b',opacity:0.7,borderRadius:'14px 14px 0 0'}}/>
+                      <div style={{padding:'12px 14px'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                          {wUnread&&<div style={{width:7,height:7,borderRadius:'50%',background:'#f59e0b',flexShrink:0}}/>}
+                          <span style={{fontSize:9,fontWeight:800,color:'#f59e0b',letterSpacing:1.2,textTransform:'uppercase',
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('warnInboxLabel')}</span>
+                          <span style={{fontSize:9,color:'var(--subtle)',fontWeight:600,marginLeft:'auto',
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{new Date(b.ts||0).toLocaleDateString()}</span>
+                        </div>
+                        {b.reason?(
+                          <div style={{fontSize:14,fontWeight:800,color:'var(--text)',marginBottom:4,
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{t(b.reason)}</div>
+                        ):null}
+                        <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,fontWeight:500,
+                          fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('warnNextBan')}</div>
+                      </div>
+                    </div>
+                  );
+                }
                 var isUnread=!readIds[b.id];
                 var imp=b.importance||'normal';
                 var fs=b.fontSize==='large'?16:b.fontSize==='small'?12:14;
@@ -7051,6 +7488,14 @@ function App(){
                 setReplayStep(0);
                 setScreen('replay');
               }}/>
+            </AdminSection>
+
+            {/* ── MELDUNGEN (SPIELER) ── */}
+            <AdminSection label="MELDUNGEN (SPIELER)">
+              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
+                Spieler-Meldungen (ww_reports) gruppiert nach gemeldetem Spieler, mit Server-Beweis + Ban-Werkzeug. Laden nur auf Klick.
+              </div>
+              <AdminReportsPanel/>
             </AdminSection>
 
             {/* ── COINS & SHOP ── */}
@@ -9139,6 +9584,16 @@ function App(){
                 </div>
               </div>
             )}
+            {gameMode==='online'&&!repOpen&&(
+              <button onClick={()=>{setRepOpen(true);setRepStatus(null);setRepSrc('end');setRepChatTs(null);setRepReason('reportCheating');setRepText('');}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'2px 0 6px',
+                  fontSize:12,fontWeight:700,color:'var(--subtle)',textDecoration:'underline',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {t('reportPlayerBtn')}
+              </button>
+            )}
+            {gameMode==='online'&&repOpen&&repSrc==='end'&&repFormUi}
+            {repChatOverlayUi}
           </div>
         </div>
       </div>
@@ -9814,16 +10269,25 @@ function App(){
                         marginBottom:2,paddingLeft:mine?0:4,paddingRight:mine?4:0,letterSpacing:0.5}}>
                         {mine?t('you'):pname(m.u)}
                       </div>
-                      <div style={{
-                        maxWidth:'82%',padding:'7px 11px',borderRadius:13,
-                        background:mine?col:'var(--bg)',
-                        color:mine?'white':'var(--text)',
-                        border:mine?'none':'1px solid var(--border-soft)',
-                        fontSize:12,fontWeight:500,lineHeight:1.35,
-                        wordBreak:'break-word',whiteSpace:'pre-wrap',
-                        borderBottomRightRadius:mine?4:13,
-                        borderBottomLeftRadius:mine?13:4}}>
-                        {m.m}
+                      <div style={{display:'flex',alignItems:'flex-end',gap:4,maxWidth:'88%'}}>
+                        <div style={{
+                          padding:'7px 11px',borderRadius:13,
+                          background:mine?col:'var(--bg)',
+                          color:mine?'white':'var(--text)',
+                          border:mine?'none':'1px solid var(--border-soft)',
+                          fontSize:12,fontWeight:500,lineHeight:1.35,
+                          wordBreak:'break-word',whiteSpace:'pre-wrap',
+                          borderBottomRightRadius:mine?4:13,
+                          borderBottomLeftRadius:mine?13:4}}>
+                          {m.m}
+                        </div>
+                        {!mine&&m.ts?(
+                          <button onClick={()=>openChatReport(m.ts)} title={t('reportChatBtn')} aria-label={t('reportChatBtn')}
+                            style={{background:'none',border:'none',cursor:'pointer',padding:'0 2px 3px',
+                              fontSize:12,lineHeight:1,color:'var(--subtle)',opacity:0.65,flexShrink:0}}>
+                            {'⚑'}
+                          </button>
+                        ):null}
                       </div>
                     </div>
                   );
@@ -9852,6 +10316,7 @@ function App(){
           </div>
         </div>
       )}
+      {repChatOverlayUi}
 
     </div>
   );
