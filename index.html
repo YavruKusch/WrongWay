@@ -1034,16 +1034,27 @@ var WSNET={
     self.sock.onopen=function(){
       clearTimeout(_connTmr);
       self._dbg('socket offen'); self.lastRecv=Date.now();
-      try{ var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null; var _rq=function(tok){ if(self.rankedOn&&!self.roomId){ try{ var _rm={type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}; if(self.equip)_rm.equip=self.equip; self._send(_rm); }catch(e){} } }; if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} _rq(tok); }).catch(function(){ _rq(null); }); } else { _rq(null); } }catch(e){} // Identitaet verifizieren + Ranked-Queue (mit Token; Server lehnt ohne verifizierte Anmeldung ab)
       if(self.onState)self.onState({type:'ws_open'});
-      if(self.roomId){
-        if(self.token){ self._send({type:'reconnect',token:self.token}); }
-        else if(self.role==='A'){ self._send(self._createMsg()); }
-        else { self._send(self._joinMsg()); }
-      }
-      if(self.browseOn){ var lm={type:'list_lobbies'}; if(self.browseMode)lm.mode=self.browseMode; self._send(lm); }
-      if(self.spectateCode){ self._send({type:'spectate_join',code:self.spectateCode}); }
-      // ranked_queue wird oben im Token-Callback gesendet (mit idToken)
+      // Eingeloggt: ERST auth, DANN create/join/queue/browse — WS haelt die Reihenfolge ein,
+      // der Server kennt die Identitaet also schon beim Bann-Check des Raum-Beitritts.
+      // Vorher lief join dem auth voraus: die Runde startete, und der Gegner eines Gesperrten
+      // wartete ewig. Gaeste (kein currentUser) senden unveraendert sofort.
+      var _after=function(tok){
+        if(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} }
+        if(self.rankedOn&&!self.roomId){ try{ var _rm={type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}; if(self.equip)_rm.equip=self.equip; self._send(_rm); }catch(e){} }
+        if(self.roomId){
+          if(self.token){ self._send({type:'reconnect',token:self.token}); }
+          else if(self.role==='A'){ self._send(self._createMsg()); }
+          else { self._send(self._joinMsg()); }
+        }
+        if(self.browseOn){ var lm={type:'list_lobbies'}; if(self.browseMode)lm.mode=self.browseMode; self._send(lm); }
+        if(self.spectateCode){ self._send({type:'spectate_join',code:self.spectateCode}); }
+      };
+      try{
+        var _fu=(typeof firebase!=='undefined'&&firebase.auth)?firebase.auth().currentUser:null;
+        if(_fu&&_fu.getIdToken){ _fu.getIdToken().then(function(tok){ _after(tok); }).catch(function(){ _after(null); }); }
+        else{ _after(null); }
+      }catch(e){ _after(null); }
     };
     self.sock.onmessage=function(ev){
       self.lastRecv=Date.now();
@@ -1659,87 +1670,119 @@ function WarnOverlay(props){
   );
 }
 function AdminReportsPanel(){
-  // Spieler-Meldungen (ww_reports) gruppiert nach gemeldetem Spieler + Ban-Werkzeug.
-  // Alle Reads on-demand (.once), Aktionen via adminWsCmd (Server prueft ADMIN_UID).
-  var[rows,setRows]=React.useState(null);      // null=nicht geladen, sonst [{uid,name,reports:[..]}]
+  // Moderations-Zentrale: ww_reports (offene Meldungen) + ww_bans (aktive Sperren) + ww_ban_log
+  // (Stufen-Historie) -> Tabs OFFEN/BEOBACHTET/VERWARNT/GESPERRT mit Status pro Spieler.
+  // Alle Reads on-demand (.once) beim Laden, Aktionen via adminWsCmd (Server prueft ADMIN_UID).
+  // ponytail: ww_ban_log wird komplett gelesen — bei sehr vielen moderierten Spielern spaeter paginieren.
+  var[data,setData]=React.useState(null);   // [{uid,name,reports[],status{},zuletzt}]
   var[busy,setBusy]=React.useState(false);
   var[msg,setMsg]=React.useState('');
+  var[tab,setTab]=React.useState('offen');
   var[openUid,setOpenUid]=React.useState(null);
   var[openName,setOpenName]=React.useState('');
-  var[banLog,setBanLog]=React.useState(null);  // ww_ban_log des aufgeklappten Ziels
-  var[lbInfo,setLbInfo]=React.useState(null);  // Rating des aufgeklappten Ziels
+  var[lbInfo,setLbInfo]=React.useState(null);
   var[grund,setGrund]=React.useState('');
   var[actBusy,setActBusy]=React.useState('');
   var[actMsg,setActMsg]=React.useState('');
   var[q,setQ]=React.useState('');
   var[qRes,setQRes]=React.useState(null);
+  var[chatOpen,setChatOpen]=React.useState({}); // reportId -> Verlauf aufgeklappt
+  var isWide=false;
+  try{ isWide=window.matchMedia&&window.matchMedia('(min-width:1000px)').matches; }catch(e){}
   var RKAT={reportCheating:'Cheating',reportHateSpeech:'Beleidigung',reportSpam:'Spam',reportOther:'Sonstiges'};
-  var AKT_LABEL={verworfen:'Verworfen',beobachtet:'Beobachtet',verwarnt:'Verwarnt',entsperrt:'Entsperrt',gesperrt_perm:'Gesperrt (permanent)'};
+  var AKT_LABEL={verworfen:'Verworfen',beobachtet:'Beobachtet',verwarnt:'Verwarnt',entsperrt:'Entsperrt',gesperrt_perm:'Gesperrt (permanent)',verwarnung_geloescht:'Verwarnung geloescht'};
   function aktLabel(a){ if(AKT_LABEL[a])return AKT_LABEL[a]; if(a&&a.indexOf('gesperrt_')===0)return 'Gesperrt ('+a.slice(9)+')'; return a||'?'; }
-  function evidTxt(ev){
-    if(!ev)return '';
-    if(ev.kind==='chat')return 'CHAT-BEWEIS: "'+(ev.text||'')+'"';
-    if(ev.kind==='match'){
-      if(ev.live)return 'MATCH lief noch (kein Endstand)';
-      try{return 'MATCH: '+JSON.stringify({winner:ev.winner,winReason:ev.winReason,forfeitUsedMs:ev.forfeitUsedMs,dauerMs:ev.dauerMs,ranked:ev.ranked});}catch(e){return 'MATCH';}
+  // Stufen aus der Historie ableiten: beobachtet je gesetzt, aktive Verwarnungen (Loeschung setzt
+  // auf 0 zurueck), aktive Sperre aus ww_bans (Ablauf-Check clientseitig nur fuer die Anzeige).
+  function statusAus(logObj,banObj){
+    var list=Object.keys(logObj||{}).map(function(k){return logObj[k]||{};});
+    list.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+    var beob=false,warnAktiv=0;
+    list.forEach(function(l){
+      if(l.aktion==='beobachtet')beob=true;
+      if(l.aktion==='verwarnt')warnAktiv++;
+      if(l.aktion==='verwarnung_geloescht')warnAktiv=0;
+    });
+    var gesperrt=null;
+    if(banObj&&banObj.banned){
+      var u=(typeof banObj.until==='number')?banObj.until:null;
+      if(u===null||u>Date.now())gesperrt={until:u,reason:banObj.reason||null};
     }
-    return '';
+    return {beobachtet:beob,verwarnt:warnAktiv,gesperrt:gesperrt,log:list.slice().reverse()};
   }
-  function load(){
+  function statusVon(uid){
+    var g=(data||[]).filter(function(x){return x.uid===uid;})[0];
+    return g||{uid:uid,name:'',reports:[],status:statusAus({},null),zuletzt:0};
+  }
+  function load(behalteUid){
     if(!window.db)return;
-    setBusy(true);setMsg('');setOpenUid(null);setBanLog(null);
-    window.db.ref('ww_reports').once('value').then(function(snap){
-      var v=snap.val()||{};var byUid={};
-      Object.keys(v).forEach(function(id){
-        var e=v[id];if(!e||!e.reported)return;
-        e=Object.assign({},e);e._id=id;
-        if(!byUid[e.reported])byUid[e.reported]={uid:e.reported,name:e.reportedName||'?',reports:[]};
-        byUid[e.reported].reports.push(e);
-        if(e.reportedName)byUid[e.reported].name=e.reportedName;
+    setBusy(true);setMsg('');
+    if(!behalteUid){setOpenUid(null);setLbInfo(null);}
+    Promise.all([
+      window.db.ref('ww_reports').once('value'),
+      window.db.ref('ww_bans').once('value'),
+      window.db.ref('ww_ban_log').once('value')
+    ]).then(function(res){
+      var rep=res[0].val()||{},bans=res[1].val()||{},logAll=res[2].val()||{};
+      var byUid={};
+      var stelle=function(uid){ if(!byUid[uid])byUid[uid]={uid:uid,name:'',reports:[],log:{},ban:null}; return byUid[uid]; };
+      Object.keys(rep).forEach(function(id){
+        var e=rep[id]; if(!e||!e.reported)return;
+        var g=stelle(e.reported);
+        var e2=Object.assign({},e);e2._id=id;
+        g.reports.push(e2);
+        if(e.reportedName)g.name=e.reportedName;
       });
-      var list=Object.keys(byUid).map(function(k){var g=byUid[k];g.reports.sort(function(a,b){return (b.ts||0)-(a.ts||0);});return g;});
-      list.sort(function(a,b){return (b.reports[0].ts||0)-(a.reports[0].ts||0);});
-      setRows(list);setBusy(false);
+      Object.keys(logAll).forEach(function(uid){ stelle(uid).log=logAll[uid]||{}; });
+      Object.keys(bans).forEach(function(uid){ stelle(uid).ban=bans[uid]; });
+      var list=Object.keys(byUid).map(function(k){
+        var g=byUid[k];
+        g.reports.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+        g.status=statusAus(g.log,g.ban);
+        g.zuletzt=g.reports.length?(g.reports[0].ts||0):(g.status.log.length?(g.status.log[0].ts||0):0);
+        return g;
+      });
+      list.sort(function(a,b){return (b.zuletzt||0)-(a.zuletzt||0);});
+      setData(list);setBusy(false);
     }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
   }
-  function loadDetail(uid){
-    setBanLog(null);setLbInfo(null);
+  function loadLb(uid){
+    setLbInfo(null);
     if(!window.db)return;
-    window.db.ref('ww_ban_log/'+uid).once('value').then(function(snap){
-      var v=snap.val()||{};
-      var list=Object.keys(v).map(function(k){return v[k]||{};});
-      list.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-      setBanLog(list);
-    }).catch(function(){setBanLog([]);});
     window.db.ref('ww_leaderboard/'+uid).once('value').then(function(snap){
       var v=snap.val();
       if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
       setLbInfo(v||{});
     }).catch(function(){setLbInfo({});});
   }
-  function toggle(uid,name,defaultGrund){
-    if(openUid===uid){setOpenUid(null);setBanLog(null);setLbInfo(null);return;}
+  function waehle(uid,name,defaultGrund){
+    if(openUid===uid){setOpenUid(null);setLbInfo(null);return;}
     setOpenUid(uid);setOpenName(name||'?');setActMsg('');
     setGrund(defaultGrund||'');
-    loadDetail(uid);
+    loadLb(uid);
   }
   function doAction(art,reportId){
     if(actBusy||!openUid)return;
     var uid=openUid,m=null,ok='';
+    var nm=openName||uid;
     if(art==='ban24'||art==='ban7'||art==='banperm'){
       var dur=art==='ban24'?86400000:(art==='ban7'?604800000:null);
-      if(!window.confirm(openName+' ('+uid+') sperren: '+(art==='banperm'?'PERMANENT':(art==='ban24'?'24 Stunden':'7 Tage'))+'?'))return;
+      if(!window.confirm(nm+' ('+uid+') sperren: '+(art==='banperm'?'PERMANENT':(art==='ban24'?'24 Stunden':'7 Tage'))+'?'))return;
       m={type:'admin_ban_set',uid:uid,reason:(grund.trim()||'other'),durationMs:dur,reportId:reportId||null};ok='admin_ban_ok';
     }else if(art==='unban'){
-      if(!window.confirm(openName+' ('+uid+') entsperren?'))return;
+      if(!window.confirm(nm+' ('+uid+') entsperren?'))return;
       m={type:'admin_unban',uid:uid};ok='admin_ban_ok';
+    }else if(art==='warnclear'){
+      if(!window.confirm('Verwarnung(en) von '+nm+' loeschen? (Karte verschwindet aus dem Postfach)'))return;
+      m={type:'admin_warn_clear',uid:uid};ok='admin_warn_clear_ok';
     }else{
+      if(art==='verwarnt'&&!window.confirm(nm+' verwarnen? (Spieler sieht Overlay + Postfach-Karte)'))return;
       m={type:'admin_report_action',uid:uid,aktion:art,grund:(grund.trim()||null),reportId:reportId||null};ok='admin_report_action_ok';
     }
     setActBusy(art);setActMsg('');
     adminWsCmd(m,ok).then(function(){
       setActBusy('');setActMsg('OK: '+art);
-      loadDetail(uid); // Historie sofort aktualisieren
+      load(uid); // Status/Tabs/Zaehler sofort nachziehen (Spieler wandert ggf. den Tab)
     }).catch(function(e){
       setActBusy('');setActMsg('Fehler: '+(e&&e.message?e.message:'?'));
     });
@@ -1757,117 +1800,207 @@ function AdminReportsPanel(){
   var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
     background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
     cursor:'pointer',fontFamily:'system-ui,sans-serif'};
-  var aBtn=function(label,art,color,reportId){
+  var aBtn=function(label,art,color,reportId,aus){
     var on=actBusy===art;
-    return <button key={art} disabled={!!actBusy} onClick={function(){doAction(art,reportId);}}
-      style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid '+color,background:'transparent',
-        color:color,fontSize:11,fontWeight:800,cursor:actBusy?'default':'pointer',
-        fontFamily:'system-ui,sans-serif',opacity:actBusy&&!on?0.5:1}}>
+    var tot=!!actBusy||!!aus;
+    return <button key={art} disabled={tot} onClick={function(){doAction(art,reportId);}}
+      style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid '+(aus?'var(--border)':color),background:'transparent',
+        color:aus?'var(--subtle)':color,fontSize:11,fontWeight:800,cursor:tot?'default':'pointer',
+        fontFamily:'system-ui,sans-serif',opacity:(actBusy&&!on)?0.5:(aus?0.6:1)}}>
       {on?'...':label}
     </button>;
   };
-  // Detail-Block (Aktionen + Historie) — fuer Meldungs-Gruppen UND Suchtreffer derselbe
-  var detailUi=function(reports){
-    var newestId=reports&&reports.length>0?reports[0]._id:null;
+  var badgeVon=function(st){
+    if(st.gesperrt)return {txt:st.gesperrt.until?('GESPERRT bis '+new Date(st.gesperrt.until).toLocaleString()):'GESPERRT PERMANENT',bg:'rgba(185,28,28,0.25)',col:'#fca5a5'};
+    if(st.verwarnt>0)return {txt:'VERWARNT '+st.verwarnt+'×',bg:'rgba(245,158,11,0.14)',col:'#f59e0b'};
+    if(st.beobachtet)return {txt:'BEOBACHTET',bg:'rgba(59,130,246,0.14)',col:'#3b82f6'};
+    return {txt:'NEU',bg:'rgba(139,155,184,0.15)',col:'var(--subtle)'};
+  };
+  var evidMatchTxt=function(ev){
+    if(ev.live)return 'MATCH lief noch (kein Endstand)';
+    try{return 'MATCH: '+JSON.stringify({winner:ev.winner,winReason:ev.winReason,forfeitUsedMs:ev.forfeitUsedMs,dauerMs:ev.dauerMs,ranked:ev.ranked});}catch(e){return 'MATCH';}
+  };
+  // Detail-Block: Stufenleiste + Meldungen (Chat-Verlauf aufklappbar) + Aktionen + Historie
+  var detailUi=function(g){
+    var st=g.status;
+    var newestId=g.reports.length>0?g.reports[0]._id:null;
     var ratingTxt='';
     if(lbInfo){
       var rc=lbInfo.classic&&lbInfo.classic.rating,rd=lbInfo.duel&&lbInfo.duel.rating;
       ratingTxt=(typeof rc==='number'?('Classic '+rc):'')+(typeof rd==='number'?((rc?' | ':'')+'Duel '+rd):'');
       if(!ratingTxt)ratingTxt='kein Rating';
     }
+    var stufeSt=function(an,col){return {fontSize:10,fontWeight:800,padding:'5px 10px',borderRadius:9,
+      border:'1.5px solid '+(an?col:'var(--border)'),color:an?col:'var(--subtle)'};};
     return(
       <div style={{marginTop:6}} onClick={function(ev){ev.stopPropagation();}}>
         <div style={{fontSize:10,color:'var(--subtle)',marginBottom:6,wordBreak:'break-all'}}>
-          UID: {openUid}{lbInfo?(' | ELO: '+ratingTxt):''}
+          UID: {g.uid}{lbInfo?(' | ELO: '+ratingTxt):''}
         </div>
-        {(reports||[]).map(function(r,ri){
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
+          <span style={stufeSt(st.beobachtet,'#3b82f6')}>{st.beobachtet?'✓ BEOBACHTET':'BEOBACHTET –'}</span>
+          <span style={stufeSt(st.verwarnt>0,'#f59e0b')}>{st.verwarnt>0?('✓ VERWARNT '+st.verwarnt+'×'):'VERWARNT 0×'}</span>
+          <span style={stufeSt(!!st.gesperrt,'#ef4444')}>{st.gesperrt?(st.gesperrt.until?('GESPERRT bis '+new Date(st.gesperrt.until).toLocaleString()):'GESPERRT PERMANENT'):'NICHT GESPERRT'}</span>
+        </div>
+        {g.reports.length>0&&<div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'8px 0 4px'}}>MELDUNGEN ({g.reports.length})</div>}
+        {g.reports.map(function(r,ri){
+          var ev=r.evidence||null;
+          var ktx=(ev&&ev.kind==='chat'&&ev.kontext&&ev.kontext.length)?ev.kontext:null;
+          var offen=!!chatOpen[r._id];
           return(
             <div key={r._id||ri} style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-word',
               marginBottom:5,padding:7,background:'var(--bg)',borderRadius:7}}>
               <span style={{fontWeight:800,color:'#ef4444'}}>{RKAT[r.reason]||r.reason}</span>
               {' | '+new Date(r.ts||0).toLocaleString()+' | Melder: '+String(r.reporter||'?').slice(0,10)+'…'}
               {r.text?('\nText: "'+r.text+'"'):''}
-              {r.evidence?('\n'+evidTxt(r.evidence)):''}
+              {ev&&ev.kind==='chat'?('\nCHAT-BEWEIS: "'+(ev.text||'')+'"'):''}
+              {ev&&ev.kind==='match'?('\n'+evidMatchTxt(ev)):''}
+              {ktx&&(
+                <div style={{marginTop:6}}>
+                  <button onClick={function(){var n=Object.assign({},chatOpen);n[r._id]=!offen;setChatOpen(n);}}
+                    style={{background:'none',border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',
+                      fontSize:10,fontWeight:700,padding:'4px 8px',cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
+                    {offen?('Verlauf zuklappen'):('Chat-Verlauf anzeigen ('+ktx.length+')')}
+                  </button>
+                  {offen&&(
+                    <div style={{marginTop:5,border:'1px solid var(--border)',borderRadius:7,overflow:'hidden'}}>
+                      {ktx.map(function(cm,ci){
+                        var istGemeldet=cm.ts===ev.ts;
+                        return(
+                          <div key={ci} style={{display:'flex',gap:8,padding:'4px 8px',fontSize:10,
+                            background:istGemeldet?'rgba(239,68,68,0.12)':'transparent',
+                            borderLeft:istGemeldet?'3px solid #ef4444':'3px solid transparent'}}>
+                            <span style={{fontWeight:700,minWidth:70,color:'var(--subtle)'}}>{cm.name}</span>
+                            <span style={{color:istGemeldet?'#fca5a5':'var(--text)',fontWeight:istGemeldet?700:500}}>{cm.text}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
-        <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'8px 0 4px'}}>HISTORIE (ww_ban_log)</div>
-        {banLog===null?<div style={{fontSize:10,color:'var(--subtle)'}}>laedt...</div>:
-          banLog.length===0?<div style={{fontSize:10,color:'var(--subtle)'}}>keine Eintraege</div>:
-          banLog.map(function(l,li){
-            return <div key={li} style={{fontSize:10,color:'var(--subtle)',marginBottom:2}}>
-              {new Date(l.ts||0).toLocaleString()+' — '+aktLabel(l.aktion)+(l.grund?(' ('+l.grund+')'):'')}
-            </div>;
-          })}
         <input value={grund} onChange={function(e){setGrund(e.target.value);}} placeholder="Grund (Kategorie-Key wird beim Spieler uebersetzt)"
           style={{width:'100%',padding:'8px 10px',borderRadius:9,fontSize:11,background:'var(--bg)',
             border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
             boxSizing:'border-box',outline:'none',margin:'8px 0 6px'}}/>
         <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:5}}>
-          {aBtn('Verwerfen','verworfen','#64748b',newestId)}
-          {aBtn('Beobachten','beobachtet','#3b82f6',newestId)}
-          {aBtn('Verwarnen','verwarnt','#f59e0b',newestId)}
+          {aBtn('Verwerfen','verworfen','#64748b',newestId,g.reports.length===0)}
+          {aBtn(st.beobachtet?'✓ Beobachtet':'Beobachten','beobachtet','#3b82f6',newestId,st.beobachtet)}
+          {aBtn(st.verwarnt>0?('✓ Verwarnt '+st.verwarnt+'×'):'Verwarnen …','verwarnt','#f59e0b',newestId,st.verwarnt>0)}
+          {st.verwarnt>0&&aBtn('Verwarnung loeschen','warnclear','#f59e0b',null,false)}
         </div>
         <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-          {aBtn('Sperren 24h','ban24','#ef4444',newestId)}
-          {aBtn('Sperren 7T','ban7','#ef4444',newestId)}
-          {aBtn('PERMANENT','banperm','#dc2626',newestId)}
-          {aBtn('Entsperren','unban','#16a34a',null)}
+          {aBtn('Sperren 24h …','ban24','#ef4444',newestId,!!st.gesperrt)}
+          {aBtn('Sperren 7T …','ban7','#ef4444',newestId,!!st.gesperrt)}
+          {aBtn('PERMANENT …','banperm','#dc2626',newestId,!!st.gesperrt)}
+          {aBtn('Entsperren','unban','#16a34a',null,!st.gesperrt)}
         </div>
         {actMsg&&<div style={{fontSize:11,fontWeight:700,marginTop:6,color:actMsg.indexOf('Fehler')===0?'#ef4444':'#16a34a'}}>{actMsg}</div>}
+        <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'10px 0 4px'}}>HISTORIE (ww_ban_log)</div>
+        {st.log.length===0?<div style={{fontSize:10,color:'var(--subtle)'}}>keine Eintraege</div>:
+          st.log.map(function(l,li){
+            return <div key={li} style={{fontSize:10,color:'var(--subtle)',marginBottom:2}}>
+              {new Date(l.ts||0).toLocaleString()+' — '+aktLabel(l.aktion)+(l.grund?(' ('+l.grund+')'):'')+(l.beweise?(' · '+l.beweise.length+' Meldung(en) archiviert'):'')}
+            </div>;
+          })}
       </div>
     );
   };
-  var rowsUi=null;
-  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Meldungen.</div>;
-  if(rows&&rows.length>0)rowsUi=rows.map(function(g){
-    var isOpen=openUid===g.uid;
+  // Tab-Zuordnung: GESPERRT > VERWARNT > BEOBACHTET; OFFEN = hat unerledigte Meldungen
+  var inTab=function(g,t){
+    var st=g.status;
+    if(t==='offen')return g.reports.length>0;
+    if(t==='gesperrt')return !!st.gesperrt;
+    if(t==='verwarnt')return !st.gesperrt&&st.verwarnt>0;
+    if(t==='beobachtet')return !st.gesperrt&&st.verwarnt===0&&st.beobachtet;
+    return false;
+  };
+  var alle=data||[];
+  var tabs=[['offen','OFFEN','#ef4444'],['beobachtet','BEOBACHTET','#3b82f6'],['verwarnt','VERWARNT','#f59e0b'],['gesperrt','GESPERRT','#dc2626']];
+  var sichtbar=alle.filter(function(g){return inTab(g,tab);});
+  var offenes=openUid?statusVon(openUid):null;
+  if(offenes&&openUid&&!offenes.name)offenes=Object.assign({},offenes,{name:openName});
+  var karteUi=function(g){
+    var sel=openUid===g.uid;
+    var b=badgeVon(g.status);
+    var anzeigeName=g.name||(g.uid.slice(0,10)+'…');
     return(
-      <div key={g.uid} onClick={function(){toggle(g.uid,g.name,g.reports[0]?g.reports[0].reason:'');}}
+      <div key={g.uid} onClick={function(){waehle(g.uid,anzeigeName,g.reports[0]?g.reports[0].reason:'');}}
         style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid '+(isOpen?'rgba(239,68,68,0.4)':'var(--border)'),marginBottom:6,cursor:'pointer'}}>
+          border:'1.5px solid '+(sel?'rgba(239,68,68,0.5)':'var(--border)'),marginBottom:6,cursor:'pointer'}}>
         <div style={{display:'flex',gap:6,alignItems:'center'}}>
-          <span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:'rgba(239,68,68,0.12)',color:'#ef4444'}}>{g.reports.length}{'×'}</span>
-          <span style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{g.name}</span>
-          <span style={{fontSize:9,color:'var(--subtle)',marginLeft:'auto'}}>{new Date(g.reports[0].ts||0).toLocaleDateString()}</span>
+          {g.reports.length>0&&<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
+            background:'rgba(239,68,68,0.12)',color:'#ef4444'}}>{g.reports.length}{'×'}</span>}
+          <span style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{anzeigeName}</span>
+          <span style={{fontSize:9,color:'var(--subtle)',marginLeft:'auto'}}>{g.zuletzt?new Date(g.zuletzt).toLocaleDateString():''}</span>
         </div>
-        {isOpen&&detailUi(g.reports)}
+        <div style={{marginTop:5}}>
+          <span style={{fontSize:9,fontWeight:800,padding:'2px 8px',borderRadius:7,letterSpacing:0.5,background:b.bg,color:b.col}}>{b.txt}</span>
+        </div>
+        {!isWide&&sel&&offenes&&detailUi(offenes)}
       </div>
     );
-  });
+  };
+  var listeUi=null;
+  if(data&&sichtbar.length===0)listeUi=<div style={{fontSize:12,color:'var(--subtle)',marginBottom:6}}>Keine Eintraege in diesem Tab.</div>;
+  if(data&&sichtbar.length>0)listeUi=sichtbar.map(karteUi);
   var qResUi=null;
   if(qRes&&qRes.length===0)qResUi=<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>Kein Treffer.</div>;
   if(qRes&&qRes.length>0)qResUi=qRes.map(function(r){
-    var isOpen=openUid===r.uid;
-    return(
-      <div key={r.uid} onClick={function(){toggle(r.uid,r.name,'');}}
-        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid '+(isOpen?'rgba(59,130,246,0.4)':'var(--border)'),marginTop:6,cursor:'pointer'}}>
-        <div style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{r.name}</div>
-        {isOpen&&detailUi((rows||[]).filter(function(g){return g.uid===r.uid;}).reduce(function(acc,g){return acc.concat(g.reports);},[]))}
-      </div>
-    );
+    var g=statusVon(r.uid);
+    if(!g.name)g=Object.assign({},g,{name:r.name});
+    return karteUi(g);
   });
   return(
     <div>
-      <div style={{display:'flex',gap:7,marginBottom:8}}>
-        <button onClick={load} disabled={busy} style={btnSt}>
-          {busy?'...':(rows===null?'Meldungen laden':'Aktualisieren')}
+      <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+        {tabs.map(function(t){
+          var n=alle.filter(function(g){return inTab(g,t[0]);}).length;
+          var an=tab===t[0];
+          return(
+            <button key={t[0]} onClick={function(){setTab(t[0]);}}
+              style={{padding:'7px 11px',borderRadius:9,border:'1.5px solid '+(an?t[2]+'88':'var(--border)'),
+                background:an?'var(--bg)':'var(--card)',color:an?'var(--text)':'var(--subtle)',
+                fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
+              {t[1]}{data?(' '+n):''}
+            </button>
+          );
+        })}
+        <button onClick={function(){load(openUid);}} disabled={busy} style={btnSt}>
+          {busy?'...':(data===null?'Laden':'Aktualisieren')}
         </button>
       </div>
-      {rowsUi}
-      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
-      <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,margin:'12px 0 4px'}}>SPIELER-SUCHE (NAME {'→'} UID + HISTORIE)</div>
-      <div style={{display:'flex',gap:6}}>
-        <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Spielername"
-          onKeyDown={function(e){if(e.key==='Enter')doSearch();}}
-          style={{flex:1,padding:'8px 10px',borderRadius:9,fontSize:12,background:'var(--bg)',
-            border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
-            boxSizing:'border-box',outline:'none',minWidth:0}}/>
-        <button onClick={doSearch} style={btnSt}>Suchen</button>
+      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginBottom:6}}>{msg}</div>}
+      <div style={isWide?{display:'grid',gridTemplateColumns:'340px 1fr',gap:14,alignItems:'start'}:{}}>
+        <div>
+          {listeUi}
+          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,margin:'12px 0 4px'}}>SPIELER-SUCHE (NAME {'→'} UID + HISTORIE)</div>
+          <div style={{display:'flex',gap:6}}>
+            <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Spielername"
+              onKeyDown={function(e){if(e.key==='Enter')doSearch();}}
+              style={{flex:1,padding:'8px 10px',borderRadius:9,fontSize:12,background:'var(--bg)',
+                border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
+                boxSizing:'border-box',outline:'none',minWidth:0}}/>
+            <button onClick={doSearch} style={btnSt}>Suchen</button>
+          </div>
+          {qResUi}
+        </div>
+        {isWide&&(
+          <div style={{padding:'10px 12px',borderRadius:11,background:'var(--card)',border:'1.5px solid var(--border)'}}>
+            {(openUid&&offenes)?(
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{offenes.name||openName}</div>
+                {detailUi(offenes)}
+              </div>
+            ):(
+              <div style={{fontSize:11,color:'var(--subtle)'}}>Spieler links anklicken — Details, Beweise und Aktionen erscheinen hier.</div>
+            )}
+          </div>
+        )}
       </div>
-      {qResUi}
     </div>
   );
 }
@@ -4460,6 +4593,23 @@ function App(){
       if(uit==='warn')setWarnings([{id:'warn_uitest',warn:true,reason:'reportHateSpeech',ts:Date.now()}]);
     }catch(e){}
   },[]);
+  // Bann-Check beim App-Start (ww_bans/<uid>, Owner-Read laut Rules): EIN .once() pro Login, meist leer.
+  // Nur Anzeige-Komfort — Autoritaet bleibt der Server (WS-'banned' + Raum-Checks). Vorher sah ein
+  // Gesperrter das Menue normal und erfuhr die Sperre erst beim Online-Gang.
+  useEffect(function(){
+    if(!window.db)return;
+    var uid=account?account.key:null;
+    if(!uid)return;
+    var cancelled=false;
+    window.db.ref('ww_bans/'+uid).once('value').then(function(snap){
+      if(cancelled)return;
+      var v=snap.val();
+      if(v&&v.banned&&(v.until===null||typeof v.until!=='number'||v.until>Date.now())){
+        setBanInfo({reason:v.reason||null,until:(typeof v.until==='number')?v.until:null});
+      }
+    }).catch(function(){});
+    return function(){cancelled=true;};
+  },[account?account.key:null]);
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
   useEffect(()=>{
@@ -7299,7 +7449,9 @@ function App(){
           background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',
           zIndex:650,padding:16}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:20,
-            padding:'20px 18px 18px',width:'100%',maxWidth:360,maxHeight:'90vh',overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch',
+            padding:'20px 18px 18px',width:'100%',
+            maxWidth:(window.matchMedia&&window.matchMedia('(min-width:1000px)').matches)?1280:360, // Mac/Desktop: volle Breite fuer die Moderations-Zentrale, Handy unveraendert
+            maxHeight:'90vh',overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch',
             boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
 
             {/* Header */}
