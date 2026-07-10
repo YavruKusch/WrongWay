@@ -1914,11 +1914,17 @@ function AdminReportsPanel(){
           style={{width:'100%',padding:'8px 10px',borderRadius:9,fontSize:11,background:'var(--bg)',
             border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
             boxSizing:'border-box',outline:'none',margin:'8px 0 6px'}}/>
+        {st.gesperrt&&(
+          <div style={{fontSize:11,fontWeight:800,color:'#fca5a5',background:'rgba(185,28,28,0.16)',
+            border:'1.5px solid rgba(185,28,28,0.4)',borderRadius:8,padding:'7px 10px',marginBottom:6}}>
+            Dieser Spieler ist GESPERRT — nur „Entsperren" ist moeglich. Fall gilt als erledigt.
+          </div>
+        )}
         <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:5}}>
-          {aBtn('Verwerfen','verworfen','#64748b',newestId,g.reports.length===0)}
-          {aBtn(st.beobachtet?'✓ Beobachtet':'Beobachten','beobachtet','#3b82f6',newestId,st.beobachtet)}
-          {aBtn(st.verwarnt>0?('✓ Verwarnt '+st.verwarnt+'×'):'Verwarnen …','verwarnt','#f59e0b',newestId,st.verwarnt>0)}
-          {st.verwarnt>0&&aBtn('Verwarnung loeschen','warnclear','#f59e0b',null,false)}
+          {aBtn('Verwerfen','verworfen','#64748b',newestId,g.reports.length===0||!!st.gesperrt)}
+          {aBtn(st.beobachtet?'✓ Beobachtet':'Beobachten','beobachtet','#3b82f6',newestId,st.beobachtet||!!st.gesperrt)}
+          {aBtn(st.verwarnt>0?('✓ Verwarnt '+st.verwarnt+'×'):'Verwarnen …','verwarnt','#f59e0b',newestId,st.verwarnt>0||!!st.gesperrt)}
+          {st.verwarnt>0&&!st.gesperrt&&aBtn('Verwarnung loeschen','warnclear','#f59e0b',null,false)}
         </div>
         <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
           {aBtn('Sperren 24h …','ban24','#ef4444',newestId,!!st.gesperrt)}
