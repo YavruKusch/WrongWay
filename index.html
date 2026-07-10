@@ -1816,9 +1816,20 @@ function AdminReportsPanel(){
     if(st.beobachtet)return {txt:'BEOBACHTET',bg:'rgba(59,130,246,0.14)',col:'#3b82f6'};
     return {txt:'NEU',bg:'rgba(139,155,184,0.15)',col:'var(--subtle)'};
   };
+  // Match-Beweis als lesbarer deutscher Satz statt JSON (Tunay 2026-07-10: "weiss nicht was gemacht wurde")
   var evidMatchTxt=function(ev){
-    if(ev.live)return 'MATCH lief noch (kein Endstand)';
-    try{return 'MATCH: '+JSON.stringify({winner:ev.winner,winReason:ev.winReason,forfeitUsedMs:ev.forfeitUsedMs,dauerMs:ev.dauerMs,ranked:ev.ranked});}catch(e){return 'MATCH';}
+    if(ev.live)return 'MATCH lief bei der Meldung noch (kein Endstand)';
+    var teile=[];
+    if(typeof ev.winner==='number'){
+      if(typeof ev.reportedNr==='number')teile.push(ev.winner===ev.reportedNr?'Der GEMELDETE hat GEWONNEN':'Der Gemeldete hat verloren');
+      else teile.push('Sieger: Spieler '+(ev.winner+1));
+    }
+    var wrMap={forfeit:'Offline-Zeit aufgebraucht',timeout:'Bedenkzeit abgelaufen',goal:'Ziel erreicht'};
+    if(ev.winReason)teile.push('Grund: '+(wrMap[ev.winReason]||ev.winReason));
+    if(typeof ev.dauerMs==='number'&&ev.dauerMs>0){var edm=Math.floor(ev.dauerMs/60000),eds=Math.floor((ev.dauerMs%60000)/1000);teile.push('Dauer '+edm+':'+(eds<10?'0':'')+eds+' Min');}
+    teile.push(ev.ranked?'Ranked':'Casual');
+    if(ev.moveCountP&&typeof ev.moveCountP[0]==='number'&&typeof ev.moveCountP[1]==='number')teile.push('Zuege '+ev.moveCountP[0]+' / '+ev.moveCountP[1]);
+    return 'MATCH-ERGEBNIS: '+teile.join(' · ');
   };
   // Detail-Block: Stufenleiste + Meldungen (Chat-Verlauf aufklappbar) + Aktionen + Historie
   var detailUi=function(g){
@@ -1851,7 +1862,7 @@ function AdminReportsPanel(){
             <div key={r._id||ri} style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-word',
               marginBottom:5,padding:7,background:'var(--bg)',borderRadius:7}}>
               <span style={{fontWeight:800,color:'#ef4444'}}>{RKAT[r.reason]||r.reason}</span>
-              {' | '+new Date(r.ts||0).toLocaleString()+' | Melder: '+String(r.reporter||'?').slice(0,10)+'…'}
+              {' | '+new Date(r.ts||0).toLocaleString()+' | Melder: '+(r.reporterName||String(r.reporter||'?').slice(0,10)+'…')}
               {r.text?('\nText: "'+r.text+'"'):''}
               {ev&&ev.kind==='chat'?('\nCHAT-BEWEIS: "'+(ev.text||'')+'"'):''}
               {ev&&ev.kind==='match'?('\n'+evidMatchTxt(ev)):''}
@@ -1927,13 +1938,15 @@ function AdminReportsPanel(){
     var sel=openUid===g.uid;
     var b=badgeVon(g.status);
     var anzeigeName=g.name||(g.uid.slice(0,10)+'…');
+    // Spieler MIT Stufe (beobachtet/verwarnt/gesperrt) UND neuer Meldung = Wiederholungsfall -> rot markieren
+    var wiederholer=g.reports.length>0&&(g.status.beobachtet||g.status.verwarnt>0||!!g.status.gesperrt);
     return(
       <div key={g.uid} onClick={function(){waehle(g.uid,anzeigeName,g.reports[0]?g.reports[0].reason:'');}}
         style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid '+(sel?'rgba(239,68,68,0.5)':'var(--border)'),marginBottom:6,cursor:'pointer'}}>
+          border:'1.5px solid '+(sel?'rgba(239,68,68,0.5)':(wiederholer?'rgba(239,68,68,0.45)':'var(--border)')),marginBottom:6,cursor:'pointer'}}>
         <div style={{display:'flex',gap:6,alignItems:'center'}}>
           {g.reports.length>0&&<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:'rgba(239,68,68,0.12)',color:'#ef4444'}}>{g.reports.length}{'×'}</span>}
+            background:wiederholer?'#ef4444':'rgba(239,68,68,0.12)',color:wiederholer?'#fff':'#ef4444'}}>{g.reports.length}{'× GEMELDET'}</span>}
           <span style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{anzeigeName}</span>
           <span style={{fontSize:9,color:'var(--subtle)',marginLeft:'auto'}}>{g.zuletzt?new Date(g.zuletzt).toLocaleDateString():''}</span>
         </div>
