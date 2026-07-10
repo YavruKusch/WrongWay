@@ -1856,40 +1856,57 @@ function AdminReportsPanel(){
         {g.reports.length>0&&<div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'8px 0 4px'}}>MELDUNGEN ({g.reports.length})</div>}
         {g.reports.map(function(r,ri){
           var ev=r.evidence||null;
-          var ktx=(ev&&ev.kind==='chat'&&ev.kontext&&ev.kontext.length)?ev.kontext:null;
+          var ktx=(ev&&ev.kontext&&ev.kontext.length)?ev.kontext:null; // Chat-Verlauf bei JEDER Meldung, wenn im Match gechattet wurde
           var offen=!!chatOpen[r._id];
+          var melderTxt=r.reporterName||(String(r.reporter||'?').slice(0,10)+'…');
           return(
-            <div key={r._id||ri} style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-word',
-              marginBottom:5,padding:7,background:'var(--bg)',borderRadius:7}}>
-              <span style={{fontWeight:800,color:'#ef4444'}}>{RKAT[r.reason]||r.reason}</span>
-              {' | '+new Date(r.ts||0).toLocaleString()+' | Melder: '+(r.reporterName||String(r.reporter||'?').slice(0,10)+'…')}
-              {r.text?('\nText: "'+r.text+'"'):''}
-              {ev&&ev.kind==='chat'?('\nCHAT-BEWEIS: "'+(ev.text||'')+'"'):''}
-              {ev&&ev.kind==='match'?('\n'+evidMatchTxt(ev)):''}
-              {ktx&&(
-                <div style={{marginTop:6}}>
+            <div key={r._id||ri} style={{marginBottom:8,padding:'10px 12px',background:'var(--bg)',borderRadius:9,
+              border:'1px solid var(--border)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:6}}>
+                <span style={{fontSize:11,fontWeight:800,color:'#fff',background:'#ef4444',padding:'3px 9px',borderRadius:7}}>{RKAT[r.reason]||r.reason}</span>
+                <span style={{fontSize:11,color:'var(--text)',fontWeight:600}}>von {melderTxt}</span>
+                <span style={{fontSize:10,color:'var(--subtle)',marginLeft:'auto'}}>{new Date(r.ts||0).toLocaleString()}</span>
+              </div>
+              {r.text?(
+                <div style={{fontSize:12,color:'var(--text)',fontStyle:'italic',padding:'6px 9px',
+                  background:'var(--card)',borderRadius:7,marginBottom:6,wordBreak:'break-word'}}>{'“'+r.text+'”'}</div>
+              ):null}
+              {ev&&ev.kind==='chat'?(
+                <div style={{fontSize:12,color:'#fca5a5',fontWeight:700,padding:'6px 9px',
+                  background:'rgba(239,68,68,0.1)',borderRadius:7,marginBottom:6,wordBreak:'break-word'}}>
+                  Gemeldete Nachricht: {'“'+(ev.text||'')+'”'}
+                </div>
+              ):null}
+              {ev&&ev.kind==='match'?(
+                <div style={{fontSize:11,color:'var(--subtle)',marginBottom:6,wordBreak:'break-word'}}>{evidMatchTxt(ev)}</div>
+              ):null}
+              {ktx?(
+                <div>
                   <button onClick={function(){var n=Object.assign({},chatOpen);n[r._id]=!offen;setChatOpen(n);}}
-                    style={{background:'none',border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',
-                      fontSize:10,fontWeight:700,padding:'4px 8px',cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
-                    {offen?('Verlauf zuklappen'):('Chat-Verlauf anzeigen ('+ktx.length+')')}
+                    style={{background:offen?'var(--card)':'#3b82f6',border:'1.5px solid '+(offen?'var(--border)':'#3b82f6'),
+                      borderRadius:8,color:offen?'var(--text)':'#fff',fontSize:11,fontWeight:800,
+                      padding:'6px 11px',cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
+                    {offen?'Chat-Verlauf zuklappen':('Ganzen Chat lesen ('+ktx.length+')')}
                   </button>
                   {offen&&(
-                    <div style={{marginTop:5,border:'1px solid var(--border)',borderRadius:7,overflow:'hidden'}}>
+                    <div style={{marginTop:6,border:'1.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
                       {ktx.map(function(cm,ci){
-                        var istGemeldet=cm.ts===ev.ts;
+                        var istGemeldet=(typeof ev.ts==='number')&&cm.ts===ev.ts;
+                        var istTaeter=cm.from===ev.reportedNr;
                         return(
-                          <div key={ci} style={{display:'flex',gap:8,padding:'4px 8px',fontSize:10,
-                            background:istGemeldet?'rgba(239,68,68,0.12)':'transparent',
+                          <div key={ci} style={{display:'flex',gap:8,padding:'6px 10px',fontSize:12,
+                            borderTop:ci>0?'1px solid var(--border)':'none',
+                            background:istGemeldet?'rgba(239,68,68,0.14)':'transparent',
                             borderLeft:istGemeldet?'3px solid #ef4444':'3px solid transparent'}}>
-                            <span style={{fontWeight:700,minWidth:70,color:'var(--subtle)'}}>{cm.name}</span>
-                            <span style={{color:istGemeldet?'#fca5a5':'var(--text)',fontWeight:istGemeldet?700:500}}>{cm.text}</span>
+                            <span style={{fontWeight:800,minWidth:80,color:istTaeter?'#ef4444':'var(--subtle)'}}>{cm.name}</span>
+                            <span style={{color:istGemeldet?'#fca5a5':'var(--text)',fontWeight:istGemeldet?700:500,wordBreak:'break-word'}}>{cm.text}</span>
                           </div>
                         );
                       })}
                     </div>
                   )}
                 </div>
-              )}
+              ):null}
             </div>
           );
         })}
