@@ -4450,7 +4450,7 @@ function App(){
   const xpBeforeMatchRef=useRef(null);
   const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen,repSrc};
   // UI-Testhaken (?uitest=ban|warn): rein lokale Dummy-Overlays fuer Design-Sichtung, keine Datenwege
   useEffect(()=>{
     try{
@@ -4775,7 +4775,7 @@ function App(){
       if(d.winner===undefined||d.winner===null){
         setLossReason(null); // laufendes Spiel -> Grund zuruecksetzen (kein stale beim naechsten Spiel)
         setBugOpen(false);setBugStatus(null); // Bug-Report-Formular gehoert nur zum Endscreen
-        setRepOpen(false);setRepStatus(null); // Spieler-Melde-Formular ebenso
+        if(S.current.repSrc!=='chat'){setRepOpen(false);setRepStatus(null);} // Endscreen-Meldeformular ebenso — Chat-Melden lebt im laufenden Match, darf nicht per Sync geschlossen werden
         var myRoleP=(typeof d.deineNummer==='number')?(d.deineNummer===0?'A':'B'):S.current.onlineRole;
         var myNumP=myRoleP==='A'?0:1;
         var srvTurnP=(typeof d.amZug==='number')?(d.amZug===0?'A':'B'):S.current.turn;
