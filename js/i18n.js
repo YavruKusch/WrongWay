@@ -112,7 +112,7 @@ var I18N_EXT={
 en:{
   lostOnTime:'Time ran out',
   lostConnection:'Connection lost',
-  reportBtn:'Report a problem',reportPlayerBtn:'Report player',reportPlayerTitle:'Report player',reportCheating:'Cheating / Hacking',reportHateSpeech:'Hate speech / Offensive',reportSpam:'Spam / Harassment',reportOther:'Other',reportDupe:'You already reported this player',reportChatBtn:'Report this message',reportTitle:'What happened?',reportPlaceholder:'Describe what went wrong...',
+  reportBtn:'Report a problem',reportPlayerBtn:'Report player',reportPlayerTitle:'Report player',reportCheating:'Cheating / Hacking',reportHateSpeech:'Hate speech / Offensive',reportSpam:'Spam / Harassment',reportOther:'Other',reportDupe:'You already reported this player',reportChatBtn:'Report this message',reportTitle:'What happened?',reportPlaceholder:'Describe what went wrong...',reportPlaceholderReq:'Required: briefly describe what happened...',reportNeedText:'Please briefly describe what happened (min. 10 characters).',
   reportSend:'Send report',reportCancel:'Close',reportSent:'Thanks! Report sent.',
   reportLimit:'Daily limit reached (3 per day)',reportNeedLogin:'Please sign in to send reports',
   reportLimitDay:'Daily report limit reached',reportMsgGone:'Message no longer available',
@@ -182,7 +182,7 @@ en:{
 de:{
   lostOnTime:'Zeit abgelaufen',
   lostConnection:'Verbindung getrennt',
-  reportBtn:'Problem melden',reportPlayerBtn:'Spieler melden',reportPlayerTitle:'Spieler melden',reportCheating:'Cheating / Hacking',reportHateSpeech:'Beleidigung / Anstößig',reportSpam:'Spam / Belästigung',reportOther:'Sonstiges',reportDupe:'Diesen Spieler hast du bereits gemeldet',reportChatBtn:'Diese Nachricht melden',reportTitle:'Was ist passiert?',reportPlaceholder:'Beschreibe, was schiefgelaufen ist...',
+  reportBtn:'Problem melden',reportPlayerBtn:'Spieler melden',reportPlayerTitle:'Spieler melden',reportCheating:'Cheating / Hacking',reportHateSpeech:'Beleidigung / Anstößig',reportSpam:'Spam / Belästigung',reportOther:'Sonstiges',reportDupe:'Diesen Spieler hast du bereits gemeldet',reportChatBtn:'Diese Nachricht melden',reportTitle:'Was ist passiert?',reportPlaceholder:'Beschreibe, was schiefgelaufen ist...',reportPlaceholderReq:'Pflicht: Beschreibe kurz, was passiert ist...',reportNeedText:'Bitte beschreibe kurz, was passiert ist (min. 10 Zeichen).',
   reportSend:'Report senden',reportCancel:'Schliessen',reportSent:'Danke! Report gesendet.',
   reportLimit:'Tageslimit erreicht (3 pro Tag)',reportNeedLogin:'Zum Melden bitte einloggen',
   reportLimitDay:'Tageslimit für Meldungen erreicht',reportMsgGone:'Nachricht nicht mehr verfügbar',
@@ -251,7 +251,7 @@ de:{
 tr:{
   lostOnTime:'Süre doldu',
   lostConnection:'Bağlantı koptu',
-  reportBtn:'Sorun bildir',reportPlayerBtn:'Oyuncuyu bildir',reportPlayerTitle:'Oyuncuyu bildir',reportCheating:'Hile / Hack',reportHateSpeech:'Hakaret / Rahatsız edici',reportSpam:'Spam / Taciz',reportOther:'Diğer',reportDupe:'Bu oyuncuyu zaten bildirdin',reportChatBtn:'Bu mesajı bildir',reportTitle:'Ne oldu?',reportPlaceholder:'Neyin yanlış gittiğini anlat...',
+  reportBtn:'Sorun bildir',reportPlayerBtn:'Oyuncuyu bildir',reportPlayerTitle:'Oyuncuyu bildir',reportCheating:'Hile / Hack',reportHateSpeech:'Hakaret / Rahatsız edici',reportSpam:'Spam / Taciz',reportOther:'Diğer',reportDupe:'Bu oyuncuyu zaten bildirdin',reportChatBtn:'Bu mesajı bildir',reportTitle:'Ne oldu?',reportPlaceholder:'Neyin yanlış gittiğini anlat...',reportPlaceholderReq:'Zorunlu: ne olduğunu kısaca anlat...',reportNeedText:'Lütfen ne olduğunu kısaca anlat (en az 10 karakter).',
   reportSend:'Raporu gönder',reportCancel:'Kapat',reportSent:'Teşekkürler! Rapor gönderildi.',
   reportLimit:'Günlük sınıra ulaşıldı (günde 3)',reportNeedLogin:'Bildirmek için giriş yap',
   reportLimitDay:'Günlük bildirim sınırına ulaşıldı',reportMsgGone:'Mesaj artık mevcut değil',
@@ -320,7 +320,7 @@ tr:{
 fr:{
   lostOnTime:'Temps écoulé',
   lostConnection:'Connexion perdue',
-  reportBtn:'Signaler un problème',reportPlayerBtn:'Signaler le joueur',reportPlayerTitle:'Signaler le joueur',reportCheating:'Triche / Hack',reportHateSpeech:'Insultes / Offensant',reportSpam:'Spam / Harcèlement',reportOther:'Autre',reportDupe:'Tu as déjà signalé ce joueur',reportChatBtn:'Signaler ce message',reportTitle:'Que s\'est-il passé ?',reportPlaceholder:'Décris ce qui a mal tourné...',
+  reportBtn:'Signaler un problème',reportPlayerBtn:'Signaler le joueur',reportPlayerTitle:'Signaler le joueur',reportCheating:'Triche / Hack',reportHateSpeech:'Insultes / Offensant',reportSpam:'Spam / Harcèlement',reportOther:'Autre',reportDupe:'Tu as déjà signalé ce joueur',reportChatBtn:'Signaler ce message',reportTitle:'Que s\'est-il passé ?',reportPlaceholder:'Décris ce qui a mal tourné...',reportPlaceholderReq:'Obligatoire : décris brièvement ce qui s\'est passé...',reportNeedText:'Merci de décrire brièvement ce qui s\'est passé (min. 10 caractères).',
   reportSend:'Envoyer',reportCancel:'Fermer',reportSent:'Merci ! Rapport envoyé.',
   reportLimit:'Limite quotidienne atteinte (3 par jour)',reportNeedLogin:'Connecte-toi pour signaler',
   reportLimitDay:'Limite quotidienne de signalements atteinte',reportMsgGone:'Message plus disponible',

@@ -4902,6 +4902,7 @@ function App(){
     if(d&&d.type==='player_report_ok'){setRepStatus('ok');return;}
     if(d&&d.type==='player_report_limit'){setRepStatus('limit');return;}
     if(d&&d.type==='player_report_dupe'){setRepStatus('dupe');return;}
+    if(d&&d.type==='player_report_needtext'){setRepStatus('needtext');return;}
     if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.repOpen){setRepStatus('login');return;}
     if(d&&d.type==='error'&&d.grund==='nachricht nicht gefunden'&&S.current.repOpen){setRepStatus('gone');return;}
     if(d&&d.type==='banned'){setBanInfo({reason:d.reason||null,until:(typeof d.until==='number')?d.until:null});return;}
@@ -6622,6 +6623,9 @@ function App(){
     setRepSrc('chat');setRepChatTs(ts);setRepReason('reportHateSpeech');
     setRepText('');setRepStatus(null);setRepOpen(true);
   };
+  // Begruendung Pflicht bei Sonstiges/Cheating aus dem Endscreen (nicht bei Chat-Meldung, da ist die Nachricht der Bezug)
+  var repBrauchtText=repSrc!=='chat'&&(repReason==='reportOther'||repReason==='reportCheating');
+  var repTextFehlt=repBrauchtText&&repText.trim().length<10;
   var repFormUi=repOpen?(
               <div style={{padding:'12px 14px',borderRadius:14,background:'var(--card)',
                 border:'1.5px solid var(--border)',textAlign:'left'}}>
@@ -6641,10 +6645,11 @@ function App(){
                       })}
                     </div>
                     <textarea value={repText} onChange={e=>setRepText(e.target.value.slice(0,500))}
-                      placeholder={t('reportPlaceholder')} rows={3} maxLength={500}
+                      placeholder={repBrauchtText?t('reportPlaceholderReq'):t('reportPlaceholder')} rows={3} maxLength={500}
                       style={{width:'100%',padding:'9px 11px',borderRadius:10,fontSize:13,resize:'vertical',
-                        background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-                        fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
+                        background:'var(--bg)',border:'1.5px solid '+(repTextFehlt?'rgba(239,68,68,0.5)':'var(--border)'),color:'var(--text)',
+                        fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:repTextFehlt?4:8}}/>
+                    {repTextFehlt&&<div style={{fontSize:11,color:'#ef4444',fontWeight:600,marginBottom:8}}>{t('reportNeedText')}</div>}
                   </div>
                 )}
                 {repStatus==='ok'&&<div style={{fontSize:12,fontWeight:700,color:'#16a34a',marginBottom:8}}>{'✓'} {t('reportSent')}</div>}
@@ -6652,10 +6657,11 @@ function App(){
                 {repStatus==='dupe'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportDupe')}</div>}
                 {repStatus==='login'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportNeedLogin')}</div>}
                 {repStatus==='gone'&&<div style={{fontSize:12,fontWeight:700,color:'#f59e0b',marginBottom:8}}>{t('reportMsgGone')}</div>}
+                {repStatus==='needtext'&&<div style={{fontSize:12,fontWeight:700,color:'#ef4444',marginBottom:8}}>{t('reportNeedText')}</div>}
                 <div style={{display:'flex',gap:7}}>
                   {repStatus!=='ok'&&(
-                    <button disabled={repStatus==='sending'} onClick={()=>{
-                      if(repStatus==='sending')return;
+                    <button disabled={repStatus==='sending'||repTextFehlt} onClick={()=>{
+                      if(repStatus==='sending'||repTextFehlt)return;
                       setRepStatus('sending');
                       var payloadR={src:repSrc,reason:repReason,text:repText.trim()};
                       if(repSrc==='chat'&&repChatTs)payloadR.ts=repChatTs;
@@ -6663,8 +6669,8 @@ function App(){
                       setTimeout(function(){setRepStatus(function(stR){return stR==='sending'?null:stR;});},8000);
                     }}
                       style={{flex:1,padding:'9px',borderRadius:10,border:'none',fontSize:12,fontWeight:800,
-                        background:repStatus==='sending'?'var(--border)':'#ef4444',
-                        color:'white',cursor:repStatus==='sending'?'default':'pointer',
+                        background:(repStatus==='sending'||repTextFehlt)?'var(--border)':'#ef4444',
+                        color:'white',cursor:(repStatus==='sending'||repTextFehlt)?'default':'pointer',
                         fontFamily:'system-ui,-apple-system,sans-serif'}}>
                       {repStatus==='sending'?'...':t('reportSend')}
                     </button>
