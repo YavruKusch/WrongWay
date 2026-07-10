@@ -3997,7 +3997,7 @@ function App(){
     window.db.ref('ww_warnings/'+uid).once('value').then(function(snap){
       if(cancelled)return;
       var v=snap.val()||{};
-      var list=Object.keys(v).map(function(k){return {id:'warn_'+k,warn:true,reason:(v[k]&&v[k].reason)||null,ts:(v[k]&&v[k].ts)||0};});
+      var list=Object.keys(v).map(function(k){var e=v[k]||{};var isThanks=e.typ==='thanks';return {id:'warn_'+k,warn:!isThanks,thanks:isThanks,reason:e.reason||null,ts:e.ts||0};});
       list.sort(function(a,b){return b.ts-a.ts;});
       setWarnings(list);
     }).catch(function(){});
@@ -4458,7 +4458,7 @@ function App(){
     +warnings.filter(function(w){return !readIds[w.id];}).length; // Verwarnungen zaehlen mit (Pulse-Icon)
   // Neueste UNGELESENE Verwarnung -> Vollbild-Overlay mit 5s-'Verstanden' (bewusste Bestaetigung, kein Eck-X)
   var activeWarn=null;
-  for(var awI=0;awI<warnings.length;awI++){ if(!readIds[warnings[awI].id]){ activeWarn=warnings[awI]; break; } }
+  for(var awI=0;awI<warnings.length;awI++){ if(warnings[awI].warn&&!readIds[warnings[awI].id]){ activeWarn=warnings[awI]; break; } } // nur echte Verwarnungen ins Vollbild-Overlay, Dank-Nachrichten nur ins Postfach
   // Postfach: Broadcasts + Verwarnungen chronologisch gemischt (Verwarnung read-only, nicht wegwischbar)
   var inboxItems=warnings.slice();
   broadcasts.forEach(function(b){ if(!dismissedIds[b.id]) inboxItems.push(b); });
@@ -4627,6 +4627,7 @@ function App(){
       if(uit==='ban')setBanInfo({reason:'reportCheating',until:Date.now()+7*86400000});
       if(uit==='banperm')setBanInfo({reason:'reportHateSpeech',until:null});
       if(uit==='warn')setWarnings([{id:'warn_uitest',warn:true,reason:'reportHateSpeech',ts:Date.now()}]);
+      if(uit==='thanks')setWarnings([{id:'warn_uitest',warn:false,thanks:true,reason:null,ts:Date.now()}]);
     }catch(e){}
   },[]);
   // Bann-Check beim App-Start (ww_bans/<uid>, Owner-Read laut Rules): EIN .once() pro Login, meist leer.
@@ -7408,6 +7409,28 @@ function App(){
                   </div>
                 </div>
               ):inboxItems.map(function(b){
+                if(b.thanks){ // Dank an den Melder: gruene Karte, klickbar (als gelesen markieren), kein Overlay
+                  var tUnread=!readIds[b.id];
+                  return(
+                    <div key={b.id} onClick={function(){markBroadcastRead(b.id);}}
+                      style={{marginBottom:10,borderRadius:14,overflow:'hidden',cursor:'pointer',
+                        background:tUnread?'var(--bg)':'var(--card)',
+                        border:'1.5px solid '+(tUnread?'rgba(22,163,74,0.45)':'var(--border)')}}>
+                      <div style={{height:3,background:'#16a34a',opacity:0.7,borderRadius:'14px 14px 0 0'}}/>
+                      <div style={{padding:'12px 14px'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                          {tUnread&&<div style={{width:7,height:7,borderRadius:'50%',background:'#16a34a',flexShrink:0}}/>}
+                          <span style={{fontSize:9,fontWeight:800,color:'#16a34a',letterSpacing:1.2,textTransform:'uppercase',
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('thanksInboxLabel')}</span>
+                          <span style={{fontSize:9,color:'var(--subtle)',fontWeight:600,marginLeft:'auto',
+                            fontFamily:'system-ui,-apple-system,sans-serif'}}>{new Date(b.ts||0).toLocaleDateString()}</span>
+                        </div>
+                        <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,fontWeight:500,
+                          fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('thanksInboxText')}</div>
+                      </div>
+                    </div>
+                  );
+                }
                 if(b.warn){ // Verwarnung: read-only, nicht wegwischbar (Missbrauchsschutz)
                   var wUnread=!readIds[b.id];
                   return(
