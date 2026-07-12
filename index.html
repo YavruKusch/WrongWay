@@ -5000,6 +5000,8 @@ function App(){
       setWalls(new Set(d.walls||[]));
       if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
       var csRtm=S.current.gameTimeMode||''; var csR=(csRtm==='classic-3')?180:(csRtm==='classic-5')?300:(csRtm==='classic-8')?480:0; setTimeLeft({A:csR,B:csR}); // Classic-Uhr bei Revanche wieder auf voll
+      // Server-Uhr-Anker fuer die Revanche neu setzen (sonst leitet die Anzeige aus dem alten Anker von Spiel-1-Ende = falsche/0-Uhr)
+      if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; } else { clkAnchorRef.current=null; }
       if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
       if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
       setWinner(null);setCelebrating(false);setGaveUp(null);
@@ -5458,10 +5460,10 @@ function App(){
     }
     const iv=setInterval(()=>{
       if(S.current.winner||S.current.screen!=='game')return;
-      // RANKED: Uhr-Anzeige aus dem Server-Anker ableiten. Keine lokale Uhr, kein Selbst-Beenden.
-      // Wert = Server-Rest minus Wanduhrzeit seit dem Anker -> driftet nie, friert auf Handy nie falsch ein.
-      // Die Server-Schachuhr beendet das Spiel autoritativ (kommt als state mit winner zurueck).
-      if(S.current.isRanked){
+      // SCHACHUHR (Ranked ODER Casual mit Classic-Zeit): Anzeige aus dem Server-Anker ableiten.
+      // Keine lokale Uhr, kein Selbst-Beenden. Wert = Server-Rest minus Wanduhrzeit seit dem Anker
+      // -> driftet nie, friert auf Handy nie falsch ein. Der Server beendet das Spiel autoritativ.
+      if(S.current.isRanked||(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('classic-')===0)){
         const a=clkAnchorRef.current;
         if(a){
           let r0=a.rem[0],r1=a.rem[1];const el=Date.now()-a.at;
