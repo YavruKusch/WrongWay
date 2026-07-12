@@ -807,7 +807,10 @@
   // In-App-Browsern (Instagram u.a.) — alles keine WrongWay-Bugs (Report-Auswertung 2026-07-08).
   var WW_ERR_IGNORE=['cancelled','Load failed','Failed to start the audio device',
     'Attempt to get records from database without an in-progress transaction',
-    'Database deleted by request of the user','Script error.','window.webkit.messageHandlers'];
+    'Database deleted by request of the user','Script error.','window.webkit.messageHandlers',
+    // grecaptcha rendert beim bfcache-Restore intern nach, nachdem App Check laengst ein Token hat
+    // (Analyse 2026-07-13) — kosmetisch, blockiert keine Verbindung
+    'already been rendered'];
   function wwErrIgnorable(e){
     var m=String((e&&e.msg)||''), s=String((e&&e.stack)||'');
     for(var i=0;i<WW_ERR_IGNORE.length;i++){ if(m.indexOf(WW_ERR_IGNORE[i])!==-1)return true; }
