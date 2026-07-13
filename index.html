@@ -947,7 +947,7 @@ function dlTrack(key,val){
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, rtt:0, _pingAt:0, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
   // Zuschauer: eigener State-Kanal ueber denselben Socket, ruehrt roomId/role/token nicht an.
   watchRoom:function(code,onSpectate){
     this.spectateCode=code; this.onSpectate=onSpectate;
@@ -1062,7 +1062,8 @@ var WSNET={
     self.sock.onmessage=function(ev){
       self.lastRecv=Date.now();
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
-      if(d.type==='pong'){ self.pongSeen=true; return; }
+      if(d.type==='pong'){ self.pongSeen=true; if(self._pingAt){ var _rtt=Date.now()-self._pingAt; self._pingAt=0; if(_rtt>=0&&_rtt<10000)self.rtt=self.rtt?Math.round(self.rtt*0.6+_rtt*0.4):_rtt; } return; }
+      if((d.type==='match_start'||d.type==='resync')&&self.sock&&self.sock.readyState===1){ self._pingAt=Date.now(); try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){} } // frueh eine RTT-Probe -> Uhr ab dem ersten Blitz-Zug kalibriert
       if(d.type==='spectate_state'||d.type==='spectate_denied'||d.type==='spectate_end'){ if(self.onSpectate)self.onSpectate(d); return; }
       if(d.type==='spectate_relay'){ if(self.onSpectate)self.onSpectate(d.payload||{}); return; }
       if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
@@ -1088,7 +1089,7 @@ var WSNET={
     self._hb=setInterval(function(){
       if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
       if(self.sock&&self.sock.readyState===1){
-        try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
+        self._pingAt=Date.now(); try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
         // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
         // Nur wenn der Server pong unterstuetzt (sonst alter Server -> keine Fehlausloesung).
         if(self.pongSeen&&(Date.now()-self.lastRecv>8000)){ self.lastRecv=Date.now(); try{ self.sock.close(); }catch(e){} }
@@ -1108,7 +1109,7 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this._stopHb(); if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; this.spectateCode=null; this.onSpectate=null; this._clearResume(); if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } },
+  close:function(){ this._stopHb(); this._pingAt=0; if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; this.spectateCode=null; this.onSpectate=null; this._clearResume(); if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } },
   // Match ueberlebt Reload UND komplettes Schliessen/Neuoeffnen (App/Browser): Token+Raum+Rolle
   // liegen in localStorage. Wird bei jedem regulaeren Verlassen (leaveRoom/close) wieder geloescht,
   // ein totes/altes Token raeumt der Server ueber reconnect_failed selbst auf (siehe dort).
@@ -4691,7 +4692,8 @@ function App(){
   const winSound=w=>{ if(!isOwnLoss(w)) playSound('win'); };
   const winnerFiredRef=useRef(false);
   const afkTriggerRef=useRef(null); // Ref für triggerWin - vermeidet TDZ in Safari
-  const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs)
+  const wsTurnEndsRef=useRef(0); // WS: lokale Deadline fuer Zug-Countdown (vom Server, turnMs) - rtt-korrigiert = Anzeige
+  const wsTurnEndsRawRef=useRef(0); // WS-Blitz: ROHE Server-Deadline (ohne rtt-Abzug) -> Backup-Skip-Trigger, nie zu frueh
   const wsSkipForRef=useRef(0); // WS-Blitz: fuer welche Deadline schon ein skip gesendet wurde (Doppelsende-Schutz)
   const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
   const clkAnchorRef=useRef(null); // Ranked: {at, rem:[ms0,ms1], active} — Server-Uhr-Anker; Anzeige wird daraus abgeleitet
@@ -4943,7 +4945,7 @@ function App(){
       if(d.golden){ if(d.golden.length>(S.current.goldenWalls?S.current.goldenWalls.size:0))playSound('wall'); setGoldenWalls(new Set(d.golden)); }
       if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); if(!d.chaosItem&&S.current.chaosItem&&!d.winner)playSound('wall'); setChaosItem(d.chaosItem); }
       if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
-      if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
       // Ranked-Uhr-Anker vom Server: Anzeige wird hieraus abgeleitet (keine Drift, kein Freeze-Fehler)
       if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; }
       if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
@@ -5015,7 +5017,7 @@ function App(){
       // Server-Uhr-Anker fuer die Revanche neu setzen (sonst leitet die Anzeige aus dem alten Anker von Spiel-1-Ende = falsche/0-Uhr)
       if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; } else { clkAnchorRef.current=null; }
       if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
-      if(typeof d.turnMs==='number'){ wsTurnEndsRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; }
+      if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
       setWinner(null);setCelebrating(false);setGaveUp(null);
       setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
       setMoveHist([]);
@@ -5460,11 +5462,12 @@ function App(){
         if(!ends){setTurnTimeLeft(getTurnTime(gameTimeMode));return;}
         var rest=Math.max(0,Math.ceil((ends-Date.now())/1000));
         setTurnTimeLeft(rest);
-        // Server skippt selbst ~600ms nach Ablauf (Kulanz fuer Zuege in letzter Sekunde).
-        // Erst wenn 900ms nach Deadline IMMER NOCH kein neuer State kam (Skip-Broadcast
-        // verloren / Server-Uhr haengt), einmalig selbst skip schicken. Server validiert eh.
-        if(S.current.turn===S.current.onlineRole&&(Date.now()-ends)>900&&wsSkipForRef.current!==ends){
-          wsSkipForRef.current=ends; // pro Deadline nur ein skip
+        // Backup-Skip an der ROHEN Server-Deadline (nicht der rtt-verschobenen Anzeige!) + grosser Puffer:
+        // nur wenn der Server-Auto-Skip (Deadline+BLITZ_GRACE) UND sein State-Broadcast lange ausblieben.
+        // So kann eine zu hohe rtt-Schaetzung den EIGENEN Zug nie verfrueht ueberspringen. Server validiert eh.
+        var rawEnds=wsTurnEndsRawRef.current;
+        if(rawEnds&&S.current.turn===S.current.onlineRole&&(Date.now()-rawEnds)>1800&&wsSkipForRef.current!==rawEnds){
+          wsSkipForRef.current=rawEnds; // pro Deadline nur ein skip
           try{WSNET.skipTurn();}catch(e){}
         }
       },300);
@@ -6399,11 +6402,12 @@ function App(){
     if(gameMode==='online'&&S.current.turn!==onlineRole)return;
     if(!getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c))return;
     if(WSNET.roomId){
-      // Optimistisch: eigenen Zug sofort lokal zeigen, Server bestaetigt parallel
-      playSound('move');
+      // Optimistisch: eigenen Zug sofort lokal zeigen, Server bestaetigt parallel.
+      // Blitz-Ausnahme: ist die eigene Zeit faktisch schon abgelaufen (Countdown 0), NICHT optimistisch
+      // zeigen -> sonst springt die Figur beim Server-Skip sichtbar zurueck. Nur senden, Server entscheidet.
+      var _blitzAbgelaufen=(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('blitz-')===0&&wsTurnEndsRef.current&&Date.now()>wsTurnEndsRef.current);
       const np={r:r,c:c};const isA=turn==='A';
-      if(isA)setPA(np);else setPB(np);
-      setTurn(turn==='A'?'B':'A');
+      if(!_blitzAbgelaufen){ playSound('move'); if(isA)setPA(np);else setPB(np); setTurn(turn==='A'?'B':'A'); }
       pendingWsRef.current={kind:'move',to:{r:r,c:c},tries:0};
       WSNET.move({r:r,c:c});
       return;
@@ -6518,10 +6522,9 @@ function App(){
             if(sc.barrLeft[sc.turn]>0){
               const next=tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
               if(next){
-                playSound('wall');
-                setWalls(next);
-                setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1});
-                setTurn(sc.turn==='A'?'B':'A');
+                // Blitz: bei faktisch abgelaufener Zeit nur senden, nicht optimistisch setzen (kein Zurueckspringen)
+                var _blitzAbgelaufenW=(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('blitz-')===0&&wsTurnEndsRef.current&&Date.now()>wsTurnEndsRef.current);
+                if(!_blitzAbgelaufenW){ playSound('wall'); setWalls(next); setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1}); setTurn(sc.turn==='A'?'B':'A'); }
                 pendingWsRef.current={kind:'wall',key:key,tries:0};
                 WSNET.wall(key);
               }else setFlash(t('invalidPos'));
