@@ -4925,7 +4925,13 @@ function App(){
     if(d.type==='match_start'||d.type==='resync'||d.type==='state'){
       setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
-      if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){WSNET._dbg('GEO-MISMATCH! Server '+d.cols+'x'+d.rows+' vs Client '+COLS+'x'+ROWS);}
+      if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){
+        // Server ist autoritativ fuer die Brettgroesse -> uebernehmen statt nur warnen. Sonst baut der
+        // Client ein falsch grosses Brett und ALLE Wand-/Positions-Keys liegen daneben = dauerhafter Desync,
+        // den kein State heilt (normale States tragen keine cols/rows). Map+Size aus den Server-Massen ableiten.
+        WSNET._dbg('GEO-MISMATCH! Server '+d.cols+'x'+d.rows+' vs Client '+COLS+'x'+ROWS+' -> uebernehme Server');
+        applyBoardSize((d.map==='duel')?'duel':'classic',(d.map==='duel'&&d.cols===7)?'blitz':'standard');
+      }
       if((d.type==='match_start'||d.type==='resync')&&d.skins!==undefined)setMatchSkins(d.skins||null);
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
       if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
@@ -4947,6 +4953,9 @@ function App(){
       }
       if(d.gaveUp!==undefined&&d.gaveUp!==null)setGaveUp(d.gaveUp===0?'A':'B');
       var mh=S.current.moveHist;
+      // Server-autoritative Zughistorie (kommt nur im resync) -> ersetzt die lokale moveHist,
+      // damit das Replay nach einem Reconnect keine Luecke hat (verpasste Gegnerzuege). Nur 1v1/Drop/Chaos.
+      if(d.zugLog){ mh=d.zugLog; setMoveHist(d.zugLog); }
       if(d.lm){
         const lp=d.lm.p===0?'A':'B';
         var lmEnt;
