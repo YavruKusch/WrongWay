@@ -1067,6 +1067,8 @@ var WSNET={
       if(d.type==='spectate_state'||d.type==='spectate_denied'||d.type==='spectate_end'){ if(self.onSpectate)self.onSpectate(d); return; }
       if(d.type==='spectate_relay'){ if(self.onSpectate)self.onSpectate(d.payload||{}); return; }
       if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
+      if(d.type==='auth_rejected'){ return; } // Re-Auth mit falscher Slot-Identitaet: Server behaelt die richtige Identitaet -> hier folgenlos ignorieren
+
       if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId&&!self._jr){ self._jr=true; setTimeout(function(){ if(self.roomId&&self.role==='B')self._send(self._joinMsg()); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
       if(d.type==='match_start')self._dbg('MATCH laeuft!');
@@ -1078,6 +1080,9 @@ var WSNET={
       if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; self._lastOppRating=d.oppRating||1000; self._lastRankedMode=d.rankedMode||d.mode||'classic'; self._saveResume(); if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
       if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self._clearResume(); if(d.grund!=='declined') self.rankedOn=false; }
+      // Takeover: ein anderes Geraet hat den Raum-Slot uebernommen. JEDEN Reconnect-Ausloeser abraeumen,
+      // sonst versucht dieser tote Socket ewig neu zu verbinden. onState bleibt gesetzt -> UI-Meldung folgt unten.
+      if(d.type==='session_replaced'){ self.rankedOn=false; self.browseOn=false; self.roomId=null; self.role=null; self.token=null; self.spectateCode=null; self._clearResume(); self._stopHb(); if(self._lp){ clearInterval(self._lp); self._lp=null; } }
       if(self.onState)self.onState(d);
     };
     self.sock.onclose=function(){ clearTimeout(_connTmr); self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
@@ -2478,6 +2483,10 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
   const[showRules,setShowRules]=React.useState(false);
   const[preMatch,setPreMatch]=React.useState(null);
   const[preMatchTimer,setPreMatchTimer]=React.useState(15);
+  // Verzoegerte ranked_denied/session_replaced-Aktionen sterben bei Unmount/neuer Queue -> canceln keine spaetere Suche
+  const pendingTimerRef=React.useRef(null);
+  const mountedRef=React.useRef(true); // WSNET.onState bleibt nach Unmount auf localRouter -> spaete Antworten duerfen keine Timer/Navigation mehr ausloesen
+  const clearPendingTimer=function(){ if(pendingTimerRef.current){ clearTimeout(pendingTimerRef.current); pendingTimerRef.current=null; } };
   const ranked=(account&&account.stats&&account.stats.ranked)||freshRankedStats();
   const feat=features||{ranked:true,rankedClassic:true,rankedDuel:true};
 
@@ -2489,18 +2498,25 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
 
   const joinQueue=function(mode){
     if(!account)return;
+    clearPendingTimer();
     const r=(ranked[mode]&&ranked[mode].rating)||1000;
     var localRouter=function(d){
+      // Komponente schon weg (Back/Rangliste waehrend der Suche): nur ein real gestartetes Match noch durchreichen,
+      // keine State-Updates/Timer mehr — sonst cancelt ein spaeter Timer eine neu gestartete Suche.
+      if(!mountedRef.current){ if(d&&(d.type==='match_start'||(d.type==='resync'&&d.gestartet)))wsRouter(d); return; }
       // Match gefunden: hoerbar + fuehlbar machen, sonst verpassen Spieler den Start
       if(d&&d.type==='ranked_found'){ try{playSound('pickup');}catch(e){} try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){} }
       if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
+      if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
+      if(d&&d.type==='session_replaced'){ setFoundMsg(t('sessionReplaced')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); goBack(); },1800); return; }
       wsRouter(d);
     };
     WSNET.startRanked(mode,r,{name:account.name,akey:account.key},localRouter);
     setQueue({mode:mode,ts:Date.now()});setElapsed(0);setFoundMsg('');
   };
   const leaveQueue=function(){
+    clearPendingTimer();
     try{WSNET.cancelRanked();}catch(e){}
     setQueue(null);setElapsed(0);setFoundMsg('');setPreMatch(null);setPreMatchTimer(15);
   };
@@ -2565,6 +2581,8 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     },1000);
     return function(){cancelled=true;clearInterval(tick);};
   },[preMatch]);
+
+  React.useEffect(function(){ return function(){ mountedRef.current=false; if(pendingTimerRef.current)clearTimeout(pendingTimerRef.current); }; },[]);
 
   var tierName=function(tier){ return t('tier'+tier.label)||tier.name; };
 
@@ -4911,6 +4929,7 @@ function App(){
     if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.repOpen){setRepStatus('login');return;}
     if(d&&d.type==='error'&&d.grund==='nachricht nicht gefunden'&&S.current.repOpen){setRepStatus('gone');return;}
     if(d&&d.type==='banned'){setBanInfo({reason:d.reason||null,until:(typeof d.until==='number')?d.until:null});return;}
+    if(d&&d.type==='session_replaced'){ try{WSNET.close();}catch(e){} setFlash(t('sessionReplaced')); setTimeout(function(){ if(S.current.screen==='game'){ setNavDir('back'); setScreen('menu'); setGameMode(null); setLobbyId(null); setFlash(''); } },1800); return; }
     if(d&&d.type==='elo_update'){
       setEloChange({change:d.change,newRating:d.newRating,won:d.won,oppChange:d.oppChange,oppNewRating:d.oppNewRating});
       // Account-State sofort aktualisieren (kein App-Neustart noetig)
@@ -5141,6 +5160,7 @@ function App(){
     if(!d||!d.type)return;
     if(d.type==='ranked_denied'){ try{WSNET.cancelRanked();}catch(e){} setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
+    if(d.type==='session_replaced'){ try{WSNET.close();}catch(e){} setFlash(t('sessionReplaced')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='resync'&&!d.gestartet&&WSNET.roomId&&d.settings&&d.settings.ranked){ try{WSNET._send({type:'ranked_confirm'});}catch(e){} return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
@@ -11855,9 +11875,12 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const uid=myUidRef.current;
   const gridRef=React.useRef(null);
   const snapPosRef=React.useRef(null);
+  const srTimerRef=React.useRef(null); // session_replaced-Takeover-Timer
+  const tv2MountedRef=React.useRef(true); // Unmount-Guard (St.current friert beim Unmount ein -> taugt nicht als Guard)
   const St=React.useRef({});
   St.current={tokens,walls,barr,turn,winner,isOnline,myToken,lobbyCode,isHost,playerMap,reached,removed,sub,lobbyPlayers,wsYouKey,removedMeReason};
   React.useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
+  React.useEffect(function(){ return function(){ tv2MountedRef.current=false; if(srTimerRef.current){ clearTimeout(srTimerRef.current); srTimerRef.current=null; } }; },[]);
 
   const lKey=c=>'barricade_2v2_lobby_'+c;
   const gKey=c=>'barricade_2v2_game_'+c;
@@ -12363,6 +12386,18 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       else if(g==='team voll'){setFlash(t('tv2TeamFull'));setTimeout(function(){setFlash('');},2000);}
       else if(g==='teams unvollstaendig'){setFlash(t('tv2Need22'));setTimeout(function(){setFlash('');},2500);}
       else if(g==='spieler getrennt'){setFlash(t('tv2NotAllOn'));setTimeout(function(){setFlash('');},2500);}
+      return;
+    }
+    if(d.type==='session_replaced'){
+      if(St.current.sub==='lobby'||St.current.sub==='game'){
+        wsActiveRef.current=false;
+        try{WSNET.close();}catch(e){}
+        wsResetStates();
+        setIsOnline(false);setIsHost(false);setLobbyCode('');setLobbyPlayers({});setWsYouKey(null);
+        setJoinError(t('sessionReplaced'));
+        setSub('online');
+        srTimerRef.current=setTimeout(function(){ srTimerRef.current=null; if(tv2MountedRef.current)onExit(); },1800); // Takeover -> kurz Meldung, dann ins Hauptmenue (Timer stirbt bei Unmount, kein Yank spaeterer Screens)
+      }
       return;
     }
     if(d.type==='reconnect_failed'){
