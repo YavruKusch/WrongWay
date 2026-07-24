@@ -5,6 +5,7 @@ let _ctx=null;
 function getCtx(){try{if(_ctx&&_ctx.state==='closed')_ctx=null;if(!_ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;_ctx=new C();}return _ctx;}catch{return null;}}
 async function playSound(type){
   try{
+    if(window.__soundOn===false)return;
     let ctx=getCtx();if(!ctx)return;
     if(ctx.state!=='running'){
       try{await ctx.resume();}catch(e){}

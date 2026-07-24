@@ -3927,6 +3927,8 @@ function App(){
   const[showLang,setShowLang]=useState(false);
   const[hapticOn,setHapticOn]=useState(()=>{try{return localStorage.getItem('ww_haptic')!=='0';}catch{return true;}});
   useEffect(()=>{window.__hapticOn=hapticOn;try{localStorage.setItem('ww_haptic',hapticOn?'1':'0');}catch{}},[hapticOn]);
+  const[soundOn,setSoundOn]=useState(()=>{try{return localStorage.getItem('ww_sound')!=='0';}catch{return true;}});
+  useEffect(()=>{window.__soundOn=soundOn;try{localStorage.setItem('ww_sound',soundOn?'1':'0');}catch{}},[soundOn]);
   // ── Account / Login ──
   const[account,setAccount]=useState(null);
   const[pendingGoogleUser,setPendingGoogleUser]=useState(null);
@@ -7330,6 +7332,24 @@ function App(){
                       background:hapticOn?'#16a34a':'var(--border)',
                       position:'relative',transition:'background 0.2s'}}>
                       <div style={{position:'absolute',top:3,left:hapticOn?20:3,width:20,height:20,
+                        borderRadius:'50%',background:'white',transition:'left 0.2s',
+                        boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                    </div>
+                  </button>
+                  {/* Ton */}
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1,margin:'16px 0 8px'}}>
+                    {lang==='tr'?'SES':lang==='fr'?'SON':lang==='en'?'SOUND':'TON'}
+                  </div>
+                  <button onClick={()=>setSoundOn(v=>!v)} style={{
+                    width:'100%',padding:'12px 14px',borderRadius:10,
+                    background:'var(--bg)',border:'1.5px solid var(--border)',cursor:'pointer',
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{soundOn?(lang==='tr'?'Açık':lang==='fr'?'Activé':lang==='en'?'On':'An'):(lang==='tr'?'Kapalı':lang==='fr'?'Désactivé':lang==='en'?'Off':'Aus')}</span>
+                    <div style={{width:44,height:26,borderRadius:13,
+                      background:soundOn?'#16a34a':'var(--border)',
+                      position:'relative',transition:'background 0.2s'}}>
+                      <div style={{position:'absolute',top:3,left:soundOn?20:3,width:20,height:20,
                         borderRadius:'50%',background:'white',transition:'left 0.2s',
                         boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
                     </div>
