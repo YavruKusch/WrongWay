@@ -2675,7 +2675,6 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
           </div>
         ):(
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
-            {renderCard('classic',t('rankedClassicCard'),<ModeGlyph kind="clock" size={12} color={muted}/>)}
             {renderCard('duel',t('rankedDuelCard'),<SwordsIcon size={12} color={muted}/>)}
             <div style={{padding:'12px 14px',borderRadius:12,
               background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',
@@ -3217,8 +3216,8 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
         {/* Ranked ELO */}
         <div style={{marginBottom:14}}>
           <Lbl v={t('ranked')}/>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            {[['classic',<ModeGlyph kind="clock" size={11} color="#8b5cf6"/>,'#8b5cf6','RACE'],['duel',<SwordsIcon size={11} color="#f59e0b"/>,'#f59e0b','DUELL']].map(([mode,icon,col,lbl])=>{
+          <div style={{display:'grid',gridTemplateColumns:'1fr',gap:10}}>
+            {[['duel',<SwordsIcon size={11} color="#f59e0b"/>,'#f59e0b','DUELL']].map(([mode,icon,col,lbl])=>{
               const r=ranked[mode]||{rating:1000,wins:0,losses:0,games:0};
               return(
                 <div key={mode} style={{background:card,border:'1.5px solid '+border,borderRadius:14,
@@ -3354,7 +3353,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
 }
 var _lbCache={data:null,ts:0};
 function LeaderboardScreen({t,darkMode,goBack,account}){
-  const[mode,setMode]=React.useState('classic');
+  const[mode,setMode]=React.useState('duel');
   const[raw,setRaw]=React.useState(_lbCache.data||{});
   const[loading,setLoading]=React.useState(!_lbCache.data);
   const dk=darkMode;
@@ -3384,14 +3383,11 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
     if(!loaded&&window.db){
       // Fallback: direkt Firebase (Server nicht erreichbar)
       try{
-        const [s1,s2]=await Promise.all([
-          window.db.ref('ww_leaderboard').orderByChild('classic/rating').limitToLast(100).once('value'),
-          window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value')
-        ]);
-        var merged=Object.assign({},s1.val()||{},s2.val()||{});
+        const s2=await window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value');
+        var merged=Object.assign({},s2.val()||{});
         _lbCache={data:merged,ts:Date.now()};
         setRaw(merged);
-        dlTrack('ww_leaderboard',s1.val());dlTrack('ww_leaderboard',s2.val());
+        dlTrack('ww_leaderboard',s2.val());
       }catch(e2){console.warn('Leaderboard load error',e2);}
     }
     setLoading(false);
@@ -3425,19 +3421,6 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
           <div style={{fontSize:28,marginBottom:6}}>🏆</div>
           <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{t('leaderboardTitle')}</div>
           <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>{t('leaderboardSubtitle')}</div>
-        </div>
-        {/* Mode-Tabs */}
-        <div style={{display:'flex',gap:8,marginBottom:16,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)',
-          borderRadius:12,padding:4}}>
-          {[['classic','\u{1F3CE} '+t('classic').toUpperCase()],['duel','\u2694 '+t('duel').toUpperCase()]].map(([m,lbl])=>(
-            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:'9px 4px',borderRadius:9,
-              background:mode===m?card:'transparent',border:'none',cursor:'pointer',
-              fontSize:13,fontWeight:800,color:mode===m?txt:muted,
-              boxShadow:mode===m?'0 2px 8px rgba(0,0,0,0.08)':'none',
-              transition:'all 0.18s',fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lbl}
-            </button>
-          ))}
         </div>
         {/* Liste */}
         {loading?(
@@ -7050,9 +7033,7 @@ function App(){
                   </div>
                 </div>
                 {account&&account.stats&&account.stats.ranked?(()=>{
-                  const maxR=Math.max(
-                    (account.stats.ranked.classic&&account.stats.ranked.classic.rating)||1000,
-                    (account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000);
+                  const maxR=(account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000;
                   const tier=rankTier(maxR);
                   return <span style={{fontSize:13,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
                     padding:'5px 11px',borderRadius:12,flexShrink:0,display:'inline-flex',alignItems:'center',gap:4}}>
@@ -11492,7 +11473,7 @@ function OppProfileModal({data,onClose,darkMode,t}){
   const txt=dk?'#f1f5f9':'#0f172a';
   const muted=dk?'#94a3b8':'#64748b';
   const border=dk?'#252d44':'#e2e8f0';
-  const tier=data.ranked?rankTier(Math.max((data.ranked.classic&&data.ranked.classic.rating)||1000,(data.ranked.duel&&data.ranked.duel.rating)||1000)):{icon:'–',label:'–'};
+  const tier=data.ranked?rankTier((data.ranked.duel&&data.ranked.duel.rating)||1000):{icon:'–',label:'–'};
   return(
     <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 24px'}}>
       <div onClick={e=>e.stopPropagation()} style={{background:card,borderRadius:24,width:'100%',maxWidth:360,padding:'24px 20px',
@@ -11534,8 +11515,8 @@ function OppProfileModal({data,onClose,darkMode,t}){
             )}
             {/* Ranked */}
             {data.ranked&&(
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                {[['classic','#8b5cf6',t('duelModeClassic')],['duel','#f59e0b',t('duelModeDuel')]].map(([mode,col,lbl])=>{
+              <div style={{display:'grid',gridTemplateColumns:'1fr',gap:8}}>
+                {[['duel','#f59e0b',t('duelModeDuel')]].map(([mode,col,lbl])=>{
                   const r=data.ranked[mode]||{rating:1000,wins:0,losses:0};
                   return(
                     <div key={mode} style={{background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:12,padding:'10px',textAlign:'center'}}>
