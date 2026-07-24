@@ -861,7 +861,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=102"></script>
+<script src="js/i18n.js?v=103"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -6226,7 +6226,7 @@ function App(){
 
   const sendChat=async()=>{
     const msg=chatInput.trim();
-    if(!msg||!lobbyId||gameMode!=='online')return;
+    if(!msg||!lobbyId||gameMode!=='online'||!account)return;
     const text=msg.slice(0,140);
     if(WSNET.roomId){ WSNET._send({type:'chat',text:text}); setChatInput(''); return; } // WS-Spiel: Chat ueber WebSocket statt Firebase
     const now=Date.now();
@@ -10552,6 +10552,7 @@ function App(){
             )}
           </div>
 
+          {account?(
           <div style={{display:'flex',gap:6,marginTop:8}}>
             <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
               onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}}}
@@ -10570,6 +10571,12 @@ function App(){
               <SendIcon size={16} color="#fff"/>
             </button>
           </div>
+          ):(
+          <div style={{marginTop:8,padding:'10px 12px',borderRadius:10,border:'1.5px solid var(--border)',
+            background:'var(--card)',color:'var(--subtle)',fontSize:13,fontWeight:600,textAlign:'center'}}>
+            {t('chatLoginRequired')}
+          </div>
+          )}
         </div>
       )}
       {repChatOverlayUi}
