@@ -1293,6 +1293,25 @@ async function coinAltLesen(leser,aktiv,setzen){
     return false;
   }catch(e){return false;}
 }
+// Codex-R5 F3: Der Lebenszyklus des Coins-Listeners liegt HIER, nicht im Effekt-Rumpf — genau diese
+// Funktion fuehrt der Regressionstest aus. Frueher standen Abbruch-Flag, Einmal-Riegel und Cleanup
+// verstreut im useEffect; dort waren sie nur per Textvergleich abgesichert, ein Fehler in der
+// Verdrahtung (Cleanup verliert `aktiv=false`, Flag als Wert statt Getter uebergeben) waere
+// unbemerkt geblieben. `anhaengen` bekommt den Wert-Callback und liefert das Abmelden zurueck.
+function coinsBeobachten(anhaengen,altLesen,setzen){
+  let altGeprueft=false,aktiv=true;
+  const abmelden=anhaengen(function(v){
+    if(typeof v==='number'){setzen(v);return;}
+    setzen(0);
+    // Alt-Format: eine Wallet, die noch eine nackte Zahl ist, hat gar kein bal-Kind. EINMAL pro
+    // Sitzung nachsehen — sonst wuerde ein gueltiges Guthaben als 0 angezeigt. Kostet nur bei
+    // Konten ohne bal einen winzigen Read (meist ein null), nie einen Dauer-Listener.
+    if(altGeprueft)return;
+    altGeprueft=true;
+    coinAltLesen(altLesen,function(){return aktiv;},setzen);
+  });
+  return function(){aktiv=false;if(abmelden)abmelden();};
+}
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
@@ -4051,23 +4070,14 @@ function App(){
     // Blatt `bal`. Das ist zugleich weniger Download als der ganze Knoten (der Idempotenz-Marker
     // traegt).
     var ref=window.db.ref('ww_coins/'+uid+'/bal');
-    var altGeprueft=false,aktiv=true;
-    ref.on('value',function(snap){
-      var v=snap.val();
-      if(typeof v==='number'){setCoins(v);return;}
-      setCoins(0);
-      // Alt-Format: eine Wallet, die noch eine nackte Zahl ist, hat gar kein bal-Kind. EINMAL pro
-      // Sitzung nachsehen — sonst wuerde ein gueltiges Guthaben als 0 angezeigt. Kostet nur bei
-      // Konten ohne bal einen winzigen Read (meist ein null), nie einen Dauer-Listener.
-      if(altGeprueft)return;
-      altGeprueft=true;
-      coinAltLesen(
-        function(){return window.db.ref('ww_coins/'+uid).once('value').then(function(s2){return s2.val();});},
-        function(){return aktiv;},
-        setCoins
-      );
-    });
-    return function(){aktiv=false;ref.off('value');};
+    return coinsBeobachten(
+      function(beiWert){
+        var h=ref.on('value',function(snap){beiWert(snap.val());});
+        return function(){ref.off('value',h);};
+      },
+      function(){return window.db.ref('ww_coins/'+uid).once('value').then(function(s2){return s2.val();});},
+      setCoins
+    );
   },[account?account.key:null]);
   // XP live aus Firebase laden
   useEffect(function(){
