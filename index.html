@@ -775,6 +775,9 @@
     navigator.serviceWorker.addEventListener('message',function(event){
       if(event.data&&event.data.type==='SW_UPDATED'){
         window._swUpdated=true;
+        // Bleibt gesetzt (das Flag oben wird vom Banner verbraucht): solange diese Seite mit ALTEM
+        // JavaScript laeuft, duerfen Aktionen, die neue Server-/Rules-Zusagen brauchen, nicht starten.
+        window._swPending=true;
       }
     });
   }
@@ -915,6 +918,12 @@ function getDisplayName(account){return account?account.name:GUEST_ID;}
 // ── WebSocket-Anbindung an den Spiel-Server (server-autoritativ, nur Classic) ──
 // Standardmaessig AUS. Mit ?ws=1 in der URL aktiv (zum Testen auf Staging).
 var WW_URL='wss://wrongway-server-production.up.railway.app';
+// Faehigkeits-Kennzeichen fuer den Rules-Rollout (Codex-R3 F6). 1 = dieser Client kommt ohne
+// direkte Namens-Writes und ohne direkte Ranglisten-Reads aus, ist also mit den verschaerften
+// Firebase-Regeln kompatibel. ALTE Seiten senden es nicht -> der Server sieht 0 und kann die
+// Verbreitung messen (`/stats`), statt den Publish-Zeitpunkt zu raten. Nur erhoehen, wenn eine
+// KUENFTIGE Regel-Verschaerfung erneut Client-Anpassungen braucht.
+var WW_CAP=1;
 var WS_ENABLED=(function(){try{return new URLSearchParams(window.location.search).get('ws')!=='0';}catch(e){return true;}})();
 var WS_DEBUG=(function(){try{return new URLSearchParams(window.location.search).get('wsdebug')==='1';}catch(e){return false;}})();
 // ── DB-Download-Messung (?dbstats=1): zaehlt empfangene Firebase-Bytes je Pfad, Overlay unten links.
@@ -1043,7 +1052,7 @@ var WSNET={
       // Vorher lief join dem auth voraus: die Runde startete, und der Gegner eines Gesperrten
       // wartete ewig. Gaeste (kein currentUser) senden unveraendert sofort.
       var _after=function(tok){
-        if(tok){ try{ self._send({type:'auth',idToken:tok}); }catch(e){} }
+        if(tok){ try{ self._send({type:'auth',idToken:tok,cap:WW_CAP}); }catch(e){} }
         if(self.rankedOn&&!self.roomId){ try{ var _rm={type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}; if(self.equip)_rm.equip=self.equip; self._send(_rm); }catch(e){} }
         if(self.roomId){
           if(self.token){ self._send({type:'reconnect',token:self.token}); }
@@ -1261,17 +1270,6 @@ async function stoSet(k,v){
 async function stoDel(k){
   try{await window.db.ref(k).remove();}catch(e){console.error('FB DEL fail',k,e);}
 }
-// Atomisches Multi-Path Update — entweder alles oder nichts (kritisch für Account-Integrität)
-async function stoMultiUpdate(updates){
-  try{
-    const mapped={};
-    for(const key of Object.keys(updates)){
-      mapped[key]=updates[key]===null?null:JSON.stringify(updates[key]);
-    }
-    await window.db.ref().update(mapped);
-    return true;
-  }catch(e){console.error('FB MULTI fail',e);window.lastFbError=e.message;return false;}
-}
 async function stoGetChildren(k){
   try{
     const snap=await window.db.ref(k).once('value');
@@ -1282,6 +1280,18 @@ async function stoGetChildren(k){
     for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
     return out;
   }catch(e){return{};}
+}
+// Liest das Coin-Alt-Format (nackte Zahl statt Wallet-Objekt) nach, wenn das `bal`-Blatt fehlt.
+// `aktiv()` sagt, ob der aufrufende Effekt noch lebt: nach Logout oder Konto-Wechsel wird das
+// Ergebnis VERWORFEN, sonst zeigte das neue Konto das Guthaben des alten (Codex-R2/R3 F3).
+// Bewusst eine eigene Funktion, damit genau dieser Abbruch deterministisch testbar ist.
+async function coinAltLesen(leser,aktiv,setzen){
+  try{
+    const w=await leser();
+    if(!aktiv())return false;
+    if(typeof w==='number'){setzen(w);return true;}
+    return false;
+  }catch(e){return false;}
 }
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
@@ -1317,6 +1327,29 @@ async function changeGoogleAccountName(uid,oldName,newName){
   // Vereinheitlicht: Konten sind jetzt alle per uid indexiert
   return changeAccountName(uid,newName);
 }
+// F10: Der Namens-Index gehoert dem Server (Rules: write:false fuer Clients). Der Server bestimmt
+// den bisherigen Namen selbst aus seiner kanonischen Zuordnung — der Client schickt ihn bewusst
+// NICHT mehr mit (er waere keine vertrauenswuerdige Quelle). Beim Umbenennen zieht der Server auch
+// den Profilnamen nach, damit Anzeige und Index nicht auseinanderlaufen koennen.
+// Rueckgabe: {ok:true,ts:<Zeitstempel>} oder {err:<i18n-Suffix>}.
+async function nameClaimWsCmd(name){
+  // F6: veraltete Seite -> Aktion NICHT versuchen, sondern klar zum Neuladen auffordern. Ohne das
+  // scheiterte sie nach dem Rules-Publish mit einem nichtssagenden Verbindungsfehler.
+  if(window._swPending)return{err:'needsReload'};
+  let d;
+  try{d=await wsCmd({type:'name_claim',name:name},'name_ok','name_err');}catch(e){return{err:'network'};}
+  if(d&&d.type==='name_ok')return{ok:true,ts:d.ts||Date.now()};
+  const r=d?d.reason:'';
+  if(r==='taken')return{err:'taken'};
+  if(r==='badName')return{err:'badChars'};
+  if(r==='limit')return{err:'nameLimit'};
+  if(r==='busy')return{err:'network'};
+  return{err:'network'};
+}
+// F9: eigenes Rating/Rang kommt vom Server statt aus einem direkten Ranglisten-Read.
+async function myRankWsCmd(){
+  try{return await wsCmd({type:'my_rank'},'my_rank');}catch(e){return null;}
+}
 async function changeAccountName(uid,newName){
   const newKey=normUser(newName);
   if(newKey.length<3)return{err:'tooShort'};
@@ -1324,17 +1357,12 @@ async function changeAccountName(uid,newName){
   const prof=await stoGet(PROFILE_KEY(uid));
   if(!prof)return{err:'notFound'};
   if(normUser(prof.name)===newKey)return{err:'sameName'};
-  const existing=await stoGet(USERNAME_KEY(newKey));
-  if(existing&&existing.uid!==uid)return{err:'taken'};
-  const oldKey=normUser(prof.name);
-  const updated=Object.assign({},prof,{name:newName.trim(),lastNameChange:Date.now()});
-  // Atomisch: Profil aktualisieren + alte Reservierung loeschen + neue setzen
-  const ok=await stoMultiUpdate({
-    [PROFILE_KEY(uid)]:updated,
-    [USERNAME_KEY(oldKey)]:null,
-    [USERNAME_KEY(newKey)]:{uid:uid,name:newName.trim()}
-  });
-  if(!ok)return{err:'network'};
+  // Reservierung, Freigabe des alten Eintrags UND der Profilname laufen server-seitig in einem
+  // Schritt — der Client schreibt hier nichts mehr selbst, sonst koennten Index und Anzeige bei
+  // einem Abbruch auseinanderlaufen. Scheitert es, bleibt der alte Name vollstaendig gueltig.
+  const claim=await nameClaimWsCmd(newName.trim());
+  if(claim.err)return{err:claim.err};
+  const updated=Object.assign({},prof,{name:newName.trim(),lastNameChange:claim.ts});
   return{prof:Object.assign({},updated,{key:uid,isGoogle:prof.isGoogle||false})};
 }
 async function changeAccountPassword(key,oldPw,newPw,confirmPw){
@@ -1423,7 +1451,7 @@ async function accountDeleteWsCmd(){
     ws.onopen=function(){
       firebase.auth().currentUser.getIdToken(true).then(function(tok){
         if(done)return;
-        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+        ws.send(JSON.stringify({type:'auth',idToken:tok,cap:WW_CAP}));
       }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
     };
     ws.onmessage=function(ev){
@@ -1445,7 +1473,7 @@ async function adminFlagWsCmd(flag, value){
     ws.onopen=function(){
       firebase.auth().currentUser.getIdToken(true).then(function(tok){
         if(done)return;
-        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+        ws.send(JSON.stringify({type:'auth',idToken:tok,cap:WW_CAP}));
       }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
     };
     ws.onmessage=function(ev){
@@ -1681,7 +1709,7 @@ function WarnOverlay(props){
 function AdminReportsPanel(){
   // Moderations-Zentrale: ww_reports (offene Meldungen) + ww_bans (aktive Sperren) + ww_ban_log
   // (Stufen-Historie) -> Tabs OFFEN/BEOBACHTET/VERWARNT/GESPERRT mit Status pro Spieler.
-  // Alle Reads on-demand (.once) beim Laden, Aktionen via adminWsCmd (Server prueft ADMIN_UID).
+  // Alle Reads on-demand (.once) beim Laden, Aktionen via wsCmd (Server prueft ADMIN_UID).
   // ponytail: ww_ban_log wird komplett gelesen — bei sehr vielen moderierten Spielern spaeter paginieren.
   var[data,setData]=React.useState(null);   // [{uid,name,reports[],status{},zuletzt}]
   var[busy,setBusy]=React.useState(false);
@@ -1789,7 +1817,7 @@ function AdminReportsPanel(){
       m={type:'admin_report_action',uid:uid,aktion:art,grund:(grund.trim()||null),reportId:reportId||null};ok='admin_report_action_ok';
     }
     setActBusy(art);setActMsg('');
-    adminWsCmd(m,ok).then(function(){
+    wsCmd(m,ok).then(function(){
       setActBusy('');setActMsg('OK: '+art);
       load(uid); // Status/Tabs/Zaehler sofort nachziehen (Spieler wandert ggf. den Tab)
     }).catch(function(e){
@@ -2092,7 +2120,11 @@ function AdminFlagsPanel(){
     </div>
   );
 }
-async function adminWsCmd(msg,okType){ // dedizierter Kurz-WS: auth -> Admin-Befehl -> auf okType warten (Coins, Bans, Report-Aktionen)
+// Dedizierter Kurz-WS: auth -> Befehl -> auf okType warten. Genutzt fuer Admin-Befehle (Coins,
+// Bans, Report-Aktionen) UND seit der F9/F10-Umstellung fuer die server-autoritative Namensvergabe
+// und die eigene Ranglisten-Auskunft. Mit errType loest das Promise auch auf der Fehlerantwort auf,
+// statt in den Timeout zu laufen — der Aufrufer prueft dann d.type.
+async function wsCmd(msg,okType,errType){
   return new Promise(function(resolve,reject){
     var ws=new WebSocket(WW_URL);
     var authed=false,done=false;
@@ -2100,7 +2132,7 @@ async function adminWsCmd(msg,okType){ // dedizierter Kurz-WS: auth -> Admin-Bef
     ws.onopen=function(){
       firebase.auth().currentUser.getIdToken(true).then(function(tok){
         if(done)return;
-        ws.send(JSON.stringify({type:'auth',idToken:tok}));
+        ws.send(JSON.stringify({type:'auth',idToken:tok,cap:WW_CAP}));
       }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
     };
     ws.onmessage=function(ev){
@@ -2108,6 +2140,7 @@ async function adminWsCmd(msg,okType){ // dedizierter Kurz-WS: auth -> Admin-Bef
       var d;try{d=JSON.parse(ev.data);}catch(e){return;}
       if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify(msg));return;}
       if(d.type===okType){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
+      if(errType&&d.type===errType){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
       if(d.type==='error'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.grund||'Server-Fehler'));}
     };
     ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
@@ -2130,7 +2163,7 @@ function AdminCoinsPanel(){
     setBusy(true);setRes(null);
     var msgObj={type:'admin_coins_'+action,uid:uidV};
     if(action!=='get')msgObj.amount=amtV;
-    adminWsCmd(msgObj,'admin_coins_ok').then(function(r){
+    wsCmd(msgObj,'admin_coins_ok').then(function(r){
       var extra=r.added!==undefined?(' ('+r.added+')'):'';
       setRes({ok:true,msg:uidV+': '+r.balance+' Coins'+extra});
       setBusy(false);
@@ -2224,13 +2257,19 @@ async function registerAccount(email,name,pw,color){
       if(u&&u.uid===uid&&!u.isAnonymous){unsub();resolve();}
     });
   });
+  // F10: Namen ZUERST server-seitig reservieren. Scheitert das (vergeben/Server weg), entsteht kein
+  // Profil mit einem Namen, der jemand anderem gehoert.
+  const claim=await nameClaimWsCmd(name.trim());
+  if(claim.err){
+    try{await firebase.auth().signOut();}catch(e){}
+    return{err:claim.err};
+  }
   const prof={name:name.trim(),color:color||AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
   const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok){
     try{await firebase.auth().signOut();}catch(e){}
     return{err:'network'};
   }
-  await stoSet(USERNAME_KEY(key),{uid:uid,name:name.trim()});
   // Bestaetigunsmail senden und abmelden (Login erst nach Bestaetigung moeglich)
   await sendVerificationEmail(cred.user);
   try{await firebase.auth().signOut();}catch(e){}
@@ -2300,10 +2339,12 @@ async function createGoogleProfile(googleUser,name,color){
       if(u&&u.uid===uid&&!u.isAnonymous){unsub();resolve();}
     });
   });
+  // F10: Namen zuerst server-seitig reservieren (siehe registerAccount).
+  const claim=await nameClaimWsCmd(name.trim());
+  if(claim.err)return{err:claim.err};
   const prof={name:name.trim(),color:color||AVATAR_COLORS[0],isGoogle:true,created:Date.now(),stats:freshAccountStats()};
   const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok)return{err:'network'};
-  await stoSet(USERNAME_KEY(nameKey),{uid:uid,name:name.trim()});
   return{prof:{...prof,key:uid,isGoogle:true}};
 }
 async function fetchAccount(key){
@@ -2947,11 +2988,10 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
       }
       // Danach die Pfade, die nur der Client loeschen kann (Owner-write laut Rules)
       const uid=user.uid;
-      const nameKey=normUser(account.name||'');
+      // Namens-Index und Ranglisten-Eintrag loescht der Server in account_delete mit (beide sind
+      // fuer Clients schreibgeschuetzt) — hier nur noch die Pfade mit Owner-Write.
       const paths=[
         PROFILE_KEY(uid),
-        USERNAME_KEY(nameKey),
-        'ww_leaderboard/'+uid,
         'ww_presence/'+uid,
         'ww_friends/'+uid,
         'ww_freq/'+uid,
@@ -3370,26 +3410,17 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
     var now=Date.now();
     if(!force&&_lbCache.data&&(now-_lbCache.ts)<300000){setRaw(_lbCache.data);setLoading(false);return;}
     setLoading(true);
-    var loaded=false;
     try{
       var resp=await fetch(WW_URL.replace('wss://','https://').replace('ws://','http://')+'/leaderboard');
       if(resp.ok){
         var data=await resp.json();
         _lbCache={data:data,ts:Date.now()};
         setRaw(data);
-        loaded=true;
       }
     }catch(e){}
-    if(!loaded&&window.db){
-      // Fallback: direkt Firebase (Server nicht erreichbar)
-      try{
-        const s2=await window.db.ref('ww_leaderboard').orderByChild('duel/rating').limitToLast(100).once('value');
-        var merged=Object.assign({},s2.val()||{});
-        _lbCache={data:merged,ts:Date.now()};
-        setRaw(merged);
-        dlTrack('ww_leaderboard',s2.val());
-      }catch(e2){console.warn('Leaderboard load error',e2);}
-    }
+    // F9: Kein Firebase-Fallback mehr. Die Rangliste kommt ausschliesslich vom Server-Endpunkt
+    // (0 Firebase-Download); ist der Server weg, laeuft ohnehin kein Match — dann bleibt die Liste
+    // leer statt einen Vollabzug der Ranglisten-Daten zu ziehen.
     setLoading(false);
   };
   React.useEffect(()=>{load();},[]);
@@ -3963,10 +3994,11 @@ function App(){
       }
       const prof=await stoGet(PROFILE_KEY(uid));
       if(prof&&prof.name){
-        // ELO direkt aus ww_leaderboard lesen (stoGet wuerde JSON.parse auf natives Objekt machen = crash)
+        // F9: eigenes ELO vom Server holen statt direkt aus der Rangliste zu lesen — der Knoten
+        // ist fuer Clients zu (er traegt server-interne Settlement-Marker).
         try{
-          const lbSnap=await window.db.ref('ww_leaderboard/'+uid).once('value');
-          const lb=lbSnap.val();
+          const rk=await myRankWsCmd();
+          const lb=(rk&&rk.modes)?rk.modes:null;
           if(lb&&typeof lb==='object'){
             if(!prof.stats)prof.stats={};
             if(!prof.stats.ranked)prof.stats.ranked={};
@@ -4015,12 +4047,27 @@ function App(){
     if(!window.db)return;
     var uid=account?account.key:null;
     if(!uid){setCoins(null);return;}
-    var ref=window.db.ref('ww_coins/'+uid);
+    // Schicht C: ww_coins/<uid> ist ein Wallet-OBJEKT ({bal,ops,day,...}) — gelesen wird nur das
+    // Blatt `bal`. Das ist zugleich weniger Download als der ganze Knoten (der Idempotenz-Marker
+    // traegt).
+    var ref=window.db.ref('ww_coins/'+uid+'/bal');
+    var altGeprueft=false,aktiv=true;
     ref.on('value',function(snap){
       var v=snap.val();
-      setCoins(typeof v==='number'?v:0);
+      if(typeof v==='number'){setCoins(v);return;}
+      setCoins(0);
+      // Alt-Format: eine Wallet, die noch eine nackte Zahl ist, hat gar kein bal-Kind. EINMAL pro
+      // Sitzung nachsehen — sonst wuerde ein gueltiges Guthaben als 0 angezeigt. Kostet nur bei
+      // Konten ohne bal einen winzigen Read (meist ein null), nie einen Dauer-Listener.
+      if(altGeprueft)return;
+      altGeprueft=true;
+      coinAltLesen(
+        function(){return window.db.ref('ww_coins/'+uid).once('value').then(function(s2){return s2.val();});},
+        function(){return aktiv;},
+        setCoins
+      );
     });
-    return function(){ref.off('value');};
+    return function(){aktiv=false;ref.off('value');};
   },[account?account.key:null]);
   // XP live aus Firebase laden
   useEffect(function(){
@@ -4534,6 +4581,17 @@ function App(){
   useEffect(()=>{
     const interval=setInterval(()=>{
       if(window._swUpdated){setUpdateAvailable(true);window._swUpdated=false;}
+      // F6: Eine Seite mit altem JavaScript bricht, sobald die verschaerften Firebase-Regeln live
+      // sind (sie wuerde noch direkt schreiben/lesen). Ein Cache-Wechsel ersetzt laufendes JS NICHT,
+      // darum laden wir selbst neu — aber NIE mitten in einer Runde: nur im Menue und nur wenn keine
+      // WS-Sitzung (Raum, Ranked-Queue, Zuschauen) offen ist. Sonst bleibt der Banner der Weg.
+      if(window._swPending){
+        try{
+          var scU=S.current?S.current.screen:null;
+          var ruht=!WSNET.roomId&&!WSNET.rankedOn&&!WSNET.spectateCode;
+          if(scU==='menu'&&ruht){ window._swPending=false; window.location.reload(); }
+        }catch(eU){} // niemals den Banner-Timer mitreissen
+      }
     },1000);
     return()=>clearInterval(interval);
   },[]);
