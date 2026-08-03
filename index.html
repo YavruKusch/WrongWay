@@ -4397,6 +4397,9 @@ function App(){
   const openTutorial=()=>{setShowOptions(false);setTutStep(0);setShowTutorial(true);};
   const[adminFlash,setAdminFlash]=useState('');
   const[clearConfirm,setClearConfirm]=useState(false);
+  const[nrBusy,setNrBusy]=useState(false);
+  const[nrMsg,setNrMsg]=useState('');
+  const[nrLeer,setNrLeer]=useState(null);
   const[bcTitle,setBcTitle]=useState('');
   const[bcMsg,setBcMsg]=useState('');
   const[bcImportance,setBcImportance]=useState('normal');
@@ -7988,6 +7991,36 @@ function App(){
                     🧹 Offene Lobbys leeren
                   </button>
                 )}
+              </div>
+              {/* Namens-Index pruefen: Pflichtschritt nach einem Rules-Publish.
+                  Muss "Arbeitsliste LEER" melden — sonst schreibt noch etwas dagegen. */}
+              <div style={{marginTop:8}}>
+                <button disabled={nrBusy} onClick={()=>{
+                  setNrBusy(true);setNrMsg('');setNrLeer(null);
+                  wsCmd({type:'admin_name_reconcile'},'admin_name_reconcile_ok').then(function(d){
+                    setNrBusy(false);
+                    var istLeer=!!(d&&d.leer);
+                    setNrLeer(istLeer);
+                    var rd=(d&&typeof d.runden==='number')?d.runden:null;
+                    var rest=(d&&typeof d.rest==='number')?d.rest:null;
+                    setNrMsg(istLeer?('Arbeitsliste LEER'+(rd!==null?' (nach '+rd+' Durchlaeufen)':'')):
+                      ('NICHT leer'+(rest!==null?' — '+rest+' Rest-Eintraege':'')+'. Es schreibt noch etwas dagegen: nicht weitermachen, nachsehen.'));
+                  }).catch(function(e){
+                    setNrBusy(false);setNrLeer(false);
+                    setNrMsg('Fehlgeschlagen: '+((e&&e.message)?e.message:'unbekannt'));
+                  });
+                }} style={{width:'100%',padding:'11px',borderRadius:10,
+                  background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',
+                  cursor:nrBusy?'default':'pointer',opacity:nrBusy?0.6:1,
+                  fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {nrBusy?'Prueft…':'🔁 Namens-Index pruefen'}
+                </button>
+                {nrMsg?(
+                  <div style={{marginTop:8,padding:'10px 12px',borderRadius:9,fontSize:12.5,fontWeight:700,
+                    background:nrLeer?'rgba(22,163,74,0.10)':'rgba(239,68,68,0.10)',
+                    border:'1.5px solid '+(nrLeer?'#16a34a':'#ef4444'),
+                    color:nrLeer?'#16a34a':'#ef4444'}}>{nrMsg}</div>
+                ):null}
               </div>
             </AdminSection>
 
