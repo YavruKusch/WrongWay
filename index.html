@@ -2,6 +2,13 @@
 <html lang="de" translate="no">
 <head>
 <meta charset="UTF-8">
+<!-- Notbremse gegen unverschluesselten Aufruf. Muss die ERSTE Zeile im head sein: alles darunter
+     wuerde sonst noch ueber http geladen. Ueber http zeigt jeder Browser "Nicht sicher", der
+     Service Worker verweigert die Registrierung (keine PWA, keine Updates), und im selben WLAN
+     kann jeder mitlesen. Greift auch dann, wenn die Weiterleitung beim Hoster mal ausfaellt.
+     Lokale Adressen ausgenommen, sonst waere die Entwicklungs- und Handy-Vorschau nicht mehr
+     aufrufbar (localhost hat kein https). -->
+<script>try{var h=location.hostname;if(location.protocol==='http:'&&h!=='localhost'&&h!=='127.0.0.1'&&h.indexOf('192.168.')!==0&&h.indexOf('10.')!==0&&!/^172\.(1[6-9]|2[0-9]|3[01])\./.test(h))location.replace('https://'+location.host+location.pathname+location.search+location.hash);}catch(e){}</script>
 <script>try{if(localStorage.getItem('ww_dark')==='1')document.documentElement.classList.add('dark');}catch(e){}</script>
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -743,6 +750,12 @@
 <script src="js/vendor/react.production.min.js"></script>
 <script src="js/vendor/react-dom.production.min.js"></script>
 <script src="js/vendor/babel.min.js"></script>
+<!-- QR-Erzeugung im Geraet statt beim fremden Dienst api.qrserver.com. Gleiche Library, die der
+     App-Client schon nutzt (qrcode, package.json), als Browser-Bundle abgelegt — keine neue
+     Abhaengigkeit. Grund: der Lobby-Code lief bisher ueber einen fremden Server, der in
+     gefilterten Netzen blockiert sein kann (und dem wir den Code mitteilten). 24 KB, `defer`
+     laedt sie ohne den Seitenaufbau zu bremsen, danach liegt sie im Service-Worker-Cache. -->
+<script defer src="js/vendor/qrcode.min.js"></script>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -4670,6 +4683,7 @@ function App(){
   // Verbindung). Nur fuer den Warte-Screen: dort wartete man sonst blind auf einen "Spielstart",
   // der an einer abwesenden Gegenseite haengt.
   const[oppOffline,setOppOffline]=useState(false);
+  const[qrUrl,setQrUrl]=useState('');
   const[gameNum,setGameNum]=useState(0);
   const[oppCountdown,setOppCountdown]=useState(null);
   const oppLastSeenRef=useRef(0);
@@ -6270,6 +6284,32 @@ function App(){
     },60000);
     return()=>clearTimeout(tmo);
   },[screen,onlineRole]);
+
+  // ── QR-Code fuer den Lobby-Code, im Geraet erzeugt ──
+  // Vorher kam das Bild von api.qrserver.com: ein fremder Server, der in gefilterten WLANs
+  // blockiert sein kann (dann blieb an der Stelle ein leerer Rahmen) und dem wir bei jedem
+  // Aufruf den Lobby-Code mitteilten. Die Library liegt jetzt lokal (js/vendor/qrcode.min.js).
+  // `defer` heisst: beim ersten Rendern kann sie noch fehlen — deshalb ein kurzer zweiter
+  // Versuch, statt den QR-Code dann dauerhaft wegzulassen.
+  useEffect(()=>{
+    if(!privateCode){setQrUrl('');return;}
+    var abgebrochen=false;
+    var basis=(typeof window!=='undefined'&&window.location)?(window.location.origin+window.location.pathname):'https://wrongway.app/';
+    var ziel=basis+'?join='+privateCode;
+    var versuche=0;
+    var baue=function(){
+      if(abgebrochen)return;
+      if(!window.WWQR||!window.WWQR.toDataURL){
+        if(versuche++<20){setTimeout(baue,150);}
+        return;
+      }
+      window.WWQR.toDataURL(ziel,{width:180,margin:1,color:{dark:'#0f172a',light:'#ffffff'}})
+        .then(function(u){if(!abgebrochen)setQrUrl(u);})
+        .catch(function(){});
+    };
+    baue();
+    return function(){abgebrochen=true;};
+  },[privateCode]);
 
   // ── Game-Chat Listener (pro Lobby) ──
   useEffect(()=>{
@@ -9321,11 +9361,11 @@ function App(){
               {copyFlash?<span style={{display:'inline-flex',alignItems:'center',gap:5}}><CheckIcon size={13} color="currentColor"/>{t('copied')}</span>:<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ClipboardIcon size={14}/>{t('copyCode')}</span>}
             </button>
 
-            {/* QR Code */}
+            {/* QR Code — im Geraet erzeugt (siehe useEffect oben), kein fremder Dienst mehr */}
             <div style={{background:'white',padding:10,borderRadius:14,marginBottom:14,
-              boxShadow:'var(--shadow-soft)',border:'1.5px solid var(--border)'}}>
-              <img alt="QR" src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data=${encodeURIComponent(shareUrl)}`}
-                style={{width:160,height:160,display:'block'}}/>
+              boxShadow:'var(--shadow-soft)',border:'1.5px solid var(--border)',
+              width:180,height:180,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {qrUrl?<img alt="QR" src={qrUrl} style={{width:160,height:160,display:'block'}}/>:null}
             </div>
             <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1,marginBottom:18}}>
               {t('scanQR')}
@@ -12872,7 +12912,16 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
               </button>
             ):(
               <div style={{textAlign:'center',fontSize:12,fontWeight:600,color:'var(--subtle)',padding:'8px 0'}}>
-                {isHost?(aPlayers.length===2&&bPlayers.length===2?(allOn?t('readyState'):t('tv2NotAllOn')):t('waitingPlayers4')):t('waitingHost4')}
+                {/* Wer nicht Host war, las hier IMMER nur "Warte auf Host" — auch wenn in Wahrheit
+                    noch ein vierter Spieler fehlte. Das liest sich, als wuerde der Host nicht
+                    starten, und war vermutlich ein Teil der "wait till host start"-Beschwerden.
+                    Jetzt sieht jeder den echten Grund: erst die Zahl (3/4), dann die Teamverteilung
+                    (die kann auch ein Nicht-Host selbst korrigieren), und erst wenn wirklich alles
+                    passt, wartet man auf den Host. */}
+                {total<4?(t('waitingPlayers4')+' ('+total+'/4)')
+                  :(aPlayers.length!==2||bPlayers.length!==2)?t('tv2Need22')
+                  :!allOn?t('tv2NotAllOn')
+                  :isHost?t('readyState'):t('waitingHost4')}
               </div>
             )}
           </div>
