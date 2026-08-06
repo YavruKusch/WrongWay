@@ -4666,6 +4666,10 @@ function App(){
   const[rematchB,setRematchB]=useState(false);
   const[rematchDeclined,setRematchDeclined]=useState(null);
   const[oppLeft,setOppLeft]=useState(false);
+  // Gegenseite ist verbunden, aber gerade nicht in der App (Handy kappt beim App-Wechsel die
+  // Verbindung). Nur fuer den Warte-Screen: dort wartete man sonst blind auf einen "Spielstart",
+  // der an einer abwesenden Gegenseite haengt.
+  const[oppOffline,setOppOffline]=useState(false);
   const[gameNum,setGameNum]=useState(0);
   const[oppCountdown,setOppCountdown]=useState(null);
   const oppLastSeenRef=useRef(0);
@@ -5198,7 +5202,7 @@ function App(){
     setFlash('');setAiThinking(false);setGiveUpArmed(false);
     setAddFriendSent(false);
     setDragging(null);setPreviewKey(null);setSnapPos(null);
-    setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
+    setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);setOppOffline(false);
     setChatMsgs([]);setChatInput('');
     setGameNum(0);
     if(mode!=='online')setPlayerNames({A:null,B:null});
@@ -5218,6 +5222,11 @@ function App(){
     if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='session_replaced'){ try{WSNET.close();}catch(e){} setFlash(t('sessionReplaced')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='resync'&&!d.gestartet&&WSNET.roomId&&d.settings&&d.settings.ranked){ try{WSNET._send({type:'ranked_confirm'});}catch(e){} return; }
+    // Gegenseite ist im Warte-Screen offline bzw. wieder da. Der Warte-Screen laeuft ueber DIESEN
+    // Handler, nicht ueber applyServerState (das ist erst ab dem laufenden Match der onState) —
+    // ohne diesen Zweig kaeme die Meldung des Servers nie an und man wartet weiter blind.
+    if(d.type==='opponent_disconnected'&&S.current.screen==='waiting'){ setOppOffline(true); return; }
+    if(d.type==='opponent_back'&&S.current.screen==='waiting'){ setOppOffline(false); return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
       setMatchSkins(d.skins||null);
@@ -5288,9 +5297,15 @@ function App(){
       return;
     }
     if(d.type==='error'){
-      if((d.grund==='raum nicht gefunden'||d.grund==='raum nicht verfuegbar'||d.grund==='raum voll')&&S.current.screen==='waiting'&&S.current.onlineRole==='B'){
+      // Diese Fehler galten bisher NUR fuer den Beitretenden (Rolle B). Der Host bekam sie nie zu
+      // Gesicht: kehrte er in seine eigene Lobby zurueck, waehrend sein alter Platz dort noch
+      // belegt war, antwortete der Server 'raum nicht verfuegbar' - und sein Warte-Screen blieb
+      // fuer immer stehen. Ein Fehler, den niemand behandelt, ist ein stiller Haenger.
+      var istGast=S.current.onlineRole==='B';
+      var raumFehler=(d.grund==='raum nicht verfuegbar'||d.grund==='raum voll'||(d.grund==='raum nicht gefunden'&&istGast));
+      if(raumFehler&&S.current.screen==='waiting'){
         try{WSNET.leaveRoom();}catch(e){}
-        setFlash(d.grund==='raum voll'?t('lobbyFull'):t('codeNotFound'));
+        setFlash(!istGast?t('lobbyGone'):(d.grund==='raum voll'?t('lobbyFull'):t('codeNotFound')));
         setNavDir('back');setScreen('online');
       } return;
     }
@@ -6302,7 +6317,7 @@ function App(){
 
   // ── Create lobby ──
   const createLobby=async(isPrivate)=>{
-    setFlash('');
+    setFlash('');setOppOffline(false);
     if(WS_ENABLED){
       // WS-Modus: Raum auf dem Server, Code = Raum-ID (privat kurz, oeffentlich lang)
       const id=isPrivate?randId(4):randId(6);
@@ -6345,6 +6360,7 @@ function App(){
 
   const joinLobby=async(id)=>{
     joinCancelledRef.current=false;
+    setOppOffline(false);
     if(WS_ENABLED){
       setFlash('');
       setLobbyId(id);setOnlineRole('B');setPrivateCode(null);
@@ -9215,7 +9231,7 @@ function App(){
         {/* Titel */}
         <div style={{fontSize:11,fontWeight:800,color:'var(--subtle)',letterSpacing:2,
           textTransform:'uppercase',marginBottom:16,textAlign:'center'}}>
-          {onlineRole==='A'?(privateCode?t('waitingPrivate'):t('waitingOpponent')):t('connecting')}
+          {oppOffline?t('waitingPrivate'):(onlineRole==='A'?(privateCode?t('waitingPrivate'):t('waitingOpponent')):t('connecting'))}
         </div>
         {/* Spieler-Cards */}
         <div style={{display:'flex',gap:10,width:'100%',marginBottom:20,alignItems:'stretch'}}>
@@ -9266,6 +9282,13 @@ function App(){
             <div style={{fontSize:12,fontWeight:700,color:'var(--subtle)',textAlign:'center'}}>
               {t('opponent')||'Opponent'}
             </div>
+            {oppOffline?(
+              <div style={{display:'inline-flex',alignItems:'center',gap:3,
+                background:'rgba(245,158,11,0.14)',borderRadius:10,padding:'2px 7px'}}>
+                <span style={{width:4,height:4,borderRadius:'50%',background:'#f59e0b',display:'inline-block'}}/>
+                <span style={{fontSize:9,fontWeight:800,color:'#f59e0b',letterSpacing:0.5}}>{t('friends_offline')}</span>
+              </div>
+            ):(
             <div style={{display:'flex',gap:3}}>
               {[0,1,2].map(function(i){return(
                 <span key={i} style={{width:4,height:4,borderRadius:'50%',background:'var(--subtle)',
@@ -9273,6 +9296,7 @@ function App(){
                   animationDelay:(i*0.2)+'s'}}/>
               );})}
             </div>
+            )}
           </div>
         </div>
         {privateCode&&(
@@ -9333,8 +9357,9 @@ function App(){
             </div>
           </>
         )}
-        <div style={{fontSize:12,color:'var(--subtle)',marginBottom:22,textAlign:'center'}}>
-          {onlineRole==='A'?t('shareCode'):t('waitingStart')}
+        <div style={{fontSize:12,color:oppOffline?'#f59e0b':'var(--subtle)',marginBottom:22,textAlign:'center',
+          fontWeight:oppOffline?700:400,lineHeight:1.45}}>
+          {oppOffline?t('waitHostAway'):(onlineRole==='A'?t('shareCode'):t('waitingStart'))}
         </div>
         <button onClick={async()=>{
           joinCancelledRef.current=true;
