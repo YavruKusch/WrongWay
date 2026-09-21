@@ -877,7 +877,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=103"></script>
+<script src="js/i18n.js?v=104"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -6922,7 +6922,7 @@ function App(){
                 boxShadow:'0 6px 20px rgba(0,0,0,0.2)'}}><ShieldSmIcon size={28} color="#fff"/></div>
               <div style={{fontSize:20,fontWeight:900,letterSpacing:-0.5,color:'var(--text)',marginBottom:8}}>{t('maintenanceTitle')}</div>
               <div style={{fontSize:13,color:'var(--subtle)',fontWeight:500,lineHeight:1.6}}>
-                {adminCfg.announce?adminCfg.announce:'Das Spiel ist gerade nicht verfügbar. Bitte versuche es später nochmal.'}
+                {adminCfg.announce?adminCfg.announce:t('maintenanceBody')}
               </div>
             </div>
           </div>
@@ -12125,7 +12125,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     const lobby={host:uid,players:{[uid]:{team:'A',name:uid,joinedAt:Date.now()}},status:'waiting',lastUpdated:Date.now()};
     const ok=await stoSet(lKey(code),lobby);
     setLobbyLoading(false);
-    if(!ok){setJoinError('Firebase-Fehler – Verbindung prüfen');return;}
+    if(!ok){setJoinError(t('serverOffline'));return;}
     lobbyIndexSet2(code,{count:1,updated:Date.now()});
     setLobbyCode(code);setIsHost(true);setIsOnline(true);setLobbyPlayers(lobby.players);
     setSub('lobby');
@@ -12219,7 +12219,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     const ps=data.players||{};
     const aP=Object.entries(ps).filter(function(e){return e[1].team==='A';}).sort(function(a,b){return a[1].joinedAt-b[1].joinedAt;});
     const bP=Object.entries(ps).filter(function(e){return e[1].team==='B';}).sort(function(a,b){return a[1].joinedAt-b[1].joinedAt;});
-    if(aP.length!==2||bP.length!==2){setFlash('Genau 2 pro Team nötig!');setTimeout(()=>setFlash(''),3000);return;}
+    if(aP.length!==2||bP.length!==2){setFlash(t('tv2Need22'));setTimeout(()=>setFlash(''),3000);return;}
     const pm={};pm[aP[0][0]]='A1';pm[aP[1][0]]='A2';pm[bP[0][0]]='B1';pm[bP[1][0]]='B2';
     const sTeam=Math.random()<0.5?'A':'B';
     const startToken=sTeam+'1';
