@@ -970,6 +970,11 @@ function dlTrack(key,val){
 }
 var WSNET={
   sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, rtt:0, _pingAt:0, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
+  // live = das Match dieses Raums laeuft (match_start/resync gestartet). Solange es laeuft, duerfen
+  // Nachrichten und Aufrufe der Ranked-SUCHE (ranked_cancelled/-denied, cancel/decline) Raum und
+  // Token nicht abraeumen: sonst gingen die Zuege nicht mehr an den Server, obwohl der Spieler dort
+  // im Match bleibt (Spieler-Report 2026-08-01 "Zug springt immer wieder zurueck", Verlust auf Zeit).
+  live:false, _rebindAt:0,
   // Zuschauer: eigener State-Kanal ueber denselben Socket, ruehrt roomId/role/token nicht an.
   watchRoom:function(code,onSpectate){
     this.spectateCode=code; this.onSpectate=onSpectate;
@@ -985,11 +990,11 @@ var WSNET={
   connect:function(roomId,role,onState,settings){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.meta=null; this.token=null; this._jr=false; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
+    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.meta=null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
   },
   // Lobby als Host eroeffnen (Raum-ID = oeffentliche ID oder privater Code). Socket wird wiederverwendet.
   openLobby:function(roomId,settings,meta,onState){
-    this.roomId=roomId; this.role='A'; this.onState=onState; this.settings=settings||{}; this.meta=meta||null; this.token=null; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=roomId; this.role='A'; this.onState=onState; this.settings=settings||{}; this.meta=meta||null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
     this._dbg('lobby '+roomId);
     if(this.sock&&this.sock.readyState===1){ this._send(this._createMsg()); }
     else{ this._open(); }
@@ -997,7 +1002,7 @@ var WSNET={
   },
   // Raum per Code beitreten (Liste, Code-Eingabe, Einladung, ?join-Link)
   joinRoom:function(code,meta,onState){
-    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
     this._dbg('beitritt '+code);
     if(this.sock&&this.sock.readyState===1){ this._send(this._joinMsg()); }
     else{ this._open(); }
@@ -1005,23 +1010,24 @@ var WSNET={
   },
   startRanked:function(mode,rating,meta,onState){
     this.rankedOn=true; this.rankedMode=mode; this.rankedRating=rating; this.meta=meta||null;
-    this.roomId=null; this.role=null; this.token=null; this.settings=null; this.onState=onState;
+    this.roomId=null; this.role=null; this.token=null; this.settings=null; this.onState=onState; this.live=false;
     this.rankedQueuedAt=Date.now();
     this.lastRecv=Date.now(); this._dbg('ranked queue '+mode); this._open(); this._startHb();
   },
   cancelRanked:function(){
     this.rankedOn=false;
+    if(this.live)return; // Match laeuft schon: es gibt keine Suche mehr abzubrechen (siehe live)
     try{ this._send({type:'ranked_cancel'}); }catch(e){}
     if(!this.roomId&&!this.browseOn){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
   confirmRanked:function(){ try{ this._send({type:'ranked_confirm'}); }catch(e){} },
-  declineRanked:function(){ try{ this._send({type:'ranked_decline'}); }catch(e){} this.roomId=null; this.token=null; this.role=null; this.rankedOn=true; },
+  declineRanked:function(){ if(this.live)return; try{ this._send({type:'ranked_decline'}); }catch(e){} this.roomId=null; this.token=null; this.role=null; this.rankedOn=true; },
   _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
   _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
   // Warteraum bewusst verlassen: Server raeumt sofort auf, Code wird frei
   leaveRoom:function(){
     try{ this._send({type:'leave_room'}); }catch(e){}
-    this.roomId=null; this.role=null; this.settings=null; this.meta=null; this.token=null; this._clearResume();
+    this.roomId=null; this.role=null; this.settings=null; this.meta=null; this.token=null; this.live=false; this._clearResume();
     if(!this.browseOn){ this._stopHb(); this.onState=null; if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } }
   },
   // Lobby-Liste beobachten: 4s-Poll, nur bei sichtbarem Tab (WS-Traffic ist quasi kostenlos).
@@ -1064,11 +1070,20 @@ var WSNET={
       // der Server kennt die Identitaet also schon beim Bann-Check des Raum-Beitritts.
       // Vorher lief join dem auth voraus: die Runde startete, und der Gegner eines Gesperrten
       // wartete ewig. Gaeste (kein currentUser) senden unveraendert sofort.
+      // Ausnahme: die Rueckkehr in einen bestehenden Raum-Slot (reconnect mit Token) braucht keine
+      // Identitaet, der Server hat sie beim Match-Start eingefroren. Haengt der Token-Refresh (Handy
+      // nach dem Hintergrund, schwaches Netz), geht der reconnect nach 1,5 s auch ohne auth raus —
+      // sonst laeuft derweil der Forfeit-Countdown, obwohl der Spieler laengst wieder verbunden ist.
+      var _rcSent=false;
+      var _rc=function(){ if(_rcSent||self.sock!==_mySock||!self.roomId||!self.token)return; _rcSent=true; self._send({type:'reconnect',token:self.token}); };
+      var _rcTmr=setTimeout(_rc,1500);
       var _after=function(tok){
+        clearTimeout(_rcTmr);
+        if(self.sock!==_mySock)return; // verspaetete Antwort fuer einen alten Socket: der aktuelle meldet sich selbst an
         if(tok){ try{ self._send({type:'auth',idToken:tok,cap:WW_CAP}); }catch(e){} }
         if(self.rankedOn&&!self.roomId){ try{ var _rm={type:'ranked_queue',idToken:tok||null,mode:self.rankedMode,rating:self.rankedRating,akey:(self.meta?self.meta.akey:null),name:(self.meta?self.meta.name:'Spieler'),queuedAt:self.rankedQueuedAt||Date.now()}; if(self.equip)_rm.equip=self.equip; self._send(_rm); }catch(e){} }
         if(self.roomId){
-          if(self.token){ self._send({type:'reconnect',token:self.token}); }
+          if(self.token){ _rc(); }
           else if(self.role==='A'){ self._send(self._createMsg()); }
           else { self._send(self._joinMsg()); }
         }
@@ -1090,6 +1105,12 @@ var WSNET={
       if(d.type==='spectate_relay'){ if(self.onSpectate)self.onSpectate(d.payload||{}); return; }
       if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
       if(d.type==='auth_rejected'){ return; } // Re-Auth mit falscher Slot-Identitaet: Server behaelt die richtige Identitaet -> hier folgenlos ignorieren
+      // Laufendes Match: Nachrichten der Ranked-SUCHE betreffen es nicht mehr (siehe live) — etwa die
+      // Antwort auf ein "Abbrechen", das erst nach dem Match-Start beim Server ankam.
+      if(self.live&&(d.type==='ranked_cancelled'||d.type==='ranked_denied'))return;
+      // Der Server ordnet diesen Socket keinem Raum zu, obwohl hier ein Match laeuft: sofort mit dem
+      // Raum-Token neu binden (hoechstens alle 3 s), statt Zuege weiter ins Leere zu schicken.
+      if(d.type==='error'&&d.grund==='kein laufendes match'&&self.live&&self.roomId&&self.token&&Date.now()-self._rebindAt>3000){ self._rebindAt=Date.now(); self._send({type:'reconnect',token:self.token}); }
 
       if(d.type==='error'&&d.grund==='raum nicht gefunden'&&self.role==='B'&&self.roomId&&!self._jr){ self._jr=true; setTimeout(function(){ if(self.roomId&&self.role==='B')self._send(self._joinMsg()); },1000); return; }
       if(d.type==='room_created'||d.type==='room_joined')self._dbg('raum ok, warte Gegner');
@@ -1098,13 +1119,14 @@ var WSNET={
       if(d.type==='state'&&d.winner!==undefined&&d.winner!==null)self._dbg('Runde vorbei');
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token){ self.token=d.token; self._saveResume(); } }
-      if(d.type==='reconnect_failed'){ self.token=null; self._clearResume(); self._dbg('reconnect_failed - Raum/Token weg'); } // toter Token: nie wieder damit reconnecten
+      if((d.type==='match_start'||(d.type==='resync'&&d.gestartet)||d.type==='tv2_match'||(d.type==='tv2_resync'&&d.phase==='game'))&&self.roomId)self.live=true;
+      if(d.type==='reconnect_failed'){ self.token=null; self.live=false; self._clearResume(); self._dbg('reconnect_failed - Raum/Token weg'); } // toter Token: nie wieder damit reconnecten
       if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; self._lastOppRating=d.oppRating||1000; self._lastRankedMode=d.rankedMode||d.mode||'classic'; self._saveResume(); if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
       if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self._clearResume(); if(d.grund!=='declined') self.rankedOn=false; }
       // Takeover: ein anderes Geraet hat den Raum-Slot uebernommen. JEDEN Reconnect-Ausloeser abraeumen,
       // sonst versucht dieser tote Socket ewig neu zu verbinden. onState bleibt gesetzt -> UI-Meldung folgt unten.
-      if(d.type==='session_replaced'){ self.rankedOn=false; self.browseOn=false; self.roomId=null; self.role=null; self.token=null; self.spectateCode=null; self._clearResume(); self._stopHb(); if(self._lp){ clearInterval(self._lp); self._lp=null; } }
+      if(d.type==='session_replaced'){ self.rankedOn=false; self.browseOn=false; self.roomId=null; self.role=null; self.token=null; self.live=false; self.spectateCode=null; self._clearResume(); self._stopHb(); if(self._lp){ clearInterval(self._lp); self._lp=null; } }
       if(self.onState)self.onState(d);
     };
     self.sock.onclose=function(){ clearTimeout(_connTmr); self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
@@ -1136,7 +1158,7 @@ var WSNET={
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
-  close:function(){ this._stopHb(); this._pingAt=0; if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.settings=null; this.meta=null; this.spectateCode=null; this.onSpectate=null; this._clearResume(); if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } },
+  close:function(){ this._stopHb(); this._pingAt=0; if(this._lp){ clearInterval(this._lp); this._lp=null; } this.browseOn=false; this.rankedOn=false; this.onLobbies=null; this.roomId=null; this.role=null; this.onState=null; this.token=null; this.live=false; this.settings=null; this.meta=null; this.spectateCode=null; this.onSpectate=null; this._clearResume(); if(this.sock){ try{ this.sock.close(); }catch(e){} this.sock=null; } },
   // Match ueberlebt Reload UND komplettes Schliessen/Neuoeffnen (App/Browser): Token+Raum+Rolle
   // liegen in localStorage. Wird bei jedem regulaeren Verlassen (leaveRoom/close) wieder geloescht,
   // ein totes/altes Token raeumt der Server ueber reconnect_failed selbst auf (siehe dort).
@@ -1146,7 +1168,7 @@ var WSNET={
   _clearResume:function(){ try{ localStorage.removeItem('ww_resume'); }catch(e){} },
   resumeMatch:function(token,roomId,role,onState){
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.token=token; this.onState=onState; this.settings=null; this.meta=null; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=roomId; this.role=role; this.token=token; this.onState=onState; this.settings=null; this.meta=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
     this._dbg('resume '+roomId); this._open(); this._startHb();
   }
 };
@@ -4788,6 +4810,12 @@ function App(){
   const wsTurnEndsRawRef=useRef(0); // WS-Blitz: ROHE Server-Deadline (ohne rtt-Abzug) -> Backup-Skip-Trigger, nie zu frueh
   const wsSkipForRef=useRef(0); // WS-Blitz: fuer welche Deadline schon ein skip gesendet wurde (Doppelsende-Schutz)
   const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
+  // WS-Spiel (gesetzt in initGame): diese Online-Partie fuehrt der WS-Server. Dann gibt es KEINEN Rueckfall
+  // auf die alten Firebase-/Lokalwege, selbst wenn WSNET seine Raum-Bindung verloren haette. Genau dieser
+  // stille Rueckfall schickte Zuege nie an den Server und liess lokale AFK-/Heartbeat-Urteile die Partie
+  // beenden (Spieler-Reports 2026-07/08: "Zug springt immer wieder zurueck", "Gegner gewinnt ohne Grund").
+  const wsGameRef=useRef(false);
+  const wsSpiel=()=>!!WSNET.roomId||wsGameRef.current;
   const clkAnchorRef=useRef(null); // Ranked: {at, rem:[ms0,ms1], active} — Server-Uhr-Anker; Anzeige wird daraus abgeleitet
 
   const triggerWin=(p,skipAnim,finalMoveHist)=>{
@@ -4928,7 +4956,7 @@ function App(){
     setMoveHist(prev=>[...prev,{type:'emote',p:me,emote:type}]);
     // Online: an Gegner senden
     if(gameMode==='online'&&lobbyId){
-      if(WSNET.roomId){ WSNET._send({type:'emote',emote:type}); } // WS-Spiel: Emote ueber WebSocket
+      if(wsSpiel()){ WSNET._send({type:'emote',emote:type}); } // WS-Spiel: Emote ueber WebSocket
       else { window.db.ref(`barricade_emote_${lobbyId}/${me}`).set(JSON.stringify({type,ts:Date.now()})); }
     }
     if(emoteTimerRef.current)clearTimeout(emoteTimerRef.current);
@@ -5188,12 +5216,15 @@ function App(){
     setBarrLeft({A:gameBarr,B:gameBarr});setTurn(starter);setWinner(null);setGaveUp(null);setMoveHist([]);
     // Server-autoritative Anbindung fuer Race UND Duell (inkl. Classic-Zeit 3/5/8 und Blitz-Zugzeit 5/8/10s).
     // Ausgeschlossen: Ranked, Hammer, Chaos, Zufalls-Waende (Drop) — laufen weiter ueber Firebase.
+    wsGameRef.current=false;
     if(wsGo){
       // Raum existiert schon seit der Lobby -> nur den Handler aufs laufende Spiel umhaengen.
+      wsGameRef.current=true;
       WSNET.onState=applyServerState;
     }else if(WS_ENABLED&&mode==='online'&&!ranked&&!S.current.hammerMode&&!S.current.chaosMode&&!S.current.dropMode){
       // Spielernamen aus dem Lobby-Spielstand holen (Sieg-Zaehler nach Namen, nicht Farbe)
       if(lid){ try{ stoGet('barricade_game_'+lid).then(function(g){ if(g&&(g.nameA||g.nameB))setPlayerNames({A:g.nameA||'',B:g.nameB||''}); }); }catch(e){} }
+      wsGameRef.current=true;
       WSNET.connect(lid,role,applyServerState,{map:mapToUse,size:sizeToUse,barr:gameBarr,tm:tm});
     }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
@@ -5332,7 +5363,7 @@ function App(){
 
   // ── Sync online ──
   const doSync=(gs)=>{
-    if(WSNET.roomId)return; // WS-Modus: der Server ist die Wahrheit, kein Firebase-Schreiben
+    if(wsSpiel())return; // WS-Modus: der Server ist die Wahrheit, kein Firebase-Schreiben
     const{gameMode:gm,lobbyId:lid,rematchA:rA,rematchB:rB,rematchDeclined:rD,gameNum:gN}=S.current;
     if(gm!=='online'||!lid)return;
     var mvs=gs.moves||[];
@@ -5388,7 +5419,7 @@ function App(){
   useEffect(()=>{
     if(!chaosMode||isRanked||winner||screen!=='game'||chaosItem)return;
     if(moveHist.length<chaosSpawnRef.current)return;
-    if(gameMode==='online'&&WSNET.roomId)return;
+    if(gameMode==='online'&&wsSpiel())return;
     if(gameMode==='online'&&onlineRole!=='A')return;
     const pos=pickChaosPos(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(pos){
@@ -5413,8 +5444,8 @@ function App(){
     if(turnTimerRef.current){clearInterval(turnTimerRef.current);turnTimerRef.current=null;}
     setAfkTimeLeft(0);
     if(screen!=='game'||gameMode!=='online'||winner)return;
-    if(WSNET.roomId&&gameTimeMode&&gameTimeMode.indexOf('blitz-')===0)return; // WS-Blitz: eigener Zug-Timer-Badge, kein AFK-Countdown daneben
-    if(WSNET.roomId){
+    if(wsSpiel()&&gameTimeMode&&gameTimeMode.indexOf('blitz-')===0)return; // WS-Blitz: eigener Zug-Timer-Badge, kein AFK-Countdown daneben
+    if(wsSpiel()){
       // Server beendet den Zug bei Ablauf. Hier nur Countdown anzeigen (fuer beide Spieler).
       turnTimerRef.current=setInterval(function(){
         var ends=wsTurnEndsRef.current;
@@ -5458,6 +5489,9 @@ function App(){
       setInactiveWarning(false);
       setInactiveSecs(15);
       inactivityWarnRef.current=setTimeout(function(){
+        // Laufendes Online-Match: nie warnen/trennen. Das Spiel laeuft ueber den WS-Server (nicht Firebase),
+        // das Vollbild-Overlay blockierte aber jeden Zug — wer den Gegner lange nachdenken liess, verlor auf Zeit.
+        var scIn=S.current; if(scIn&&scIn.screen==='game'&&scIn.gameMode==='online'&&!scIn.winner){ resetInactivity(); return; }
         setInactiveWarning(true);
         var s=15;
         setInactiveSecs(s);
@@ -5468,6 +5502,7 @@ function App(){
         },1000);
       },105000);
       inactivityTimerRef.current=setTimeout(function(){
+        var scKi=S.current; if(scKi&&scKi.screen==='game'&&scKi.gameMode==='online'&&!scKi.winner){ resetInactivity(); return; }
         inactiveKickedRef.current=true;
         setInactiveWarning(false);
         setInactiveKicked(true);
@@ -5499,7 +5534,7 @@ function App(){
     }
     // Warte 50 Züge seit Wave-1-Abschluss
     if(moveHist.length-hammerWave1ClearedRef.current<50)return;
-    if(gameMode==='online'&&WSNET.roomId)return;
+    if(gameMode==='online'&&wsSpiel())return;
     if(gameMode==='online'&&onlineRole!=='A')return;
     const wave=makeHammersWave2(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(wave.length){
@@ -5517,7 +5552,7 @@ function App(){
   useEffect(()=>{
     if(!dropMode||isRanked||winner||screen!=='game')return;
     if(moveHist.length<dropNextRef.current)return;
-    if(gameMode==='online'&&WSNET.roomId)return;
+    if(gameMode==='online'&&wsSpiel())return;
     if(gameMode==='online'&&onlineRole!=='A')return;
     const key=pickFairDropWall(pA,pB,walls,goalRowOf('A',selectedMap),goalRowOf('B',selectedMap));
     if(key){
@@ -5557,7 +5592,7 @@ function App(){
     if(winner)return;
     if(!isTimerMode(gameTimeMode))return;
     const isBlitz=gameTimeMode.indexOf('blitz-')===0;
-    if(isBlitz&&WSNET.roomId&&gameMode==='online'){
+    if(isBlitz&&wsSpiel()&&gameMode==='online'){
       // WS-Blitz: der SERVER skippt autoritativ bei Ablauf (kein Verlust, Zug wechselt).
       // Hier nur Countdown aus der Server-Deadline anzeigen + Sicherheitsnetz: bei 0
       // einmalig skip senden (falls die Server-Uhr haengt; Server validiert eh).
@@ -5654,7 +5689,7 @@ function App(){
   // Faengt verlorene State-Nachrichten ab (z.B. wenn die Verbindung still abbricht ohne onclose),
   // sodass kein Spiel haengen bleibt weil beide denken der andere sei dran.
   useEffect(()=>{
-    if(!WSNET.roomId||gameMode!=='online'||screen!=='game')return;
+    if(!wsSpiel()||gameMode!=='online'||screen!=='game')return;
     const iv=setInterval(()=>{
       const s=S.current;
       if(!s||s.gameMode!=='online'||s.winner)return;
@@ -5803,7 +5838,7 @@ function App(){
   // ── Online realtime listener ──
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||(screen!=='game'&&screen!=='end'))return;
-    if(WSNET.roomId)return; // WS-Modus: kein Firebase-Listener
+    if(wsSpiel())return; // WS-Modus: kein Firebase-Listener
     const ref=window.db.ref(`barricade_game_${lobbyId}`);
     const cb=ref.on('value',snap=>{
       const v=snap.val();if(!v)return;
@@ -5963,7 +5998,7 @@ function App(){
   // ── Online Emote-Listener (Gegner-Emotes empfangen) ──
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game')return;
-    if(WSNET.roomId)return; // WS-Spiel: Emotes ueber WebSocket
+    if(wsSpiel())return; // WS-Spiel: Emotes ueber WebSocket
     const oppRole=onlineRole==='A'?'B':'A';
     const ref=window.db.ref(`barricade_emote_${lobbyId}/${oppRole}`);
     const initTs=Date.now();
@@ -6002,7 +6037,7 @@ function App(){
   },[gameMode,lobbyId,screen]);
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
-    if(WSNET.roomId)return; // WS-Match: Server ueberwacht Verbindungen selbst, kein Firebase-Heartbeat
+    if(wsSpiel())return; // WS-Match: Server ueberwacht Verbindungen selbst, kein Firebase-Heartbeat
     const myRef=window.db.ref(`barricade_hb_${lobbyId}/${onlineRole}`);
     const send=()=>myRef.set(Date.now());
     send();
@@ -6017,7 +6052,7 @@ function App(){
 
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId||screen!=='game'||winner)return;
-    if(WSNET.roomId)return; // WS-Match: kein Firebase-Gegner-Heartbeat
+    if(wsSpiel())return; // WS-Match: kein Firebase-Gegner-Heartbeat
     const oppRole=onlineRole==='A'?'B':'A';
     oppLastSeenRef.current=Date.now();
     const ref=window.db.ref(`barricade_hb_${lobbyId}/${oppRole}`);
@@ -6034,7 +6069,7 @@ function App(){
 
   useEffect(()=>{
     if(gameMode!=='online'||screen!=='game'||winner){setOppCountdown(null);return;}
-    if(WSNET.roomId){setOppCountdown(null);return;} // WS-Match: NUR der Server entscheidet Disconnect-Forfeits
+    if(wsSpiel()){setOppCountdown(null);return;} // WS-Match: NUR der Server entscheidet Disconnect-Forfeits
     let lastTick=Date.now();
     const iv=setInterval(()=>{
       const nowT=Date.now();
@@ -6078,7 +6113,7 @@ function App(){
   const requestRematch=()=>{
     const s=S.current;
     if(s.rematchDeclined)return;
-    if(WSNET.roomId){
+    if(wsSpiel()){
       if(s.onlineRole==='A')setRematchA(true);else setRematchB(true);
       WSNET.rematch();
       return;
@@ -6096,7 +6131,7 @@ function App(){
   const declineRematch=()=>{
     const s=S.current;
     if(s.gameMode!=='online'||!s.lobbyId)return;
-    if(WSNET.roomId){
+    if(wsSpiel()){
       setRematchA(false);setRematchB(false);
       WSNET.rematchCancel();
       return;
@@ -6315,7 +6350,7 @@ function App(){
   useEffect(()=>{
     if(gameMode!=='online'||!lobbyId)return;
     if(screen!=='game'&&screen!=='end')return;
-    if(WSNET.roomId)return; // WS-Spiel: Chat ueber WebSocket, kein Firebase-Listener
+    if(wsSpiel())return; // WS-Spiel: Chat ueber WebSocket, kein Firebase-Listener
     const ref=window.db.ref('barricade_chat_'+lobbyId);
     const cb=ref.on('value',snap=>{
       const v=snap.val();
@@ -6339,7 +6374,7 @@ function App(){
     const msg=chatInput.trim();
     if(!msg||!lobbyId||gameMode!=='online'||!account)return;
     const text=msg.slice(0,140);
-    if(WSNET.roomId){ WSNET._send({type:'chat',text:text}); setChatInput(''); return; } // WS-Spiel: Chat ueber WebSocket statt Firebase
+    if(wsSpiel()){ WSNET._send({type:'chat',text:text}); setChatInput(''); return; } // WS-Spiel: Chat ueber WebSocket statt Firebase
     const now=Date.now();
     const key='barricade_chat_'+lobbyId;
     setChatInput('');
@@ -6533,7 +6568,7 @@ function App(){
     // Sicherheits-Check für Online+Blitz: sicherstellen dass es noch der eigene Zug ist
     if(gameMode==='online'&&S.current.turn!==onlineRole)return;
     if(!getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c))return;
-    if(WSNET.roomId){
+    if(wsSpiel()){
       // Optimistisch: eigenen Zug sofort lokal zeigen, Server bestaetigt parallel.
       // Blitz-Ausnahme: ist die eigene Zeit faktisch schon abgelaufen (Countdown 0), NICHT optimistisch
       // zeigen -> sonst springt die Figur beim Server-Skip sichtbar zurueck. Nur senden, Server entscheidet.
@@ -6610,7 +6645,7 @@ function App(){
     const winP=loser==='A'?'B':'A';
     setGaveUp(loser);
     if(gameMode==='online'){
-      if(WSNET.roomId){
+      if(wsSpiel()){
         WSNET.giveUp();
       }else{
         const s=S.current;
@@ -6648,7 +6683,7 @@ function App(){
         const rel=getRel(x,y-OFFSET);
         if(rel){
           const key=snapWall(rel.x,rel.y,dragging.orient);
-          if(WSNET.roomId){
+          if(wsSpiel()){
             // Optimistisch: Wand lokal pruefen+setzen, Server bestaetigt parallel
             const sc=S.current;
             if(sc.barrLeft[sc.turn]>0){
@@ -6725,7 +6760,7 @@ function App(){
         const nm=[...S.current.moveHist,{type:'break',p:me,k}];setMoveHist(nm);
         setBreakingWall(k);setTimeout(()=>setBreakingWall(null),450);
         playSound('break');
-        if(gameMode==='online'&&WSNET.roomId){ try{WSNET.breakWall(k);}catch(e){} }
+        if(gameMode==='online'&&wsSpiel()){ try{WSNET.breakWall(k);}catch(e){} }
         else doSync({pA:S.current.pA,pB:S.current.pB,walls:w2,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:nm,chaosItem:S.current.chaosItem,hammers:S.current.hammers,hammerHeld:newHeld});
         setTimeout(()=>{if(gameContainerRef.current)gameContainerRef.current.scrollTop=savedScroll.current;},0);
       }
@@ -10471,7 +10506,10 @@ function App(){
       )}
 
       {/* Eigener Reconnect-Overlay: wenn EIGENE Verbindung weg */}
-      {(!serverOnline||(WSNET.roomId&&!wsConn))&&gameMode==='online'&&!winner&&(
+      {/* WS-Spiel: nur die WS-Verbindung zaehlt. Vorher blockierte dieses Vollbild auch dann jeden Zug,
+          wenn bloss die Firebase-Verbindung weg war (Backoff nach Funkloch, gesperrtes Netz) — das
+          Spiel selbst lief weiter, die eigene Zugzeit auch, und man verlor, ohne ziehen zu koennen. */}
+      {(wsSpiel()?!wsConn:!serverOnline)&&gameMode==='online'&&!winner&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(8px)',
           WebkitBackdropFilter:'blur(8px)',zIndex:600,display:'flex',flexDirection:'column',
           alignItems:'center',justifyContent:'center',gap:16,padding:24}}>
