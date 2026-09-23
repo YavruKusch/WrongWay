@@ -4791,6 +4791,7 @@ function App(){
   const[rematchA,setRematchA]=useState(false);
   const[rematchB,setRematchB]=useState(false);
   const[rematchDeclined,setRematchDeclined]=useState(null);
+  const[rematchWartet,setRematchWartet]=useState(false); // beide wollen die Revanche, der Server wartet auf den getrennten Gegner
   const[oppLeft,setOppLeft]=useState(false);
   // Gegenseite ist verbunden, aber gerade nicht in der App (Handy kappt beim App-Wechsel die
   // Verbindung). Nur fuer den Warte-Screen: dort wartete man sonst blind auf einen "Spielstart",
@@ -5108,7 +5109,7 @@ function App(){
     if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
     if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
     setWinner(null);setCelebrating(false);setGaveUp(null);
-    setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
+    setRematchA(false);setRematchB(false);setRematchDeclined(null);setRematchWartet(false);setOppLeft(false);
     setMoveHist([]);
     setGameNum((S.current.gameNum||1)+1);
     winnerFiredRef.current=false;
@@ -5177,6 +5178,9 @@ function App(){
       var neuSp=d.type!=='match_start'&&typeof d.g==='number'&&!!snAlt&&snAlt.c===WSNET.roomId&&d.g!==snAlt.g;
       if(typeof d.g==='number')spielNrRef.current={c:WSNET.roomId,g:d.g};
       if(neuSp)neueRunde(d);
+      // Revanche-Wuensche nach der Rueckkehr (ein verpasstes rematch_state liess sonst ein veraltetes "Warte auf Gegner"
+      // stehen); wartet = beide wollen, der andere ist auch gerade weg
+      if(d.type==='resync'&&d.req&&d.req.length===2){setRematchA(!!d.req[0]);setRematchB(!!d.req[1]);setRematchWartet(!!d.wartet);}
       setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
       if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){
@@ -5259,6 +5263,7 @@ function App(){
     }else if(d.type==='rematch_state'){
       setRematchA(!!(d.req&&d.req[0]));
       setRematchB(!!(d.req&&d.req[1]));
+      setRematchWartet(!!d.wartet);
     }else if(d.type==='rematch_start'){
       if(typeof d.g==='number')spielNrRef.current={c:WSNET.roomId,g:d.g};
       neueRunde(d);
@@ -10011,12 +10016,12 @@ function App(){
               <span style={{fontSize:13,fontWeight:700,color:'#ef4444'}}>{t('rematchDeclined')}</span>
             </div>
           )}
-          {gameMode==='online'&&!oppLeft&&!otherDeclined&&myRematch&&!otherRematch&&(
+          {gameMode==='online'&&!oppLeft&&!otherDeclined&&myRematch&&(!otherRematch||rematchWartet)&&(
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',marginBottom:12,
               background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.2)',borderRadius:12}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',
                 animation:'piece-pulse 1.4s ease-in-out infinite',flexShrink:0}}/>
-              <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>{t('rematchWaiting')}</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>{otherRematch?t('reconnecting'):t('rematchWaiting')}</span>
             </div>
           )}
           {gameMode==='online'&&!oppLeft&&!otherDeclined&&!myRematch&&otherRematch&&(
