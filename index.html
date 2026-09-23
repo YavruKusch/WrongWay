@@ -5119,7 +5119,7 @@ function App(){
       if(d.from!==myNrEmo)showEmote(d.from===0?'A':'B',d.emote);
     }else if(d.type==='opponent_disconnected'){
       if(d.countdown)setFlash(t('oppDisconnectedWinsIn')+' '+d.countdown+t('secLabel'));
-      if(clkAnchorRef.current)clkAnchorRef.current.active=null; // Uhr einfrieren solange Gegner weg (Server pausiert sie)
+      // Uhr NICHT einfrieren: der Server laesst die Zugzeit auch bei getrenntem Gegner weiterlaufen (seit 2026-09-23)
     }else if(d.type==='opponent_back'){
       setFlash('');
       try{WSNET.requestSync();}catch(e){} // frische Uhr holen -> Anzeige laeuft korrekt weiter
