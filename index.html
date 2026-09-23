@@ -877,7 +877,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=105"></script>
+<script src="js/i18n.js?v=106"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -2668,6 +2668,9 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
       if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
       if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
+      // Gegner gefunden, aber der Server kennt den Raum nicht mehr (Absturz ohne Uebergabe): sonst lief die Suche ewig weiter,
+      // und der zentrale Handler legte unter dem Ranked-Code eine normale Lobby an. Socket zu, Hinweis, zurueck wie bei ranked_denied.
+      if(d&&d.type==='reconnect_failed'){ try{WSNET.close();}catch(e){} setFoundMsg(t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
       if(d&&d.type==='session_replaced'){ setFoundMsg(t('sessionReplaced')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); goBack(); },1800); return; }
       wsRouter(d);
     };
@@ -5236,8 +5239,10 @@ function App(){
       if(sc2.gameMode==='online'&&sc2.screen==='game'&&!sc2.winner){
         // Laufendes Match unrettbar -> ehrlich beenden statt ewig "Gegner ist dran" zu zeigen
         try{WSNET.close();}catch(e){}
-        setFlash(t('wsRoomGone'));
-        setScreen('menu');setGameMode(null);setLobbyId(null);
+        // Meldung erst im Spiel zeigen, dann ins Menue (das Menue zeigt keine Meldungen) — wie bei session_replaced.
+        // Ohne ELO-Behauptung: nach langer Abwesenheit kann das Spiel inzwischen gewertet sein (2026-09-23)
+        setFlash(t('wsMatchLost'));
+        setTimeout(function(){ if(S.current.screen==='game'){ setNavDir('back'); setScreen('menu'); setGameMode(null); setLobbyId(null); setFlash(''); } },1800);
       }else if(sc2.winner){
         try{WSNET.close();}catch(e){} // Match vorbei, Raum weg -> nichts mehr zu retten
       }else if(WSNET.roomId){
