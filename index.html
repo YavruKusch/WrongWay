@@ -4901,6 +4901,9 @@ function App(){
   const wsTurnEndsRawRef=useRef(0); // WS-Blitz: ROHE Server-Deadline (ohne rtt-Abzug) -> Backup-Skip-Trigger, nie zu frueh
   const wsSkipForRef=useRef(0); // WS-Blitz: fuer welche Deadline schon ein skip gesendet wurde (Doppelsende-Schutz)
   const pendingWsRef=useRef(null); // WS: zuletzt optimistisch gesendeter Zug/Wand, falls er verloren geht -> erneut senden
+  // WS: Spielnummer (g) des angezeigten Spiels samt Raum ({c,g}); der Server schickt sie in match_start, rematch_start,
+  // resync und der sync-Antwort. Meldet ein Stand im selben Raum eine ANDERE Nummer, laeuft laengst ein neues Spiel.
+  const spielNrRef=useRef(null);
   // WS-Spiel (gesetzt in initGame): diese Online-Partie fuehrt der WS-Server. Dann gibt es KEINEN Rueckfall
   // auf die alten Firebase-/Lokalwege, selbst wenn WSNET seine Raum-Bindung verloren haette. Genau dieser
   // stille Rueckfall schickte Zuege nie an den Server und liess lokale AFK-/Heartbeat-Urteile die Partie
@@ -4909,8 +4912,10 @@ function App(){
   const wsSpiel=()=>!!WSNET.roomId||wsGameRef.current;
   const clkAnchorRef=useRef(null); // Ranked: {at, rem:[ms0,ms1], active} — Server-Uhr-Anker; Anzeige wird daraus abgeleitet
 
-  const triggerWin=(p,skipAnim,finalMoveHist)=>{
-    if(winnerFiredRef.current||S.current.winner)return;
+  // neuesSpiel: der Sieger gehoert zu einem Spiel, das eben erst per Spielnummer erkannt wurde (neueRunde lief im selben
+  // Aufruf) — S.current zeigt bis zum naechsten Render noch den Sieger des ALTEN Spiels und darf dann nicht bremsen.
+  const triggerWin=(p,skipAnim,finalMoveHist,neuesSpiel)=>{
+    if(winnerFiredRef.current||(S.current.winner&&!neuesSpiel))return;
     winnerFiredRef.current=true;
     afkTriggerRef.current=null; // Reset nach Spielende
     winSound(p);
@@ -5089,6 +5094,35 @@ function App(){
   const color=MC[turn];
 
   // ── Init game ──
+  // Neues Spiel nach einer Revanche: Vollreset wie eine neue Runde. Laeuft bei rematch_start UND wenn ein Server-Stand
+  // eine neue Spielnummer traegt — dann kam rematch_start hier nie an (Handy gesperrt, Funkloch; Tunay 2026-09-23: der
+  // Spieler blieb im Endbildschirm, waehrend im neuen Spiel seine Uhr lief). Test: scripts/online-e2e/revanche.mjs
+  const neueRunde=(d)=>{
+    if(d.skins!==undefined)setMatchSkins(d.skins||null);
+    if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
+    setWalls(new Set(d.walls||[]));
+    if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
+    var csRtm=S.current.gameTimeMode||''; var csR=(csRtm==='classic-3')?180:(csRtm==='classic-5')?300:(csRtm==='classic-8')?480:0; setTimeLeft({A:csR,B:csR}); // Classic-Uhr bei Revanche wieder auf voll
+    // Server-Uhr-Anker fuer die Revanche neu setzen (sonst leitet die Anzeige aus dem alten Anker von Spiel-1-Ende = falsche/0-Uhr)
+    if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; } else { clkAnchorRef.current=null; }
+    if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
+    if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
+    setWinner(null);setCelebrating(false);setGaveUp(null);
+    setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
+    setMoveHist([]);
+    setGameNum((S.current.gameNum||1)+1);
+    winnerFiredRef.current=false;
+    pendingWsRef.current=null;
+    setGiveUpArmed(false);setFlash('');
+    setEloChange(null);
+    if(d.hammers!==undefined){setHammers(d.hammers);}else{setHammers([]);}
+    if(d.held){setHammerHeld(d.held);}else{setHammerHeld({A:false,B:false});}
+    if(d.used){setHammerUsed(d.used);}else{setHammerUsed(freshHammerUsed());}
+    if(d.golden!==undefined){setGoldenWalls(new Set(d.golden||[]));}else{setGoldenWalls(new Set());}
+    if(d.chaosItem!==undefined){setChaosItem(d.chaosItem);}else{setChaosItem(null);}
+    hammerWave2Ref.current=false;hammerWave1ClearedRef.current=null;
+    setScreen('game');
+  };
   // Wendet einen Server-Zustand auf das React-Spiel an (Adapter Server -> Spiel)
   const applyServerState=(d)=>{
     if(d&&d.type==='coins_update'){
@@ -5137,6 +5171,12 @@ function App(){
       return;
     } // Ranked-ELO vom Server (Stufe 2)
     if(d.type==='match_start'||d.type==='resync'||d.type==='state'){
+      // Der Server ist schon im naechsten Spiel dieses Raums: rematch_start kam hier nie an (Handy gesperrt, Funkloch).
+      // Vorher legte der resync das neue Brett nur unter den Endbildschirm. match_start beginnt ohnehin frisch.
+      var snAlt=spielNrRef.current;
+      var neuSp=d.type!=='match_start'&&typeof d.g==='number'&&!!snAlt&&snAlt.c===WSNET.roomId&&d.g!==snAlt.g;
+      if(typeof d.g==='number')spielNrRef.current={c:WSNET.roomId,g:d.g};
+      if(neuSp)neueRunde(d);
       setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
       if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){
@@ -5166,7 +5206,7 @@ function App(){
         setTimeout(function(){ setFlash(function(f){ return f===t('turnSkipped')?'':f; }); },1600);
       }
       if(d.gaveUp!==undefined&&d.gaveUp!==null)setGaveUp(d.gaveUp===0?'A':'B');
-      var mh=S.current.moveHist;
+      var mh=neuSp?[]:S.current.moveHist;
       // Server-autoritative Zughistorie (kommt nur im resync) -> ersetzt die lokale moveHist,
       // damit das Replay nach einem Reconnect keine Luecke hat (verpasste Gegnerzuege). Nur 1v1/Drop/Chaos.
       if(d.zugLog){ mh=d.zugLog; setMoveHist(d.zugLog); }
@@ -5176,14 +5216,14 @@ function App(){
         if(d.lm.type==='wall')lmEnt={type:'wall',p:lp,k:d.lm.k};
         else if(d.lm.type==='break')lmEnt={type:'break',p:lp,k:d.lm.k};
         else lmEnt={type:'move',p:lp,r:d.lm.r,c:d.lm.c};
-        mh=(S.current.moveHist||[]).concat([lmEnt]);
+        mh=((neuSp?null:S.current.moveHist)||[]).concat([lmEnt]);
         setMoveHist(mh);
         if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':d.lm.type==='break'?'break':'move');
       }
-      if(d.winner!==undefined&&d.winner!==null&&!S.current.winner){
+      if(d.winner!==undefined&&d.winner!==null&&(neuSp||!S.current.winner)){
         const wRole=d.winner===0?'A':'B';
         if(d.reason)setLossReason(d.reason);
-        triggerWin(wRole,false,mh);
+        triggerWin(wRole,false,mh,neuSp);
       }
       // Verlorenen eigenen Zug automatisch erneut senden (Anti-Verlust auf wackeliger Verbindung)
       if(d.winner===undefined||d.winner===null){
@@ -5220,31 +5260,8 @@ function App(){
       setRematchA(!!(d.req&&d.req[0]));
       setRematchB(!!(d.req&&d.req[1]));
     }else if(d.type==='rematch_start'){
-      // Vollreset wie neue Runde
-      if(d.skins!==undefined)setMatchSkins(d.skins||null);
-      if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
-      setWalls(new Set(d.walls||[]));
-      if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
-      var csRtm=S.current.gameTimeMode||''; var csR=(csRtm==='classic-3')?180:(csRtm==='classic-5')?300:(csRtm==='classic-8')?480:0; setTimeLeft({A:csR,B:csR}); // Classic-Uhr bei Revanche wieder auf voll
-      // Server-Uhr-Anker fuer die Revanche neu setzen (sonst leitet die Anzeige aus dem alten Anker von Spiel-1-Ende = falsche/0-Uhr)
-      if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; } else { clkAnchorRef.current=null; }
-      if(typeof d.amZug==='number')setTurn(d.amZug===0?'A':'B');
-      if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
-      setWinner(null);setCelebrating(false);setGaveUp(null);
-      setRematchA(false);setRematchB(false);setRematchDeclined(null);setOppLeft(false);
-      setMoveHist([]);
-      setGameNum((S.current.gameNum||1)+1);
-      winnerFiredRef.current=false;
-      pendingWsRef.current=null;
-      setGiveUpArmed(false);setFlash('');
-      setEloChange(null);
-      if(d.hammers!==undefined){setHammers(d.hammers);}else{setHammers([]);}
-      if(d.held){setHammerHeld(d.held);}else{setHammerHeld({A:false,B:false});}
-      if(d.used){setHammerUsed(d.used);}else{setHammerUsed(freshHammerUsed());}
-      if(d.golden!==undefined){setGoldenWalls(new Set(d.golden||[]));}else{setGoldenWalls(new Set());}
-      if(d.chaosItem!==undefined){setChaosItem(d.chaosItem);}else{setChaosItem(null);}
-      hammerWave2Ref.current=false;hammerWave1ClearedRef.current=null;
-      setScreen('game');
+      if(typeof d.g==='number')spielNrRef.current={c:WSNET.roomId,g:d.g};
+      neueRunde(d);
     }else if(d.type==='ws_open'){
       setWsConn(true);
     }else if(d.type==='ws_closed'){
