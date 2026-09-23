@@ -969,7 +969,7 @@ function dlTrack(key,val){
   }catch(e){}
 }
 var WSNET={
-  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, lastRecv:0, pongSeen:false, rtt:0, _pingAt:0, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
+  sock:null, token:null, roomId:null, role:null, onState:null, settings:null, meta:null, equip:null, browseOn:false, onLobbies:null, _lp:null, _jr:false, rtt:0, _pingAt:0, _probeAt:0, _hb:null, rankedOn:false, rankedMode:null, rankedRating:1000, spectateCode:null, onSpectate:null,
   // live = das Match dieses Raums laeuft (match_start/resync gestartet). Solange es laeuft, duerfen
   // Nachrichten und Aufrufe der Ranked-SUCHE (ranked_cancelled/-denied, cancel/decline) Raum und
   // Token nicht abraeumen: sonst gingen die Zuege nicht mehr an den Server, obwohl der Spieler dort
@@ -990,11 +990,11 @@ var WSNET={
   connect:function(roomId,role,onState,settings){
     // Alte Verbindung KOMPLETT schliessen, sonst bleibt der Socket im alten (beendeten) Raum gebunden
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.meta=null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now(); this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
+    this.roomId=roomId; this.role=role; this.onState=onState; this.settings=settings||null; this.meta=null; this.token=null; this.live=false; this._jr=false; this._dbg('verbinde '+roomId+' ('+role+')'); this._open(); this._startHb();
   },
   // Lobby als Host eroeffnen (Raum-ID = oeffentliche ID oder privater Code). Socket wird wiederverwendet.
   openLobby:function(roomId,settings,meta,onState){
-    this.roomId=roomId; this.role='A'; this.onState=onState; this.settings=settings||{}; this.meta=meta||null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=roomId; this.role='A'; this.onState=onState; this.settings=settings||{}; this.meta=meta||null; this.token=null; this.live=false; this._jr=false;
     this._dbg('lobby '+roomId);
     if(this.sock&&this.sock.readyState===1){ this._send(this._createMsg()); }
     else{ this._open(); }
@@ -1002,7 +1002,7 @@ var WSNET={
   },
   // Raum per Code beitreten (Liste, Code-Eingabe, Einladung, ?join-Link)
   joinRoom:function(code,meta,onState){
-    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this.live=false; this._jr=false;
     this._dbg('beitritt '+code);
     if(this.sock&&this.sock.readyState===1){ this._send(this._joinMsg()); }
     else{ this._open(); }
@@ -1012,7 +1012,7 @@ var WSNET={
     this.rankedOn=true; this.rankedMode=mode; this.rankedRating=rating; this.meta=meta||null;
     this.roomId=null; this.role=null; this.token=null; this.settings=null; this.onState=onState; this.live=false;
     this.rankedQueuedAt=Date.now();
-    this.lastRecv=Date.now(); this._dbg('ranked queue '+mode); this._open(); this._startHb();
+    this._dbg('ranked queue '+mode); this._open(); this._startHb();
   },
   cancelRanked:function(){
     this.rankedOn=false;
@@ -1064,7 +1064,7 @@ var WSNET={
     },7000);
     self.sock.onopen=function(){
       clearTimeout(_connTmr);
-      self._dbg('socket offen'); self.lastRecv=Date.now();
+      self._dbg('socket offen'); self._probeAt=0;
       if(self.onState)self.onState({type:'ws_open'});
       // Eingeloggt: ERST auth, DANN create/join/queue/browse — WS haelt die Reihenfolge ein,
       // der Server kennt die Identitaet also schon beim Bann-Check des Raum-Beitritts.
@@ -1074,8 +1074,13 @@ var WSNET={
       // Identitaet, der Server hat sie beim Match-Start eingefroren. Haengt der Token-Refresh (Handy
       // nach dem Hintergrund, schwaches Netz), geht der reconnect nach 1,5 s auch ohne auth raus —
       // sonst laeuft derweil der Forfeit-Countdown, obwohl der Spieler laengst wieder verbunden ist.
+      // Im LAUFENDEN Match (live) geht der reconnect sofort als erste Nachricht raus: der Slot braucht keine
+      // Identitaet, und so wartet die Rueckkehr weder auf den Login-Token noch auf die Pruefung am Server.
+      // In der Lobby bleibt es bei auth zuerst — dort kann der reconnect das Match starten, und dann muss
+      // die Identitaet schon feststehen (sonst ohne Wertung).
       var _rcSent=false;
       var _rc=function(){ if(_rcSent||self.sock!==_mySock||!self.roomId||!self.token)return; _rcSent=true; self._send({type:'reconnect',token:self.token}); };
+      if(self.live)_rc();
       var _rcTmr=setTimeout(_rc,1500);
       var _after=function(tok){
         clearTimeout(_rcTmr);
@@ -1097,10 +1102,11 @@ var WSNET={
       }catch(e){ _after(null); }
     };
     self.sock.onmessage=function(ev){
-      self.lastRecv=Date.now();
+      if(self.sock!==_mySock)return; // ersetzter Socket: was er noch liefert, gilt nicht mehr (die neue Leitung bekommt den Stand per resync)
+      self._probeAt=0; // jede Nachricht beweist: die Leitung lebt
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
-      if(d.type==='pong'){ self.pongSeen=true; if(self._pingAt){ var _rtt=Date.now()-self._pingAt; self._pingAt=0; if(_rtt>=0&&_rtt<10000)self.rtt=self.rtt?Math.round(self.rtt*0.6+_rtt*0.4):_rtt; } return; }
-      if((d.type==='match_start'||d.type==='resync')&&self.sock&&self.sock.readyState===1){ self._pingAt=Date.now(); try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){} } // frueh eine RTT-Probe -> Uhr ab dem ersten Blitz-Zug kalibriert
+      if(d.type==='pong'){ if(self._pingAt){ var _rtt=Date.now()-self._pingAt; self._pingAt=0; if(_rtt>=0&&_rtt<10000)self.rtt=self.rtt?Math.round(self.rtt*0.6+_rtt*0.4):_rtt; } return; }
+      if(d.type==='match_start'||d.type==='resync')self._probe(); // frueh eine RTT-Probe -> Uhr ab dem ersten Blitz-Zug kalibriert
       if(d.type==='spectate_state'||d.type==='spectate_denied'||d.type==='spectate_end'){ if(self.onSpectate)self.onSpectate(d); return; }
       if(d.type==='spectate_relay'){ if(self.onSpectate)self.onSpectate(d.payload||{}); return; }
       if(d.type==='lobby_list'){ if(self.onLobbies)self.onLobbies(d.lobbies||[]); return; }
@@ -1129,7 +1135,10 @@ var WSNET={
       if(d.type==='session_replaced'){ self.rankedOn=false; self.browseOn=false; self.roomId=null; self.role=null; self.token=null; self.live=false; self.spectateCode=null; self._clearResume(); self._stopHb(); if(self._lp){ clearInterval(self._lp); self._lp=null; } }
       if(self.onState)self.onState(d);
     };
-    self.sock.onclose=function(){ clearTimeout(_connTmr); self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
+    // Ein ersetzter Socket meldet sein Ende oft erst viel spaeter (tote Leitung: der Browser wartet bis zu
+    // 60 s auf den Abschluss). Das darf die laengst stehende neue Verbindung nicht als "weg" melden — sonst
+    // blieb die Vollbild-Sperre "Verbindung wird wiederhergestellt" im eigenen Zug stehen (Verlust auf Zeit).
+    self.sock.onclose=function(){ clearTimeout(_connTmr); if(self.sock!==_mySock)return; self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
   },
   _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
   _startHb:function(){
@@ -1137,15 +1146,30 @@ var WSNET={
     if(self._hb)return;
     self._hb=setInterval(function(){
       if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
-      if(self.sock&&self.sock.readyState===1){
-        self._pingAt=Date.now(); try{ self.sock.send(JSON.stringify({type:'ping'})); }catch(e){}
-        // Server antwortet (pong/State); kommt lange GAR NICHTS, ist die Verbindung still tot -> Reconnect erzwingen.
-        // Nur wenn der Server pong unterstuetzt (sonst alter Server -> keine Fehlausloesung).
-        if(self.pongSeen&&(Date.now()-self.lastRecv>8000)){ self.lastRecv=Date.now(); try{ self.sock.close(); }catch(e){} }
-      }else{ self._open(); }
+      if(self.sock&&self.sock.readyState===1)self._probe();
+      else self._open();
     },6000);
   },
   _stopHb:function(){ if(this._hb){ clearInterval(this._hb); this._hb=null; } },
+  // Lebenszeichen: ein ping, auf den der Server sofort antwortet (auch waehrend der Login-Pruefung).
+  // Kommt 4 s lang GAR NICHTS zurueck, ist die Leitung still gestorben (Handy gesperrt, App gewechselt,
+  // Netzwechsel) — der Socket meldet dann weiter "offen". Dann sofort ersetzen, statt auf den Abschluss der
+  // toten Leitung zu warten: bis dahin sah der Spieler den Zug des Gegners nicht, und beide sahen den
+  // anderen am Zug (Tunay 2026-09-23). Angestossen vom Herzschlag, von jeder Stand-Anfrage und von der
+  // Rueckkehr aus dem Hintergrund. Test: leitungtest.js
+  _probe:function(){
+    var self=this, s=self.sock;
+    if(!s||s.readyState!==1||self._probeAt)return;
+    self._probeAt=self._pingAt=Date.now();
+    try{ s.send(JSON.stringify({type:'ping'})); }catch(e){}
+    setTimeout(function(){ if(self.sock===s&&self._probeAt&&Date.now()-self._probeAt>=4000)self._ersetzen(); },4000);
+  },
+  _ersetzen:function(){
+    var s=this.sock; this.sock=null; this._probeAt=0; this._dbg('Leitung tot -> neu');
+    try{ s.close(); }catch(e){}
+    if(this.onState)this.onState({type:'ws_closed'});
+    this._open();
+  },
   move:function(to){ this._send({type:'move',to:to}); },
   wall:function(key){ this._send({type:'wall',key:key}); },
   giveUp:function(){ this._send({type:'give_up'}); },
@@ -1153,7 +1177,7 @@ var WSNET={
   playerReport:function(payload){ var m={type:'player_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
   timeout:function(){ this._send({type:'timeout'}); },
   skipTurn:function(){ this._send({type:'skip'}); },
-  requestSync:function(){ this._send({type:'sync'}); },
+  requestSync:function(){ this._send({type:'sync'}); this._probe(); },
   breakWall:function(key){ this._send({type:'break',key:key}); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
@@ -1168,12 +1192,12 @@ var WSNET={
   _clearResume:function(){ try{ localStorage.removeItem('ww_resume'); }catch(e){} },
   resumeMatch:function(token,roomId,role,onState){
     if(this.sock){ try{ this.sock.onopen=null; this.sock.onmessage=null; this.sock.onclose=null; this.sock.close(); }catch(e){} this.sock=null; }
-    this.roomId=roomId; this.role=role; this.token=token; this.onState=onState; this.settings=null; this.meta=null; this.live=false; this._jr=false; this.lastRecv=Date.now();
+    this.roomId=roomId; this.role=role; this.token=token; this.onState=onState; this.settings=null; this.meta=null; this.live=false; this._jr=false;
     this._dbg('resume '+roomId); this._open(); this._startHb();
   }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn&&!WSNET.rankedOn&&!WSNET.spectateCode)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); } else if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else if(WSNET.spectateCode){ try{ WSNET._send({type:'spectate_join',code:WSNET.spectateCode}); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn&&!WSNET.rankedOn&&!WSNET.spectateCode)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); return; } WSNET._probe(); if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else if(WSNET.spectateCode){ try{ WSNET._send({type:'spectate_join',code:WSNET.spectateCode}); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
 // iOS Safari stellt einen geschlossenen Tab beim Wiederoeffnen manchmal aus dem bfcache wieder her
 // (eingefrorener alter Seitenzustand, KEIN echter Reload - unser ganzer Reconnect-Code laeuft dann
 // nie erneut). e.persisted===true erkennt genau diesen Fall -> echten Reload erzwingen.
@@ -12672,6 +12696,22 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       return;
     }
   };
+
+  // ── WS-2v2: Anti-Deadlock (wie im 1v1) ──
+  // Solange ein anderer dran ist, alle 4 s den echten Stand holen. Eine verpasste Zustands-Nachricht (oder ein
+  // eigener Zug, der auf einer still gestorbenen Leitung verloren ging) liess sonst die alte Anzeige stehen,
+  // waehrend der Server laengst auf UNS wartete — bis sein Zug-Takt uns uebersprang (Tunay 2026-09-23).
+  // requestSync prueft dabei die Leitung mit (WSNET._probe).
+  React.useEffect(()=>{
+    if(!useWS||!isOnline||sub!=='game')return;
+    const iv=setInterval(function(){
+      const s=St.current;
+      if(!s||s.winner||!s.myToken||s.turn===s.myToken||s.removedMeReason||(s.removed&&s.removed[s.myToken]))return;
+      try{WSNET.requestSync();}catch(e){}
+      try{if(!WSNET.sock||WSNET.sock.readyState!==1)WSNET._open();}catch(e){}
+    },4000);
+    return function(){clearInterval(iv);};
+  },[sub,isOnline]);
 
   // ── WS-2v2: Zug-Countdown-Anzeige (Server skippt autoritativ, hier nur Anzeige) ──
   React.useEffect(()=>{
