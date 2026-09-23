@@ -4905,6 +4905,11 @@ function App(){
   // WS: Spielnummer (g) des angezeigten Spiels samt Raum ({c,g}); der Server schickt sie in match_start, rematch_start,
   // resync und der sync-Antwort. Meldet ein Stand im selben Raum eine ANDERE Nummer, laeuft laengst ein neues Spiel.
   const spielNrRef=useRef(null);
+  // Paket Spielstart (2026-09-23): spielt ein App-Spieler mit, startet der Server die Zugzeit erst nach dessen Intro
+  // (match_start/rematch_start/resync tragen intro, der Start kommt als state mit los). Bis dahin: keine Zuege, die
+  // Uhr steht. Der Browser zeigt selbst kein Intro. Test: scripts/online-e2e/intro.mjs (wrongway-server)
+  const introSperreRef=useRef(false);
+  const introEinfrieren=()=>{ if(!introSperreRef.current)return; wsTurnEndsRawRef.current=0; wsTurnEndsRef.current=0; if(clkAnchorRef.current)clkAnchorRef.current.active=null; };
   // WS-Spiel (gesetzt in initGame): diese Online-Partie fuehrt der WS-Server. Dann gibt es KEINEN Rueckfall
   // auf die alten Firebase-/Lokalwege, selbst wenn WSNET seine Raum-Bindung verloren haette. Genau dieser
   // stille Rueckfall schickte Zuege nie an den Server und liess lokale AFK-/Heartbeat-Urteile die Partie
@@ -5204,6 +5209,9 @@ function App(){
       if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
       // Ranked-Uhr-Anker vom Server: Anzeige wird hieraus abgeleitet (keine Drift, kein Freeze-Fehler)
       if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; }
+      if(d.type==='match_start'||d.type==='resync')introSperreRef.current=!!d.intro;
+      if(d.los)introSperreRef.current=false;
+      introEinfrieren(); // Intro-Phase: ein sync-Stand meldet die volle Zeit, sie laeuft aber noch nicht
       if(typeof d.skipped==='number'&&(d.skipped===0?'A':'B')===S.current.onlineRole&&(d.winner===undefined||d.winner===null)){
         // Eigener Zug ist per Blitz-Timer verfallen -> kurzes Feedback
         setFlash(t('turnSkipped'));
@@ -5267,6 +5275,7 @@ function App(){
     }else if(d.type==='rematch_start'){
       if(typeof d.g==='number')spielNrRef.current={c:WSNET.roomId,g:d.g};
       neueRunde(d);
+      introSperreRef.current=!!d.intro; introEinfrieren();
     }else if(d.type==='ws_open'){
       setWsConn(true);
     }else if(d.type==='ws_closed'){
@@ -6684,6 +6693,7 @@ function App(){
     if(gameMode==='online'&&S.current.turn!==onlineRole)return;
     if(!getValidMoves(cur,other,walls).some(m=>m.r===r&&m.c===c))return;
     if(wsSpiel()){
+      if(introSperreRef.current)return; // vor dem los laeuft keine Zeit, der Server lehnt Zuege ab
       // Optimistisch: eigenen Zug sofort lokal zeigen, Server bestaetigt parallel.
       // Blitz-Ausnahme: ist die eigene Zeit faktisch schon abgelaufen (Countdown 0), NICHT optimistisch
       // zeigen -> sonst springt die Figur beim Server-Skip sichtbar zurueck. Nur senden, Server entscheidet.
@@ -6801,7 +6811,7 @@ function App(){
           if(wsSpiel()){
             // Optimistisch: Wand lokal pruefen+setzen, Server bestaetigt parallel
             const sc=S.current;
-            if(sc.barrLeft[sc.turn]>0){
+            if(sc.barrLeft[sc.turn]>0&&!introSperreRef.current){
               const next=tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
               if(next){
                 // Blitz: bei faktisch abgelaufener Zeit nur senden, nicht optimistisch setzen (kein Zurueckspringen)
@@ -6867,7 +6877,7 @@ function App(){
     const onMove=(x,y)=>{setGhostPos({x,y});setHammerTarget(findWall(x,y));};
     const onEnd=(x,y)=>{
       const k=hammerTargetRef.current;
-      if(k&&S.current.walls.has(k)){
+      if(k&&S.current.walls.has(k)&&!(gameMode==='online'&&wsSpiel()&&introSperreRef.current)){ // vor dem los: nichts zerschlagen
         const me=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':S.current.turn);
         const w2=new Set(S.current.walls);w2.delete(k);
         setWalls(w2);
