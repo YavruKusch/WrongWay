@@ -877,7 +877,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=104"></script>
+<script src="js/i18n.js?v=105"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -1305,16 +1305,13 @@ async function stoSet(k,v){
 async function stoDel(k){
   try{await window.db.ref(k).remove();}catch(e){console.error('FB DEL fail',k,e);}
 }
-async function stoGetChildren(k){
-  try{
-    const snap=await window.db.ref(k).once('value');
-    const v=snap.val();if(!v)return{};
-    dlTrack(k,v);
-    if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return{};}}
-    const out={};
-    for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
-    return out;
-  }catch(e){return{};}
+// Kindknoten auswerten: Werte sind JSON-Strings (stoSet) oder Objekte, der ganze Knoten evtl. ein Alt-String.
+function kinderParsen(v){
+  if(!v)return{};
+  if(typeof v==='string'){try{const r=JSON.parse(v);return r&&typeof r==='object'?r:{};}catch(e){return{};}}
+  const out={};
+  for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
+  return out;
 }
 // Liest das Coin-Alt-Format (nackte Zahl statt Wallet-Objekt) nach, wenn das `bal`-Blatt fehlt.
 // `aktiv()` sagt, ob der aufrufende Effekt noch lebt: nach Logout oder Konto-Wechsel wird das
@@ -1541,6 +1538,20 @@ async function adminFlagWsCmd(flag, value){
     ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
   });
 }
+// Fehler-Reports nach Text gruppieren, neueste zuerst. Die Texte schreibt jedes Konto selbst ->
+// Object.create(null): jeder Text ist ein gewoehnlicher Schluessel, auch Namen wie "constructor".
+function fehlerGruppieren(list){
+  var g=Object.create(null);
+  list.forEach(function(e){
+    var k=e.msg;
+    if(!g[k])g[k]={msg:k,n:0,uids:{},last:0,sample:e};
+    g[k].n++;g[k].uids[e._uid]=1;
+    if((e.ts||0)>=g[k].last){g[k].last=e.ts||0;g[k].sample=e;}
+  });
+  var arr=Object.keys(g).map(function(k){return g[k];});
+  arr.sort(function(a,b){return b.last-a.last;});
+  return arr;
+}
 function AdminErrorsPanel(){
   var[rows,setRows]=React.useState(null);
   var[busy,setBusy]=React.useState(false);
@@ -1557,16 +1568,7 @@ function AdminErrorsPanel(){
           var e=v[uid][slot];if(e&&e.msg){e=Object.assign({},e);e._uid=uid;list.push(e);}
         });
       });
-      var g={};
-      list.forEach(function(e){
-        var k=e.msg;
-        if(!g[k])g[k]={msg:k,n:0,uids:{},last:0,sample:e};
-        g[k].n++;g[k].uids[e._uid]=1;
-        if((e.ts||0)>=g[k].last){g[k].last=e.ts||0;g[k].sample=e;}
-      });
-      var arr=Object.keys(g).map(function(k){return g[k];});
-      arr.sort(function(a,b){return b.last-a.last;});
-      setRows(arr);setBusy(false);
+      setRows(fehlerGruppieren(list));setBusy(false);
     }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
   }
   function clearAll(){
@@ -2494,22 +2496,84 @@ async function setPresence(key,online,name){
 async function setGamePresence(key,inGame,lobbyId){
   try{await window.db.ref(PRESENCE_KEY(key)).update({inGame:inGame,lobbyId:lobbyId||null});}catch(e){}
 }
-async function getPresenceMany(keys){
-  const res={};
-  await Promise.all(keys.map(async k=>{
-    try{
-      const snap=await window.db.ref(PRESENCE_KEY(k)).once('value');
-      const p=snap.val();
-      dlTrack('ww_presence/x',p);
-      const isOnline=p&&p.online&&(Date.now()-p.lastSeen<90000);
-      res[k]={
-        status:isOnline?(p.inGame?'in_game':'online'):'offline',
-        lobbyId:isOnline&&p.inGame&&p.lobbyId?p.lobbyId:null,
-        name:p&&p.name?p.name:null
-      };
-    }catch(e){res[k]={status:'offline',lobbyId:null,name:null};}
-  }));
-  return res;
+// Online-Status aus einem ww_presence-Knoten. Ohne Herzschlag seit 90 s gilt der Freund als offline
+// (der Knoten bleibt z.B. stehen, wenn ein Handy die App einfriert, statt die Verbindung zu trennen).
+function praesenzStatus(p){
+  const an=!!(p&&p.online&&(Date.now()-p.lastSeen<90000));
+  return{status:an?(p.inGame?'in_game':'online'):'offline',lobbyId:an&&p.inGame&&p.lobbyId?p.lobbyId:null};
+}
+// Freundesliste LIVE statt alle 30 s komplett neu (Firebase-Kosten): jedes Profil (bis 8 KB) EINMAL
+// je Bildschirm, danach nur kleine Listener auf Liste, Anfragen und Online-Status — wie die
+// Lobby-Liste nur bei SICHTBAREM Tab. Die Uhr liest nichts aus Firebase, sie wertet nur lastSeen neu
+// aus. Gemeldet wird erst, wenn alle Profile und Online-Staende da sind, und hoechstens alle 500 ms
+// (eine Flut von Aenderungen kostet also kein Rendern je Nachricht). Rueckgabe: Abmelde-Funktion.
+function freundeBeobachten(myKey,melden){
+  const profil=Object.create(null),angefragt=Object.create(null),praesenz=Object.create(null),pAb=Object.create(null);
+  const fRef=window.db.ref(FLIST_KEY(myKey)),aRef=window.db.ref(FR_KEY(myKey));
+  let freunde=null,anfragen=null,dran=false,tot=false,uhr=null,plan=null,zuletzt=0;
+  const rang=s=>s==='offline'?1:s==='online'?0:-1;
+  function ausgeben(){
+    if(tot||!freunde||!anfragen)return;
+    const aKeys=Object.keys(anfragen);
+    if(freunde.some(k=>!(k in profil)||!(k in praesenz))||aKeys.some(k=>!(k in profil)))return;
+    melden(
+      freunde.filter(k=>profil[k]).map(k=>Object.assign({},profil[k],praesenzStatus(praesenz[k]))).sort((a,b)=>rang(a.status)-rang(b.status)),
+      aKeys.filter(k=>profil[k]).map(k=>Object.assign({},profil[k],{ts:(anfragen[k]||{}).ts}))
+    );
+  }
+  function bald(){
+    if(plan||tot)return;
+    plan=setTimeout(()=>{plan=null;zuletzt=Date.now();ausgeben();},Math.max(0,500-(Date.now()-zuletzt)));
+  }
+  function profilLaden(k){
+    if(angefragt[k])return;
+    angefragt[k]=1;
+    stoGet(PROFILE_KEY(k)).then(p=>{profil[k]=p?Object.assign({},p,{key:k}):null;bald();});
+  }
+  function praesenzAn(k){
+    if(pAb[k])return;
+    const ref=window.db.ref(PRESENCE_KEY(k));
+    const cb=snap=>{const v=snap.val();dlTrack('ww_presence/x',v);praesenz[k]=v;bald();};
+    ref.on('value',cb,()=>{praesenz[k]=null;bald();}); // verweigert = offline, statt die Liste zu blockieren
+    pAb[k]=()=>{ref.off('value',cb);delete pAb[k];delete praesenz[k];};
+  }
+  function setzeFreunde(keys){
+    freunde=keys;
+    Object.keys(pAb).forEach(k=>{if(keys.indexOf(k)<0)pAb[k]();});
+    keys.forEach(k=>{profilLaden(k);if(dran)praesenzAn(k);});
+    bald();
+  }
+  const onFreunde=snap=>{
+    const v=snap.val();dlTrack(FLIST_KEY(myKey),v);
+    // Alt-Format (JSON-String): getFriendKeys migriert auf Kindknoten, danach meldet sich der Listener neu
+    if(typeof v==='string'){getFriendKeys(myKey).then(k=>{if(!tot)setzeFreunde(k);});return;}
+    setzeFreunde(v?Object.keys(v):[]);
+  };
+  const onAnfragen=snap=>{
+    const v=snap.val();dlTrack(FR_KEY(myKey),v);
+    anfragen=kinderParsen(v);
+    Object.keys(anfragen).forEach(profilLaden);
+    bald();
+  };
+  function anhaengen(){
+    if(dran||tot)return;
+    dran=true;
+    // verweigerter Lesezugriff = leere Liste (wie frueher der catch-Zweig), nie endloses Laden
+    fRef.on('value',onFreunde,()=>setzeFreunde([]));aRef.on('value',onAnfragen,()=>{anfragen={};bald();});
+    if(freunde)freunde.forEach(praesenzAn);
+    uhr=setInterval(bald,15000);
+  }
+  function abhaengen(){
+    if(!dran)return;
+    dran=false;
+    fRef.off('value',onFreunde);aRef.off('value',onAnfragen);
+    Object.keys(pAb).forEach(k=>pAb[k]());
+    clearInterval(uhr);
+  }
+  const onVis=()=>{if(document.hidden)abhaengen();else anhaengen();};
+  onVis();
+  document.addEventListener('visibilitychange',onVis);
+  return()=>{tot=true;abhaengen();clearTimeout(plan);document.removeEventListener('visibilitychange',onVis);};
 }
 async function sendLobbyInvite(toKey,fromKey,fromName,code,gameType){
   await stoSet(INVITE_KEY(toKey),{from:fromKey,fromName:fromName,code:code,type:gameType||'1v1',ts:Date.now()});
@@ -11414,28 +11478,7 @@ function FriendsScreen({account,t,darkMode,goBack,onInvite,onSpectate,friendLobb
 
   React.useEffect(()=>{
     if(!account)return;
-    let cancelled=false;
-    const load=async()=>{
-      const keys=await getFriendKeys(account.key);
-      const reqs=await stoGetChildren(FR_KEY(account.key));
-      const fps=await Promise.all(keys.map(k=>stoGet(PROFILE_KEY(k)).then(p=>p?Object.assign({},p,{key:k}):null)));
-      const presence=await getPresenceMany(keys);
-      const reqKeys=Object.keys(reqs);
-      const rps=await Promise.all(reqKeys.map(k=>stoGet(PROFILE_KEY(k)).then(p=>p?Object.assign({},p,{key:k,ts:reqs[k].ts}):null)));
-      if(!cancelled){
-        setFriends(fps.filter(Boolean).map(f=>{
-          const pr=presence[f.key]||{status:'offline',lobbyId:null};
-          return Object.assign({},f,{status:pr.status,lobbyId:pr.lobbyId});
-        }).sort((a,b)=>(a.status==='offline'?1:a.status==='online'?0:-1)-(b.status==='offline'?1:b.status==='online'?0:-1)));
-        setRequests(rps.filter(Boolean));
-        setLoading(false);
-      }
-    };
-    load();const iv=setInterval(load,30000);
-    var reqRef=window.db.ref(FR_KEY(account.key));
-    var onReq=function(){load();};
-    reqRef.on('value',onReq);
-    return()=>{cancelled=true;clearInterval(iv);try{reqRef.off('value',onReq);}catch(e){}};
+    return freundeBeobachten(account.key,(f,r)=>{setFriends(f);setRequests(r);setLoading(false);});
   },[account]);
 
   const doAdd=async()=>{
