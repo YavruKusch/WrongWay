@@ -877,7 +877,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=106"></script>
+<script src="js/i18n.js?v=108"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/sound.js"></script>
@@ -1374,11 +1374,15 @@ const PROFILE_KEY=u=>'ww_profiles/'+u;
 const USERNAME_KEY=n=>'ww_usernames/'+normUser(n);
 // Index: Benutzername (kleingeschrieben) -> { uid, name }. Fuer Eindeutigkeit + Freunde-Suche per Name.
 const VERIFY_SETTINGS={url:'https://wrongway.app',handleCodeInApp:false};
-async function sendVerificationEmail(user){
+// Firebase-Link-Mail (Notfall des Pakets E-Mail-Code) in der Spielsprache — gilt, solange das Template in
+// der Firebase-Console nicht angepasst ist. Rueckgabe true = verschickt.
+async function sendVerificationEmail(user,lang){
+  try{if(lang)firebase.auth().languageCode=lang;}catch(e){}
   // Versuche mit kurzem Redirect auf wrongway.app (braucht autorisierte Domain in Firebase-Konsole)
-  try{await user.sendEmailVerification(VERIFY_SETTINGS);return;}catch(e){}
+  try{await user.sendEmailVerification(VERIFY_SETTINGS);return true;}catch(e){}
   // Fallback: Standard-Link ohne Redirect
-  try{await user.sendEmailVerification();}catch(e){}
+  try{await user.sendEmailVerification();return true;}catch(e){}
+  return false;
 }
 function normUser(u){return (u||'').trim().toLowerCase();}
 async function hashPw(pw){
@@ -1420,6 +1424,51 @@ async function nameClaimWsCmd(name){
   if(r==='limit')return{err:'nameLimit'};
   if(r==='busy')return{err:'network'};
   return{err:'network'};
+}
+// Paket E-Mail-Code (Spec wrongway-server/docs/superpowers/specs/2026-09-23-email-code-design.md): der
+// Server schickt einen 6-stelligen Code, der Client zeigt den Code-Schritt (MailCodeStep). Antworten des
+// Servers: Spec "Nachrichten". Ein Verbindungsfehler kommt als status/err 'network' zurueck, nie als Ausnahme.
+async function mailCodeWsCmd(msg){
+  var pruefen=msg.type==='mail_code_check';
+  try{return await wsCmd(msg,pruefen?'mail_code_res':'mail_code');}
+  catch(e){return pruefen?{ok:false,err:'network'}:{status:'error',err:'network'};}
+}
+// Adresse aendern (Tippfehler bei der Registrierung). Eine echte Adressaenderung ist fuer Firebase eine grosse
+// Kontoaenderung: die Refresh-Tokens des Kontos verfallen. Deshalb SOFORT still mit der neuen Adresse und dem
+// gerade eingegebenen Passwort neu anmelden, bevor irgendetwas ein frisches Token holt (das beendete die
+// Sitzung). 'retry' kann auch NACH der Aenderung kommen (Schreibfehler danach) — dann wird die neue Anmeldung
+// ebenfalls versucht; scheitert sie, war die Adresse noch unveraendert.
+// Rueckgabe: Server-Antwort, dazu neu:true (angemeldet mit der neuen Adresse) bzw. relogin:true (abgemeldet,
+// der Spieler meldet sich mit der neuen Adresse selbst an).
+async function mailAdresseAendern(email,lang,pw){
+  var em=String(email||'').trim().toLowerCase();
+  var d=await mailCodeWsCmd({type:'mail_change',email:em,lang:lang});
+  var geaendert=d.status==='sent'||d.status==='fallback';
+  if(!geaendert&&!(d.status==='error'&&d.err==='retry'))return d;
+  try{
+    if(!pw)throw new Error('kein Passwort');
+    await firebase.auth().signInWithEmailAndPassword(em,pw);
+    d.neu=true;
+  }catch(e){
+    if(geaendert){try{await firebase.auth().signOut();}catch(e2){}d.relogin=true;}
+  }
+  return d;
+}
+// Nach der Bestaetigung (Code angenommen, Link geklickt, Server meldet "schon bestaetigt"): Nutzer neu laden
+// und ein frisches Token in den Zwischenspeicher holen. Ein altes Token traegt noch email_verified:false, und
+// jede spaetere Verbindung meldet sich mit dem Zwischenspeicher an (der Server stufte sie wieder als
+// unbestaetigt ein). Eine offene Spiel-Verbindung gibt es auf dem Anmelde-Bildschirm nicht (WSNET._open).
+// Rueckgabe: {prof} wie loginAccount, {err:'notVerified'} (Link noch nicht geklickt) oder {err:'login'|'network'}.
+async function mailBestaetigtAbschliessen(){
+  var u=firebase.auth().currentUser;
+  if(!u||u.isAnonymous)return{err:'login'};
+  var uid=u.uid;
+  try{await u.reload();}catch(e){return{err:e&&e.code==='auth/network-request-failed'?'network':'login'};}
+  u=firebase.auth().currentUser;
+  if(!u||u.uid!==uid||u.isAnonymous)return{err:'login'};
+  if(u.emailVerified!==true)return{err:'notVerified'};
+  try{await u.getIdToken(true);}catch(e){return{err:'network'};}
+  return await loginProfil(uid);
 }
 // F9: eigenes Rating/Rang kommt vom Server statt aus einem direkten Ranglisten-Read.
 async function myRankWsCmd(){
@@ -2227,6 +2276,177 @@ async function wsCmd(msg,okType,errType){
     ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
   });
 }
+// Paket E-Mail-Code: Code-Schritt im Anmelde-Bildschirm — schlicht, nur vorhandene Browser-Elemente (die
+// Browser-Optik ist eingefroren). Phasen: code (Code eingeben) | change (Adresse aendern) | fallback (Notfall:
+// Firebase-Link-Mail) | done (bestaetigt). Server-Antworten und Grenzen: Spec im Server-Repo.
+// data-mc = Griffe fuer den Browser-Test (wrongway-server/scripts/online-e2e/mailcode.mjs). Zurueck (= abmelden) gibt
+// es nur vor "done" — danach wuerde er das gerade bestaetigte Konto wieder abmelden.
+function mcZeit(s){var m=Math.floor(s/60),r=s%60;return m+':'+(r<10?'0':'')+r;}
+function MailCodeStep(props){
+  var t=props.t,lang=props.lang,inputStyle=props.inputStyle;
+  var[phase,setPhase]=React.useState('code');
+  var[vorher,setVorher]=React.useState('code');
+  var[email,setEmail]=React.useState(props.email||'');
+  var[code,setCode]=React.useState('');
+  var[neu,setNeu]=React.useState(props.email||'');
+  var[meldung,setMeldung]=React.useState(null);
+  var[falsch,setFalsch]=React.useState(false);
+  var[busy,setBusy]=React.useState(false);
+  var[bis,setBis]=React.useState(0);
+  var[jetzt,setJetzt]=React.useState(Date.now());
+  var[prof,setProf]=React.useState(null);
+  var rest=Math.max(0,Math.ceil((bis-jetzt)/1000));
+  var warte=function(s){var n=Date.now();setJetzt(n);setBis(n+(s||0)*1000);};
+  var rot=function(k){setMeldung({rot:true,text:t(k)});};
+  var abschliessen=function(){
+    setBusy(true);
+    mailBestaetigtAbschliessen().then(function(r){
+      setBusy(false);
+      if(r.prof){setProf(r.prof);setMeldung(null);setPhase('done');return;}
+      if(r.err==='notVerified'){rot('mc_fbNotYet');return;}
+      if(r.err==='login'){props.onRelogin(email,'mc_loginAgain');return;}
+      rot('auth_network');
+    });
+  };
+  // Antwort auf mail_code_send bzw. mail_change
+  var nachSenden=function(d,adresse){
+    if(d.neu&&adresse)setEmail(adresse);
+    if(d.relogin){props.onRelogin(adresse,'mc_relogin');return;}
+    if(d.status==='sent'){setPhase('code');setMeldung(null);setFalsch(false);setCode('');warte(d.wait);return;}
+    if(d.status==='fallback'){
+      setPhase('fallback');setMeldung(null);
+      var u=firebase.auth().currentUser;
+      if(u)sendVerificationEmail(u,lang);
+      return;
+    }
+    if(d.status==='verified'||d.status==='not_needed'){abschliessen();return;}
+    if(d.status==='login'){props.onRelogin(email,'mc_loginAgain');return;}
+    if(d.status==='limit'){rot('mc_later');if(d.wait)warte(d.wait);return;}
+    if(d.err==='email_taken'){rot('auth_emailTaken');return;}
+    if(d.err==='email_invalid'){rot('auth_emailInvalid');return;}
+    rot('auth_network');
+  };
+  var senden=function(neuerCode){
+    if(busy)return;
+    setBusy(true);
+    mailCodeWsCmd({type:'mail_code_send',lang:lang,neu:!!neuerCode}).then(function(d){setBusy(false);nachSenden(d,null);});
+  };
+  var pruefen=function(c){
+    if(busy||c.length!==6)return;
+    setBusy(true);
+    mailCodeWsCmd({type:'mail_code_check',code:c}).then(function(d){
+      setBusy(false);
+      if(d.ok){abschliessen();return;}
+      if(d.err==='wrong'||d.err==='locked'||d.err==='expired')setFalsch(true);
+      if(d.err==='wrong'){setMeldung({rot:true,text:d.left===1?t('mc_wrong1'):t('mc_wrong').replace('{n}',String(d.left))});return;}
+      if(d.err==='locked'){rot('mc_locked');return;}
+      if(d.err==='expired'){rot('mc_expired');return;}
+      if(d.err==='format'){rot('mc_format');return;}
+      if(d.err==='limit'){rot('mc_later');return;}
+      if(d.err==='login'){props.onRelogin(email,'mc_loginAgain');return;}
+      rot('auth_network');
+    });
+  };
+  var aendern=function(){
+    if(busy)return;
+    var a=String(neu||'').trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a)){rot('auth_emailInvalid');return;}
+    setBusy(true);
+    mailAdresseAendern(a,lang,props.pw).then(function(d){setBusy(false);nachSenden(d,a);});
+  };
+  var linkNeu=function(){
+    var u=firebase.auth().currentUser;
+    if(busy||!u)return;
+    setBusy(true);
+    sendVerificationEmail(u,lang).then(function(ok){setBusy(false);setMeldung(ok?{rot:false,text:t('verifySent')}:{rot:true,text:t('auth_network')});});
+  };
+  var eingabe=function(e){
+    var c=String(e.target.value||'').replace(/\D/g,'').slice(0,6); // eingefuegtes "482 915" -> 482915
+    setCode(c);
+    if(falsch){setFalsch(false);setMeldung(null);}
+    if(c.length===6)pruefen(c);
+  };
+  var zumAendern=function(){setVorher(phase);setNeu(email);setMeldung(null);setPhase('change');};
+  var mitAdresse=function(k){var s=t(k).split('{mail}');return <span>{s[0]}<b style={{color:'var(--text)'}}>{email}</b>{s[1]||''}</span>;};
+  // Automatisch beim Betreten: ein noch gueltiger Code wird NICHT neu verschickt (Server meldet nur die Wartezeit)
+  React.useEffect(function(){senden(false);},[]);
+  React.useEffect(function(){
+    if(rest<=0)return;
+    var id=setTimeout(function(){setJetzt(Date.now());},1000);
+    return function(){clearTimeout(id);};
+  },[jetzt,bis]);
+  var knopf={width:'100%',padding:'14px',marginTop:16,borderRadius:12,
+    background:busy?'var(--border)':'linear-gradient(135deg,#8b5cf6,#3b82f6)',
+    color:'white',border:'none',cursor:busy?'default':'pointer',
+    fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif',
+    boxShadow:'0 4px 14px rgba(99,102,241,0.35)'};
+  var textKnopf={background:'none',border:'none',padding:'8px 4px',cursor:'pointer',color:'var(--subtle)',
+    fontSize:12,fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif',textDecoration:'underline'};
+  var reihe={display:'flex',justifyContent:'center',alignItems:'center',gap:10,marginTop:6,flexWrap:'wrap'};
+  var klein={fontSize:11,color:'var(--subtle)',fontWeight:500,marginTop:6,textAlign:'center',lineHeight:1.5};
+  var erklaer={fontSize:12,color:'var(--subtle)',fontWeight:500,marginTop:6,lineHeight:1.5};
+  var titel=phase==='done'?t('mc_doneTitle'):(phase==='change'?t('mc_change'):t('mc_title'));
+  var hinweis=meldung?<div data-mc="meldung" style={{color:meldung.rot?'#ef4444':'#16a34a',fontSize:12,fontWeight:600,marginTop:10,lineHeight:1.5}}>{meldung.text}</div>:null;
+  return (
+    <div style={{width:'100%',maxWidth:330,position:'relative',zIndex:1}}>
+      {phase!=='done'&&<button data-mc="zurueck" onClick={props.onBack} style={props.backStyle}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>}
+      <div style={{textAlign:'center',marginBottom:18}}>
+        <div style={{width:64,height:64,borderRadius:'50%',margin:'0 auto 12px',background:phase==='done'?'#16a34a':'linear-gradient(135deg,#8b5cf6,#3b82f6)',
+          display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(99,102,241,0.3)'}}>
+          {phase==='done'
+            ?<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12.5 10 17 19 7"/></svg>
+            :<PeopleIcon size={30} color="#fff"/>}
+        </div>
+        <div data-mc="titel" style={{fontSize:21,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{titel}</div>
+        {phase==='code'&&<div data-mc="text" style={erklaer}>{mitAdresse('mc_text')}</div>}
+        {phase==='change'&&<div data-mc="text" style={erklaer}>{t('mc_changeText')}</div>}
+        {phase==='fallback'&&<div data-mc="text" style={erklaer}>{mitAdresse('mc_fbText')}</div>}
+        {phase==='done'&&<div data-mc="text" style={erklaer}>{t('mc_doneText')}</div>}
+        {hinweis}
+      </div>
+      {phase==='code'&&(
+        <div>
+          <input data-mc="code" value={code} onChange={eingabe} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*"
+            aria-label={t('mc_codeLabel')} placeholder={'······'} autoFocus
+            style={Object.assign({},inputStyle,{fontSize:28,fontWeight:800,letterSpacing:8,textAlign:'center',
+              border:falsch?'1.5px solid #ef4444':'1.5px solid var(--border)',color:falsch?'#ef4444':'var(--text)'})}/>
+          <button data-mc="ok" onClick={function(){pruefen(code);}} disabled={busy||code.length!==6} style={knopf}>{busy?'…':t('confirm')}</button>
+          <div style={reihe}>
+            <button data-mc="neu" onClick={function(){senden(true);}} disabled={busy||rest>0}
+              style={Object.assign({},textKnopf,rest>0?{textDecoration:'none',cursor:'default'}:{})}>
+              {rest>0?t('mc_resendIn').replace('{t}',mcZeit(rest)):t('mc_resend')}
+            </button>
+            <span style={{color:'var(--subtle)',fontSize:12}}>{'·'}</span>
+            <button data-mc="aendern" onClick={zumAendern} style={textKnopf}>{t('mc_change')}</button>
+          </div>
+          <div style={klein}>{t('mc_tip')}</div>
+        </div>
+      )}
+      {phase==='change'&&(
+        <div>
+          <input data-mc="adresse" value={neu} onChange={function(e){setNeu(e.target.value);}} type="email" inputMode="email"
+            autoCapitalize="off" autoCorrect="off" aria-label={t('mc_newEmail')} placeholder={t('email')} autoFocus
+            onKeyDown={function(e){if(e.key==='Enter')aendern();}} style={inputStyle}/>
+          <button data-mc="senden" onClick={aendern} disabled={busy} style={knopf}>{busy?'…':t('mc_sendCode')}</button>
+          <div style={reihe}>
+            <button data-mc="abbrechen" onClick={function(){setMeldung(null);setPhase(vorher);}} style={textKnopf}>{t('cancel')}</button>
+          </div>
+        </div>
+      )}
+      {phase==='fallback'&&(
+        <div>
+          <button data-mc="habe" onClick={abschliessen} disabled={busy} style={knopf}>{busy?'…':t('mc_fbDone')}</button>
+          <div style={klein}>{t('mc_fbSpam')}</div>
+          <div style={reihe}>
+            <button data-mc="linkneu" onClick={linkNeu} disabled={busy} style={textKnopf}>{t('mc_fbResend')}</button>
+            <button data-mc="aendern" onClick={zumAendern} style={textKnopf}>{t('mc_change')}</button>
+          </div>
+        </div>
+      )}
+      {phase==='done'&&<button data-mc="los" onClick={function(){props.onDone(prof);}} style={knopf}>{t('mc_doneGo')}</button>}
+    </div>
+  );
+}
 function AdminCoinsPanel(){
   var[uid,setUid]=React.useState('');
   var[amt,setAmt]=React.useState('');
@@ -2350,10 +2570,8 @@ async function registerAccount(email,name,pw,color){
     try{await firebase.auth().signOut();}catch(e){}
     return{err:'network'};
   }
-  // Bestaetigunsmail senden und abmelden (Login erst nach Bestaetigung moeglich)
-  await sendVerificationEmail(cred.user);
-  try{await firebase.auth().signOut();}catch(e){}
-  return{err:'verifyRequired'};
+  // Paket E-Mail-Code: angemeldet bleiben, der Code-Schritt uebernimmt (den Code schickt der Server).
+  return{step:'code',email:cred.user.email||em};
 }
 async function loginAccount(email,pw){
   const em=(email||'').trim();
@@ -2367,13 +2585,12 @@ async function loginAccount(email,pw){
     if(c==='auth/too-many-requests')return{err:'tooManyAttempts'};
     return{err:'wrongLogin'};
   }
-  const uid=cred.user.uid;
-  // E-Mail muss bestaetigt sein
-  if(!cred.user.emailVerified){
-    await sendVerificationEmail(cred.user);
-    try{await firebase.auth().signOut();}catch(e){}
-    return{err:'notVerified'};
-  }
+  // Paket E-Mail-Code: unbestaetigt -> Code-Schritt (keine Abmeldung, keine Link-Mail mehr von hier)
+  if(!cred.user.emailVerified)return{step:'code',email:cred.user.email||em};
+  return await loginProfil(cred.user.uid);
+}
+// Profil eines frisch angemeldeten Passwort-Kontos (auch nach dem Code-Schritt).
+async function loginProfil(uid){
   let prof=await stoGet(PROFILE_KEY(uid));
   if(!prof){
     // Auth-Konto ohne Profil (z.B. abgebrochene Registrierung) -> minimal anlegen
@@ -4104,7 +4321,7 @@ function App(){
   const[authMode,setAuthMode]=useState('login'); // 'login' | 'register'
   const[authName,setAuthName]=useState('');
   const[authEmail,setAuthEmail]=useState('');
-  const[showResend,setShowResend]=useState(false);
+  const[mailStep,setMailStep]=useState(null); // Paket E-Mail-Code: {email,pw} solange der Code-Schritt laeuft
   const[authPw,setAuthPw]=useState('');
   const[authColor,setAuthColor]=useState(AVATAR_COLORS[0]);
   const[authErr,setAuthErr]=useState('');
@@ -4247,7 +4464,7 @@ function App(){
   },[oppAccountKey]);
   const doAuth=async()=>{
     if(authBusy)return;
-    setAuthErr('');setAuthBusy(true);setShowResend(false);
+    setAuthErr('');setAuthBusy(true);
     let res;
     try{
       res=authMode==='register'
@@ -4257,33 +4474,20 @@ function App(){
       setAuthBusy(false);setAuthErr(t('auth_network'));return;
     }
     setAuthBusy(false);
-    if(res.err==='verifyRequired'){
-      setAuthErr(t('auth_verifyRequired'));
-      setAuthMode('login');
-      setAuthName('');setAuthPw('');
-      return;
-    }
-    if(res.err==='notVerified'){setAuthErr(t('auth_notVerified'));setShowResend(true);return;}
+    // Paket E-Mail-Code: Konto steht, E-Mail noch unbestaetigt -> Code-Schritt. Das Passwort bleibt nur fuer die
+    // stille Neu-Anmeldung nach einer Adressaenderung im Speicher, bis der Schritt endet.
+    if(res.step==='code'){setMailStep({email:res.email,pw:authPw});setAuthName('');setAuthPw('');return;}
     if(res.err){setAuthErr(t('auth_'+res.err));return;}
     setAccount(res.prof);
-    setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');setShowResend(false);
+    setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');
     setNavDir('back');setScreen('menu');
   };
   const doForgotPw=async()=>{
     const em=(authEmail||'').trim();
     if(!em){setAuthErr(t('auth_needEmail'));return;}
+    try{firebase.auth().languageCode=lang;}catch(e){} // Mail in Spielsprache (solange das Firebase-Template unveraendert ist)
     try{await firebase.auth().sendPasswordResetEmail(em);setAuthErr(t('pwResetSent'));}
     catch(e){setAuthErr(t('pwResetErr'));}
-  };
-  const doResendVerification=async()=>{
-    const em=(authEmail||'').trim();
-    if(!em||!authPw)return;
-    try{
-      const cred=await firebase.auth().signInWithEmailAndPassword(em,authPw);
-      sendVerificationEmail(cred.user);
-      try{await firebase.auth().signOut();}catch(e){}
-      setAuthErr(t('verifySent'));setShowResend(false);
-    }catch(e){setAuthErr(t('auth_wrongLogin'));}
   };
   const doLogout=()=>{
     try{firebase.auth().signOut();}catch(e){}
@@ -8886,6 +9090,19 @@ function App(){
     const inputStyle={width:'100%',padding:'13px 14px',borderRadius:11,border:'1.5px solid var(--border)',
       fontSize:16,outline:'none',fontFamily:'system-ui,-apple-system,sans-serif',
       background:'var(--card)',color:'var(--text)',boxSizing:'border-box'};
+    // Paket E-Mail-Code: Code-Schritt statt Anmeldeformular. Zurueck = abmelden (danach meldet die Seite
+    // selbst anonym an, siehe onAuthStateChanged beim Start).
+    if(mailStep){
+      const mcRelogin=function(em,key){try{firebase.auth().signOut();}catch(e){}setMailStep(null);setAuthMode('login');setAuthEmail(em||'');setAuthErr(t(key));};
+      return(
+        <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+          <MenuBG dark={darkMode}/>
+          <MailCodeStep t={t} lang={lang} email={mailStep.email} pw={mailStep.pw} inputStyle={inputStyle} backStyle={backChevron} onRelogin={mcRelogin}
+            onBack={function(){try{firebase.auth().signOut();}catch(e){}setMailStep(null);setAuthErr('');}}
+            onDone={function(prof){setMailStep(null);setAccount(prof);setAuthEmail('');setAuthErr('');setNavDir('back');setScreen('menu');}}/>
+        </div>
+      );
+    }
     return(
       <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
         <MenuBG dark={darkMode}/>
@@ -8927,17 +9144,7 @@ function App(){
             </div>
           )}
 
-          {authErr&&<div style={{color: authErr===t('auth_verifyRequired')||authErr===t('verifySent')?'#16a34a':'#ef4444',fontSize:12,fontWeight:600,marginTop:12,textAlign:'center',lineHeight:1.5}}>{authErr}</div>}
-
-          {showResend&&(
-            <button onClick={doResendVerification} style={{
-              width:'100%',padding:'10px',marginTop:8,borderRadius:10,
-              background:'rgba(245,158,11,0.1)',border:'1.5px solid rgba(245,158,11,0.4)',
-              color:'#d97706',cursor:'pointer',fontSize:12,fontWeight:700,
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {t('resendVerification')}
-            </button>
-          )}
+          {authErr&&<div style={{color: authErr===t('mc_relogin')?'#16a34a':'#ef4444',fontSize:12,fontWeight:600,marginTop:12,textAlign:'center',lineHeight:1.5}}>{authErr}</div>}
 
           <button onClick={doAuth} disabled={authBusy} style={{
             width:'100%',padding:'14px',marginTop:18,borderRadius:12,
