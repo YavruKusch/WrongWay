@@ -1323,6 +1323,13 @@ async function stoGet(k){
     return v?JSON.parse(v):null;
   }catch(e){console.error('FB GET fail',k,e);window.lastFbError=e.message;return null;}
 }
+// Wie stoGet, aber ein LESEFEHLER wirft statt null zu liefern — fuer Stellen, an denen "kein Eintrag" zu einem
+// Schreiben fuehrt (sonst ueberschriebe ein Lesefehler den echten Eintrag). Unlesbarer Inhalt bleibt null.
+async function stoGetStreng(k){
+  const v=(await window.db.ref(k).once('value')).val();
+  dlTrack(k,v);
+  try{return v?JSON.parse(v):null;}catch(e){console.error('FB GET fail',k,e);window.lastFbError=e.message;return null;}
+}
 async function stoSet(k,v){
   try{dlTrack('^'+k,v);await window.db.ref(k).set(JSON.stringify(v));return true;}
   catch(e){console.error('FB SET fail',k,e);window.lastFbError=e.message;return false;}
@@ -2296,12 +2303,14 @@ function MailCodeStep(props){
   var[bis,setBis]=React.useState(0);
   var[jetzt,setJetzt]=React.useState(Date.now());
   var[prof,setProf]=React.useState(null);
+  var weg=React.useRef(false); // nach Zurueck (Unmount): spaete Antworten aendern nichts mehr (Anmeldeformular, Link-Mail)
   var rest=Math.max(0,Math.ceil((bis-jetzt)/1000));
   var warte=function(s){var n=Date.now();setJetzt(n);setBis(n+(s||0)*1000);};
   var rot=function(k){setMeldung({rot:true,text:t(k)});};
   var abschliessen=function(){
     setBusy(true);
     mailBestaetigtAbschliessen().then(function(r){
+      if(weg.current)return;
       setBusy(false);
       if(r.prof){setProf(r.prof);setMeldung(null);setPhase('done');return;}
       if(r.err==='notVerified'){rot('mc_fbNotYet');return;}
@@ -2330,12 +2339,13 @@ function MailCodeStep(props){
   var senden=function(neuerCode){
     if(busy)return;
     setBusy(true);
-    mailCodeWsCmd({type:'mail_code_send',lang:lang,neu:!!neuerCode}).then(function(d){setBusy(false);nachSenden(d,null);});
+    mailCodeWsCmd({type:'mail_code_send',lang:lang,neu:!!neuerCode}).then(function(d){if(weg.current)return;setBusy(false);nachSenden(d,null);});
   };
   var pruefen=function(c){
     if(busy||c.length!==6)return;
     setBusy(true);
     mailCodeWsCmd({type:'mail_code_check',code:c}).then(function(d){
+      if(weg.current)return;
       setBusy(false);
       if(d.ok){abschliessen();return;}
       if(d.err==='wrong'||d.err==='locked'||d.err==='expired'){setFalsch(true);setCode('');} // leeren: sonst schickte jede weitere Ziffer den alten Code erneut
@@ -2353,7 +2363,7 @@ function MailCodeStep(props){
     var a=String(neu||'').trim().toLowerCase();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a)){rot('auth_emailInvalid');return;}
     setBusy(true);
-    mailAdresseAendern(a,lang,props.pw).then(function(d){setBusy(false);nachSenden(d,a);});
+    mailAdresseAendern(a,lang,props.pw).then(function(d){if(weg.current)return;setBusy(false);nachSenden(d,a);});
   };
   var linkNeu=function(){
     var u=firebase.auth().currentUser;
@@ -2367,10 +2377,12 @@ function MailCodeStep(props){
     if(falsch){setFalsch(false);setMeldung(null);}
     if(c.length===6)pruefen(c);
   };
+  // "Adresse aendern" ist gesperrt, solange ein Versand laeuft: dessen spaete Antwort wuerfe sonst aus diesem Zustand
   var zumAendern=function(){setVorher(phase);setNeu(email);setMeldung(null);setPhase('change');};
   var mitAdresse=function(k){var s=t(k).split('{mail}');return <span>{s[0]}<b style={{color:'var(--text)'}}>{email}</b>{s[1]||''}</span>;};
   // Automatisch beim Betreten: ein noch gueltiger Code wird NICHT neu verschickt (Server meldet nur die Wartezeit)
   React.useEffect(function(){senden(false);},[]);
+  React.useEffect(function(){weg.current=false;return function(){weg.current=true;};},[]);
   React.useEffect(function(){
     if(rest<=0)return;
     var id=setTimeout(function(){setJetzt(Date.now());},1000);
@@ -2418,7 +2430,7 @@ function MailCodeStep(props){
               {rest>0?t('mc_resendIn').replace('{t}',mcZeit(rest)):t('mc_resend')}
             </button>
             <span style={{color:'var(--subtle)',fontSize:12}}>{'·'}</span>
-            <button data-mc="aendern" onClick={zumAendern} style={textKnopf}>{t('mc_change')}</button>
+            <button data-mc="aendern" onClick={zumAendern} disabled={busy} style={textKnopf}>{t('mc_change')}</button>
           </div>
           <div style={klein}>{t('mc_tip')}</div>
         </div>
@@ -2440,7 +2452,7 @@ function MailCodeStep(props){
           <div style={klein}>{t('mc_fbSpam')}</div>
           <div style={reihe}>
             <button data-mc="linkneu" onClick={linkNeu} disabled={busy} style={textKnopf}>{t('mc_fbResend')}</button>
-            <button data-mc="aendern" onClick={zumAendern} style={textKnopf}>{t('mc_change')}</button>
+            <button data-mc="aendern" onClick={zumAendern} disabled={busy} style={textKnopf}>{t('mc_change')}</button>
           </div>
         </div>
       )}
@@ -2590,9 +2602,11 @@ async function loginAccount(email,pw){
   if(!cred.user.emailVerified)return{step:'code',email:cred.user.email||em};
   return await loginProfil(cred.user.uid);
 }
-// Profil eines frisch angemeldeten Passwort-Kontos (auch nach dem Code-Schritt).
+// Profil eines frisch angemeldeten Passwort-Kontos (auch nach dem Code-Schritt). Ein Lesefehler ist NICHT "kein
+// Profil": sonst ueberschriebe der Minimal-Eintrag das echte Profil (Name, Statistik) -> {err:'network'}.
 async function loginProfil(uid){
-  let prof=await stoGet(PROFILE_KEY(uid));
+  let prof;
+  try{prof=await stoGetStreng(PROFILE_KEY(uid));}catch(e){return{err:'network'};}
   if(!prof){
     // Auth-Konto ohne Profil (z.B. abgebrochene Registrierung) -> minimal anlegen
     prof={name:'Player',color:AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
