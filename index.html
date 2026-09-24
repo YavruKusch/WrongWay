@@ -2316,7 +2316,7 @@ function MailCodeStep(props){
     if(d.status==='fallback'){
       setPhase('fallback');setMeldung(null);
       var u=firebase.auth().currentUser;
-      if(u)sendVerificationEmail(u,lang);
+      if(u)sendVerificationEmail(u,lang).then(function(ok){if(!ok)rot('auth_network');}); // verweigert (z.B. zu viele Versuche): nicht still "geschickt" behaupten
       return;
     }
     if(d.status==='verified'||d.status==='not_needed'){abschliessen();return;}
@@ -2337,7 +2337,7 @@ function MailCodeStep(props){
     mailCodeWsCmd({type:'mail_code_check',code:c}).then(function(d){
       setBusy(false);
       if(d.ok){abschliessen();return;}
-      if(d.err==='wrong'||d.err==='locked'||d.err==='expired')setFalsch(true);
+      if(d.err==='wrong'||d.err==='locked'||d.err==='expired'){setFalsch(true);setCode('');} // leeren: sonst schickte jede weitere Ziffer den alten Code erneut
       if(d.err==='wrong'){setMeldung({rot:true,text:d.left===1?t('mc_wrong1'):t('mc_wrong').replace('{n}',String(d.left))});return;}
       if(d.err==='locked'){rot('mc_locked');return;}
       if(d.err==='expired'){rot('mc_expired');return;}
@@ -4347,9 +4347,9 @@ function App(){
       const uid=firebaseUser.uid;
       const isG=(firebaseUser.providerData||[]).some(p=>p&&p.providerId==='google.com');
       // E-Mail-Nutzer muessen ihre E-Mail bestaetigt haben.
-      // KEIN signOut() hier — registerAccount ruft selbst signOut() am Ende auf.
-      // Ein signOut() hier wuerde den registerAccount-Flow brechen (interner Listener
-      // resolved nie → authBusy bleibt true → 3-Punkte-Haenger).
+      // KEIN signOut() hier: nach Registrierung/Anmeldung mit unbestaetigter Mail laeuft der Code-Schritt
+      // (Paket E-Mail-Code, MailCodeStep) mit genau dieser Sitzung weiter, und registerAccount wartet intern
+      // auf diesen Nutzer (ein signOut() liesse authBusy haengen -> 3-Punkte-Haenger).
       if(!isG&&!firebaseUser.emailVerified){
         setAccount(null);
         return;
@@ -9098,7 +9098,7 @@ function App(){
         <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
           <MenuBG dark={darkMode}/>
           <MailCodeStep t={t} lang={lang} email={mailStep.email} pw={mailStep.pw} inputStyle={inputStyle} backStyle={backChevron} onRelogin={mcRelogin}
-            onBack={function(){try{firebase.auth().signOut();}catch(e){}setMailStep(null);setAuthErr('');}}
+            onBack={function(){try{firebase.auth().signOut();}catch(e){}setMailStep(null);setAuthMode('login');setAuthErr('');}}
             onDone={function(prof){setMailStep(null);setAccount(prof);setAuthEmail('');setAuthErr('');setNavDir('back');setScreen('menu');}}/>
         </div>
       );
