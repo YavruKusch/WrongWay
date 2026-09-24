@@ -1345,37 +1345,6 @@ function kinderParsen(v){
   for(const ck of Object.keys(v)){try{out[ck]=typeof v[ck]==='string'?JSON.parse(v[ck]):v[ck];}catch(e){}}
   return out;
 }
-// Liest das Coin-Alt-Format (nackte Zahl statt Wallet-Objekt) nach, wenn das `bal`-Blatt fehlt.
-// `aktiv()` sagt, ob der aufrufende Effekt noch lebt: nach Logout oder Konto-Wechsel wird das
-// Ergebnis VERWORFEN, sonst zeigte das neue Konto das Guthaben des alten (Codex-R2/R3 F3).
-// Bewusst eine eigene Funktion, damit genau dieser Abbruch deterministisch testbar ist.
-async function coinAltLesen(leser,aktiv,setzen){
-  try{
-    const w=await leser();
-    if(!aktiv())return false;
-    if(typeof w==='number'){setzen(w);return true;}
-    return false;
-  }catch(e){return false;}
-}
-// Codex-R5 F3: Der Lebenszyklus des Coins-Listeners liegt HIER, nicht im Effekt-Rumpf — genau diese
-// Funktion fuehrt der Regressionstest aus. Frueher standen Abbruch-Flag, Einmal-Riegel und Cleanup
-// verstreut im useEffect; dort waren sie nur per Textvergleich abgesichert, ein Fehler in der
-// Verdrahtung (Cleanup verliert `aktiv=false`, Flag als Wert statt Getter uebergeben) waere
-// unbemerkt geblieben. `anhaengen` bekommt den Wert-Callback und liefert das Abmelden zurueck.
-function coinsBeobachten(anhaengen,altLesen,setzen){
-  let altGeprueft=false,aktiv=true;
-  const abmelden=anhaengen(function(v){
-    if(typeof v==='number'){setzen(v);return;}
-    setzen(0);
-    // Alt-Format: eine Wallet, die noch eine nackte Zahl ist, hat gar kein bal-Kind. EINMAL pro
-    // Sitzung nachsehen — sonst wuerde ein gueltiges Guthaben als 0 angezeigt. Kostet nur bei
-    // Konten ohne bal einen winzigen Read (meist ein null), nie einen Dauer-Listener.
-    if(altGeprueft)return;
-    altGeprueft=true;
-    coinAltLesen(altLesen,function(){return aktiv;},setzen);
-  });
-  return function(){aktiv=false;if(abmelden)abmelden();};
-}
 // ── Account / Auth ──────────────────────────────────────────
 const AVATAR_COLORS=['#ef4444','#3b82f6','#16a34a','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
 const PROFILE_KEY=u=>'ww_profiles/'+u;
@@ -4419,49 +4388,9 @@ function App(){
     }).catch(function(){});
     return function(){cancelled=true;};
   },[account?account.key:null]);
-  // Coins-Balance live aus Firebase laden (read-only fuer Client)
-  useEffect(function(){
-    if(!window.db)return;
-    var uid=account?account.key:null;
-    if(!uid){setCoins(null);return;}
-    // Schicht C: ww_coins/<uid> ist ein Wallet-OBJEKT ({bal,ops,day,...}) — gelesen wird nur das
-    // Blatt `bal`. Das ist zugleich weniger Download als der ganze Knoten (der Idempotenz-Marker
-    // traegt).
-    var ref=window.db.ref('ww_coins/'+uid+'/bal');
-    return coinsBeobachten(
-      function(beiWert){
-        var h=ref.on('value',function(snap){beiWert(snap.val());});
-        return function(){ref.off('value',h);};
-      },
-      function(){return window.db.ref('ww_coins/'+uid).once('value').then(function(s2){return s2.val();});},
-      setCoins
-    );
-  },[account?account.key:null]);
-  // XP live aus Firebase laden
-  useEffect(function(){
-    if(!window.db)return;
-    var uid=account?account.key:null;
-    if(!uid){setXp(null);return;}
-    var ref=window.db.ref('ww_xp/'+uid);
-    ref.on('value',function(snap){
-      var v=snap.val();
-      var newV=typeof v==='number'?v:0;
-      setXp(function(prev){return Math.max(prev===null?0:prev,newV);});
-      // Fallback-Animation: wenn xp_update per WS nicht ankam (Disconnect)
-      var sc=S.current?S.current.screen:null;
-      if(sc==='end'&&!pendingXpUpdateRef.current){
-        var pxv=xpBeforeMatchRef.current;
-        if(typeof pxv==='number'&&newV>pxv){
-          setXpGainAnim(function(prev){
-            if(prev&&prev.xpAfter>=newV)return prev;
-            var g=newV-pxv;
-            return {gained:g,lvBefore:levelAusXp(pxv),lvAfter:levelAusXp(newV),xpAfter:newV};
-          });
-        }
-      }
-    });
-    return function(){ref.off('value');};
-  },[account?account.key:null]);
+  // Paket 1 (App-only Economy, 2026-09-24): eigene Coins und XP gibt es nur in der App. Der Browser liest
+  // sie nicht mehr (zwei Dauer-Listener weniger je angemeldetem Spieler); coins/xp bleiben null, und jede
+  // Anzeige dafuer haengt schon an 'Wert vorhanden'. Das Gegner-Level (ww_levels) bleibt.
   // XP-System-Flag live aus Firebase laden
   useEffect(function(){
     if(!window.db)return;
