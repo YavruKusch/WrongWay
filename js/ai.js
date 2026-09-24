@@ -144,12 +144,14 @@ function getMovesFrom(pos,opp,walls){
     if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
     if(edgeBlocked(pos.r,pos.c,nr,nc,walls))continue;
     if(nr===opp.r&&nc===opp.c){
-      for(const[d2r,d2c]of[[-1,0],[1,0],[0,-1],[0,1]]){
-        const jr=nr+d2r,jc=nc+d2c;
-        if(jr===pos.r&&jc===pos.c)continue;
-        if(jr<0||jr>=ROWS||jc<0||jc>=COLS)continue;
-        if(edgeBlocked(nr,nc,jr,jc,walls))continue;
-        moves.push({r:jr,c:jc});
+      // Sprung wie im Brettspiel Quoridor: gerade drueber; nur wenn dahinter Wand oder Rand ist, schraeg daneben
+      const jr=nr+dr,jc=nc+dc;
+      if(jr>=0&&jr<ROWS&&jc>=0&&jc<COLS&&!edgeBlocked(nr,nc,jr,jc,walls)){moves.push({r:jr,c:jc});continue;}
+      for(const[sr,sc]of[[dc,dr],[-dc,-dr]]){
+        const kr=nr+sr,kc=nc+sc;
+        if(kr<0||kr>=ROWS||kc<0||kc>=COLS)continue;
+        if(edgeBlocked(nr,nc,kr,kc,walls))continue;
+        moves.push({r:kr,c:kc});
       }
     }else moves.push({r:nr,c:nc});
   }
@@ -195,8 +197,30 @@ function shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr,aiGoal=0)
   return next;
 }
 
+// ── Neuer Bot (js/bot.js) fuer Hard/Normal in Classic + Duell ──
+// aiNeuesSpiel kommt beim Start jeder Partie gegen den Bot und waehlt den Spielstil fuer die ganze
+// Partie. Hammer/Chaos/Zufallswaende behalten den alten Bot (deren Sonderregeln kennt bot.js nicht).
+var _botSpiel={an:false,stil:0,zw:[]};
+function aiNeuesSpiel(sonder,stilNr){
+  const zw=[];for(let i=0;i<8;i++)zw.push(Math.random()*2-1);
+  _botSpiel={an:!sonder&&typeof botZug==='function',stil:typeof stilNr==='number'?stilNr:Math.floor(Math.random()*3),zw:zw};
+}
+function aiNeu(stufe,aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal){
+  const satz=BOT_STILE[botModus(ROWS,aiGoal,humGoal)];
+  const stile=satz&&satz[stufe];
+  if(!stile||!stile.length)return null;
+  const d=botZug({rows:ROWS,cols:COLS,me:aiPos,opp:humanPos,meGoal:aiGoal,oppGoal:humGoal,walls:walls,meBarr:aiBarr,oppBarr:humBarr,recent:recentAi||[],stil:botStilZiehen(stile[_botSpiel.stil%stile.length],_botSpiel.zw,BOT_ZITTERN)});
+  if(!d)return null;
+  // Gegenpruefung mit den Spielregeln: was nicht erlaubt ist, faellt auf den alten Bot zurueck
+  if(d.type==='move')return getMovesFrom(aiPos,humanPos,walls).some(m=>m.r===d.pos.r&&m.c===d.pos.c)?d:null;
+  if(aiBarr<=0)return null;
+  const next=tryWall(d.key,walls,aiPos,humanPos,aiGoal,humGoal);
+  return next?{type:'barricade',walls:next}:null;
+}
+
 function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi,chaosItem,aiGoal=0,humGoal=0){
   difficulty=difficulty||'normal';
+  if(difficulty!=='easy'&&_botSpiel.an&&!chaosItem){const d=aiNeu(difficulty,aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal);if(d)return d;}
   if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal);
   if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
   return aiNormal(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
@@ -391,6 +415,7 @@ function aiDisjoint(start,goal,walls,cap){
 // Duell-Normal: 1-Zug-Vorausschau, blockt optimal gewaehlt & rueckt klug vor.
 // Deutlich ueber Easy (optimale Mauerwahl statt zufaellig), klar unter Hard (kein Minimax).
 function aiDuelNormal(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  if(_botSpiel.an&&!chaosItem){const d=aiNeu('normal',aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal);if(d)return d;}
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
   for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
   if(chaosItem){const d=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);if(d)return{type:'move',pos:d};}
@@ -415,6 +440,7 @@ function aiDuelNormal(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiG
 // Duell-Hard: Minimax (Alpha-Beta, Tiefe 3) + Pfad-Robustheit.
 // Sichert den eigenen Weg ab (schwer blockierbar) und blockt den Gegner vorausschauend.
 function aiDuelHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal){
+  if(_botSpiel.an&&!chaosItem){const d=aiNeu('hard',aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal);if(d)return d;}
   const initMoves=getMovesFrom(aiPos,humanPos,walls);
   for(const m of initMoves)if(m.r===aiGoal)return{type:'move',pos:m};
   if(chaosItem){const direct=initMoves.find(m=>m.r===chaosItem.r&&m.c===chaosItem.c);if(direct)return{type:'move',pos:direct};}

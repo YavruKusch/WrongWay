@@ -877,9 +877,10 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=108"></script>
+<script src="js/i18n.js?v=109"></script>
 <script src="js/game-logic.js"></script>
-<script src="js/ai.js"></script>
+<script src="js/bot.js?v=1"></script>
+<script src="js/ai.js?v=2"></script>
 <script src="js/sound.js"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
@@ -5269,7 +5270,9 @@ function App(){
     emoteTimerRef.current=setTimeout(()=>setEmoteCooldown(false),EMOTE_DUR);
   };
 
-  const myTurn=gameMode==='online'?turn===onlineRole:true;
+  // Gegen den Bot ist der Mensch immer A: waehrend der Bot dran ist, darf niemand ziehen oder Waende setzen
+  // (vorher schuetzte nur aiThinking, das erst NACH dem Zeichnen gesetzt wird — in dieser Luecke liess sich der Bot-Stein bewegen).
+  const myTurn=gameMode==='online'?turn===onlineRole:(gameMode==='pvc'?turn==='A':true);
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game'&&!matchIntro;
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
   const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
@@ -5567,6 +5570,7 @@ function App(){
     hammerWave2Ref.current=false;
     hammerWave1ClearedRef.current=null;
     aiProgRef.current={best:Infinity,stall:0};
+    if(mode==='pvc'&&typeof aiNeuesSpiel==='function')aiNeuesSpiel(!!(effHammer||chaosMode||effDrop)); // Bot-Stil fuer diese Partie (js/bot.js)
     dropNextRef.current=effDrop?dropInterval(effDrop):99999;
     setGoldenWalls(new Set());
     // Timer initialisieren falls Classic-Mode aktiv
@@ -6105,12 +6109,18 @@ function App(){
         const afterP=bfsPath(d.pos,w,aiGoal);
         const afterD=afterP?afterP.length-1:Infinity;
         const isItem=!!(chaosItem&&d.pos.r===chaosItem.r&&d.pos.c===chaosItem.c);
-        if(afterD<beforeD||isItem)aiProgRef.current.stall=0;
-        else aiProgRef.current.stall++;
-        if(aiProgRef.current.stall>=3&&afterD>=beforeD&&!isItem&&beforeP){
+        // Fortschritt heisst: naeher am Ziel als JE ZUVOR, seit sich zuletzt eine Wand geaendert hat. Vorher zaehlte
+        // "naeher als im Zug davor" - bei vor-zurueck-vor war jeder zweite Zug Fortschritt, die Sperre griff nie und
+        // der Bot pendelte endlos (2026-09-23: Partie ohne Ende gegen den Bot). best war dafuer angelegt, nie gesetzt.
+        const pr=aiProgRef.current;
+        if(pr.waende!==w.size){pr.waende=w.size;pr.best=beforeD;pr.stall=0;}
+        if(pr.stall>=3&&afterD>=beforeD&&!isItem&&beforeP){
           const forced=moveTowardGoal(b,a,w,beforeP);
-          if(forced){d={type:'move',pos:forced};aiProgRef.current.stall=0;}
+          if(forced)d={type:'move',pos:forced};
         }
+        const endP=bfsPath(d.pos,w,aiGoal),endD=endP?endP.length-1:Infinity;
+        if(endD<pr.best||isItem){pr.best=Math.min(pr.best,endD);pr.stall=0;}
+        else pr.stall++;
       }
       let nextHammers=hms,nextHeld={A:hh.A,B:heldB};
       if(d){
@@ -6160,7 +6170,8 @@ function App(){
       }else{setWalls(w);setMoveHist(moves);setHammerHeld(nextHeld);}
       setTurn('A');setAiThinking(false);
     },delay);
-    return()=>clearTimeout(t);
+    // Abgebrochener Bot-Zug (Aufgeben, Menue, neue Partie): "Bot rechnet" nicht stehen lassen, sonst ist das Brett gesperrt
+    return()=>{clearTimeout(t);setAiThinking(false);};
   },[turn,gameMode,winner,screen,aiDifficulty]);
 
   // ── Online realtime listener ──
@@ -6876,12 +6887,14 @@ function App(){
       if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
       if(edgeBlocked(pos.r,pos.c,nr,nc,w))continue;
       if(nr===opp.r&&nc===opp.c){
-        for(const[dr2,dc2]of[[-1,0],[1,0],[0,-1],[0,1]]){
-          const jr=nr+dr2,jc=nc+dc2;
-          if(jr===pos.r&&jc===pos.c)continue;
-          if(jr<0||jr>=ROWS||jc<0||jc>=COLS)continue;
-          if(edgeBlocked(nr,nc,jr,jc,w))continue;
-          moves.push({r:jr,c:jc});
+        // Sprung wie im Brettspiel Quoridor: gerade drueber; nur wenn dahinter Wand oder Rand ist, schraeg daneben
+        const jr=nr+dr,jc=nc+dc;
+        if(jr>=0&&jr<ROWS&&jc>=0&&jc<COLS&&!edgeBlocked(nr,nc,jr,jc,w)){moves.push({r:jr,c:jc});continue;}
+        for(const[sr,sc]of[[dc,dr],[-dc,-dr]]){
+          const kr=nr+sr,kc=nc+sc;
+          if(kr<0||kr>=ROWS||kc<0||kc>=COLS)continue;
+          if(edgeBlocked(nr,nc,kr,kc,w))continue;
+          moves.push({r:kr,c:kc});
         }
       }else{moves.push({r:nr,c:nc});}
     }
@@ -10293,7 +10306,7 @@ function App(){
                   setReplayStep(0);setScreen('replay');
                 }}/>
             <MenuItem icon={<HomeIcon size={18}/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
-              title={t('menu')} desc="Zurück zum Hauptmenü"
+              title={t('menu')} desc={t('menuDesc')}
               onClick={()=>{
                 if(gameMode==='online'&&myRematch)declineRematch();
                 try{WSNET.leaveRoom();}catch(e){}
