@@ -3261,9 +3261,9 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
 // ===== Weltliga-Bildschirm (Browser, schlicht wie der Ranked-Bildschirm) =====
 // Land (Wahl beim ersten Oeffnen, jeder Wechsel ab Montag), eigene Punkte, Suche ueber den Ranked-Weg von WSNET mit
 // mode 'weltliga' (Neusenden nach einem Verbindungsabbruch inklusive), Gefunden-Moment mit beiden Flaggen, Live-Zeile.
-// Die Tabelle steht in der Rangliste (Reiter Weltliga). data-wl = Griffe fuer den Browser-Test
+// Die Tabelle steht direkt darunter (Tunay 2026-09-26) und weiter als Reiter in der Rangliste. data-wl = Griffe fuer den Browser-Test
 // (wrongway-server/scripts/online-e2e/weltliga.mjs).
-function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onTabelle}){
+function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin}){
   const[wl,setWl]=React.useState(null);            // {land,neu,ab,mein} vom Server (wl_land)
   const[wlFehler,setWlFehler]=React.useState('');
   const[suche,setSuche]=React.useState(null);      // {LAND: Zahl} — live
@@ -3422,7 +3422,8 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onTabel
             <div style={{padding:'12px 14px',borderRadius:12,background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>{t('wl_regeln')}</div>
           </div>
         )}
-        {!queue?<button data-wl="tabelle" onClick={onTabelle} style={{...leise,marginTop:14,padding:'12px',fontSize:13,color:txt,background:card}}>{t('wl_tabelle')}</button>:null}
+        <div style={{fontSize:11,fontWeight:800,color:muted,letterSpacing:1,margin:'22px 0 10px',textTransform:'uppercase'}}>{t('wl_tabelle')}</div>
+        <WeltligaTabelle t={t} lang={lang} darkMode={darkMode} account={account}/>
       </div>
 
       {waehlen&&account?(
@@ -4660,7 +4661,6 @@ function App(){
   const[eloChange,setEloChange]=useState(null); // {change, newRating, won}
   const[wlLands,setWlLands]=useState(null); // Weltliga-Spiel: [Land A, Land B] aus den Raum-Einstellungen, sonst null
   const[wlErgebnis,setWlErgebnis]=useState(null); // Weltliga: {land, ok, grund} (wl_ergebnis bzw. resync.wl)
-  const[lbTab,setLbTab]=useState('ranked'); // Rangliste: welcher Reiter beim Oeffnen (ranked | weltliga)
   const[rankedOppKey,setRankedOppKey]=useState(null);
   const[oppAccountKey,setOppAccountKey]=useState(null);
   const[oppLevel,setOppLevel]=useState(null);
@@ -5412,7 +5412,7 @@ function App(){
   const xpBeforeMatchRef=useRef(null);
   const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
-  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen,repSrc};
+  S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen,repSrc,wlLands};
   // UI-Testhaken (?uitest=ban|warn): rein lokale Dummy-Overlays fuer Design-Sichtung, keine Datenwege
   useEffect(()=>{
     try{
@@ -5525,7 +5525,8 @@ function App(){
         saveReplayToHistory({
           ts:Date.now(),winner:p,moveHist:mh,
           map:s.selectedMap||'classic',duelSize:s.duelSize||'standard',
-          nameA:pA,nameB:pB,gameMode:s.gameMode||'local',myRole:s.onlineRole||null
+          nameA:pA,nameB:pB,gameMode:s.gameMode||'local',myRole:s.onlineRole||null,
+          wl:s.wlLands||null // Weltliga: Laender [A, B] fuer die Flaggen-Steine im Replay
         });
       }
     }catch(e){}
@@ -8818,7 +8819,7 @@ function App(){
           <span style={{fontSize:9,fontWeight:900,color:'#8b5cf6',letterSpacing:0.3}}>{'Home'}</span>
         </button>
         {/* Leaderboard */}
-        <button onClick={()=>{setLbTab('ranked');setNavDir('fwd');setScreen('leaderboard');}}
+        <button onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}
           style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
             gap:2,background:'none',border:'none',cursor:'pointer',padding:'10px 0',minHeight:54}}>
           <TrophySmIcon size={22} color="var(--subtle)"/>
@@ -9254,7 +9255,7 @@ function App(){
 
   // ── RANKED ──────────────────────────────────────────────
   if(screen==='leaderboard'){
-    return <LeaderboardScreen t={t} darkMode={darkMode} goBack={goBack} account={account} lang={lang} startTab={lbTab}/>;
+    return <LeaderboardScreen t={t} darkMode={darkMode} goBack={goBack} account={account} lang={lang}/>;
   }
 
   if(screen==='ranked'){
@@ -9264,7 +9265,7 @@ function App(){
 
   if(screen==='weltliga'){
     return <WeltligaScreen account={account} t={t} lang={lang} darkMode={darkMode} goBack={goBack} wsRouter={wsLobbyTrampRef.current}
-      onLogin={()=>{setNavDir('fwd');setScreen('auth');}} onTabelle={()=>{setLbTab('weltliga');setNavDir('fwd');setScreen('leaderboard');}}/>;
+      onLogin={()=>{setNavDir('fwd');setScreen('auth');}}/>;
   }
 
   // ── FRIENDS ─────────────────────────────────────────────
@@ -10124,6 +10125,7 @@ function App(){
     const rNameB=rEntry&&rEntry.nameB?rEntry.nameB:pname('B');
     const rPname=p=>p==='A'?rNameA:rNameB;
     const rWinner=rEntry?rEntry.winner:winner;
+    const rLands=rEntry?(rEntry.wl||null):wlLands; // Weltliga: Flaggen-Steine wie im Spiel
     const isEnd=replayStep>=rMoves.length;
     const rBoardFlip=rEntry?(rEntry.myRole==='B'&&rEntry.map==='duel'):(gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel');
     // Emote aus aktuellem Move
@@ -10174,7 +10176,7 @@ function App(){
         <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?PC['A']:'#16a34a'}}>
           <span className="ln"/>
           <span className="ar">{'\u25b2'}</span>
-          {rMap==='duel'&&<span className="nm2">{pname('A').toUpperCase()}</span>}
+          {rMap==='duel'&&<span className="nm2">{rNameA.toUpperCase()}</span>}
           <span className="ln"/>
         </div>
         <div style={{position:'relative',width:COLS*CELL+26,margin:'0 auto',borderRadius:24,padding:13,
@@ -10215,8 +10217,8 @@ function App(){
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
-              transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none'}}>
-              <Piece color={PC[p]} dark={PD[p]} size={sz}/>
+              transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none',transform:rBoardFlip?'scaleY(-1)':'none'}}>
+              <Piece color={PC[p]} dark={PD[p]} size={sz} flag={rLands?rLands[p==='A'?0:1]:null}/>
             </div>
           );})}
           {/* Emote-Anzeige neben Spieler */}
@@ -10234,7 +10236,7 @@ function App(){
         <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?PC['B']:'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
           <span className="ln"/>
           {rMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
-          {rMap==='duel'&&<span className="nm2">{pname('B').toUpperCase()}</span>}
+          {rMap==='duel'&&<span className="nm2">{rNameB.toUpperCase()}</span>}
           <span className="ln"/>
         </div>
 
