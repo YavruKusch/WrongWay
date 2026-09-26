@@ -2284,9 +2284,12 @@ function wlIstLand(c){return typeof c==='string'&&WL_LAND_SET[c]===true;}
 function wlFlagge(c,quadrat){return wlIstLand(c)?'flags/'+(quadrat?'1x1':'4x3')+'/'+c.toLowerCase()+'.svg':'';}
 // Laendername in der Spielsprache ueber die eingebaute Browser-Funktion; ohne sie steht der Code da.
 var WL_DN={};
+// Eigene Namen statt der Browser-Bezeichnung (Tunay 2026-09-26: PS heisst Palaestina, nicht "Autonomiegebiete").
+var WL_NAME_EIGEN={PS:{en:'Palestine',de:'Pal\u00e4stina',tr:'Filistin',fr:'Palestine'}};
 function wlLandName(c,sprache){
   if(!wlIstLand(c))return '';
   var l=sprache||'en';
+  if(WL_NAME_EIGEN[c]&&WL_NAME_EIGEN[c][l])return WL_NAME_EIGEN[c][l];
   if(WL_DN[l]===undefined){WL_DN[l]=null;try{if(typeof Intl!=='undefined'&&Intl.DisplayNames)WL_DN[l]=new Intl.DisplayNames([l],{type:'region'});}catch(e){}}
   var n=null;try{n=WL_DN[l]?WL_DN[l].of(c):null;}catch(e){}
   return n||c;
