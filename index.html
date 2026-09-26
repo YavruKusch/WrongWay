@@ -1271,10 +1271,22 @@ const MODE_HELP={
   }
 };
 
-// ── Replay-Archiv (localStorage, max 10) ──────────────────
-const REPLAY_HIST_KEY='ww_replay_hist';
+// Geraetespeicher PRO KONTO (Tunay 2026-09-26: nach einem Kontowechsel zeigte das Spiel die Replays des anderen
+// Kontos). Kontoeigenes (Replays, Postfach-Gelesen-Status) liegt unter '<name>:<uid>', ohne Konto ':gast'.
+// Das Konto kommt aus ww_account (App schreibt es bei jeder Konto-Aenderung). Alte geraeteweite Schluessel sind
+// keinem Konto zuzuordnen und werden einmalig entfernt. Gleiche Regel wie die App (gameStore.js kontoKey).
+function kontoKey(base,acc){
+  var a=acc;
+  if(a===undefined){try{a=JSON.parse(localStorage.getItem('ww_account')||'null');}catch(e){a=null;}}
+  return base+':'+(a&&a.key?a.key:'gast');
+}
+function ladeKontoJson(base,acc){try{var r=localStorage.getItem(kontoKey(base,acc));return r?JSON.parse(r)||{}:{};}catch(e){return {};}}
+try{['ww_replay_hist','ww_read_ids','ww_dismissed_ids'].forEach(function(k){localStorage.removeItem(k);});}catch(e){}
+
+// ── Replay-Archiv (localStorage, max 10, pro Konto) ──────────────────
 function saveReplayToHistory(entry){
   try{
+    const REPLAY_HIST_KEY=kontoKey('ww_replay_hist');
     const raw=localStorage.getItem(REPLAY_HIST_KEY);
     let list=raw?JSON.parse(raw):[];
     list.unshift(entry);
@@ -1284,7 +1296,7 @@ function saveReplayToHistory(entry){
 }
 function loadReplayHistory(){
   try{
-    const raw=localStorage.getItem(REPLAY_HIST_KEY);
+    const raw=localStorage.getItem(kontoKey('ww_replay_hist'));
     return raw?JSON.parse(raw):[];
   }catch(e){return[];}
 }
@@ -4681,8 +4693,8 @@ function App(){
   const[showInbox,setShowInbox]=useState(false);
   const[broadcasts,setBroadcasts]=useState([]);
   const[warnings,setWarnings]=useState([]); // persoenliche Verwarnungen aus ww_warnings/<uid> (.once beim Login)
-  const[readIds,setReadIds]=useState(()=>{try{var r=localStorage.getItem('ww_read_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
-  const[dismissedIds,setDismissedIds]=useState(()=>{try{var r=localStorage.getItem('ww_dismissed_ids');return r?JSON.parse(r):{};}catch(e){return {};}});
+  const[readIds,setReadIds]=useState(()=>ladeKontoJson('ww_read_ids'));
+  const[dismissedIds,setDismissedIds]=useState(()=>ladeKontoJson('ww_dismissed_ids'));
   const[afkTimeLeft,setAfkTimeLeft]=useState(0);
   const[inactiveWarning,setInactiveWarning]=useState(false);
   const[inactiveSecs,setInactiveSecs]=useState(15);
@@ -4777,6 +4789,8 @@ function App(){
       else localStorage.removeItem('ww_account');
     }catch(e){}
   },[account]);
+  // Konto-Trennung: Postfach-Gelesen-Status des jeweiligen Kontos laden
+  useEffect(()=>{setReadIds(ladeKontoJson('ww_read_ids',account));setDismissedIds(ladeKontoJson('ww_dismissed_ids',account));},[account?account.key:null]);
   // Persoenliche Verwarnungen (ww_warnings/<uid>): EIN .once() pro Login, meist leer — kein Dauer-Listener
   useEffect(function(){
     if(!window.db)return;
@@ -5212,21 +5226,21 @@ function App(){
     var next=Object.assign({},readIds);
     next[id]=1;
     setReadIds(next);
-    try{localStorage.setItem('ww_read_ids',JSON.stringify(next));}catch(e){}
+    try{localStorage.setItem(kontoKey('ww_read_ids',account),JSON.stringify(next));}catch(e){}
   };
   var markAllRead=function(){
     var next={};
     broadcasts.forEach(function(b){next[b.id]=1;});
     setReadIds(next);
-    try{localStorage.setItem('ww_read_ids',JSON.stringify(next));}catch(e){}
+    try{localStorage.setItem(kontoKey('ww_read_ids',account),JSON.stringify(next));}catch(e){}
   };
   var dismissBroadcast=function(id){
     var nr=Object.assign({},readIds);nr[id]=1;
     setReadIds(nr);
-    try{localStorage.setItem('ww_read_ids',JSON.stringify(nr));}catch(e){}
+    try{localStorage.setItem(kontoKey('ww_read_ids',account),JSON.stringify(nr));}catch(e){}
     var nd=Object.assign({},dismissedIds);nd[id]=1;
     setDismissedIds(nd);
-    try{localStorage.setItem('ww_dismissed_ids',JSON.stringify(nd));}catch(e){}
+    try{localStorage.setItem(kontoKey('ww_dismissed_ids',account),JSON.stringify(nd));}catch(e){}
   };
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
   // Admin: Config speichern (schreibt global, alle Clients übernehmen live)
@@ -5398,7 +5412,8 @@ function App(){
   useEffect(function(){
     if(!window.db)return;
     var uid=account?account.key:null;
-    if(!uid)return;
+    // Kontowechsel: die Sperre des vorigen Kontos gilt nicht fuer das neue (im Aufraeumen, damit ?uitest=ban beim Start bleibt)
+    if(!uid)return function(){setBanInfo(null);};
     var cancelled=false;
     window.db.ref('ww_bans/'+uid).once('value').then(function(snap){
       if(cancelled)return;
@@ -5407,7 +5422,7 @@ function App(){
         setBanInfo({reason:v.reason||null,until:(typeof v.until==='number')?v.until:null});
       }
     }).catch(function(){});
-    return function(){cancelled=true;};
+    return function(){cancelled=true;setBanInfo(null);};
   },[account?account.key:null]);
   useEffect(()=>{snapPosRef.current=snapPos;},[snapPos]);
   useEffect(()=>{hammerTargetRef.current=hammerTarget;},[hammerTarget]);
