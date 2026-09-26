@@ -2281,6 +2281,32 @@ var WL_LAND_SET=Object.create(null); // ohne Prototyp: "constructor" o.ae. ist n
 WL_LAENDER.forEach(function(c){WL_LAND_SET[c]=true;});
 function wlIstLand(c){return typeof c==='string'&&WL_LAND_SET[c]===true;}
 // Flaggen-Datei (flag-icons 7.5.0, MIT, liegt unter flags/). quadrat=true: 1x1-Fassung fuer die runden Steine.
+// Kartenfarben der Weltliga (Tunay 2026-09-26, "Karte B"): je Land Hauptfarbe + zweite Farbe der Flagge als [Farbton, Saettigung,
+// Farbton2, Saettigung2], aus den 1x1-Flaggen gemessen (Bildrund, ohne Weiss/Schwarz/Grau; Saettigung 12 = neutral).
+var WL_FARBEN={AD:[52,80,350,80],AE:[0,80,137,80],AF:[0,80,120,80],AG:[205,80,355,79],AI:[220,80,355,79],AL:[0,80,215,12],AM:[222,80,40,80],AO:[0,80,56,80],AQ:[213,57,215,12],AR:[210,55,45,58],AS:[240,80,354,77],AT:[355,79,215,12],AU:[240,80,0,80],AW:[200,57,60,80],AX:[48,80,210,80],AZ:[355,80,120,46],BA:[240,80,48,80],BB:[223,80,46,80],BD:[351,80,160,80],BE:[52,80,351,80],BF:[102,80,0,80],BG:[160,80,5,80],BH:[355,79,215,12],BI:[350,80,132,77],BJ:[100,80,5,80],BL:[351,80,223,80],BM:[355,79,240,80],BN:[56,80,355,79],BO:[56,80,146,80],BQ:[220,55,353,75],BR:[137,58,56,80],BS:[185,80,56,80],BT:[13,80,215,12],BV:[0,69,220,80],BW:[192,80,215,12],BY:[355,79,146,80],BZ:[218,80,315,44],CA:[5,80,215,12],CC:[120,80,56,80],CD:[212,80,355,79],CF:[0,80,120,80],CG:[60,80,0,80],CH:[0,80,215,12],CI:[120,80,36,80],CK:[240,80,355,79],CL:[5,80,222,80],CM:[355,79,51,80],CN:[355,80,60,80],CO:[56,80,232,80],CR:[0,80,240,80],CU:[0,79,225,80],CV:[231,80,5,69],CW:[223,80,56,80],CX:[146,70,228,80],CY:[32,80,215,12],CZ:[0,80,210,67],DE:[0,80,48,80],DJ:[120,80,220,80],DK:[355,79,215,12],DM:[112,80,5,80],DO:[355,79,220,80],DZ:[150,80,350,80],EC:[56,80,232,80],EE:[206,80,215,12],EG:[355,79,40,77],EH:[0,79,146,80],ER:[349,80,210,80],ES:[44,80,215,12],ET:[105,80,5,80],FI:[220,80,215,12],FJ:[202,74,355,79],FK:[220,80,355,79],FM:[214,59,215,12],FO:[0,69,220,80],FR:[0,80,240,80],GA:[56,80,207,80],GB:[355,79,220,80],GD:[51,80,163,80],GE:[0,80,215,12],GF:[0,80,240,80],GG:[355,80,51,80],GH:[51,80,150,80],GI:[0,80,215,12],GL:[346,80,215,12],GM:[120,80,240,80],GN:[60,80,120,80],GP:[0,80,240,80],GQ:[5,80,100,80],GR:[210,80,215,12],GS:[240,80,355,79],GT:[207,65,48,63],GU:[223,50,349,80],GW:[147,80,51,80],GY:[100,80,52,80],HK:[355,80,215,12],HM:[240,80,0,80],HN:[185,80,215,12],HR:[0,80,240,73],HT:[350,80,227,80],HU:[98,80,10,80],ID:[356,80,215,12],IE:[28,80,147,80],IM:[0,80,215,12],IN:[112,80,30,80],IO:[240,80,355,79],IQ:[355,79,146,80],IR:[0,80,137,58],IS:[220,80,0,69],IT:[354,67,147,80],JE:[355,79,52,80],JM:[48,80,120,80],JO:[0,80,120,80],JP:[349,80,215,12],KE:[0,80,120,80],KG:[0,80,60,80],KH:[351,80,228,80],KI:[5,80,202,80],KM:[137,58,223,50],KN:[0,80,102,80],KP:[0,80,220,46],KR:[354,67,216,80],KW:[351,80,138,80],KY:[240,80,355,79],KZ:[190,80,55,80],LA:[220,80,355,79],LB:[0,80,150,80],LC:[200,80,48,80],LI:[355,79,223,80],LK:[0,55,168,80],LR:[0,80,240,80],LS:[147,80,227,80],LT:[160,80,0,67],LU:[194,80,355,80],LV:[345,73,215,12],LY:[137,58,356,80],MA:[0,67,150,80],MC:[351,80,215,12],MD:[52,80,5,80],ME:[0,80,215,12],MF:[0,80,240,80],MG:[146,80,0,80],MH:[223,50,33,76],MK:[0,80,56,80],ML:[60,80,0,80],MM:[120,53,48,80],MN:[207,80,355,69],MO:[163,80,215,12],MP:[202,80,215,12],MQ:[150,80,355,80],MR:[150,80,354,67],MS:[220,80,355,79],MT:[355,79,215,12],MU:[48,80,240,62],MV:[350,80,146,80],MW:[4,80,130,55],MX:[355,79,160,80],MY:[0,80,240,80],MZ:[0,80,48,80],NA:[0,80,102,80],NC:[56,80,147,80],NE:[21,80,131,80],NF:[112,80,215,12],NG:[158,80,215,12],NI:[210,80,45,80],NL:[220,55,353,75],NO:[355,80,220,80],NP:[0,80,240,80],NR:[223,80,44,80],NU:[52,80,355,79],NZ:[223,80,355,79],OM:[0,80,133,80],PA:[240,80,0,80],PE:[355,80,215,12],PF:[5,80,220,47],PG:[0,80,48,80],PH:[355,79,222,80],PK:[120,80,215,12],PL:[350,80,215,12],PM:[0,80,240,80],PN:[223,80,355,79],PR:[220,80,0,80],PS:[355,80,140,80],PT:[0,80,120,80],PW:[200,65,52,80],PY:[222,80,5,80],QA:[343,70,215,12],RE:[351,80,223,80],RO:[52,80,5,80],RS:[206,80,0,57],RU:[222,80,5,80],RW:[194,80,52,80],SA:[150,57,215,12],SB:[240,80,120,80],SC:[0,69,48,80],SD:[120,80,0,80],SE:[207,80,48,80],SG:[0,80,215,12],SH:[355,79,220,80],SI:[240,80,0,80],SJ:[0,80,220,80],SK:[355,80,216,80],SL:[240,80,120,80],SM:[194,80,135,54],SN:[60,80,137,80],SO:[207,80,215,12],SR:[349,80,120,36],SS:[216,80,142,80],ST:[127,75,48,80],SV:[216,80,60,70],SX:[227,80,355,80],SY:[146,80,355,79],SZ:[0,80,225,53],TC:[220,80,355,79],TD:[48,80,345,80],TF:[227,80,355,80],TG:[0,80,56,80],TH:[347,75,215,12],TJ:[120,80,0,80],TK:[223,80,52,80],TL:[0,80,48,80],TM:[142,80,26,50],TN:[356,80,215,12],TO:[0,80,215,12],TR:[356,80,215,12],TT:[0,80,215,12],TV:[195,80,355,79],TW:[0,80,240,80],TZ:[120,80,204,80],UA:[52,80,213,80],UG:[56,80,215,12],UM:[225,57,352,53],US:[225,57,352,53],UY:[222,80,49,79],UZ:[132,77,191,80],VA:[56,80,215,12],VC:[60,80,113,80],VE:[223,80,355,79],VG:[240,80,355,79],VI:[42,67,228,62],VN:[5,80,60,80],VU:[147,80,350,80],WF:[0,80,240,80],WS:[355,79,223,80],YE:[0,80,215,12],YT:[0,80,240,80],ZA:[154,80,240,80],ZM:[112,80,5,80],ZW:[52,80,0,80]};
+function wlFarbWahl(c,i){var f=WL_FARBEN[c];return f?[f[i*2],f[i*2+1]]:[215,12];}
+function wlFarbNah(a,b){ // aehnlich = beide neutral, oder beide farbig mit nahem Farbton (Kartentext + Karten muessen sich unterscheiden)
+  var na=a[1]<25,nb=b[1]<25;if(na||nb)return na&&nb;
+  var d=Math.abs(a[0]-b[0]);return Math.min(d,360-d)<35;
+}
+// Farben beider Karten [A, B]: Hauptfarben; ist es zu aehnlich, nimmt B seine zweite Farbe, dann A, zuletzt neutral.
+function wlKartenFarben(lands){
+  if(!lands)return null;
+  var a=wlFarbWahl(lands[0],0),b=wlFarbWahl(lands[1],0);
+  if(wlFarbNah(a,b)){
+    var b2=wlFarbWahl(lands[1],1),a2=wlFarbWahl(lands[0],1);
+    if(b2[1]>=25&&!wlFarbNah(a,b2))b=b2;else if(a2[1]>=25&&!wlFarbNah(a2,b))a=a2;else if(!wlFarbNah(a,b2))b=b2;else b=[215,12];
+  }
+  return [a,b];
+}
+// Kartenhintergrund + Leuchten: dunkel genug fuer weisse Schrift (Gelbtoene noch dunkler)
+function wlKartenStil(hs,live){
+  var h=hs[0],s=hs[1],y=(h>=35&&h<=75)?8:0;
+  var hell='hsl('+h+','+s+'%,'+(40-y)+'%)',dunkel='hsl('+h+','+s+'%,'+(27-y)+'%)';
+  var st={background:'linear-gradient(150deg,'+hell+','+dunkel+')'};
+  if(live)st.boxShadow='0 7px 22px hsla('+h+','+s+'%,'+(45-y)+'%,0.5),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28)';
+  return st;
+}
 function wlFlagge(c,quadrat){return wlIstLand(c)?'flags/'+(quadrat?'1x1':'4x3')+'/'+c.toLowerCase()+'.svg':'';}
 // Laendername in der Spielsprache ueber die eingebaute Browser-Funktion; ohne sie steht der Code da.
 var WL_DN={};
@@ -5681,6 +5707,8 @@ function App(){
   // Weltliga: die Landesflagge ersetzt den angelegten Stein-Skin (einheitlicher Laender-Look, Spec Entscheidung 13).
   var _skA=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[0]&&matchSkins[0].stone)?STONE_SKINS[matchSkins[0].stone]:null;
   var _skB=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
+  const wlKarten=wlLands?wlKartenFarben(wlLands):null; // Weltliga: Kartenfarben aus den Flaggen
+  const spFarbe=p=>wlKarten?('hsl('+wlKarten[p==='A'?0:1][0]+','+wlKarten[p==='A'?0:1][1]+'%,45%)'):PC[p]; // Farbe der Namenszeilen am Brett
   const MC={A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
   const MD={A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
   var _mySkinEntry=(gameMode==='online'&&matchSkins)?matchSkins[onlineRole==='B'?1:0]:null;
@@ -10126,6 +10154,9 @@ function App(){
     const rPname=p=>p==='A'?rNameA:rNameB;
     const rWinner=rEntry?rEntry.winner:winner;
     const rLands=rEntry?(rEntry.wl||null):wlLands; // Weltliga: Flaggen-Steine wie im Spiel
+    const rKarten=rLands?wlKartenFarben(rLands):null; // Weltliga: Farben der Karten = Farben im Replay (Legende, Ziel-Zeilen)
+    // Spielerfarbe im Replay: Weltliga = Kartenfarbe aus der Flagge (al = Deckkraft), sonst Rot/Blau (suffix = Hex-Deckkraft)
+    const rCol=(p,al,suffix)=>rKarten?('hsla('+rKarten[p==='A'?0:1][0]+','+rKarten[p==='A'?0:1][1]+'%,45%,'+(al===undefined?1:al)+')'):(PC[p]+(suffix||''));
     const isEnd=replayStep>=rMoves.length;
     const rBoardFlip=rEntry?(rEntry.myRole==='B'&&rEntry.map==='duel'):(gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel');
     // Emote aus aktuellem Move
@@ -10173,7 +10204,7 @@ function App(){
           <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',borderRadius:2,transition:'width 0.15s'}}/>
         </div>
 
-        <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?PC['A']:'#16a34a'}}>
+        <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?rCol('A'):'#16a34a'}}>
           <span className="ln"/>
           <span className="ar">{'\u25b2'}</span>
           {rMap==='duel'&&<span className="nm2">{rNameA.toUpperCase()}</span>}
@@ -10212,8 +10243,15 @@ function App(){
           );})})}
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
-            var wallColor=owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
-            return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner?PC[owner]:null}/>;
+            // Weltliga (Tunay 2026-09-26, "Mauer C"): neutrale Mauer wie im Spiel, der Besitzer steht als kleine Flagge auf der Mauer
+            var wallColor=owner&&!rLands?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
+            var wp=rLands&&owner?wallPos(k):null;
+            return <React.Fragment key={k}>
+              <Wall wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null}/>
+              {wp?<div data-wl-mauerflagge={rLands[owner==='A'?0:1]} style={{position:'absolute',left:wp.left+wp.width/2-7,top:wp.top+wp.height/2-7,width:14,height:14,borderRadius:'50%',zIndex:11,pointerEvents:'none',
+                background:'url('+wlFlagge(rLands[owner==='A'?0:1],true)+') center/cover no-repeat',boxShadow:'0 0 0 1.5px '+(darkMode?'#0f172a':'#ffffff')+',0 1px 4px rgba(0,0,0,0.5)',
+                transform:rBoardFlip?'scaleY(-1)':'none'}}/>:null}
+            </React.Fragment>;
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
@@ -10233,7 +10271,7 @@ function App(){
           )}
         </div>
         </div>
-        <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?PC['B']:'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
+        <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?rCol('B'):'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
           <span className="ln"/>
           {rMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
           {rMap==='duel'&&<span className="nm2">{rNameB.toUpperCase()}</span>}
@@ -10243,11 +10281,11 @@ function App(){
         {/* Legende Wandfarben */}
         <div style={{display:'flex',gap:12,marginBottom:12,alignItems:'center'}}>
           <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:18,height:5,borderRadius:3,background:'#ef4444'}}/>
+            {rLands?<div style={{width:14,height:14,borderRadius:'50%',background:'url('+wlFlagge(rLands[0],true)+') center/cover no-repeat',boxShadow:'0 0 0 1px var(--border)'}}/>:<div style={{width:18,height:5,borderRadius:3,background:'#ef4444'}}/>}
             <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameA}</span>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:18,height:5,borderRadius:3,background:'#3b82f6'}}/>
+            {rLands?<div style={{width:14,height:14,borderRadius:'50%',background:'url('+wlFlagge(rLands[1],true)+') center/cover no-repeat',boxShadow:'0 0 0 1px var(--border)'}}/>:<div style={{width:18,height:5,borderRadius:3,background:'#3b82f6'}}/>}
             <span style={{fontSize:10,fontWeight:700,color:'var(--subtle)'}}>{rNameB}</span>
           </div>
         </div>
@@ -10257,7 +10295,7 @@ function App(){
           <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',marginBottom:12,
             background:'var(--card)',border:'1.5px solid var(--border)',borderRadius:12,
             boxShadow:'var(--shadow-soft)'}}>
-            <div style={{width:10,height:10,borderRadius:'50%',background:PC[curMove.p],flexShrink:0}}/>
+            <div style={{width:10,height:10,borderRadius:'50%',background:rCol(curMove.p),flexShrink:0}}/>
             <span style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>{rPname(curMove.p)}</span>
             <span style={{fontSize:12,color:'var(--subtle)'}}>-</span>
             <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>
@@ -10266,9 +10304,9 @@ function App(){
           </div>
         )}
         {isEnd&&rWinner&&(
-          <div style={{padding:'8px 16px',borderRadius:12,background:PC[rWinner]+'22',
-            border:'1.5px solid '+PC[rWinner]+'55',fontSize:13,fontWeight:800,
-            color:PC[rWinner],textAlign:'center',marginBottom:12}}>
+          <div style={{padding:'8px 16px',borderRadius:12,background:rCol(rWinner,0.13,'22'),
+            border:'1.5px solid '+rCol(rWinner,0.33,'55'),fontSize:13,fontWeight:800,
+            color:rCol(rWinner),textAlign:'center',marginBottom:12}}>
             {rPname(rWinner)} {t('wins')}
           </div>
         )}
@@ -10974,7 +11012,7 @@ function App(){
             <React.Fragment key={p}>
             <div onClick={canTapProfile?openOppProfile:undefined}
               className={"ww-pcard p"+p+(active?" live":" dim")}
-              style={{cursor:canTapProfile?'pointer':'default'}}>
+              style={{cursor:canTapProfile?'pointer':'default',...(wlKarten?wlKartenStil(wlKarten[p==='A'?0:1],active):null)}}>
               <div className="ww-sheen2"/>
               {spectatorCount>0&&gameMode==='online'&&(
                 <div style={{position:'absolute',top:5,right:7,zIndex:6,
@@ -11048,7 +11086,7 @@ function App(){
       {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
 
       {/* Goal-Richtungsanzeige oben */}
-      <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?PC['B']:PC['A']):'#16a34a'}}>
+      <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?spFarbe('B'):spFarbe('A')):'#16a34a'}}>
         <span className="ln"/>
         <span className="ar">{'\u25b2'}</span>
         {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'B':'A').toUpperCase()}</span>}
@@ -11155,7 +11193,7 @@ function App(){
       </div>{/* /game-enter wrapper */}
 
       {/* Goal-Richtungsanzeige unten */}
-      <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?PC['A']:PC['B']):'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
+      <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?spFarbe('A'):spFarbe('B')):'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
         <span className="ln"/>
         {selectedMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
         {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'A':'B').toUpperCase()}</span>}
