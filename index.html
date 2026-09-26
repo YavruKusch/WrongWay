@@ -2363,6 +2363,8 @@ function WlFlagge({land,h}){
     style={{display:'inline-block',verticalAlign:'middle',borderRadius:2,boxShadow:'0 0 0 1px rgba(0,0,0,0.18)',flexShrink:0,objectFit:'cover'}}/>;
 }
 // Live-Zeile "Suchen gerade: [Flagge] 2 [Flagge] 1" — nur Zahlen je Land, keine Namen.
+// Flaggen im Weltliga-Menueknopf: 32 Laender mit kleinen Dateien (~15 KB zusammen) statt aller 249 (2,3 MB)
+const WL_MOSAIK=['de','br','jp','tr','us','ng','fr','kr','it','in','gb','za','se','cn','ca','gr','pl','ma','no','au','ch','co','ua','th','nl','ke','dk','cl','fi','vn','ie','gh'];
 function WlSucheZeile({t,suche,klein}){
   var l=wlSucheListe(suche);
   if(!l.length)return <span data-wl="suche-leer">{t('wl_niemand')}</span>;
@@ -7862,175 +7864,56 @@ function App(){
       </button>
 
       <div style={{width:280,position:'relative',zIndex:1}}>
-        {/* RANKED — Hero Card */}
-        {feat('ranked')&&(
-          <div style={{position:'relative',marginBottom:18}}>
-            <button onClick={()=>{setNavDir('fwd');setScreen('ranked');}} className="mi-btn"
-              style={{
-                width:'100%',padding:'16px 18px',minHeight:104,
-                background:'linear-gradient(135deg,#f59e0b 0%,#ef4444 52%,#8b5cf6 100%)',
-                border:'none',borderRadius:22,cursor:'pointer',
-                display:'flex',flexDirection:'column',gap:12,
-                boxShadow:'0 4px 10px rgba(15,23,42,0.22),0 18px 44px rgba(239,68,68,0.35),inset 0 1px 0 rgba(255,255,255,0.28)',
-                position:'relative',overflow:'hidden',
-                animation:'highlightPulse 2.5s ease-in-out infinite',
-                fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left'}}>
-              <div style={{position:'absolute',inset:0,
-                background:'linear-gradient(105deg,transparent 38%,rgba(255,255,255,0.12) 50%,transparent 62%)',
-                backgroundSize:'200% 100%',animation:'shimmer 2.5s ease-in-out infinite',pointerEvents:'none'}}/>
-              <div style={{position:'absolute',top:0,left:0,right:0,height:'55%',
-                background:'linear-gradient(180deg,rgba(255,255,255,0.13),transparent)',borderRadius:'22px 22px 0 0',pointerEvents:'none'}}/>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{display:'flex',alignItems:'center',gap:13}}>
-                  <div style={{width:46,height:46,borderRadius:15,background:'rgba(255,255,255,0.2)',
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    boxShadow:'0 2px 8px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3)'}}>
-                    <SwordsIcon size={22} color="#fff"/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:800,letterSpacing:2.5,color:'rgba(255,255,255,0.72)',textTransform:'uppercase',marginBottom:2}}>{'ELO · RANKED'}</div>
-                    <div style={{fontSize:22,fontWeight:900,color:'#fff',letterSpacing:-0.5,lineHeight:1}}>{'Ranked'}</div>
-                  </div>
-                </div>
-                {account&&account.stats&&account.stats.ranked?(()=>{
-                  const maxR=(account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000;
-                  const tier=rankTier(maxR);
-                  return <span style={{fontSize:13,fontWeight:800,background:'rgba(255,255,255,0.22)',color:'#fff',
-                    padding:'5px 11px',borderRadius:12,flexShrink:0,display:'inline-flex',alignItems:'center',gap:4}}>
-                    <TierIcon icon={tier.icon} size={13}/> {maxR}</span>;
-                })():<span style={{fontSize:20,color:'rgba(255,255,255,0.7)',fontWeight:700}}>{'›'}</span>}
-              </div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.72)'}}>{t('rankedMenuDesc')}</div>
-                {account&&account.stats&&account.stats.ranked&&<span style={{fontSize:18,color:'rgba(255,255,255,0.65)',fontWeight:700}}>{'›'}</span>}
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* WELTLIGA — schlichter Knopf nach dem Rezept der Modus-Karte; Live-Zeile aus /stats (alle 30 s) */}
+        {/* Menue-Reihenfolge (Tunay 2026-09-26): Weltliga (groesser, Flaggen-Mosaik), Ranked (gelb), Online (lila), Bot (grau), Freunde, danach 2v2 + Lokal */}
+        <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:18}}>
         {feat('online')&&(
           <button data-wl="menu" onClick={()=>{setNavDir('fwd');setScreen('weltliga');}} className="mi-btn" style={{
-            width:'100%',padding:'12px 14px',marginBottom:18,
-            background:'var(--card)',border:'1.5px solid var(--border)',borderLeft:'4px solid #16a34a',
-            borderRadius:16,cursor:'pointer',display:'flex',alignItems:'center',gap:12,
-            boxShadow:'0 2px 5px rgba(15,23,42,0.1),0 12px 28px rgba(15,23,42,0.16)',
+            width:'100%',minHeight:116,padding:0,marginBottom:4,position:'relative',overflow:'hidden',
+            background:'#0f172a',border:'none',borderRadius:20,cursor:'pointer',
+            boxShadow:'0 2px 6px rgba(15,23,42,0.18),0 14px 32px rgba(15,23,42,0.24)',
             fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left'}}>
-            <div style={{width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#16a34a,#22c55e)',
-              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <GlobeIcon size={20} color="#fff"/>
+            <div aria-hidden="true" style={{position:'absolute',inset:0,display:'grid',gridTemplateColumns:'repeat(8,1fr)',gridTemplateRows:'repeat(4,1fr)',gap:2,padding:2}}>
+              {WL_MOSAIK.map(function(c){return <img key={c} src={'flags/4x3/'+c+'.svg'} alt="" draggable="false" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:3,display:'block'}}/>;})}
             </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:900,color:'var(--text)',letterSpacing:-0.3}}>{t('wl_titel')}</div>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',marginTop:3}}>
-                {wlSucheListe(globalStats.wlSuche).length?<WlSucheZeile t={t} suche={globalStats.wlSuche} klein/>:t('wl_menuDesc')}
+            <div style={{position:'absolute',inset:0,background:'linear-gradient(90deg,rgba(15,23,42,0.9) 0%,rgba(15,23,42,0.66) 58%,rgba(15,23,42,0.38) 100%)'}}/>
+            <div style={{position:'relative',display:'flex',alignItems:'center',gap:13,padding:'16px',minHeight:116,boxSizing:'border-box'}}>
+              <div style={{width:46,height:46,borderRadius:14,background:'linear-gradient(135deg,#16a34a,#22c55e)',
+                display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <GlobeIcon size={22} color="#fff"/>
               </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:19,fontWeight:900,color:'#fff',letterSpacing:-0.4,lineHeight:1.1}}>{t('wl_titel')}</div>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.82)',marginTop:4}}>
+                  {wlSucheListe(globalStats.wlSuche).length?<WlSucheZeile t={t} suche={globalStats.wlSuche} klein/>:t('wl_menuDesc')}
+                </div>
+              </div>
+              <span style={{fontSize:18,color:'rgba(255,255,255,0.75)',fontWeight:700}}>{'›'}</span>
             </div>
-            <span style={{fontSize:16,color:'var(--subtle)',fontWeight:700}}>›</span>
           </button>
         )}
-
-        {/* ONLINE SPIELEN — 2-Spalten-Grid */}
-        {(feat('online')||feat('friend')||feat('twovtwo'))&&(
-          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              {feat('online')&&(
-                <button onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}
-                  className="mi-btn"
-                  style={{
-                    padding:'14px 12px',borderRadius:16,minHeight:90,
-                    background:selectedMap==='duel'
-                      ?'linear-gradient(135deg,#a855f7 0%,#8b5cf6 52%,#6d28d9 100%)'
-                      :'linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)',
-                    border:'none',cursor:feat('online')?'pointer':'not-allowed',
-                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
-                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(59,130,246,0.32),inset 0 1px 0 rgba(255,255,255,0.2)',
-                    position:'relative',overflow:'hidden',
-                    fontFamily:'system-ui,-apple-system,sans-serif',
-                    opacity:feat('online')?1:0.45,textAlign:'left'}}>
-                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
-                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
-                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
-                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
-                    <GlobeIcon size={17} color="#fff"/>
-                  </div>
-                  <div style={{position:'relative',zIndex:1}}>
-                    <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{t('playOnline')||'Online'}</div>
-                    <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{serverOnline?t('createLobby'):t('serverFull')}</div>
-                  </div>
-                </button>
-              )}
-              {feat('friend')&&(
-                <button onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}
-                  className="mi-btn"
-                  style={{
-                    padding:'14px 12px',borderRadius:16,minHeight:90,
-                    background:'linear-gradient(135deg,#8b5cf6,#7c3aed)',
-                    border:'none',cursor:'pointer',
-                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
-                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(139,92,246,0.3),inset 0 1px 0 rgba(255,255,255,0.2)',
-                    position:'relative',overflow:'hidden',
-                    fontFamily:'system-ui,-apple-system,sans-serif',
-                    opacity:feat('friend')?1:0.45,textAlign:'left'}}>
-                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
-                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
-                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
-                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
-                    <PeopleIcon size={17} color="#fff"/>
-                  </div>
-                  <div style={{position:'relative',zIndex:1}}>
-                    <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{t('friendPlay')}</div>
-                    <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{t('friendDesc')}</div>
-                  </div>
-                </button>
-              )}
-              {feat('twovtwo')&&(
-                <button onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}
-                  className="mi-btn"
-                  style={{
-                    padding:'14px 12px',borderRadius:16,minHeight:90,
-                    background:'linear-gradient(135deg,#ef4444 0%,#8b5cf6 100%)',
-                    border:'none',cursor:'pointer',
-                    display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'space-between',
-                    boxShadow:'0 2px 6px rgba(15,23,42,0.2),0 8px 22px rgba(239,68,68,0.22),inset 0 1px 0 rgba(255,255,255,0.2)',
-                    position:'relative',overflow:'hidden',
-                    fontFamily:'system-ui,-apple-system,sans-serif',
-                    gridColumn:'span 2',
-                    opacity:feat('twovtwo')?1:0.45,textAlign:'left'}}>
-                  <div style={{position:'absolute',top:0,left:0,right:0,height:'50%',
-                    background:'linear-gradient(180deg,rgba(255,255,255,0.1),transparent)',pointerEvents:'none'}}/>
-                  <div style={{width:36,height:36,borderRadius:11,background:'rgba(255,255,255,0.2)',
-                    display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
-                    <PeopleIcon size={17} color="#fff"/>
-                  </div>
-                  <div style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%'}}>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:900,color:'#fff',lineHeight:1.2,letterSpacing:-0.2}}>{'2 vs 2'}</div>
-                      <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.72)',marginTop:2}}>{t('teamModeDesc')}</div>
-                    </div>
-                    <span style={{fontSize:18,color:'rgba(255,255,255,0.6)',fontWeight:700}}>{'›'}</span>
-                  </div>
-                </button>
-              )}
-            </div>
-          </MenuSection>
-        )}
-
-        {/* ÜBEN & OFFLINE */}
-        {(feat('bots')||feat('local'))&&(
-          <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GamepadIcon size={11} color="var(--subtle)"/>{t('practiceOffline')}</span>}>
-            {feat('bots')&&<MenuItem
-              icon={<BotIcon size={19}/>} iconBg="linear-gradient(135deg,#64748b,#475569)"
-              title={t('vsBot')} desc={t('vsBotDesc')}
-              off={!feat('bots')}
-              onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
-            {feat('local')&&<MenuItem
-              icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
-              title={t('localPlay')} desc={t('localDesc')}
-              off={!feat('local')}
-              onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
-          </MenuSection>
-        )}
+        {feat('ranked')&&<MenuFarbe bg="#facc15" tx="#422006" icon={<SwordsIcon size={19} color="#422006"/>}
+          title={'Ranked'} desc={t('rankedMenuDesc')}
+          right={account&&account.stats&&account.stats.ranked?<RankedWert r={(account.stats.ranked.duel&&account.stats.ranked.duel.rating)||1000}/>:null}
+          onClick={()=>{setNavDir('fwd');setScreen('ranked');}}/>}
+        {feat('online')&&<MenuFarbe bg="#8b5cf6" icon={<GlobeIcon size={19} color="#fff"/>}
+          title={t('playOnline')||'Online'} desc={serverOnline?t('createLobby'):t('serverFull')}
+          onClick={()=>{setNavDir('fwd');setLobbyCfgPrivate(false);setLobbyCfgMode('classic');setFlash('');setScreen('online');}}/>}
+        {feat('bots')&&<MenuFarbe bg="#64748b" icon={<BotIcon size={19}/>}
+          title={t('vsBot')} desc={t('vsBotDesc')}
+          onClick={()=>{setNavDir('fwd');setScreen('difficulty');}}/>}
+        {feat('friend')&&<MenuItem
+          icon={<PeopleIcon size={19} color="#fff"/>} iconBg="linear-gradient(135deg,#8b5cf6,#7c3aed)"
+          title={t('friendPlay')} desc={t('friendDesc')}
+          onClick={()=>{setNavDir('fwd');setScreen('friendPlay');}}/>}
+        {feat('twovtwo')&&<MenuItem
+          icon={<PeopleIcon size={19} color="#fff"/>} iconBg="linear-gradient(135deg,#ef4444,#8b5cf6)"
+          title={'2 vs 2'} desc={t('teamModeDesc')}
+          onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
+        {feat('local')&&<MenuItem
+          icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
+          title={t('localPlay')} desc={t('localDesc')}
+          onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
+        </div>
 
         {/* COMMUNITY */}
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:6,paddingBottom:4}}>
@@ -12651,6 +12534,26 @@ function ScreenHead({icon,iconBg,title,sub}){
       {sub?<div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,marginTop:6,letterSpacing:0.1}}>{sub}</div>:null}
     </div>
   );
+}
+// Menue-Knopf in voller Flaechenfarbe, ohne Leuchten/Puls (Tunay 2026-09-26: Ranked gelb, Online lila, Bot grau)
+// ELO-Anzeige im gelben Ranked-Knopf (dunkle Schrift auf Gelb)
+function RankedWert({r}){
+  return <span style={{fontSize:13,fontWeight:800,background:'rgba(66,32,6,0.12)',color:'#422006',
+    padding:'5px 11px',borderRadius:12,flexShrink:0,display:'inline-flex',alignItems:'center',gap:4}}>
+    <TierIcon icon={rankTier(r).icon} size={13}/> {r}</span>;
+}
+function MenuFarbe({bg,tx,icon,title,desc,right,onClick}){
+  var c=tx||'#fff';
+  return <button onClick={onClick} className="mi-btn" style={{width:'100%',padding:'12px 14px',borderRadius:18,background:bg,border:'none',
+    display:'flex',alignItems:'center',gap:13,cursor:'pointer',textAlign:'left',
+    boxShadow:'0 2px 6px rgba(15,23,42,0.14),0 10px 24px rgba(15,23,42,0.16)',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+    <div style={{width:40,height:40,borderRadius:13,flexShrink:0,background:'rgba(255,255,255,0.24)',display:'flex',alignItems:'center',justifyContent:'center',color:c}}>{icon}</div>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:14,fontWeight:900,lineHeight:1.2,color:c,letterSpacing:-0.1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{title}</div>
+      {desc?<div style={{fontSize:11,fontWeight:600,marginTop:2,color:c,opacity:0.78,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{desc}</div>:null}
+    </div>
+    {right||<span style={{fontSize:16,color:c,opacity:0.7,fontWeight:700}}>{'›'}</span>}
+  </button>;
 }
 function MenuItem({icon,iconBg,title,desc,onClick,right,off,highlight,highlightBg,pulse,glowColor}){
   return(
