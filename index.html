@@ -877,7 +877,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=109"></script>
+<script src="js/i18n.js?v=110"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
@@ -2253,6 +2253,125 @@ async function wsCmd(msg,okType,errType){
     ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
   });
 }
+// ===== Weltliga: reine Helfer (Anfang) =====
+// Weltliga (Laender-Rangliste), Browser-Teil — Spec wrongway-server/docs/superpowers/specs/2026-09-25-weltliga-design.md.
+// Kein React, kein Netz: der Test wrongway-server/weltligaclienttest.js laedt genau diesen Block per vm (beide Repos).
+// Die Laenderliste ist dieselbe wie im Server (weltliga.js, ISO 3166-1 alpha-2) — der Test prueft die Gleichheit.
+var WL_LAENDER=(
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA '+
+  'CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA '+
+  'GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP '+
+  'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS '+
+  'MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS '+
+  'RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW '+
+  'TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW').split(' ');
+var WL_LAND_SET=Object.create(null); // ohne Prototyp: "constructor" o.ae. ist nie ein Land
+WL_LAENDER.forEach(function(c){WL_LAND_SET[c]=true;});
+function wlIstLand(c){return typeof c==='string'&&WL_LAND_SET[c]===true;}
+// Flaggen-Datei (flag-icons 7.5.0, MIT, liegt unter flags/). quadrat=true: 1x1-Fassung fuer die runden Steine.
+function wlFlagge(c,quadrat){return wlIstLand(c)?'flags/'+(quadrat?'1x1':'4x3')+'/'+c.toLowerCase()+'.svg':'';}
+// Laendername in der Spielsprache ueber die eingebaute Browser-Funktion; ohne sie steht der Code da.
+var WL_DN={};
+function wlLandName(c,sprache){
+  if(!wlIstLand(c))return '';
+  var l=sprache||'en';
+  if(WL_DN[l]===undefined){WL_DN[l]=null;try{if(typeof Intl!=='undefined'&&Intl.DisplayNames)WL_DN[l]=new Intl.DisplayNames([l],{type:'region'});}catch(e){}}
+  var n=null;try{n=WL_DN[l]?WL_DN[l].of(c):null;}catch(e){}
+  return n||c;
+}
+// Vorschlag aus der Handy-Sprache: Region aus "de-DE" -> DE; nur Sprache ohne Region: tr/de/fr -> TR/DE/FR.
+function wlVorschlag(sprachen){
+  var liste=sprachen||[],nurSprache={tr:'TR',de:'DE',fr:'FR'};
+  for(var i=0;i<liste.length;i++){
+    var teile=String(liste[i]||'').replace(/_/g,'-').split('-');
+    for(var j=1;j<teile.length;j++){var r=teile[j].toUpperCase();if(r.length===2&&wlIstLand(r))return r;}
+  }
+  for(var k=0;k<liste.length;k++){var s=String(liste[k]||'').slice(0,2).toLowerCase();if(nurSprache[s])return nurSprache[s];}
+  return null;
+}
+// Suchtext ohne Akzente und ohne tuerkisches i-Problem: "turk" findet "Türkiye", "ırak" findet "Irak".
+// Die Akzent-Spanne (U+0300 bis U+036F) entsteht per fromCharCode: ein Unicode-Escape (Backslash-u) im
+// Quelltext wuerde beim Schreiben mit den Werkzeugen zu unsichtbaren Zeichen.
+var WL_AKZENTE=new RegExp('['+String.fromCharCode(768)+'-'+String.fromCharCode(879)+']','g');
+function wlOhneAkzent(s){
+  s=String(s||'').toLowerCase().replace(/ı/g,'i');
+  try{s=s.normalize('NFD').replace(WL_AKZENTE,'');}catch(e){}
+  return s;
+}
+// Landwahl: alle Laender nach Namen in der Spielsprache, gefiltert nach Name oder Code.
+function wlLandListe(sprache,suche){
+  var q=wlOhneAkzent(suche).trim();
+  var l=WL_LAENDER.map(function(c){return {c:c,n:wlLandName(c,sprache)};});
+  if(q)l=l.filter(function(e){return wlOhneAkzent(e.n).indexOf(q)>=0||e.c.toLowerCase()===q;});
+  var coll=null;try{coll=new Intl.Collator(sprache||'en');}catch(e){}
+  l.sort(function(a,b){return coll?coll.compare(a.n,b.n):(a.n<b.n?-1:(a.n>b.n?1:0));});
+  return l;
+}
+// Live-Zeile "wer sucht": [[Land, Zahl], ...] absteigend nach Zahl, dann Code. Nur gueltige Laender, Zahl > 0.
+function wlSucheListe(suche){
+  var out=[];
+  if(suche&&typeof suche==='object')Object.keys(suche).forEach(function(c){var z=suche[c];if(wlIstLand(c)&&typeof z==='number'&&z>0)out.push([c,z]);});
+  return out.sort(function(a,b){return (b[1]-a[1])||(a[0]<b[0]?-1:1);});
+}
+// Eigene Punkte (Server-Feld mein {w, e}); ohne gueltige Zahlen kein Text.
+function wlPunkteText(mein,t){
+  if(!mein||typeof mein.w!=='number'||typeof mein.e!=='number')return '';
+  return t('wl_deinePunkte').replace('{w}',String(mein.w)).replace('{e}',String(mein.e));
+}
+// Endbildschirm: Text zum Weltliga-Ergebnis (wl_ergebnis bzw. resync.wl). Gezeigt wird er nur dem Sieger.
+function wlErgebnisText(erg,t,sprache){
+  if(!erg)return '';
+  if(erg.ok)return t('wl_plus1').replace('{land}',wlLandName(erg.land,sprache)||String(erg.land||''));
+  if(erg.grund==='kurz')return t('wl_keinPunktKurz');
+  if(erg.grund==='paar')return t('wl_keinPunktPaar');
+  return t('wl_keinPunkt');
+}
+// ===== Weltliga: reine Helfer (Ende) =====
+// Eigene kleine Verbindung des Weltliga-Bildschirms: Landwahl (wl_land_holen/_setzen) und Live-Anzeige (wl_suche).
+// Angemeldet: erst auth, dann die Anfrage (der Server stellt sie bis nach der Pruefung zurueck). Gast: ohne auth,
+// er bekommt land null und die Live-Zahlen. Faellt die Leitung weg (Update, Netz), baut sie sich nach 3 s neu auf und
+// fragt erneut. zu() beendet sie endgueltig. Kein Firebase: nur der Spiel-Server.
+function wlVerbindung(onMsg){
+  var ws=null,aus=false,tmr=null;
+  var auf=function(){
+    if(aus)return;
+    try{ws=new WebSocket(WW_URL);}catch(e){tmr=setTimeout(auf,3000);return;}
+    var meins=ws;
+    ws.onopen=function(){
+      var u=null;try{u=firebase.auth().currentUser;}catch(e){}
+      var los=function(tok){
+        if(aus||ws!==meins||meins.readyState!==1)return;
+        if(tok)meins.send(JSON.stringify({type:'auth',idToken:tok,cap:WW_CAP}));
+        meins.send(JSON.stringify({type:'wl_land_holen'}));
+      };
+      if(u&&!u.isAnonymous&&u.getIdToken)u.getIdToken().then(los,function(){los(null);});else los(null);
+    };
+    ws.onmessage=function(ev){if(ws!==meins)return;var d;try{d=JSON.parse(ev.data);}catch(e){return;}onMsg(d);};
+    ws.onclose=function(){if(ws!==meins)return;ws=null;if(!aus)tmr=setTimeout(auf,3000);};
+  };
+  auf();
+  return {
+    send:function(o){if(ws&&ws.readyState===1){ws.send(JSON.stringify(o));return true;}return false;},
+    zu:function(){aus=true;clearTimeout(tmr);var s=ws;ws=null;if(s){try{s.close();}catch(e){}}}
+  };
+}
+// Kleine Flagge (4:3) fuer Namen, Listen und die Live-Zeile. loading=lazy: nur sichtbare Flaggen werden geladen.
+function WlFlagge({land,h}){
+  var src=wlFlagge(land,false);if(!src)return null;
+  var hh=h||12;
+  return <img src={src} alt={land} loading="lazy" width={Math.round(hh*4/3)} height={hh}
+    style={{display:'inline-block',verticalAlign:'middle',borderRadius:2,boxShadow:'0 0 0 1px rgba(0,0,0,0.18)',flexShrink:0,objectFit:'cover'}}/>;
+}
+// Live-Zeile "Suchen gerade: [Flagge] 2 [Flagge] 1" — nur Zahlen je Land, keine Namen.
+function WlSucheZeile({t,suche,klein}){
+  var l=wlSucheListe(suche);
+  if(!l.length)return <span data-wl="suche-leer">{t('wl_niemand')}</span>;
+  return <span data-wl="suche" style={{display:'inline-flex',alignItems:'center',gap:6,flexWrap:'wrap',justifyContent:'center'}}>
+    <span>{t('wl_suchenGerade')}</span>
+    {l.slice(0,6).map(function(e){return <span key={e[0]} data-wl-land={e[0]} style={{display:'inline-flex',alignItems:'center',gap:3,fontWeight:800}}><WlFlagge land={e[0]} h={klein?10:12}/>{e[1]}</span>;})}
+    {l.length>6?<span>{'+'+(l.length-6)}</span>:null}
+  </span>;
+}
 // Paket E-Mail-Code: Code-Schritt im Anmelde-Bildschirm — schlicht, nur vorhandene Browser-Elemente (die
 // Browser-Optik ist eingefroren). Phasen: code (Code eingeben) | change (Adresse aendern) | fallback (Notfall:
 // Firebase-Link-Mail) | done (bestaetigt). Server-Antworten und Grenzen: Spec im Server-Repo.
@@ -3122,6 +3241,278 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
     </div>
   );
 }
+// ===== Weltliga-Bildschirm (Browser, schlicht wie der Ranked-Bildschirm) =====
+// Land (Wahl beim ersten Oeffnen, jeder Wechsel ab Montag), eigene Punkte, Suche ueber den Ranked-Weg von WSNET mit
+// mode 'weltliga' (Neusenden nach einem Verbindungsabbruch inklusive), Gefunden-Moment mit beiden Flaggen, Live-Zeile.
+// Die Tabelle steht in der Rangliste (Reiter Weltliga). data-wl = Griffe fuer den Browser-Test
+// (wrongway-server/scripts/online-e2e/weltliga.mjs).
+function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onTabelle}){
+  const[wl,setWl]=React.useState(null);            // {land,neu,ab,mein} vom Server (wl_land)
+  const[wlFehler,setWlFehler]=React.useState('');
+  const[suche,setSuche]=React.useState(null);      // {LAND: Zahl} — live
+  const[waehlen,setWaehlen]=React.useState(false); // Landwahl offen
+  const[filter,setFilter]=React.useState('');
+  const[frage,setFrage]=React.useState(null);      // Land, das bestaetigt werden soll
+  const[queue,setQueue]=React.useState(null);
+  const[elapsed,setElapsed]=React.useState(0);
+  const[gefunden,setGefunden]=React.useState(null);// [eigenes Land, Land des Gegners] (ranked_found)
+  const[msg,setMsg]=React.useState('');
+  const verbRef=React.useRef(null);
+  const pendingTimerRef=React.useRef(null);
+  const mountedRef=React.useRef(true);
+  const vorschlag=React.useMemo(function(){var l=[];try{l=(navigator.languages&&navigator.languages.length)?navigator.languages:[navigator.language];}catch(e){}return wlVorschlag(l);},[]);
+  const liste=React.useMemo(function(){
+    if(!waehlen)return [];
+    var l=wlLandListe(lang,filter);
+    if(vorschlag&&!filter)l=[{c:vorschlag,n:wlLandName(vorschlag,lang),vorschlag:true}].concat(l.filter(function(e){return e.c!==vorschlag;}));
+    return l;
+  },[waehlen,lang,filter,vorschlag]);
+  const clearPendingTimer=function(){if(pendingTimerRef.current){clearTimeout(pendingTimerRef.current);pendingTimerRef.current=null;}};
+  const leaveQueue=function(){
+    clearPendingTimer();
+    try{WSNET.cancelRanked();}catch(e){}
+    setQueue(null);setElapsed(0);setGefunden(null);setMsg('');
+  };
+  const joinQueue=function(){
+    if(!account||!wl||!wl.land)return;
+    clearPendingTimer();
+    var localRouter=function(d){
+      // Bildschirm schon weg: nur ein real gestartetes Match noch durchreichen (wie RankedScreen)
+      if(!mountedRef.current){if(d&&(d.type==='match_start'||(d.type==='resync'&&d.gestartet)))wsRouter(d);return;}
+      if(d&&d.type==='wl_suche'){setSuche(d.suche||{});return;}
+      if(d&&d.type==='ranked_waiting'){setQueue({ts:Date.now()});setElapsed(0);return;}
+      if(d&&d.type==='ranked_found'){try{playSound('pickup');}catch(e){}try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}var fl=d.lands||[],ich=d.deineNummer===1?1:0;setGefunden([fl[ich],fl[1-ich]]);return;} // eigene Flagge zuerst
+      if(d&&d.type==='ranked_denied'){var g=d.grund;setMsg(g==='login'?t('rankedLoginHint'):g==='busy'?t('rankedBusy'):g==='land'?t('wl_fehlerLand'):t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();if(g==='land')setWaehlen(true);},2500);return;}
+      if(d&&d.type==='reconnect_failed'){try{WSNET.close();}catch(e){}setMsg(t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();},2500);return;}
+      if(d&&d.type==='session_replaced'){setMsg(t('sessionReplaced'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();goBack();},1800);return;}
+      wsRouter(d);
+    };
+    WSNET.startRanked('weltliga',1000,{name:account.name,akey:account.key},localRouter);
+    setQueue({ts:Date.now()});setElapsed(0);setMsg('');setGefunden(null);
+  };
+  const landSetzen=function(c){
+    setFrage(null);setWaehlen(false);setFilter('');
+    var v=verbRef.current;
+    if(!v||!v.send({type:'wl_land_setzen',land:c}))setWlFehler(t('rankedRetry'));
+  };
+  // Eigene Verbindung: Landwahl + Live-Zahlen. Nach einem Login (anderes Konto) neu, dann mit auth. Waehrend der Suche
+  // zu: dann liefert die Such-Verbindung (WSNET) die Live-Zahlen, und niemand zaehlt in /stats doppelt als online.
+  React.useEffect(function(){
+    if(queue)return;
+    var v=wlVerbindung(function(d){
+      if(!mountedRef.current)return;
+      if(d.type==='wl_land'){setWl({land:d.land||null,neu:d.neu||null,ab:d.ab||null,mein:d.mein||null});setWlFehler('');if(d.suche)setSuche(d.suche);if(account&&!d.land)setWaehlen(true);return;}
+      if(d.type==='wl_suche'){setSuche(d.suche||{});return;}
+      if(d.type==='wl_land_fehler'){setWlFehler(d.grund==='login'?t('rankedLoginHint'):t('rankedRetry'));return;}
+    });
+    verbRef.current=v;
+    return function(){v.zu();if(verbRef.current===v)verbRef.current=null;};
+  },[account?account.key:null,!!queue]);
+  React.useEffect(function(){
+    if(!queue)return;
+    var s=0,iv=setInterval(function(){s++;setElapsed(s);},1000);
+    return function(){clearInterval(iv);};
+  },[queue]);
+  React.useEffect(function(){return function(){mountedRef.current=false;if(pendingTimerRef.current)clearTimeout(pendingTimerRef.current);};},[]);
+
+  const dk=darkMode;
+  const card=dk?'#1e293b':'#fff';
+  const border=dk?'#334155':'#e2e8f0';
+  const txt=dk?'#f1f5f9':'#1e293b';
+  const muted=dk?'#64748b':'#94a3b8';
+  const gruen='#16a34a';
+  var land=wl?wl.land:null;
+  var punkte=wl?wlPunkteText(wl.mein,t):'';
+  var knopf={width:'100%',padding:'13px',borderRadius:11,border:'none',cursor:'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',background:'linear-gradient(135deg,#16a34a,#22c55e)',color:'#fff'};
+  var leise={width:'100%',padding:'10px',borderRadius:10,background:'transparent',border:'1.5px solid '+border,color:muted,cursor:'pointer',fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif'};
+  var karte={background:card,border:'1.5px solid '+border,borderRadius:16,padding:'16px'};
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',minHeight:'100vh',
+      padding:'0 16px 40px',paddingTop:'calc(env(safe-area-inset-top) + 20px)',
+      background:'transparent',position:'fixed',inset:0,zIndex:1,
+      overflowY:'auto',WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehavior:'contain',
+      animation:'fadeSlideUp 0.40s cubic-bezier(0.22,1,0.36,1) both'}}>
+      <MenuBG dark={darkMode}/>
+      {/* Zurueck als Pille wie im Rechtliches-Bildschirm (der runde 40-px-Knopf des Ranked-Bildschirms ist zu klein fuer den Text) */}
+      <button onClick={function(){leaveQueue();goBack();}} style={{position:'fixed',top:'calc(env(safe-area-inset-top)+14px)',left:14,zIndex:300,
+        display:'flex',alignItems:'center',gap:4,padding:'7px 12px 7px 8px',borderRadius:20,background:card,border:'1.5px solid '+border,
+        cursor:'pointer',fontSize:13,fontWeight:700,color:txt,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        {t('tutBack')}
+      </button>
+
+      <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+        <div style={{textAlign:'center',marginBottom:20,paddingTop:8}}>
+          <div style={{fontSize:13,fontWeight:800,color:muted,letterSpacing:2,marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:5}}><GlobeIcon size={13} color={muted}/> {t('wl_titel').toUpperCase()}</div>
+          <div style={{fontSize:26,fontWeight:900,color:txt,letterSpacing:-1}}>{t('wl_titel')}</div>
+          <div style={{fontSize:12,color:muted,marginTop:6}}>{t('wl_menuDesc')}</div>
+        </div>
+        <div data-wl="live" style={{...karte,padding:'10px 14px',fontSize:12,fontWeight:700,color:muted,textAlign:'center',marginBottom:14}}>
+          <WlSucheZeile t={t} suche={suche}/>
+        </div>
+        {!account?(
+          <div data-wl="gast" style={{...karte,textAlign:'center',padding:'28px 16px'}}>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:8}}><LockIcon size={26} color={muted}/></div>
+            <div style={{fontSize:14,fontWeight:700,color:txt,marginBottom:14}}>{t('wl_gastHinweis')}</div>
+            <button onClick={onLogin} style={knopf}>{t('login')}</button>
+          </div>
+        ):!wl?(
+          <div style={{...karte,textAlign:'center',fontSize:13,fontWeight:700,color:wlFehler?'#ef4444':muted}}>{wlFehler||t('loading')}</div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            {land?(
+              <div data-wl="land" style={karte}>
+                <div style={{fontSize:11,fontWeight:800,color:muted,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>{t('wl_duSpielstFuer')}</div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <WlFlagge land={land} h={24}/>
+                  <span style={{fontSize:20,fontWeight:900,color:txt}}>{wlLandName(land,lang)}</span>
+                </div>
+                {punkte?<div data-wl="punkte" style={{fontSize:12,fontWeight:700,color:muted,marginTop:8}}>{punkte}</div>:null}
+                {wl.neu?<div data-wl="neu" style={{fontSize:12,fontWeight:700,color:muted,marginTop:6,display:'flex',alignItems:'center',gap:6}}>{t('wl_abMontag')} <WlFlagge land={wl.neu} h={12}/> {wlLandName(wl.neu,lang)}</div>:null}
+                {!queue?<button data-wl="aendern" onClick={function(){setWaehlen(true);}} style={{marginTop:10,background:'none',border:'none',padding:0,color:gruen,fontWeight:800,fontSize:12,cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('wl_landAendern')}</button>:null}
+              </div>
+            ):(
+              <button data-wl="waehlen" onClick={function(){setWaehlen(true);}} style={knopf}>{t('wl_landWaehlen')}</button>
+            )}
+            {land&&!queue?(
+              <button data-wl="spielen" onClick={joinQueue} style={{...knopf,padding:'14px',fontSize:15,fontWeight:900,boxShadow:'0 4px 12px rgba(22,163,74,0.35)'}}>
+                {t('wl_spielen').replace('{land}',wlLandName(land,lang))}
+              </button>
+            ):null}
+            {queue?(
+              <div data-wl={gefunden?'gefunden':'sucht'} style={{...karte,textAlign:'center'}}>
+                {gefunden?(
+                  <div>
+                    <div style={{fontSize:13,fontWeight:900,color:gruen,marginBottom:12}}>{t('wl_gefunden')}</div>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
+                      <WlFlagge land={gefunden[0]} h={36}/>
+                      <span style={{fontSize:16,fontWeight:900,color:muted}}>{'VS'}</span>
+                      <WlFlagge land={gefunden[1]} h={36}/>
+                    </div>
+                  </div>
+                ):(
+                  <div>
+                    <div style={{display:'flex',alignItems:'center',gap:8,justifyContent:'center',marginBottom:10}}>
+                      <div style={{width:8,height:8,borderRadius:'50%',background:gruen,animation:'pulse 1s ease-in-out infinite'}}/>
+                      <span style={{fontSize:13,fontWeight:700,color:gruen}}>{msg||(t('wl_sucht')+' '+elapsed+'s')}</span>
+                    </div>
+                    <button onClick={leaveQueue} style={leise}>{t('cancel')}</button>
+                  </div>
+                )}
+              </div>
+            ):null}
+            {wlFehler?<div style={{fontSize:12,color:'#ef4444',textAlign:'center',fontWeight:700}}>{wlFehler}</div>:null}
+            <div style={{padding:'12px 14px',borderRadius:12,background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>{t('wl_regeln')}</div>
+          </div>
+        )}
+        {!queue?<button data-wl="tabelle" onClick={onTabelle} style={{...leise,marginTop:14,padding:'12px',fontSize:13,color:txt,background:card}}>{t('wl_tabelle')}</button>:null}
+      </div>
+
+      {waehlen&&account?(
+        <div data-wl="wahl" style={{position:'fixed',inset:0,zIndex:400,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end'}} onClick={function(){setWaehlen(false);setFilter('');}}>
+          <div onClick={function(e){e.stopPropagation();}} style={{width:'100%',height:'82vh',boxSizing:'border-box',display:'flex',flexDirection:'column',borderRadius:'22px 22px 0 0',background:dk?'#0f172a':'#ffffff',border:'1.5px solid '+border,padding:'18px 16px calc(env(safe-area-inset-bottom,0px) + 16px)'}}>
+            <div style={{fontSize:17,fontWeight:900,color:txt,textAlign:'center',marginBottom:12}}>{t('wl_landWaehlen')}</div>
+            <input data-wl="filter" value={filter} onChange={function(e){setFilter(e.target.value);}} placeholder={t('wl_landSuchen')}
+              style={{width:'100%',boxSizing:'border-box',padding:'11px 14px',borderRadius:12,border:'1.5px solid '+border,background:card,color:txt,fontSize:16,fontWeight:600,marginBottom:10,fontFamily:'system-ui,-apple-system,sans-serif'}}/>
+            <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+              {liste.map(function(e){return(
+                <button key={(e.vorschlag?'v':'')+e.c} data-wl-wahl={e.c} onClick={function(){setFrage(e.c);}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 6px',background:'none',border:'none',borderBottom:'1px solid '+border,cursor:'pointer',color:txt,fontSize:14,fontWeight:700,textAlign:'left',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  <WlFlagge land={e.c} h={18}/><span style={{flex:1,minWidth:0}}>{e.n}</span>
+                  {e.vorschlag?<span style={{fontSize:10,fontWeight:800,color:gruen}}>{t('wl_vorschlag')}</span>:null}
+                </button>);})}
+            </div>
+            <button onClick={function(){setWaehlen(false);setFilter('');}} style={{...leise,marginTop:10}}>{t('close')}</button>
+          </div>
+        </div>
+      ):null}
+
+      {frage?(
+        <div data-wl="frage" style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}}>
+          <div style={{width:'100%',maxWidth:340,borderRadius:18,background:dk?'#0f172a':'#fff',border:'1.5px solid '+border,padding:'22px 18px',textAlign:'center'}}>
+            <WlFlagge land={frage} h={36}/>
+            <div style={{fontSize:14,fontWeight:700,color:txt,margin:'12px 0 16px',lineHeight:1.5}}>
+              {(!land?t('wl_bestaetigErst'):(frage===land?t('wl_bleibst'):t('wl_bestaetigWechsel'))).replace('{land}',wlLandName(frage,lang))}
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={function(){setFrage(null);}} style={{...leise,flex:1}}>{t('cancel')}</button>
+              <button data-wl="ja" onClick={function(){landSetzen(frage);}} style={{...knopf,flex:1}}>{t('confirm')}</button>
+            </div>
+          </div>
+        </div>
+      ):null}
+    </div>
+  );
+}
+// Weltliga-Tabelle (Reiter in der Rangliste): Laender der Woche bzw. fuer immer; Land antippen -> die besten 100
+// Spieler des Landes (Name + Punkte). Daten nur vom Server-Endpunkt /weltliga: 0 Firebase-Download, Server-Cache und
+// Cache-Control 60 s (der Browser haelt die Antwort also selbst eine Minute, Reiterwechsel laden nichts neu).
+function wlHoleJson(pfad){
+  return fetch(WW_URL.replace('wss://','https://').replace('ws://','http://')+pfad).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+}
+function WeltligaTabelle({t,lang,darkMode,account}){
+  const[z,setZ]=React.useState('w');
+  const[daten,setDaten]=React.useState(null);
+  const[fehler,setFehler]=React.useState(false);
+  const[land,setLand]=React.useState(null);
+  const[spieler,setSpieler]=React.useState(null);
+  React.useEffect(function(){
+    var weg=false;
+    wlHoleJson('/weltliga').then(function(d){if(weg)return;if(d)setDaten(d);else setFehler(true);});
+    return function(){weg=true;};
+  },[]);
+  React.useEffect(function(){
+    if(!land){setSpieler(null);return;}
+    var weg=false;setSpieler(null);
+    wlHoleJson('/weltliga?land='+land+'&z='+z).then(function(d){if(!weg)setSpieler(d&&d.s?d.s:[]);});
+    return function(){weg=true;};
+  },[land,z]);
+  const dk=darkMode;
+  const card=dk?'#161e33':'#ffffff';
+  const txt=dk?'#f1f5f9':'#0f172a';
+  const muted=dk?'#64748b':'#94a3b8';
+  const border=dk?'#252d44':'#e2e8f0';
+  var zeilen=daten?((z==='e'?daten.le:daten.lw)||[]):[];
+  var meinName=account?account.name:null;
+  var tabSt=function(an){return {flex:1,padding:'9px 4px',border:'none',cursor:'pointer',fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',borderRadius:8,background:an?txt:'transparent',color:an?(dk?'#0f172a':'#ffffff'):muted};};
+  var zeileSt={display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:14,background:card,border:'1.5px solid '+border,width:'100%',boxSizing:'border-box',fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left'};
+  var leer=function(text){return <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border,fontSize:13,fontWeight:700,color:muted}}>{text}</div>;};
+  return(
+    <div data-wl="tab">
+      <div style={{display:'flex',gap:3,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:10,padding:3,border:'1.5px solid '+border,marginBottom:14}}>
+        <button data-wl-z="w" onClick={function(){setZ('w');}} style={tabSt(z==='w')}>{t('wl_dieseWoche')}</button>
+        <button data-wl-z="e" onClick={function(){setZ('e');}} style={tabSt(z==='e')}>{t('wl_fuerImmer')}</button>
+      </div>
+      {land?(
+        <div>
+          <button data-wl="zurueck" onClick={function(){setLand(null);}} style={{...zeileSt,marginBottom:10,cursor:'pointer',color:txt,fontSize:14,fontWeight:800}}>
+            <span style={{color:muted}}>{'‹'}</span><WlFlagge land={land} h={16}/><span style={{flex:1}}>{wlLandName(land,lang)}</span>
+          </button>
+          {!spieler?leer(t('leaderboardLoading')):spieler.length===0?leer(t('wl_leer')):(
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {spieler.map(function(s,i){var ich=!!meinName&&s[0]===meinName;return(
+                <div key={i} data-wl-spieler={s[0]} style={{...zeileSt,background:ich?(dk?'rgba(139,92,246,0.18)':'rgba(139,92,246,0.08)'):card,border:'1.5px solid '+(ich?'#8b5cf6':border)}}>
+                  <span style={{width:28,textAlign:'center',fontSize:13,fontWeight:800,color:muted}}>{'#'+(i+1)}</span>
+                  <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:800,color:txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s[0]}</span>
+                  {ich?<span data-wl="ich" style={{fontSize:9,fontWeight:900,background:'#8b5cf6',color:'#fff',padding:'1px 5px',borderRadius:6,letterSpacing:0.5}}>{t('you').toUpperCase()}</span>:null}
+                  <span style={{fontSize:18,fontWeight:900,color:txt}}>{s[1]}</span>
+                </div>);})}
+            </div>
+          )}
+        </div>
+      ):(!daten?leer(fehler?t('rankedRetry'):t('leaderboardLoading')):zeilen.length===0?leer(t('wl_leer')):(
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          {zeilen.map(function(e,i){return(
+            <button key={e[0]} data-wl-tab-land={e[0]} onClick={function(){setLand(e[0]);}} style={{...zeileSt,cursor:'pointer'}}>
+              <span style={{width:28,textAlign:'center',fontSize:13,fontWeight:800,color:muted}}>{'#'+(i+1)}</span>
+              <WlFlagge land={e[0]} h={18}/>
+              <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:800,color:txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{wlLandName(e[0],lang)}</span>
+              <span style={{fontSize:18,fontWeight:900,color:txt}}>{e[1]}</span>
+            </button>);})}
+        </div>
+      ))}
+    </div>
+  );
+}
 function AdminWhoAmI(){
   // Zeigt die eigene Firebase-UID an (fuer die Firebase-Regel) + ob eingeloggt
   var u=null;
@@ -3738,8 +4129,9 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
   );
 }
 var _lbCache={data:null,ts:0};
-function LeaderboardScreen({t,darkMode,goBack,account}){
+function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
   const[mode,setMode]=React.useState('duel');
+  const[tab,setTab]=React.useState(startTab==='weltliga'?'weltliga':'ranked'); // Reiter: Ranked (ELO) | Weltliga (Laender)
   const[raw,setRaw]=React.useState(_lbCache.data||{});
   const[loading,setLoading]=React.useState(!_lbCache.data);
   const dk=darkMode;
@@ -3797,10 +4189,17 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
         <div style={{textAlign:'center',marginBottom:20}}>
           <div style={{fontSize:28,marginBottom:6}}>🏆</div>
           <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{t('leaderboardTitle')}</div>
-          <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>{t('leaderboardSubtitle')}</div>
+          <div style={{fontSize:12,color:muted,fontWeight:600,marginTop:3}}>{tab==='weltliga'?t('wl_menuDesc'):t('leaderboardSubtitle')}</div>
+        </div>
+        {/* Reiter Ranked | Weltliga */}
+        <div style={{display:'flex',gap:3,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:10,padding:3,border:'1.5px solid '+border,marginBottom:14}}>
+          {['ranked','weltliga'].map(function(k){var an=tab===k;return(
+            <button key={k} data-lb-tab={k} onClick={function(){setTab(k);}} style={{flex:1,padding:'9px 4px',border:'none',cursor:'pointer',fontWeight:800,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',borderRadius:8,background:an?'#8b5cf6':'transparent',color:an?'#fff':muted}}>{k==='weltliga'?t('wl_titel'):'Ranked'}</button>);})}
         </div>
         {/* Liste */}
-        {loading?(
+        {tab==='weltliga'?(
+          <WeltligaTabelle t={t} lang={lang} darkMode={darkMode} account={account}/>
+        ):loading?(
           <div style={{textAlign:'center',padding:'40px 0',color:muted,fontSize:14,fontWeight:600}}>
             {t('leaderboardLoading')}
           </div>
@@ -3906,8 +4305,8 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
             })}
           </div>
         )}
-        {/* Refresh */}
-        {!loading&&(
+        {/* Refresh (nur Ranked — die Weltliga-Tabelle laedt beim Oeffnen selbst) */}
+        {tab!=='weltliga'&&!loading&&(
           <button onClick={load} style={{width:'100%',marginTop:14,padding:'12px',borderRadius:12,
             background:'transparent',border:'1.5px solid '+border,color:muted,fontSize:13,fontWeight:700,
             cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif',
@@ -3916,9 +4315,9 @@ function LeaderboardScreen({t,darkMode,goBack,account}){
           </button>
         )}
         {/* Hinweis */}
-        <div style={{textAlign:'center',marginTop:12,fontSize:11,color:muted,fontWeight:600}}>
+        {tab!=='weltliga'&&<div style={{textAlign:'center',marginTop:12,fontSize:11,color:muted,fontWeight:600}}>
           {t('rankedMinOneGame')}
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -4242,6 +4641,9 @@ function App(){
   const[rankedMyRating,setRankedMyRating]=useState(1000);
   const[rankedOppRating,setRankedOppRating]=useState(1000);
   const[eloChange,setEloChange]=useState(null); // {change, newRating, won}
+  const[wlLands,setWlLands]=useState(null); // Weltliga-Spiel: [Land A, Land B] aus den Raum-Einstellungen, sonst null
+  const[wlErgebnis,setWlErgebnis]=useState(null); // Weltliga: {land, ok, grund} (wl_ergebnis bzw. resync.wl)
+  const[lbTab,setLbTab]=useState('ranked'); // Rangliste: welcher Reiter beim Oeffnen (ranked | weltliga)
   const[rankedOppKey,setRankedOppKey]=useState(null);
   const[oppAccountKey,setOppAccountKey]=useState(null);
   const[oppLevel,setOppLevel]=useState(null);
@@ -4454,7 +4856,7 @@ function App(){
         var resp=await fetch(WW_URL.replace('wss://','https://').replace('ws://','http://')+'/stats');
         if(cancelled)return;
         var data=await resp.json();
-        if(!cancelled)setGlobalStats({online:data.online||0,inGame:data.inGame||0});
+        if(!cancelled)setGlobalStats({online:data.online||0,inGame:data.inGame||0,wlSuche:data.wlSuche||null});
       }catch(e){}
     };
     load();
@@ -5218,7 +5620,7 @@ function App(){
   const myTurn=gameMode==='online'?turn===onlineRole:(gameMode==='pvc'?turn==='A':true);
   const canDrag=!winner&&!aiThinking&&myTurn&&barrLeft[turn]>0&&screen==='game'&&!matchIntro;
   const meRole=gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':turn);
-  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
+  const backMap={modeConfig:'menu',difficulty:'menu',friendPlay:'menu',online:'menu',lobbyConfig:'online',auth:'menu',profile:'menu',friends:'menu',spectate:'friends',ranked:'menu',weltliga:'menu',leaderboard:'menu',replayHistory:'menu',legal:'menu'};
   const navTo=(target)=>{setNavDir('fwd');setScreen(target);};
   const goBack=()=>{const tgt=backMap[screen];if(!tgt)return;setNavDir('back');setScreen(tgt);};
   const pageAnim=navDir==='back'?'slide-in-left 0.38s cubic-bezier(0.22,1,0.36,1) both':'slide-in-right 0.38s cubic-bezier(0.22,1,0.36,1) both';
@@ -5241,8 +5643,9 @@ function App(){
   };
   // Effektive Match-Steinfarben: Server-validierte Skins (nur online), sonst Defaults.
   // Keine Kollisionsregel — beide tragen ihre echte Farbe, Eigen-Erkennung uebernimmt der Orbit-Ring.
-  var _skA=(gameMode==='online'&&matchSkins&&matchSkins[0]&&matchSkins[0].stone)?STONE_SKINS[matchSkins[0].stone]:null;
-  var _skB=(gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
+  // Weltliga: die Landesflagge ersetzt den angelegten Stein-Skin (einheitlicher Laender-Look, Spec Entscheidung 13).
+  var _skA=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[0]&&matchSkins[0].stone)?STONE_SKINS[matchSkins[0].stone]:null;
+  var _skB=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
   const MC={A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
   const MD={A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
   var _mySkinEntry=(gameMode==='online'&&matchSkins)?matchSkins[onlineRole==='B'?1:0]:null;
@@ -5302,6 +5705,7 @@ function App(){
       setEloChange({change:0,newRating:null,won:d.won,reason:d.reason});
       return;
     }
+    if(d&&d.type==='wl_ergebnis'){setWlErgebnis(d);return;} // Weltliga: +1 fuer das Land bzw. der Grund (kommt nach dem End-Stand)
     if(d&&d.type==='bug_report_ok'){setBugStatus('ok');return;}
     if(d&&d.type==='bug_report_limit'){setBugStatus('limit');return;}
     if(d&&d.type==='error'&&d.grund==='nicht eingeloggt'&&S.current.bugOpen){setBugStatus('login');return;}
@@ -5336,6 +5740,7 @@ function App(){
       // Revanche-Wuensche nach der Rueckkehr (ein verpasstes rematch_state liess sonst ein veraltetes "Warte auf Gegner"
       // stehen); wartet = beide wollen, der andere ist auch gerade weg
       if(d.type==='resync'&&d.req&&d.req.length===2){setRematchA(!!d.req[0]);setRematchB(!!d.req[1]);setRematchWartet(!!d.wartet);}
+      if(d.type==='resync'&&d.wl)setWlErgebnis(d.wl); // Weltliga: das Ergebnis ueberlebt die Rueckkehr (Server-Feld wl)
       setWsConn(true);
       // Schutz bei gemischten Versionen: Server-Brett muss zum Client-Brett passen
       if((d.type==='match_start'||d.type==='resync')&&d.cols&&d.rows&&(d.cols!==COLS||d.rows!==ROWS)){
@@ -5504,6 +5909,7 @@ function App(){
     }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
     setEloChange(null);
+    setWlErgebnis(null);if(!wsKeep)setWlLands(null); // Weltliga: Laender setzt nur der Server-Start (wsLobbyMsgRef)
     winnerFiredRef.current=false;
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
@@ -5551,6 +5957,8 @@ function App(){
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
       setMatchSkins(d.skins||null);
+      // Weltliga: die Laender beider Spieler (nach Spielernummer) stehen in den Raum-Einstellungen (match_start + resync)
+      setWlLands((st.rankedMode==='weltliga'&&st.lands&&wlIstLand(st.lands[0])&&wlIstLand(st.lands[1]))?[st.lands[0],st.lands[1]]:null);
       var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
       var tmS=(st.tm!==undefined&&st.tm!==null)?st.tm:'none';
       var brS=parseInt(st.barr,10);if(!(brS>=1&&brS<=25))brS=10; setGameBarr(brS);
@@ -7500,6 +7908,28 @@ function App(){
           </div>
         )}
 
+        {/* WELTLIGA — schlichter Knopf nach dem Rezept der Modus-Karte; Live-Zeile aus /stats (alle 30 s) */}
+        {feat('online')&&(
+          <button data-wl="menu" onClick={()=>{setNavDir('fwd');setScreen('weltliga');}} className="mi-btn" style={{
+            width:'100%',padding:'12px 14px',marginBottom:18,
+            background:'var(--card)',border:'1.5px solid var(--border)',borderLeft:'4px solid #16a34a',
+            borderRadius:16,cursor:'pointer',display:'flex',alignItems:'center',gap:12,
+            boxShadow:'0 2px 5px rgba(15,23,42,0.1),0 12px 28px rgba(15,23,42,0.16)',
+            fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left'}}>
+            <div style={{width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#16a34a,#22c55e)',
+              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <GlobeIcon size={20} color="#fff"/>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:900,color:'var(--text)',letterSpacing:-0.3}}>{t('wl_titel')}</div>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',marginTop:3}}>
+                {wlSucheListe(globalStats.wlSuche).length?<WlSucheZeile t={t} suche={globalStats.wlSuche} klein/>:t('wl_menuDesc')}
+              </div>
+            </div>
+            <span style={{fontSize:16,color:'var(--subtle)',fontWeight:700}}>›</span>
+          </button>
+        )}
+
         {/* ONLINE SPIELEN — 2-Spalten-Grid */}
         {(feat('online')||feat('friend')||feat('twovtwo'))&&(
           <MenuSection label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><GlobeIcon size={11} color="var(--subtle)"/>{t('playOnline')||'Online spielen'}<span style={{display:'inline-flex',alignItems:'center',marginLeft:4,width:6,height:6,borderRadius:'50%',background:serverOnline?'#16a34a':'#ef4444',flexShrink:0}}/></span>}>
@@ -8466,7 +8896,7 @@ function App(){
           <span style={{fontSize:9,fontWeight:900,color:'#8b5cf6',letterSpacing:0.3}}>{'Home'}</span>
         </button>
         {/* Leaderboard */}
-        <button onClick={()=>{setNavDir('fwd');setScreen('leaderboard');}}
+        <button onClick={()=>{setLbTab('ranked');setNavDir('fwd');setScreen('leaderboard');}}
           style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
             gap:2,background:'none',border:'none',cursor:'pointer',padding:'10px 0',minHeight:54}}>
           <TrophySmIcon size={22} color="var(--subtle)"/>
@@ -8902,12 +9332,17 @@ function App(){
 
   // ── RANKED ──────────────────────────────────────────────
   if(screen==='leaderboard'){
-    return <LeaderboardScreen t={t} darkMode={darkMode} goBack={goBack} account={account}/>;
+    return <LeaderboardScreen t={t} darkMode={darkMode} goBack={goBack} account={account} lang={lang} startTab={lbTab}/>;
   }
 
   if(screen==='ranked'){
     return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack} wsRouter={wsLobbyTrampRef.current}
       onStart={doStartRanked} features={isAdmin()?Object.assign({},adminCfg.features,{ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:true}):adminCfg.features}/>;
+  }
+
+  if(screen==='weltliga'){
+    return <WeltligaScreen account={account} t={t} lang={lang} darkMode={darkMode} goBack={goBack} wsRouter={wsLobbyTrampRef.current}
+      onLogin={()=>{setNavDir('fwd');setScreen('auth');}} onTabelle={()=>{setLbTab('weltliga');setNavDir('fwd');setScreen('leaderboard');}}/>;
   }
 
   // ── FRIENDS ─────────────────────────────────────────────
@@ -8941,10 +9376,10 @@ function App(){
   if(screen==='legal'){
     var legalData={
       impressum:{
-        de:['Impressum','Angaben gem. Gesetz Nr. 6563 (T\u00fcrkei, elektronischer Handel)','Betreiber: [FIRMENNAME \u2014 wird nach Firmengr\u00fcndung eingetragen]','Adresse: [wird nach Umzug eingetragen]','Steuernummer: [wird nach Gr\u00fcndung eingetragen]','Verantwortlich f\u00fcr den Inhalt: der Betreiber','Kontakt: wrongwayapp.official@gmail.com'],
-        en:['Legal Notice','Information acc. to Law No. 6563 (Turkey, e-commerce)','Operator: [COMPANY NAME \u2014 to be added after incorporation]','Address: [to be added after relocation]','Tax number: [to be added after incorporation]','Responsible for content: the operator','Contact: wrongwayapp.official@gmail.com'],
-        tr:['K\u00fcnye','6563 say\u0131l\u0131 Elektronik Ticaret Kanunu kapsam\u0131nda','\u0130\u015fleten: [F\u0130RMA ADI \u2014 \u015firket kurulu\u015fundan sonra eklenecek]','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','Vergi numaras\u0131: [kurulu\u015ftan sonra eklenecek]','\u0130\u00e7erikten sorumlu: i\u015fleten','\u0130leti\u015fim: wrongwayapp.official@gmail.com'],
-        fr:['Mentions l\u00e9gales','Informations selon la loi n\u00b0 6563 (Turquie, commerce \u00e9lectronique)','Exploitant: [NOM DE LA SOCI\u00c9T\u00c9 \u2014 \u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Num\u00e9ro fiscal: [\u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Responsable du contenu: l\u2019exploitant','Contact: wrongwayapp.official@gmail.com']
+        de:['Impressum','Angaben gem. Gesetz Nr. 6563 (T\u00fcrkei, elektronischer Handel)','Betreiber: [FIRMENNAME \u2014 wird nach Firmengr\u00fcndung eingetragen]','Adresse: [wird nach Umzug eingetragen]','Steuernummer: [wird nach Gr\u00fcndung eingetragen]','Verantwortlich f\u00fcr den Inhalt: der Betreiber','Kontakt: wrongwayapp.official@gmail.com','Flaggen: flag-icons von Panayiotis Lipiridis (github.com/lipis/flag-icons), MIT-Lizenz, © 2013 Panayiotis Lipiridis'],
+        en:['Legal Notice','Information acc. to Law No. 6563 (Turkey, e-commerce)','Operator: [COMPANY NAME \u2014 to be added after incorporation]','Address: [to be added after relocation]','Tax number: [to be added after incorporation]','Responsible for content: the operator','Contact: wrongwayapp.official@gmail.com','Flags: flag-icons by Panayiotis Lipiridis (github.com/lipis/flag-icons), MIT License, © 2013 Panayiotis Lipiridis'],
+        tr:['K\u00fcnye','6563 say\u0131l\u0131 Elektronik Ticaret Kanunu kapsam\u0131nda','\u0130\u015fleten: [F\u0130RMA ADI \u2014 \u015firket kurulu\u015fundan sonra eklenecek]','Adres: [ta\u015f\u0131nd\u0131ktan sonra eklenecek]','Vergi numaras\u0131: [kurulu\u015ftan sonra eklenecek]','\u0130\u00e7erikten sorumlu: i\u015fleten','\u0130leti\u015fim: wrongwayapp.official@gmail.com','Bayraklar: flag-icons, Panayiotis Lipiridis (github.com/lipis/flag-icons), MIT Lisansı, © 2013 Panayiotis Lipiridis'],
+        fr:['Mentions l\u00e9gales','Informations selon la loi n\u00b0 6563 (Turquie, commerce \u00e9lectronique)','Exploitant: [NOM DE LA SOCI\u00c9T\u00c9 \u2014 \u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Adresse: [\u00e0 compl\u00e9ter apr\u00e8s d\u00e9m\u00e9nagement]','Num\u00e9ro fiscal: [\u00e0 compl\u00e9ter apr\u00e8s cr\u00e9ation]','Responsable du contenu: l\u2019exploitant','Contact: wrongwayapp.official@gmail.com','Drapeaux : flag-icons de Panayiotis Lipiridis (github.com/lipis/flag-icons), licence MIT, © 2013 Panayiotis Lipiridis']
       },
       privacy:{
         de:['Datenschutz (DSGVO & KVKK)','Verantwortlicher: wrongwayapp.official@gmail.com','Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für Konten; lit. a (Einwilligung) für Werbung und Analyse.','Gespeicherte Daten: E-Mail, Benutzername, Passwort (gehasht), Spielstatistiken, ELO, Spielverlauf, Coins, XP, Level, Inventar (Skins), Kaufhistorie.','Fehlerberichte: Bei technischen Fehlern speichert die App automatisch einen kurzen Bericht (Fehlermeldung, betroffene Code-Stelle, Browser-/Ger\u00e4tetyp, App-Version, Zeitpunkt) unter deiner Nutzer-ID \u2014 maximal 10 Eintr\u00e4ge pro Konto, nur zur Fehlerbehebung. Zus\u00e4tzlich kannst du nach einer Online-Runde freiwillig einen Problembericht senden (deine Beschreibung, Spielverlauf und technische Daten der Runde) \u2014 maximal 3 pro Tag. Fehlerberichte werden mit der Kontol\u00f6schung gel\u00f6scht.','Anonyme Sitzungen: Beim Spielen ohne Konto werden anonyme Firebase-IDs erzeugt. Keine Personenbeziehbarkeit.','Hosting: GitHub Pages (USA) + Google Firebase EU (europe-west1, Frankfurt). Datenübertragung in die USA auf Basis von Standardvertragsklauseln (SCC).','Drittanbieter: Google Firebase (Auth, Datenbank) \u00b7 Google reCAPTCHA v3 (Spam-Schutz). Google LLC, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA.','Passw\u00f6rter werden ausschlie\u00dflich von Firebase gehasht. Kein Zugriff auf Klartextpassw\u00f6rter.','Cookies & Speicher: Wir nutzen localStorage zur Speicherung von Einstellungen und Cookie-Einwilligung. Keine Tracking-Cookies ohne Zustimmung.','Chat & Moderation: Chat-Nachrichten werden zur Zustellung verarbeitet und automatisch gefiltert. Bei einer Meldung (Melde-Funktion) werden die gemeldete Nachricht und der Chat-Verlauf der betroffenen Runde als Kontext zur Pr\u00fcfung gespeichert; Blockierlisten geh\u00f6ren zu deinem Konto.','Missbrauchsschutz: Meldungen anderer Spieler (inklusive der gemeldeten Nachricht und des Chat-Verlaufs der Runde) und Sperr-Eintr\u00e4ge bleiben auch nach der Kontol\u00f6schung gespeichert, damit Sperren nicht durch L\u00f6schen und Neuanlegen des Kontos umgangen werden k\u00f6nnen (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO). Chat-Ausz\u00fcge in Meldungen und Moderations-Protokollen werden sp\u00e4testens nach 12 Monaten entfernt.','Daten\u00fcbertragung ins Ausland (KVKK Art. 9): Verarbeitung auf Servern in der EU und den USA (Google Firebase, GitHub). Mit der Nutzung willigst du in diese \u00dcbertragung ausdr\u00fccklich ein.','Werbung (geplant): freiwillige Bonus-Videos (Rewarded Ads) \u00fcber Google AdMob. Vor Aktivierung erscheint ein Einwilligungs-Banner (Google UMP); ohne Zustimmung keine personalisierte Werbung.','Speicherdauer: Bis zur Kontol\u00f6schung. Konten k\u00f6nnen jederzeit in den Profileinstellungen gel\u00f6scht werden. Ausnahme: Missbrauchsschutz-Daten (siehe oben).','Deine Rechte (DSGVO): Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Portabilit\u00e4t, Widerspruch. Anfragen an wrongwayapp.official@gmail.com','Beschwerderecht: Du hast das Recht, dich bei einer Datenschutzaufsichtsbeh\u00f6rde zu beschweren (z. B. BfDI: bfdi.bund.de).','KVKK (T\u00fcrkei): Rechte gem. Gesetz Nr. 6698. Antr\u00e4ge an wrongwayapp.official@gmail.com \u00b7 www.kvkk.gov.tr'],
@@ -10030,7 +10465,7 @@ function App(){
                 {/* Player A */}
                 <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderRight:'1px solid var(--border)'}}>
                   <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
-                    background:'radial-gradient(circle at 38% 32%, '+MC.A+', '+MD.A+' 100%)',
+                    background:wlLands?('url('+wlFlagge(wlLands[0],true)+') center/cover no-repeat'):('radial-gradient(circle at 38% 32%, '+MC.A+', '+MD.A+' 100%)'),
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
                   <div style={{fontSize:11,fontWeight:800,color:MC.A,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
@@ -10052,7 +10487,7 @@ function App(){
                     <span style={{fontSize:9,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,textTransform:'uppercase',flex:1,textAlign:'center'}}>{t('wallsLabel')||'Mauern'}</span>
                     <span style={{fontSize:14,fontWeight:900,color:statWallB>statWallA?MC.B:'var(--text)',minWidth:22,textAlign:'left'}}>{statWallB}</span>
                   </div>
-                  {isRanked&&rankedMyRating&&rankedOppRating&&(
+                  {isRanked&&!wlLands&&rankedMyRating&&rankedOppRating&&(
                     <div>
                       <div style={{height:1,background:'var(--border)',opacity:0.5,marginBottom:8}}/>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
@@ -10070,7 +10505,7 @@ function App(){
                 {/* Player B */}
                 <div style={{flex:1,padding:'14px 12px',textAlign:'center',borderLeft:'1px solid var(--border)'}}>
                   <div style={{width:32,height:32,borderRadius:'50%',margin:'0 auto 6px',
-                    background:'radial-gradient(circle at 38% 32%, '+MC.B+', '+MD.B+' 100%)',
+                    background:wlLands?('url('+wlFlagge(wlLands[1],true)+') center/cover no-repeat'):('radial-gradient(circle at 38% 32%, '+MC.B+', '+MD.B+' 100%)'),
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
                   <div style={{fontSize:11,fontWeight:800,color:MC.B,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
@@ -10177,6 +10612,19 @@ function App(){
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+          {/* Weltliga: +1 fuer das Land bzw. der Grund, warum der Punkt nicht zaehlt — nur der Sieger sieht es */}
+          {wlLands&&wlErgebnis&&winner===onlineRole&&(
+            <div data-wl="ergebnis" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 16px',marginBottom:12,
+              borderRadius:14,
+              background:wlErgebnis.ok?'rgba(22,163,74,0.10)':'rgba(120,120,120,0.08)',
+              border:'1.5px solid '+(wlErgebnis.ok?'rgba(22,163,74,0.25)':'rgba(120,120,120,0.2)')}}>
+              {wlErgebnis.ok?<WlFlagge land={wlErgebnis.land} h={20}/>:null}
+              <div style={{textAlign:'center'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--subtle)',letterSpacing:0.5,marginBottom:2}}>{t('wl_titel').toUpperCase()}</div>
+                <div style={{fontSize:wlErgebnis.ok?18:14,fontWeight:900,color:wlErgebnis.ok?'#16a34a':'var(--subtle)'}}>{wlErgebnisText(wlErgebnis,t,lang)}</div>
               </div>
             </div>
           )}
@@ -10393,7 +10841,7 @@ function App(){
                   animation:'intro-ring 0.9s ease-out 0.55s'}}/>
                 <div style={{position:'relative',animation:'intro-avatar-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.45s both',
                   filter:`drop-shadow(0 12px 22px ${MC[introOppRole]}aa)`}}>
-                  <Piece color={MC[introOppRole]} dark={MD[introOppRole]} size={86}/>
+                  <Piece color={MC[introOppRole]} dark={MD[introOppRole]} size={86} flag={wlLands?wlLands[introOppRole==='A'?0:1]:null}/>
                 </div>
               </div>
               <div style={{fontSize:21,fontWeight:800,color:'#fff',letterSpacing:-0.3,maxWidth:'78vw',
@@ -10426,7 +10874,7 @@ function App(){
                   animation:'intro-ring 0.9s ease-out 0.55s'}}/>
                 <div style={{position:'relative',animation:'intro-avatar-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.45s both',
                   filter:`drop-shadow(0 12px 22px ${MC[introMyRole]}aa)`}}>
-                  <Piece color={MC[introMyRole]} dark={MD[introMyRole]} size={86}/>
+                  <Piece color={MC[introMyRole]} dark={MD[introMyRole]} size={86} flag={wlLands?wlLands[introMyRole==='A'?0:1]:null}/>
                 </div>
               </div>
             </div>
@@ -10455,7 +10903,7 @@ function App(){
                 background:isRanked?'linear-gradient(135deg,#f59e0b,#d97706)':selectedMap==='duel'?'linear-gradient(135deg,#8b5cf6,#6d28d9)':'linear-gradient(135deg,#3b82f6,#2563eb)',
                 boxShadow:isRanked?'0 4px 20px rgba(245,158,11,0.55)':selectedMap==='duel'?'0 4px 20px rgba(139,92,246,0.55)':'0 4px 20px rgba(59,130,246,0.55)',
                 border:'2px solid rgba(255,255,255,0.25)'}}>
-                {isRanked?'RANKED ':''}{introMapLbl.toUpperCase()}
+                {wlLands?t('wl_titel').toUpperCase():((isRanked?'RANKED ':'')+introMapLbl.toUpperCase())}
               </div>
               {/* Sub-Modi Badges */}
               <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'center'}}>
@@ -10621,7 +11069,7 @@ function App(){
                 )}
                 <div className="ww-stone" style={{width:43,height:43,position:'relative',zIndex:2}}>
                   <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
-                    background:'radial-gradient(circle at 38% 32%, '+MC[p]+', '+MD[p]+' 100%)',
+                    background:wlLands?('url('+wlFlagge(wlLands[p==='A'?0:1],true)+') center/cover no-repeat'):('radial-gradient(circle at 38% 32%, '+MC[p]+', '+MD[p]+' 100%)'),
                     boxShadow:'inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 3px 6px rgba(0,0,0,0.4)'}}/>
                   <div className="ww-stone-tex"/>
                   <div className="ww-stone-sheen"/>
@@ -10636,7 +11084,8 @@ function App(){
                   </div>
                 )}
                 <div className="ww-pname">{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
-                {isRanked&&_eloVal&&(<div style={{fontSize:9,fontWeight:800,color:'var(--text)',opacity:0.55,letterSpacing:0.3,marginTop:1,lineHeight:1}}>{_eloVal+' ELO'}</div>)}
+                {wlLands?(<div data-wl-landname={wlLands[p==='A'?0:1]} style={{fontSize:9,fontWeight:800,color:'var(--text)',opacity:0.55,letterSpacing:0.3,marginTop:1,lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{wlLandName(wlLands[p==='A'?0:1],lang)}</div>)
+                  :(isRanked&&_eloVal&&(<div style={{fontSize:9,fontWeight:800,color:'var(--text)',opacity:0.55,letterSpacing:0.3,marginTop:1,lineHeight:1}}>{_eloVal+' ELO'}</div>))}
                 <div className="ww-pwalls">
                   <svg width="12" height="12" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
                   {barrLeft[p]}
@@ -10771,7 +11220,7 @@ function App(){
                 background:MC[p],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
               <div key={'land'+pos.r+'-'+pos.c} style={{position:'absolute',inset:-3,borderRadius:'50%',
                 border:'2px solid '+MC[p],animation:'ww-land 0.5s ease-out forwards',pointerEvents:'none'}}/>
-              <Piece color={MC[p]} dark={MD[p]} size={sz}/>
+              <Piece color={MC[p]} dark={MD[p]} size={sz} flag={wlLands?wlLands[p==='A'?0:1]:null}/>
               {gameMode==='online'&&p===onlineRole&&<div className="ww-me-orbit"/>}
             </div>
           );
@@ -11411,10 +11860,12 @@ function Confetti({color}){
   </div>;
 }
 
-function Piece({color,dark,size=30}){
+// flag (optional, Weltliga): die ganze Landesflagge auf dem Stein (1x1-Fassung, rund beschnitten), Glanz und Kornung bleiben.
+function Piece({color,dark,size=30,flag}){
+  var fl=flag?wlFlagge(flag,true):'';
   return <div className="ww-stone" style={{width:size,height:size}}>
     <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',borderRadius:'50%',
-      background:`radial-gradient(circle at 38% 32%, ${color}, ${dark} 100%)`,
+      background:fl?('url('+fl+') center/cover no-repeat'):`radial-gradient(circle at 38% 32%, ${color}, ${dark} 100%)`,
       boxShadow:`inset 0 2px 3px rgba(255,255,255,0.28),inset 0 -4px 7px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(0,0,0,0.12),0 4px 7px rgba(0,0,0,0.4),0 2px 3px rgba(0,0,0,0.28)`}}/>
     <div className="ww-stone-tex"/>
     <div className="ww-stone-sheen"/>
