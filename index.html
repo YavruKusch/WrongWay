@@ -5835,12 +5835,13 @@ function App(){
       const next=new Set([...walls,key]);
       setWalls(next);
       setGoldenWalls(prev=>{const g=new Set([...prev]);g.add(key);return g;});
-      setMoveHist(prev=>{if(!prev.length)return prev;const n=prev.slice();n[n.length-1]=Object.assign({},n[n.length-1],{d:key});return n;}); // Replay kennt die Drop-Wand (wie online)
+      const mhAlt=S.current.moveHist,mhD=mhAlt.length?mhAlt.slice(0,-1).concat([Object.assign({},mhAlt[mhAlt.length-1],{d:key})]):mhAlt; // Replay kennt die Drop-Wand (wie online); derselbe Stand geht unten in den Sync
+      setMoveHist(mhD);
       playSound('wall');
       dropNextRef.current=moveHist.length+dropInterval(dropMode);
       if(gameMode==='online'){
         const gw=new Set([...S.current.goldenWalls]);gw.add(key);
-        doSync({pA:S.current.pA,pB:S.current.pB,walls:next,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:S.current.moveHist,chaosItem:S.current.chaosItem,goldenWalls:[...gw]});
+        doSync({pA:S.current.pA,pB:S.current.pB,walls:next,barrLeft:S.current.barrLeft,turn:S.current.turn,winner:null,moves:mhD,chaosItem:S.current.chaosItem,goldenWalls:[...gw]});
       }
     }else{
       dropNextRef.current=moveHist.length+3; // kein fairer Drop möglich → bald erneut
