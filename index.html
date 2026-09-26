@@ -5896,7 +5896,9 @@ function App(){
       // SCHACHUHR (Ranked ODER Casual mit Classic-Zeit): Anzeige aus dem Server-Anker ableiten.
       // Keine lokale Uhr, kein Selbst-Beenden. Wert = Server-Rest minus Wanduhrzeit seit dem Anker
       // -> driftet nie, friert auf Handy nie falsch ein. Der Server beendet das Spiel autoritativ.
-      if(S.current.isRanked||(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('classic-')===0)){
+      // Nur Online-Spiele haben einen Server-Anker; Bot- und Lokal-Spiele zaehlen ihre Classic-Zeit unten selbst herunter
+      // (seit c910108 fehlte diese Pruefung: dort stand die Uhr bzw. zeigte Reste des letzten Online-Spiels). Test: botuhr.mjs
+      if(S.current.gameMode==='online'&&(S.current.isRanked||(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('classic-')===0))){
         const a=clkAnchorRef.current;
         if(a){
           let r0=a.rem[0],r1=a.rem[1];const el=Date.now()-a.at;
