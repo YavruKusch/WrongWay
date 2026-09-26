@@ -760,6 +760,7 @@ function applyMoves(moveList,step,map){
   const walls=new Set();
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
+    if(m.d)walls.add(m.d); // gefallene Drop-Wand (Folgen-Feld, auch am Emote-Eintrag des Bot-Spiels)
     if(m.type==='emote')continue;
     if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
     else if(m.type==='break')walls.delete(m.k);
@@ -774,6 +775,7 @@ function applyMovesWithOwner(moveList,step,map){
   const wallOwner={};
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
+    if(m.d)walls.add(m.d); // gefallene Drop-Wand, ohne Besitzer
     if(m.type==='emote')continue;
     if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
     else if(m.type==='break'){walls.delete(m.k);delete wallOwner[m.k];}

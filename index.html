@@ -880,7 +880,7 @@
 <script src="js/i18n.js?v=109"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
-<script src="js/ai.js?v=2"></script>
+<script src="js/ai.js?v=3"></script>
 <script src="js/sound.js"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
@@ -5378,6 +5378,7 @@ function App(){
         if(d.lm.type==='wall')lmEnt={type:'wall',p:lp,k:d.lm.k};
         else if(d.lm.type==='break')lmEnt={type:'break',p:lp,k:d.lm.k};
         else lmEnt={type:'move',p:lp,r:d.lm.r,c:d.lm.c};
+        if(d.lm.d)lmEnt.d=d.lm.d; // gefallene Drop-Wand fuers Replay (Folgen-Feld des Servers seit 2026-09-26)
         mh=((neuSp?null:S.current.moveHist)||[]).concat([lmEnt]);
         setMoveHist(mh);
         if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':d.lm.type==='break'?'break':'move');
@@ -5834,6 +5835,7 @@ function App(){
       const next=new Set([...walls,key]);
       setWalls(next);
       setGoldenWalls(prev=>{const g=new Set([...prev]);g.add(key);return g;});
+      setMoveHist(prev=>{if(!prev.length)return prev;const n=prev.slice();n[n.length-1]=Object.assign({},n[n.length-1],{d:key});return n;}); // Replay kennt die Drop-Wand (wie online)
       playSound('wall');
       dropNextRef.current=moveHist.length+dropInterval(dropMode);
       if(gameMode==='online'){
@@ -8544,7 +8546,7 @@ function App(){
     const DropBtn=({val,label})=>{
       const sel=dropMode===val;
       return(
-        <button onClick={()=>setDropMode(d=>d===val?false:val)} style={{
+        <button onClick={()=>{const n=dropMode===val?false:val;setDropMode(n);if(n)setHammerMode(false);}} style={{
           flex:1,padding:'8px 2px',borderRadius:9,
           background:sel?'#ec4899':'var(--card)',
           color:sel?'white':'var(--text)',
@@ -8765,7 +8767,7 @@ function App(){
             <SectionHeader icon={<ModeGlyph kind="swirl" size={12} color="#64748b"/>} label={t('modeChaos').toUpperCase()}/>
             <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
               {feat('chaos')&&(
-              <button onClick={()=>setChaosMode(c=>!c)} style={{
+              <button onClick={()=>{if(!chaosMode)setHammerMode(false);setChaosMode(!chaosMode);}} style={{
                 flex:1,padding:'11px 7px',opacity:feat('chaos')?1:0.45,
                 position:'relative',
                 background:chaosMode?'#8b5cf6':'var(--card)',
@@ -8808,7 +8810,7 @@ function App(){
 
           {feat('hammer')&&(
           <div style={{marginTop:8,position:'relative'}}>
-            <button onClick={()=>setHammerMode(h=>!h)} style={{
+            <button onClick={()=>{if(!hammerMode){setChaosMode(false);setDropMode(false);}setHammerMode(!hammerMode);}} style={{
               width:'100%',padding:'11px 12px',position:'relative',
               background:hammerMode?'#f59e0b':'var(--card)',
               color:hammerMode?'white':'var(--text)',
