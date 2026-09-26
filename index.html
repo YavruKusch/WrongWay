@@ -4725,9 +4725,6 @@ function App(){
   const[readIds,setReadIds]=useState(()=>ladeKontoJson('ww_read_ids'));
   const[dismissedIds,setDismissedIds]=useState(()=>ladeKontoJson('ww_dismissed_ids'));
   const[afkTimeLeft,setAfkTimeLeft]=useState(0);
-  const[inactiveWarning,setInactiveWarning]=useState(false);
-  const[inactiveSecs,setInactiveSecs]=useState(15);
-  const[inactiveKicked,setInactiveKicked]=useState(false);
   const[optionsTab,setOptionsTab]=useState('main');
   const[showLang,setShowLang]=useState(false);
   const[hapticOn,setHapticOn]=useState(()=>{try{return localStorage.getItem('ww_haptic')!=='0';}catch{return true;}});
@@ -6181,10 +6178,6 @@ function App(){
   // ── Hammer 2. Welle: Countdown startet wenn alle Wave-1 weg, spawnt nach 50 Zügen ──
   const hammerWave1ClearedRef=useRef(null); // moveHist.length zu dem Zeitpunkt
   const turnTimerRef=useRef(null);
-  const inactivityTimerRef=useRef(null);
-  const inactivityWarnRef=useRef(null);
-  const inactiveCountRef=useRef(null);
-  const inactiveKickedRef=useRef(false);
 
   // AFK-Zug-Timer: 60s pro Zug. WS-Modus: Countdown fuer beide vom Server, Timeout handhabt der Server.
   useEffect(function(){
@@ -6225,48 +6218,6 @@ function App(){
       setAfkTimeLeft(0);
     };
   },[turn,winner,screen,onlineRole,gameMode,gameTimeMode,isRanked]);
-
-  // Inaktivitäts-Kick: 2min kein Touch → Warnung → Firebase trennen
-  useEffect(function(){
-    function resetInactivity(){
-      if(inactiveKickedRef.current)return; // Nach Kick nicht mehr zurücksetzen
-      clearTimeout(inactivityTimerRef.current);
-      clearTimeout(inactivityWarnRef.current);
-      clearInterval(inactiveCountRef.current);
-      setInactiveWarning(false);
-      setInactiveSecs(15);
-      inactivityWarnRef.current=setTimeout(function(){
-        // Laufendes Online-Match: nie warnen/trennen. Das Spiel laeuft ueber den WS-Server (nicht Firebase),
-        // das Vollbild-Overlay blockierte aber jeden Zug — wer den Gegner lange nachdenken liess, verlor auf Zeit.
-        var scIn=S.current; if(scIn&&scIn.screen==='game'&&scIn.gameMode==='online'&&!scIn.winner){ resetInactivity(); return; }
-        setInactiveWarning(true);
-        var s=15;
-        setInactiveSecs(s);
-        inactiveCountRef.current=setInterval(function(){
-          s--;
-          setInactiveSecs(s);
-          if(s<=0)clearInterval(inactiveCountRef.current);
-        },1000);
-      },105000);
-      inactivityTimerRef.current=setTimeout(function(){
-        var scKi=S.current; if(scKi&&scKi.screen==='game'&&scKi.gameMode==='online'&&!scKi.winner){ resetInactivity(); return; }
-        inactiveKickedRef.current=true;
-        setInactiveWarning(false);
-        setInactiveKicked(true);
-        // Firebase trennen → stoppt Datentransfer, spart Kosten
-        try{if(window.firebase&&window.firebase.database)window.firebase.database().goOffline();}catch(e){}
-      },120000);
-    }
-    var evts=['touchstart','mousedown','click','keydown'];
-    evts.forEach(function(e){document.addEventListener(e,resetInactivity,{passive:true,capture:true});});
-    resetInactivity();
-    return function(){
-      evts.forEach(function(e){document.removeEventListener(e,resetInactivity,{capture:true});});
-      clearTimeout(inactivityTimerRef.current);
-      clearTimeout(inactivityWarnRef.current);
-      clearInterval(inactiveCountRef.current);
-    };
-  },[]);
 
   useEffect(()=>{
     if(!hammerMode||isRanked||hammerDrops!==2||winner||screen!=='game')return;
@@ -8172,65 +8123,6 @@ function App(){
               )}
 
             </div>
-          </div>
-        </div>
-      )}
-      {inactiveKicked&&(
-        <div style={{position:'fixed',inset:0,
-          background:'rgba(0,0,0,0.88)',zIndex:99999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div style={{
-            background:'var(--card)',borderRadius:20,padding:'32px 24px',
-            border:'1.5px solid var(--border)',boxShadow:'var(--shadow-card)',
-            maxWidth:320,width:'100%',textAlign:'center'}}>
-            <div style={{fontSize:40,marginBottom:12}}>{'(-_-) zZ'}</div>
-            <div style={{fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:8,
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lang==='de'?'Wegen Inaktivität getrennt':lang==='tr'?'Hareketsizlik nedeniyle bağlantı kesildi':lang==='fr'?'Déconnecté pour inactivité':'Disconnected due to inactivity'}
-            </div>
-            <div style={{fontSize:13,color:'var(--subtle)',marginBottom:22,lineHeight:1.5,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lang==='de'?'Du warst zu lange inaktiv. Tippe zum Neuverbinden.':lang==='tr'?'Çok uzun süre hareketsiz kaldın. Yeniden bağlanmak için dokun.':lang==='fr'?'Inactif trop longtemps. Touchez pour vous reconnecter.':'You were inactive too long. Tap to reconnect.'}
-            </div>
-            <button onClick={function(){
-              try{if(window.firebase&&window.firebase.database)window.firebase.database().goOnline();}catch(e){}
-              window.location.reload();
-            }} style={{
-              width:'100%',padding:'13px',borderRadius:12,
-              background:'linear-gradient(135deg,#3b82f6,#6366f1)',
-              color:'white',border:'none',cursor:'pointer',
-              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:'0 4px 14px rgba(99,102,241,0.35)'}}>
-              {lang==='de'?'Wieder verbinden':lang==='tr'?'Yeniden bağlan':lang==='fr'?'Se reconnecter':'Reconnect'}
-            </button>
-          </div>
-        </div>
-      )}
-      {inactiveWarning&&(
-        <div onClick={function(){setInactiveWarning(false);}} style={{position:'fixed',inset:0,
-          background:'rgba(0,0,0,0.6)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div onClick={function(e){e.stopPropagation();}} style={{
-            background:'var(--card)',borderRadius:20,padding:'28px 24px',
-            border:'1.5px solid var(--border)',boxShadow:'var(--shadow-card)',
-            maxWidth:300,width:'100%',textAlign:'center',
-            animation:'screen-pop 0.2s cubic-bezier(0.25,1,0.5,1) both'}}>
-            <div style={{fontSize:36,marginBottom:8}}>{'(~_~)'}</div>
-            <div style={{fontSize:17,fontWeight:900,color:'var(--text)',marginBottom:6,
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lang==='de'?'Noch da?':lang==='tr'?'Hâlâ buradasın?':lang==='fr'?'Toujours là ?':'Still there?'}
-            </div>
-            <div style={{fontSize:13,color:'var(--subtle)',marginBottom:20,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              {lang==='de'?'Du wirst in ':lang==='tr'?'':lang==='fr'?'Déconnexion dans ':''}{inactiveSecs}s{lang==='tr'?' içinde atılacaksın':''}
-              {lang==='en'?' until disconnect':''}
-              {lang==='de'?' Sek. abgemeldet':''}
-              {lang==='fr'?'':''} 
-            </div>
-            <button onClick={function(){setInactiveWarning(false);}} style={{
-              width:'100%',padding:'12px',borderRadius:12,
-              background:'linear-gradient(135deg,#3b82f6,#6366f1)',
-              color:'white',border:'none',cursor:'pointer',
-              fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
-              boxShadow:'0 4px 14px rgba(99,102,241,0.35)'}}>
-              {lang==='de'?'Ich bin noch da!':lang==='tr'?'Hâlâ buradayım!':lang==='fr'?'Je suis là !':'I\'m still here!'}
-            </button>
           </div>
         </div>
       )}
@@ -10243,9 +10135,9 @@ function App(){
           );})})}
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
-            // Weltliga (Tunay 2026-09-27, "Mauer C"): neutrale Mauer wie im Spiel, dazu ein duenner Rand in der Kartenfarbe des Besitzers
-            var wallColor=owner&&!rLands?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
-            return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} edge={rLands&&owner?rCol(owner):null}/>;
+            // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
+            var wallColor=owner?rCol(owner):(darkMode?'#e2e8f0':'#1e293b');
+            return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
@@ -12020,8 +11912,7 @@ function ClipboardIcon({size,color}){
     <rect x="8" y="3" width="9" height="12" rx="2"/><path d="M5 7 V19 a2 2 0 0 0 2 2 H14"/>
   </svg>;
 }
-// edge (optional, Weltliga-Replay): duenner Rand in der Kartenfarbe des Besitzers, Mauer selbst bleibt neutral
-function Wall({wkey,color,opacity,animate,golden,steel,steelColor,edge}){
+function Wall({wkey,color,opacity,animate,golden,steel,steelColor,wandFarbe}){ // wandFarbe: nur Test-Kennzeichen (Weltliga-Replay)
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
   const enterAnim=isH?'wall-enter-h':'wall-enter-v';
@@ -12037,9 +11928,9 @@ function Wall({wkey,color,opacity,animate,golden,steel,steelColor,edge}){
     const bolts=isH
       ?[{left:5,top:p.height/2-2},{left:p.width/2-2,top:p.height/2-2},{left:p.width-9,top:p.height/2-2}]
       :[{left:p.width/2-2,top:5},{left:p.width/2-2,top:p.height/2-2},{left:p.width/2-2,top:p.height-9}];
-    return <div data-wl-rand={edge||undefined} style={{position:'absolute',...p,background:metalBg,borderRadius:2,zIndex:10,
+    return <div data-wl-wand={wandFarbe||undefined} style={{position:'absolute',...p,background:metalBg,borderRadius:2,zIndex:10,
       pointerEvents:'none',opacity:opacity!==undefined?opacity:1,transformOrigin:'center center',
-      boxShadow:(edge?('0 0 0 2px '+edge+','):'')+(steelColor?('0 0 0 1px '+steelColor+'88,0 2px 8px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.35)'):('inset 0 0 0 1px rgba(30,41,59,0.5),inset 0 1px 1px rgba(255,255,255,0.5),0 2px 5px rgba(0,0,0,0.4)')),
+      boxShadow:steelColor?('0 0 0 1px '+steelColor+'88,0 2px 8px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.35)'):('inset 0 0 0 1px rgba(30,41,59,0.5),inset 0 1px 1px rgba(255,255,255,0.5),0 2px 5px rgba(0,0,0,0.4)'),
       animation:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}>
       {bolts.map((b,i)=><span key={i} style={{position:'absolute',left:b.left,top:b.top,
         width:4,height:4,borderRadius:'50%',
@@ -12052,10 +11943,10 @@ function Wall({wkey,color,opacity,animate,golden,steel,steelColor,edge}){
     ?'golden-drop-h 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite'
     :'golden-drop-v 0.38s cubic-bezier(0.34,1.56,0.64,1) both, golden-glow 1.6s 0.38s ease-in-out infinite';
   const wallOverlay='linear-gradient(180deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0) 30%,rgba(0,0,0,0) 62%,rgba(0,0,0,0.3) 73%,rgba(0,0,0,0.1) 100%), ';
-  return <div data-wl-rand={edge||undefined} style={{position:'absolute',...p,
+  return <div data-wl-wand={wandFarbe||undefined} style={{position:'absolute',...p,
     background:golden?goldenBg:(wallOverlay+color),
     borderRadius:4,zIndex:10,pointerEvents:'none',opacity:opacity!==undefined?opacity:1,overflow:'hidden',
-    boxShadow:golden?'none':(edge?('0 0 0 2px '+edge+','):'')+'inset 0 1.5px 1px rgba(255,255,255,0.28),inset 0 -2px 3px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.5),0 2px 3px rgba(0,0,0,0.35)',
+    boxShadow:golden?'none':'inset 0 1.5px 1px rgba(255,255,255,0.28),inset 0 -2px 3px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.5),0 2px 3px rgba(0,0,0,0.35)',
     transformOrigin:'center center',
     animation:golden?goldenAnim:animate?`${enterAnim} 0.28s cubic-bezier(0.34,1.56,0.64,1) both`:'none'}}>
     {!golden&&<div className="ww-wall-gloss"/>}
