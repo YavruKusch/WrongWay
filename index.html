@@ -2323,6 +2323,10 @@ function wlTextFarbe(f,al){return f.t==='c'?('hsla('+f.h+','+f.s+'%,45%,'+(al===
 function wlWandFarbe(f){return f.t==='c'?('hsl('+f.h+','+f.s+'%,45%)'):f.t==='w'?'#f1f5f9':'#334155';}
 // Kartenfarbe als #rrggbb (= wlTextFarbe) fuer Stellen, die ihre Deckkraft als Hex anhaengen: Zielzonen, Zugpunkte, Emotes,
 // Sieger-Tanz (Tunay 2026-09-27: in der Weltliga nirgends mehr Rot/Blau). dunkel = Schattenton (statt PD)
+// Leuchtkante am Brettrahmen in der Farbe des Spielers, dessen ZIEL an diesem Rand liegt (Tunay 2026-09-27: vorher fest oben
+// Rot, unten Blau — falsch in der Weltliga und bei gedrehtem Brett). KANTE = die bisherigen Kantenfarben ohne Weltliga.
+var KANTE={A:'#ec5346',B:'#4793ec'};
+function kantenStil(f,dk){return {opacity:dk?0.85:0.5,background:'linear-gradient(90deg,transparent,'+f+' 25%,'+f+' 75%,transparent)',boxShadow:'0 0 11px '+f+',0 0 22px '+f+'88'};}
 function wlHex(f,dunkel){
   if(f.t!=='c')return f.t==='w'?(dunkel?'#64748b':'#94a3b8'):(dunkel?'#1e293b':'#475569');
   var l=dunkel?0.3:0.45,a=f.s/100*Math.min(l,1-l);
@@ -4576,7 +4580,6 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
         {/* Ziel oben */}
         <div className="ww-goalext t" style={{width:COLS*SC+26,margin:'0 auto',color:gs&&gs.map==='duel'?PC['A']:'#16a34a'}}>
           <span className="ln"/><span className="ar">{'\u25b2'}</span>
-          {gs&&gs.map==='duel'&&<span className="nm2">{(gs.nameA||t('red')).toUpperCase()}</span>}
           <span className="ln"/>
         </div>
         {/* Brett (v8) */}
@@ -4612,7 +4615,6 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
         <div className="ww-goalext b" style={{width:COLS*SC+26,margin:'8px auto 0',color:gs&&gs.map==='duel'?PC['B']:'var(--subtle)',opacity:gs&&gs.map==='duel'?1:0.4}}>
           <span className="ln"/>
           {gs&&gs.map==='duel'&&<span className="ar">{'\u25bc'}</span>}
-          {gs&&gs.map==='duel'&&<span className="nm2">{(gs.nameB||t('blue')).toUpperCase()}</span>}
           <span className="ln"/>
         </div>
         {/* Andere Zuschauer-Emotes */}
@@ -10173,17 +10175,16 @@ function App(){
             style={{position:'absolute',left:0,top:-12,width:'100%',height:27,margin:0,opacity:0,cursor:'pointer'}}/>
         </div>
 
-        <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?rCol('A'):'#16a34a'}}>
+        <div className="ww-goalext t" style={{width:COLS*CELL+26,color:rMap==='duel'?rCol(rBoardFlip?'B':'A'):'#16a34a'}}>
           <span className="ln"/>
           <span className="ar">{'\u25b2'}</span>
-          {rMap==='duel'&&<span className="nm2">{rNameA.toUpperCase()}</span>}
           <span className="ln"/>
         </div>
         <div style={{position:'relative',width:COLS*CELL+26,margin:'0 auto',borderRadius:24,padding:13,
           background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
           boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
-          <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
-          <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+          <div className="ww-edge ww-edge-t" style={kantenStil((rKarten?RC:KANTE)[rBoardFlip?'B':'A'],darkMode)}/>
+          <div className="ww-edge ww-edge-b" style={kantenStil((rKarten?RC:KANTE)[rBoardFlip?'A':'B'],darkMode)}/>
           <div className="ww-stud ww-stud-l"/>
           <div className="ww-stud ww-stud-r"/>
         <div style={{position:'relative',width:COLS*CELL,height:ROWS*CELL,...sGrid,
@@ -10219,10 +10220,9 @@ function App(){
           );})}
         </div>
         </div>
-        <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?rCol('B'):'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
+        <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?rCol(rBoardFlip?'A':'B'):'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
           <span className="ln"/>
           {rMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
-          {rMap==='duel'&&<span className="nm2">{rNameB.toUpperCase()}</span>}
           <span className="ln"/>
         </div>
 
@@ -11062,7 +11062,6 @@ function App(){
       <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?spFarbe('B'):spFarbe('A')):'#16a34a'}}>
         <span className="ln"/>
         <span className="ar">{'\u25b2'}</span>
-        {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'B':'A').toUpperCase()}</span>}
         <span className="ln"/>
       </div>
 
@@ -11071,8 +11070,8 @@ function App(){
         background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
         boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)',
         animation:'game-enter 0.46s cubic-bezier(0.22,1,0.36,1) backwards'}}>
-      <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
-      <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+      <div className="ww-edge ww-edge-t" style={kantenStil((wlKarten?MC:KANTE)[gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel'?'B':'A'],darkMode)}/>
+      <div className="ww-edge ww-edge-b" style={kantenStil((wlKarten?MC:KANTE)[gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel'?'A':'B'],darkMode)}/>
       <div className="ww-stud ww-stud-l"/>
       <div className="ww-stud ww-stud-r"/>
       {(()=>{
@@ -11169,7 +11168,6 @@ function App(){
       <div className="ww-goalext b" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?spFarbe('A'):spFarbe('B')):'var(--subtle)',opacity:selectedMap==='duel'?1:0.4}}>
         <span className="ln"/>
         {selectedMap==='duel'&&<span className="ar">{'\u25bc'}</span>}
-        {selectedMap==='duel'&&<span className="nm2">{pname(gameMode==='online'&&onlineRole==='B'?'A':'B').toUpperCase()}</span>}
         <span className="ln"/>
       </div>
 
@@ -13749,8 +13747,8 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
       <div style={{position:'relative',width:COLS2*CELL2+26,margin:'0 auto',borderRadius:24,padding:13,
         background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
         boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
-        <div className="ww-edge ww-edge-t" style={{opacity:darkMode?0.85:0.5}}/>
-        <div className="ww-edge ww-edge-b" style={{opacity:darkMode?0.85:0.5}}/>
+        <div className="ww-edge ww-edge-t" style={kantenStil(KANTE[boardFlip?'B':'A'],darkMode)}/>
+        <div className="ww-edge ww-edge-b" style={kantenStil(KANTE[boardFlip?'A':'B'],darkMode)}/>
         <div className="ww-stud ww-stud-l"/>
         <div className="ww-stud ww-stud-r"/>
       <div ref={gridRef} style={{position:'relative',width:COLS2*CELL2,height:ROWS2*CELL2,touchAction:'auto',...sGrid,
