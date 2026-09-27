@@ -1227,7 +1227,19 @@ var LOBBY_CLEAN_TS={t:0};
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
 const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true},announce:'',announceUntil:0,maintenance:false};
-function mergeAdminCfg(cfg){return {features:{...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
+// A5 "Schalter pro Gruppe" (Admin-Seite): ein Feature kann per featureGroups auf 'app' oder 'browser' eingeschraenkt
+// sein — der Bool-Wert im Schalter bleibt unveraendert, ein Client ausserhalb der Gruppe sieht ihn aber als AUS.
+// index.html laeuft nie als Capacitor-App, istApp ist hier also immer false.
+function gruppenGefiltert(feats,gruppen,istApp){
+  if(!gruppen)return feats;
+  var out=Object.assign({},feats);
+  Object.keys(gruppen).forEach(function(k){
+    if(gruppen[k]==='app'&&!istApp)out[k]=false;
+    if(gruppen[k]==='browser'&&istApp)out[k]=false;
+  });
+  return out;
+}
+function mergeAdminCfg(cfg){return {features:gruppenGefiltert({...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},cfg&&cfg.featureGroups,false),announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
   de:{
