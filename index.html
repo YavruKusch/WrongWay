@@ -880,7 +880,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=113"></script>
+<script src="js/i18n.js?v=114"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
@@ -1720,6 +1720,7 @@ function wlErgebnisText(erg,t,sprache){
   if(erg.ok)return t('wl_plus1').replace('{land}',wlLandName(erg.land,sprache)||String(erg.land||''));
   if(erg.grund==='kurz')return t('wl_keinPunktKurz');
   if(erg.grund==='paar')return t('wl_keinPunktPaar');
+  if(erg.grund==='tag')return t('wl_keinPunktTag');
   return t('wl_keinPunkt');
 }
 // ===== Weltliga: reine Helfer (Ende) =====
@@ -2825,6 +2826,7 @@ function WeltligaTabelle({t,lang,darkMode,account}){
   var leer=function(text){return <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border,fontSize:13,fontWeight:700,color:muted}}>{text}</div>;};
   return(
     <div data-wl="tab">
+      <div data-wl="tagesgrenze" style={{fontSize:12,fontWeight:700,color:muted,lineHeight:1.5,textAlign:'center',marginBottom:10}}>{t('wl_tagesgrenze')}</div>
       <div style={{display:'flex',gap:3,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:10,padding:3,border:'1.5px solid '+border,marginBottom:14}}>
         <button data-wl-z="w" onClick={function(){setZ('w');}} style={tabSt(z==='w')}>{t('wl_dieseWoche')}</button>
         <button data-wl-z="e" onClick={function(){setZ('e');}} style={tabSt(z==='e')}>{t('wl_fuerImmer')}</button>
