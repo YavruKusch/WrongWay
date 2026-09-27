@@ -4672,6 +4672,7 @@ function App(){
           ts:Date.now(),winner:p,moveHist:mh,
           map:s.selectedMap||'classic',duelSize:s.duelSize||'standard',
           nameA:pA,nameB:pB,gameMode:s.gameMode||'local',myRole:s.onlineRole||null,
+          hm:!!s.hammerMode, // Hammer-Modus: nur dann ist die Randwand im Replay Metall
           wl:s.wlLands||null // Weltliga: Laender [A, B] fuer die Flaggen-Steine im Replay
         });
       }
@@ -5152,7 +5153,7 @@ function App(){
       setChaosMode(!!st.ch);setHammerMode(!!st.hm);setDropMode(st.dp!==undefined?st.dp:false);
       var nm=d.namen||[];var ak=d.akeys||[];
       setPlayerNames({A:nm[0]||'',B:nm[1]||''});
-      wsMetaRef.current={map:mapS,duelSize:sizeS,nameA:nm[0]||null,nameB:nm[1]||null,myRole:role,
+      wsMetaRef.current={map:mapS,duelSize:sizeS,nameA:nm[0]||null,nameB:nm[1]||null,myRole:role,hm:!!st.hm,
         wl:(st.rankedMode==='weltliga'&&st.lands&&wlIstLand(st.lands[0])&&wlIstLand(st.lands[1]))?[st.lands[0],st.lands[1]]:null};
       setOppAccountKey(role==='A'?(ak[1]||null):(ak[0]||null));
       setPendingInvite(null);setFriendLobbyState(null);setPrivateCode(null);setFlash('');
@@ -8873,7 +8874,7 @@ function App(){
             var owner=rs.wallOwner[k];
             // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
             var wallColor=owner&&rKarten?wlWandFarbe(rKarten[owner==='A'?0:1]):owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
-            return <Wall key={k} wkey={k} color={wallColor} opacity={1} animate={curMove&&curMove.k===k&&curMove.type==='wall'} steel={isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
+            return <Wall key={k} wkey={k} color={wallColor} opacity={1} animate={curMove&&curMove.k===k&&curMove.type==='wall'} steel={(rEntry?!!rEntry.hm:hammerMode)&&isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
@@ -9776,7 +9777,7 @@ function App(){
             </div>
           );
         });})}
-        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate golden={goldenWalls.has(k)} steel={isSteelWall(k)}/>)}
+        {[...walls].map(k=><Wall key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate golden={goldenWalls.has(k)} steel={hammerMode&&isSteelWall(k)}/>)}
         {previewKey&&<Wall wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
         {breakingWall&&<BreakingWall wkey={breakingWall} dark={darkMode}/>}
         {hammerDrag&&hammerTarget&&<Wall wkey={hammerTarget} color={'#f59e0b'} opacity={0.9}/>}
