@@ -880,7 +880,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=112"></script>
+<script src="js/i18n.js?v=113"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
@@ -2572,11 +2572,12 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
 // mode 'weltliga' (Neusenden nach einem Verbindungsabbruch inklusive), Gefunden-Moment mit beiden Flaggen, Live-Zeile.
 // Die Tabelle steht direkt darunter (Tunay 2026-09-26) und weiter als Reiter in der Rangliste. data-wl = Griffe fuer den Browser-Test
 // (wrongway-server/scripts/online-e2e/weltliga.mjs).
-function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin}){
+function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}){
   const[wl,setWl]=React.useState(null);            // {land,neu,ab,mein} vom Server (wl_land)
   const[wlFehler,setWlFehler]=React.useState('');
   const[suche,setSuche]=React.useState(null);      // {LAND: Zahl} — live
-  const[waehlen,setWaehlen]=React.useState(false); // Landwahl offen
+  const[waehlen,setWaehlen]=React.useState(false); // Landwahl offen (true) bzw. Clip-Land 'A'/'B'
+  const[clip,setClip]=React.useState(['DE','TR']); // Clip-Modus (nur Admin, Server-Kennzeichen clip): Laender A/B, lokal
   const[filter,setFilter]=React.useState('');
   const[frage,setFrage]=React.useState(null);      // Land, das bestaetigt werden soll
   const[queue,setQueue]=React.useState(null);
@@ -2627,7 +2628,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin}){
     if(queue)return;
     var v=wlVerbindung(function(d){
       if(!mountedRef.current)return;
-      if(d.type==='wl_land'){setWl({land:d.land||null,neu:d.neu||null,ab:d.ab||null,mein:d.mein||null});setWlFehler('');if(d.suche)setSuche(d.suche);if(account&&!d.land)setWaehlen(true);return;}
+      if(d.type==='wl_land'){setWl({land:d.land||null,neu:d.neu||null,ab:d.ab||null,mein:d.mein||null,clip:d.clip===1});setWlFehler('');if(d.suche)setSuche(d.suche);if(account&&!d.land)setWaehlen(true);return;}
       if(d.type==='wl_suche'){setSuche(d.suche||{});return;}
       if(d.type==='wl_land_fehler'){setWlFehler(d.grund==='login'?t('rankedLoginHint'):t('rankedRetry'));return;}
     });
@@ -2729,6 +2730,21 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin}){
             ):null}
             {wlFehler?<div style={{fontSize:12,color:'#ef4444',textAlign:'center',fontWeight:700}}>{wlFehler}</div>:null}
             <div style={{padding:'12px 14px',borderRadius:12,background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>{t('wl_regeln')}</div>
+            {wl.clip&&!queue?(
+              <div data-wl="clip" style={karte}>
+                <div style={{fontSize:11,fontWeight:800,color:muted,letterSpacing:1,marginBottom:10,textTransform:'uppercase'}}>{t('wl_clip')}</div>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['A','B'].map(function(k,i){return(
+                    <button key={k} data-wl-clip={k} onClick={function(){setWaehlen(k);}} style={{...leise,flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,color:txt}}>
+                      <WlFlagge land={clip[i]} h={14}/><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{wlLandName(clip[i],lang)}</span>
+                    </button>);})}
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button data-wl-clip="pvp" onClick={function(){onClip('pvp',clip);}} style={{...knopf,flex:1,padding:'11px'}}>{t('twoPlayer')}</button>
+                  <button data-wl-clip="pvc" onClick={function(){onClip('pvc',clip);}} style={{...knopf,flex:1,padding:'11px'}}>{t('vsAI')}</button>
+                </div>
+              </div>
+            ):null}
           </div>
         )}
         <div style={{fontSize:11,fontWeight:800,color:muted,letterSpacing:1,margin:'22px 0 10px',textTransform:'uppercase'}}>{t('wl_tabelle')}</div>
@@ -2743,7 +2759,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin}){
               style={{width:'100%',boxSizing:'border-box',padding:'11px 14px',borderRadius:12,border:'1.5px solid '+border,background:card,color:txt,fontSize:16,fontWeight:600,marginBottom:10,fontFamily:'system-ui,-apple-system,sans-serif'}}/>
             <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
               {liste.map(function(e){return(
-                <button key={(e.vorschlag?'v':'')+e.c} data-wl-wahl={e.c} onClick={function(){setFrage(e.c);}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 6px',background:'none',border:'none',borderBottom:'1px solid '+border,cursor:'pointer',color:txt,fontSize:14,fontWeight:700,textAlign:'left',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                <button key={(e.vorschlag?'v':'')+e.c} data-wl-wahl={e.c} onClick={function(){if(waehlen==='A'||waehlen==='B'){var n=clip.slice();n[waehlen==='A'?0:1]=e.c;setClip(n);setWaehlen(false);setFilter('');return;}setFrage(e.c);}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 6px',background:'none',border:'none',borderBottom:'1px solid '+border,cursor:'pointer',color:txt,fontSize:14,fontWeight:700,textAlign:'left',fontFamily:'system-ui,-apple-system,sans-serif'}}>
                   <WlFlagge land={e.c} h={18}/><span style={{flex:1,minWidth:0}}>{e.n}</span>
                   {e.vorschlag?<span style={{fontSize:10,fontWeight:800,color:gruen}}>{t('wl_vorschlag')}</span>:null}
                 </button>);})}
@@ -3803,6 +3819,7 @@ function App(){
   const[eloChange,setEloChange]=useState(null); // {change, newRating, won}
   const[wlLands,setWlLands]=useState(null); // Weltliga-Spiel: [Land A, Land B] aus den Raum-Einstellungen, sonst null
   const[wlErgebnis,setWlErgebnis]=useState(null); // Weltliga: {land, ok, grund} (wl_ergebnis bzw. resync.wl)
+  const clipLandsRef=useRef(null); // Clip-Modus (nur Admin): [Land A, Land B] fuer lokale Spiele; bucht nichts, faellt im Menue weg
   const[rankedOppKey,setRankedOppKey]=useState(null);
   const[oppAccountKey,setOppAccountKey]=useState(null);
   const[oppLevel,setOppLevel]=useState(null);
@@ -4530,6 +4547,9 @@ function App(){
   const pendingXpUpdateRef=useRef(null);
   const S=useRef({});
   S.current={pA,pB,walls,barrLeft,turn,winner,moveHist,gameMode,lobbyId,onlineRole,rematchA,rematchB,rematchDeclined,oppLeft,gameNum,chaosItem,goldenWalls,hammers,hammerHeld,hammerUsed,hammerMode,chaosMode,dropMode,gaveUp,gameTimeMode,isRanked,rankedMode,rankedMyRating,rankedOppRating,rankedOppKey,playerNames,selectedMap,duelSize,screen,bugOpen,repOpen,repSrc,wlLands};
+  // Clip-Modus (nur Admin): im Menue faellt er weg; am Ende zeigt das lokale Spiel das Weltliga-Ergebnis des Siegers (nur Anzeige, bucht nichts)
+  useEffect(()=>{if(screen==='menu')clipLandsRef.current=null;},[screen]);
+  useEffect(()=>{if((winner==='A'||winner==='B')&&gameMode!=='online'&&clipLandsRef.current)setWlErgebnis({ok:true,land:clipLandsRef.current[winner==='A'?0:1]});},[winner]);
   // UI-Testhaken (?uitest=ban|warn): rein lokale Dummy-Overlays fuer Design-Sichtung, keine Datenwege
   useEffect(()=>{
     try{
@@ -5072,7 +5092,7 @@ function App(){
     }else if(WSNET.roomId){ WSNET.close(); }
     if(!isRematch)setSeriesScore({A:0,B:0});
     setEloChange(null);
-    setWlErgebnis(null);if(!wsKeep)setWlLands(null); // Weltliga: Laender setzt nur der Server-Start (wsLobbyMsgRef)
+    setWlErgebnis(null);if(!wsKeep)setWlLands(mode!=='online'&&clipLandsRef.current?clipLandsRef.current:null); // Weltliga: Laender setzt nur der Server-Start (wsLobbyMsgRef) bzw. der Clip-Modus (nur lokal)
     winnerFiredRef.current=false;
     setChaosItem(null);
     chaosSpawnRef.current=18+Math.floor(Math.random()*8); // 18–25
@@ -7896,7 +7916,8 @@ function App(){
 
   if(screen==='weltliga'){
     return <WeltligaScreen account={account} t={t} lang={lang} darkMode={darkMode} goBack={goBack} wsRouter={wsLobbyTrampRef.current}
-      onLogin={()=>{setNavDir('fwd');setScreen('auth');}}/>;
+      onLogin={()=>{setNavDir('fwd');setScreen('auth');}}
+      onClip={(m,l)=>{clipLandsRef.current=[l[0],l[1]];initGame(m,undefined,null,false,undefined,false,selectedMap);}}/>;
   }
 
   // ── FRIENDS ─────────────────────────────────────────────
@@ -9189,7 +9210,7 @@ function App(){
             </div>
           )}
           {/* Weltliga: +1 fuer das Land bzw. der Grund, warum der Punkt nicht zaehlt — nur der Sieger sieht es */}
-          {wlLands&&wlErgebnis&&winner===onlineRole&&(
+          {wlLands&&wlErgebnis&&(winner===onlineRole||gameMode!=='online')&&(
             <div data-wl="ergebnis" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 16px',marginBottom:12,
               borderRadius:14,
               background:wlErgebnis.ok?'rgba(22,163,74,0.10)':'rgba(120,120,120,0.08)',
