@@ -2321,6 +2321,14 @@ function wlKartenStil(f,live){
 // Farbe fuer Schrift/Linien am Brett (auf hellem und dunklem Grund lesbar) und fuer Mauern
 function wlTextFarbe(f,al){return f.t==='c'?('hsla('+f.h+','+f.s+'%,45%,'+(al===undefined?1:al)+')'):f.t==='w'?('rgba(148,163,184,'+(al===undefined?1:al)+')'):('rgba(71,85,105,'+(al===undefined?1:al)+')');}
 function wlWandFarbe(f){return f.t==='c'?('hsl('+f.h+','+f.s+'%,45%)'):f.t==='w'?'#f1f5f9':'#334155';}
+// Kartenfarbe als #rrggbb (= wlTextFarbe) fuer Stellen, die ihre Deckkraft als Hex anhaengen: Zielzonen, Zugpunkte, Emotes,
+// Sieger-Tanz (Tunay 2026-09-27: in der Weltliga nirgends mehr Rot/Blau). dunkel = Schattenton (statt PD)
+function wlHex(f,dunkel){
+  if(f.t!=='c')return f.t==='w'?(dunkel?'#64748b':'#94a3b8'):(dunkel?'#1e293b':'#475569');
+  var l=dunkel?0.3:0.45,a=f.s/100*Math.min(l,1-l);
+  var k=function(n){var m=(n+f.h/30)%12;return ('0'+Math.round((l-a*Math.max(-1,Math.min(m-3,9-m,1)))*255).toString(16)).slice(-2);};
+  return '#'+k(0)+k(8)+k(4);
+}
 function wlFlagge(c,quadrat){return wlIstLand(c)?'flags/'+(quadrat?'1x1':'4x3')+'/'+c.toLowerCase()+'.svg':'';}
 // Laendername in der Spielsprache ueber die eingebaute Browser-Funktion; ohne sie steht der Code da.
 var WL_DN={};
@@ -5410,7 +5418,7 @@ function App(){
   const[replayHistEntry,setReplayHistEntry]=useState(null);
   const[replayPlaying,setReplayPlaying]=useState(false); // Replay laeuft von selbst
   const[replaySpeed,setReplaySpeed]=useState(600); // ms je Zug (wie in der App)
-  const[replayFeier,setReplayFeier]=useState(false); // Sieger-Tanz am Replay-Ende, nur kurz (verdeckte sonst die Endstellung)
+  const[replayFeier,setReplayFeier]=useState(false); // Sieger-Tanz am Replay-Ende: 0,7 s nach dem letzten Zug, bis man tippt (wie in der App)
   const replayZurueckRef=useRef('replayHistory'); // wohin "Zurueck" aus einem gespeicherten Replay fuehrt (Admin: Menue mit Panel)
   const[rematchA,setRematchA]=useState(false);
   const[rematchB,setRematchB]=useState(false);
@@ -5729,8 +5737,9 @@ function App(){
   var _skB=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
   const wlKarten=wlLands?wlKartenFarben(wlLands):null; // Weltliga: Kartenfarben aus den Flaggen
   const spFarbe=p=>wlKarten?wlTextFarbe(wlKarten[p==='A'?0:1]):PC[p]; // Farbe der Namenszeilen am Brett
-  const MC={A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
-  const MD={A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
+  // Weltliga: Flaggen-Kartenfarben statt Rot/Blau — Zielzonen, Zugpunkte, Emotes, Intro, Sieger-Tanz haengen alle hieran
+  const MC=wlKarten?{A:wlHex(wlKarten[0]),B:wlHex(wlKarten[1])}:{A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
+  const MD=wlKarten?{A:wlHex(wlKarten[0],true),B:wlHex(wlKarten[1],true)}:{A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
   var _mySkinEntry=(gameMode==='online'&&matchSkins)?matchSkins[onlineRole==='B'?1:0]:null;
   const myBoardSkin=(_mySkinEntry&&_mySkinEntry.board&&BOARD_SKINS[_mySkinEntry.board])||null;
   const color=MC[turn];
@@ -7258,29 +7267,29 @@ function App(){
 
   // ── Replay: Toene, Sieger-Tanz, Abspielen, Tasten ──
   const lastReplayStep=useRef(0);
+  const replayFeierTimer=useRef(null);
   useEffect(()=>{
-    if(screen!=='replay'){lastReplayStep.current=replayStep;setReplayPlaying(false);setReplayFeier(false);return;}
+    if(screen!=='replay'){lastReplayStep.current=replayStep;clearTimeout(replayFeierTimer.current);setReplayPlaying(false);setReplayFeier(false);return;}
     const rMoves=replayHistEntry?replayHistEntry.moveHist:moveHist;
     const rWinner=replayHistEntry?replayHistEntry.winner:winner;
-    if(replayStep<rMoves.length)setReplayFeier(false); // zurueckgespult: der Tanz gehoert zum Ende
+    if(replayStep<rMoves.length){clearTimeout(replayFeierTimer.current);setReplayFeier(false);} // zurueckgespult: der Tanz gehoert zum Ende
     if(replayStep>lastReplayStep.current){
       const m=rMoves[replayStep-1];
       if(m)playSound(m.type==='emote'?m.emote:m.type==='move'?'move':m.type==='break'?'break':'wall');
-      // Ende erreicht: Toene aus EIGENER Sicht (wie in der App), Tanz kurz wie im Spiel, danach ist die Endstellung frei
+      // Ende erreicht, wie in der App: erst den letzten Zug sehen (0,7 s), dann tanzt der Sieger, bis man tippt.
+      // Toene aus EIGENER Sicht, mit dem Tanz.
       if(replayStep>=rMoves.length&&rWinner){
         const ich=replayHistEntry?(replayHistEntry.myRole||(replayHistEntry.gameMode==='pvc'?'A':null)):(gameMode==='online'?onlineRole:(gameMode==='pvc'?'A':null));
-        if(ich&&rWinner!==ich)playSound('lose');
-        else{playSound('win');setTimeout(()=>playSound('laugh'),350);}
-        setReplayFeier(true);
+        clearTimeout(replayFeierTimer.current);
+        replayFeierTimer.current=setTimeout(()=>{
+          if(ich&&rWinner!==ich)playSound('lose');
+          else{playSound('win');setTimeout(()=>playSound('laugh'),350);}
+          setReplayFeier(true);
+        },700);
       }
     }
     lastReplayStep.current=replayStep;
   },[replayStep,screen,moveHist,replayHistEntry,winner]);
-  useEffect(()=>{
-    if(!replayFeier)return;
-    const id=setTimeout(()=>setReplayFeier(false),2200);
-    return ()=>clearTimeout(id);
-  },[replayFeier]);
   useEffect(()=>{
     if(screen!=='replay'||!replayPlaying)return;
     const n=(replayHistEntry?replayHistEntry.moveHist:moveHist).length;
@@ -10114,6 +10123,7 @@ function App(){
     const rKarten=rLands?wlKartenFarben(rLands):null; // Weltliga: Farben der Karten = Farben im Replay (Legende, Ziel-Zeilen)
     // Spielerfarbe im Replay: Weltliga = Kartenfarbe aus der Flagge (al = Deckkraft), sonst Rot/Blau (suffix = Hex-Deckkraft)
     const rCol=(p,al,suffix)=>rKarten?wlTextFarbe(rKarten[p==='A'?0:1],al):(PC[p]+(suffix||''));
+    const RC=rKarten?{A:wlHex(rKarten[0]),B:wlHex(rKarten[1])}:PC,RD=rKarten?{A:wlHex(rKarten[0],true),B:wlHex(rKarten[1],true)}:PD; // wie MC/MD im Spiel
     const isEnd=replayStep>=rMoves.length;
     const rBoardFlip=rEntry?(rEntry.myRole==='B'&&rEntry.map==='duel'):(gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel');
     const activeEmote=curMove&&curMove.type==='emote'?curMove:null;
@@ -10123,11 +10133,11 @@ function App(){
       <div style={{...sCont,paddingBottom:80,paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
         {/* Gewinner-Tanz am Ende */}
         {isEnd&&rWinner&&replayFeier&&(
-          <div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
-            zIndex:500,pointerEvents:'none',background:'rgba(0,0,0,0.15)'}}>
-            <Confetti color={PC[rWinner]}/>
+          <div data-replay-tanz="1" onClick={function(){setReplayFeier(false);}} style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+            zIndex:500,cursor:'pointer',background:'rgba(0,0,0,0.15)'}}>
+            <Confetti color={RC[rWinner]}/>
             <div style={{animation:'person-grow 0.3s ease-out both'}}>
-              <WinnerPerson color={PC[rWinner]} dark={PD[rWinner]} speed={danceSpeed} dance={danceStyle}/>
+              <WinnerPerson color={RC[rWinner]} dark={RD[rWinner]} speed={danceSpeed} dance={danceStyle}/>
             </div>
           </div>
         )}
@@ -10185,12 +10195,12 @@ function App(){
           <div className="ww-board-veins" style={{opacity:darkMode?0.3:0.45}}/>
           <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,background:darkMode?'radial-gradient(120% 65% at 50% -6%,rgba(125,160,220,0.1),transparent 48%)':'radial-gradient(120% 65% at 50% -6%,rgba(255,255,255,0.5),transparent 48%)'}}/>
           <div style={{position:'absolute',top:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
-            background:`linear-gradient(180deg,${rMap==='duel'?'#ef4444':'#22c55e'}28 0%,${rMap==='duel'?'#ef4444':'#22c55e'}12 60%,transparent 100%)`,
-            boxShadow:`inset 0 0 0 1.5px ${rMap==='duel'?'#ef4444':'#22c55e'}55,inset 0 2px 10px ${rMap==='duel'?'#ef4444':'#22c55e'}33`,
+            background:`linear-gradient(180deg,${rMap==='duel'?RC.A:'#22c55e'}28 0%,${rMap==='duel'?RC.A:'#22c55e'}12 60%,transparent 100%)`,
+            boxShadow:`inset 0 0 0 1.5px ${rMap==='duel'?RC.A:'#22c55e'}55,inset 0 2px 10px ${rMap==='duel'?RC.A:'#22c55e'}33`,
             animation:'ww-goalpulse 3s ease-in-out infinite'}}/>
           {rMap==='duel'&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:CELL,pointerEvents:'none',zIndex:1,
-            background:'linear-gradient(0deg,rgba(59,130,246,0.16) 0%,rgba(59,130,246,0.07) 60%,transparent 100%)',
-            boxShadow:'inset 0 0 0 1.5px rgba(59,130,246,0.33),inset 0 -2px 10px rgba(59,130,246,0.2)',
+            background:`linear-gradient(0deg,${RC.B}29 0%,${RC.B}12 60%,transparent 100%)`,
+            boxShadow:`inset 0 0 0 1.5px ${RC.B}55,inset 0 -2px 10px ${RC.B}33`,
             animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
           <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
             backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
@@ -10204,7 +10214,7 @@ function App(){
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
               transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none',transform:rBoardFlip?'scaleY(-1)':'none'}}>
-              <Piece color={PC[p]} dark={PD[p]} size={sz} flag={rLands?rLands[p==='A'?0:1]:null}/>
+              <Piece color={RC[p]} dark={RD[p]} size={sz} flag={rLands?rLands[p==='A'?0:1]:null}/>
             </div>
           );})}
         </div>
@@ -10244,7 +10254,7 @@ function App(){
               <span key={replayStep+'e'} data-replay-emote="1" style={{display:'inline-block',position:'relative',width:36,height:18,marginLeft:2}}>
                 <span style={{position:'absolute',left:0,top:-13,width:72,height:90,transform:'scale(0.5)',transformOrigin:'top left',pointerEvents:'none'}}>
                   <span style={{display:'block',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
-                    <EmoteChar color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote}/>
+                    <EmoteChar color={RC[activeEmote.p]} dark={RD[activeEmote.p]} type={activeEmote.emote}/>
                   </span>
                 </span>
               </span>
@@ -10967,7 +10977,7 @@ function App(){
           const active=turn===p&&!winner;
           const isOpp=(gameMode==='online'&&p!==onlineRole)||(gameMode==='pvc'&&p==='B');
           const canTapProfile=isOpp&&oppAccountKey;
-          const eyeCol=p==='A'?'#ef4444':'#3b82f6';
+          const eyeCol=wlKarten?MC[p]:p==='A'?'#ef4444':'#3b82f6';
           const classic=gameTimeMode&&gameTimeMode.indexOf('classic-')===0;
           var _eloVal=isRanked?(isOpp?rankedOppRating:rankedMyRating):0;
           var _eloTier=_eloVal?rankTier(_eloVal):{color:'#94a3b8'};
@@ -11388,7 +11398,7 @@ function App(){
               <div style={{display:'flex',flexDirection:'column',gap:5}}>
                 {chatMsgs.map((m,i)=>{
                   const mine=m.u===onlineRole;
-                  const col=PC[m.u]||'#8b5cf6';
+                  const col=(wlKarten?MC[m.u]:PC[m.u])||'#8b5cf6';
                   return(
                     <div key={i} style={{
                       display:'flex',flexDirection:'column',
