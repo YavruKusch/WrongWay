@@ -10105,8 +10105,6 @@ function App(){
     // Zuletzt ausgefuehrter Eintrag (der Stand auf dem Brett); vorher stand hier der NAECHSTE, der letzte Zug fehlte nie angezeigt
     const curMove=replayStep>0?rMoves[replayStep-1]:null;
     const progress=rMoves.length>0?Math.round((replayStep/rMoves.length)*100):0;
-    // Letzter Zug markiert: Feld, von dem der Stein kam (Stand einen Eintrag frueher)
-    const vorPos=curMove&&curMove.type==='move'?applyMoves(rMoves,replayStep-1,rMap)[curMove.p==='A'?'pA':'pB']:null;
     // Gespeichertes Replay: Namen aus dem Eintrag, sonst Rot/Blau — nie aus dem gerade laufenden Spiel (pname)
     const rNameA=rEntry?(rEntry.nameA||t('red')):pname('A');
     const rNameB=rEntry?(rEntry.nameB||t('blue')):pname('B');
@@ -10197,8 +10195,6 @@ function App(){
           <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
             backgroundImage:`linear-gradient(${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),linear-gradient(90deg,${darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)'} 1px,transparent 1px),radial-gradient(circle at 0 0, ${darkMode?'rgba(255,255,255,0.13)':'rgba(20,28,45,0.16)'} 1.4px, transparent 2px)`,
             backgroundSize:`${CELL}px ${CELL}px,${CELL}px ${CELL}px,${CELL}px ${CELL}px`}}/>
-          {vorPos&&<div style={{position:'absolute',left:vorPos.c*CELL+CELL*0.3,top:vorPos.r*CELL+CELL*0.3,width:CELL*0.4,height:CELL*0.4,
-            borderRadius:'50%',border:'2px dashed '+rCol(curMove.p),opacity:0.7,boxSizing:'border-box',pointerEvents:'none',zIndex:15}}/>}
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
             // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
@@ -10211,16 +10207,6 @@ function App(){
               <Piece color={PC[p]} dark={PD[p]} size={sz} flag={rLands?rLands[p==='A'?0:1]:null}/>
             </div>
           );})}
-          {/* Emote-Anzeige neben Spieler */}
-          {activeEmote&&(
-            <div key={replayStep+'e'} style={{position:'absolute',
-              left:(activeEmote.p==='A'?rs.pA.c:rs.pB.c)*CELL+CELL+4,
-              top:(activeEmote.p==='A'?rs.pA.r:rs.pB.r)*CELL-18,
-              zIndex:30,pointerEvents:'none',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
-              transform:rBoardFlip?'scaleY(-1)':'none'}}>
-              <EmoteChar color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote}/>
-            </div>
-          )}
         </div>
         </div>
         <div className="ww-goalext b" style={{width:COLS*CELL+26,marginBottom:14,color:rMap==='duel'?rCol('B'):'var(--subtle)',opacity:rMap==='duel'?1:0.4}}>
@@ -10253,6 +10239,16 @@ function App(){
             <span style={{fontSize:12,fontWeight:600,color:'var(--subtle)'}}>
               {curMove.type==='move'?t('step'):curMove.type==='emote'?t('replayEmote'):curMove.type==='break'?t('replayBreak'):t('wallPlaced')}
             </span>
+            {/* Emote als kleine Figur in der Zeile (Tunay 2026-09-27: nicht mitten aufs Brett); ragt ueber die Zeile, statt sie zu erhoehen */}
+            {activeEmote&&(
+              <span key={replayStep+'e'} data-replay-emote="1" style={{display:'inline-block',position:'relative',width:36,height:18,marginLeft:2}}>
+                <span style={{position:'absolute',left:0,top:-13,width:72,height:90,transform:'scale(0.5)',transformOrigin:'top left',pointerEvents:'none'}}>
+                  <span style={{display:'block',animation:'emote-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both'}}>
+                    <EmoteChar color={PC[activeEmote.p]} dark={PD[activeEmote.p]} type={activeEmote.emote}/>
+                  </span>
+                </span>
+              </span>
+            )}
           </div>
         )}
         {isEnd&&rWinner&&(
