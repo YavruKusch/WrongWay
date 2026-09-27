@@ -880,7 +880,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=111"></script>
+<script src="js/i18n.js?v=112"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
@@ -1219,17 +1219,7 @@ const ORDER_2V2=['A1','A2','B1','B2'];
 const TEAM_2V2=id=>id[0]; // 'A1'->'A'
 const PC2={A1:'#ef4444',A2:'#f87171',B1:'#3b82f6',B2:'#60a5fa'};
 const PD2={A1:'#7f1d1d',A2:'#991b1b',B1:'#1e3a5f',B2:'#1e4d8f'};
-// Admin-Gate: nur der eingeloggte Firebase-Account mit der Admin-UID hat Zugang.
-// Kein Hash, kein Passwort, kein URL-Parameter — serverseitig durch Firebase-Regel gesichert.
-// Die UID ist KEIN Geheimnis: sie nuetzt nur dem, der sich in genau diesen Account einloggen kann.
-const ADMIN_UID='mSonMcXmL8fktWt170Q1pYVduya2';
 const WARN_SECONDS=5; // Verwarnungs-Overlay: Countdown bis 'Verstanden' klickbar wird
-function isAdmin(){
-  try{
-    var u=firebase.auth().currentUser;
-    return !!(u&&u.uid===ADMIN_UID);
-  }catch(e){return false;}
-}
 // Spielerzaehler-Cache: verhindert Neuladen von ww_pv2/ww_ig bei jeder Rueckkehr ins Hauptmenue
 var PVCACHE={ts:0,online:0,inGame:0};
 // Drossel fuer Lobby-Listen-Bereinigung (max. 1x pro Intervall, egal wie oft Menue/Liste geoeffnet wird)
@@ -1499,63 +1489,6 @@ async function changeAccountPassword(key,oldPw,newPw,confirmPw){
     return{err:'wrongPw'};
   }
 }
-async function adminResetAllRanked(){
-  const snap=await window.db.ref('ww_leaderboard').once('value');
-  const all=snap.val();
-  if(!all)return 0;
-  const keys=Object.keys(all);
-  const resetMode={rating:1000,wins:0,losses:0};
-  var errors=[];
-  await Promise.all(keys.map(async function(k){
-    const entry=all[k];
-    if(!entry||typeof entry!=='object'){return;}
-    // Bogus-Eintraege loeschen: kein Name, Name '?', oder Rating > 4000 (Cheat)
-    var classicR=(entry.classic&&typeof entry.classic.rating==='number')?entry.classic.rating:0;
-    var duelR=(entry.duel&&typeof entry.duel.rating==='number')?entry.duel.rating:0;
-    var isBogus=(!entry.name||entry.name==='?'||classicR>4000||duelR>4000);
-    if(isBogus){
-      try{await window.db.ref('ww_leaderboard/'+k).remove();}
-      catch(e){errors.push('del '+k+': '+(e&&e.message?e.message:e));}
-      return;
-    }
-    const update={};
-    if(entry.classic)update.classic=resetMode;
-    if(entry.duel)update.duel=resetMode;
-    if(Object.keys(update).length>0){
-      try{await window.db.ref('ww_leaderboard/'+k).update(update);}
-      catch(e){errors.push('rst '+k+': '+(e&&e.message?e.message:e));}
-    }
-  }));
-  if(errors.length>0)throw new Error(errors.join(' | '));
-  return keys.length;
-}
-async function adminFixLeaderboardNames(){
-  // Liest alle Leaderboard-Eintraege, wo name==='Spieler', und ersetzt mit echtem Profil-Namen
-  const snap=await window.db.ref('ww_leaderboard').once('value');
-  const lb=snap.val();
-  if(!lb)return 0;
-  const uids=Object.keys(lb).filter(function(k){return lb[k]&&lb[k].name==='Spieler';});
-  if(uids.length===0)return 0;
-  var fixed=0;
-  var errors=[];
-  await Promise.all(uids.map(async function(uid){
-    try{
-      const ps=await window.db.ref('ww_profiles/'+uid).once('value');
-      var raw=ps.val();
-      var prof=null;
-      try{prof=(typeof raw==='string')?JSON.parse(raw):raw;}catch(_){}
-      var name=(prof&&typeof prof.name==='string'&&prof.name)?prof.name:null;
-      var color=(prof&&typeof prof.color==='string'&&prof.color)?prof.color:null;
-      if(!name)return;
-      var upd={name:name};
-      if(color)upd.color=color;
-      await window.db.ref('ww_leaderboard/'+uid).update(upd);
-      fixed++;
-    }catch(e){errors.push(uid+': '+(e&&e.message?e.message:e));}
-  }));
-  if(errors.length>0)throw new Error(errors.join(' | '));
-  return fixed;
-}
 // Loescht die write-geschuetzten Server-Pfade (Coins/XP/Level/Inventar/Kaeufe/Receipts/
 // Elo-Reports/Tag/PlayerID), die der Client wegen der Firebase-Regeln nie selbst loeschen
 // kann. Gleiches Muster wie im Vite-Client (ProfileScreen.jsx) — muss VOR dem Auth-Delete
@@ -1581,208 +1514,6 @@ async function accountDeleteWsCmd(){
     ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
     ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
   });
-}
-async function adminFlagWsCmd(flag, value){
-  return new Promise(function(resolve,reject){
-    var ws=new WebSocket(WW_URL);
-    var authed=false,done=false;
-    var tmr=setTimeout(function(){if(!done){done=true;try{ws.close();}catch(e){}reject(new Error('Timeout'));}},10000);
-    ws.onopen=function(){
-      firebase.auth().currentUser.getIdToken(true).then(function(tok){
-        if(done)return;
-        ws.send(JSON.stringify({type:'auth',idToken:tok,cap:WW_CAP}));
-      }).catch(function(e){if(!done){done=true;clearTimeout(tmr);try{ws.close();}catch(e2){}reject(e);}});
-    };
-    ws.onmessage=function(ev){
-      if(done)return;
-      var d;try{d=JSON.parse(ev.data);}catch(e){return;}
-      if(d.type==='authed'&&!authed){authed=true;ws.send(JSON.stringify({type:'admin_set_flag',flag:flag,value:value}));return;}
-      if(d.type==='admin_flag_ok'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}resolve(d);return;}
-      if(d.type==='error'){done=true;clearTimeout(tmr);try{ws.close();}catch(e){}reject(new Error(d.grund||'Fehler'));}
-    };
-    ws.onerror=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('WS-Fehler'));}};
-    ws.onclose=function(){if(!done){done=true;clearTimeout(tmr);reject(new Error('Verbindung getrennt'));}};
-  });
-}
-// Fehler-Reports nach Text gruppieren, neueste zuerst. Die Texte schreibt jedes Konto selbst ->
-// Object.create(null): jeder Text ist ein gewoehnlicher Schluessel, auch Namen wie "constructor".
-function fehlerGruppieren(list){
-  var g=Object.create(null);
-  list.forEach(function(e){
-    var k=e.msg;
-    if(!g[k])g[k]={msg:k,n:0,uids:{},last:0,sample:e};
-    g[k].n++;g[k].uids[e._uid]=1;
-    if((e.ts||0)>=g[k].last){g[k].last=e.ts||0;g[k].sample=e;}
-  });
-  var arr=Object.keys(g).map(function(k){return g[k];});
-  arr.sort(function(a,b){return b.last-a.last;});
-  return arr;
-}
-function AdminErrorsPanel(){
-  var[rows,setRows]=React.useState(null);
-  var[busy,setBusy]=React.useState(false);
-  var[msg,setMsg]=React.useState('');
-  var[open,setOpen]=React.useState(-1);
-  var[confirmDel,setConfirmDel]=React.useState(false);
-  function load(){
-    if(!window.db)return;
-    setBusy(true);setMsg('');setOpen(-1);setConfirmDel(false);
-    window.db.ref('ww_error_reports').once('value').then(function(snap){
-      var v=snap.val()||{};var list=[];
-      Object.keys(v).forEach(function(uid){
-        Object.keys(v[uid]||{}).forEach(function(slot){
-          var e=v[uid][slot];if(e&&e.msg){e=Object.assign({},e);e._uid=uid;list.push(e);}
-        });
-      });
-      setRows(fehlerGruppieren(list));setBusy(false);
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
-  }
-  function clearAll(){
-    if(!confirmDel){setConfirmDel(true);return;}
-    if(!window.db)return;
-    setBusy(true);
-    window.db.ref('ww_error_reports').set(null).then(function(){
-      setRows([]);setBusy(false);setConfirmDel(false);setMsg('Alle geloescht');
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);setConfirmDel(false);});
-  }
-  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
-    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
-    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
-  var rowsUi=null;
-  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Fehler-Reports.</div>;
-  if(rows&&rows.length>0)rowsUi=rows.map(function(r,idx){
-    var s=r.sample;var users=Object.keys(r.uids).length;
-    var when=new Date(r.last).toLocaleString();
-    var det=null;
-    if(open===idx)det=(
-      <div style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-all',
-        marginTop:5,padding:7,background:'var(--bg)',borderRadius:7}}>
-        {'typ: '+s.type+'\nver: '+(s.ver||'?')+'\nsrc: '+(s.src||'?')+' Z.'+(s.line||0)+
-         '\nua: '+(s.ua||'?')+'\nuid: '+s._uid+'\n\n'+(s.stack||'(kein Stack)')}
-      </div>
-    );
-    return(
-      <div key={r.msg} onClick={function(){setOpen(open===idx?-1:idx);}}
-        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid var(--border)',marginBottom:6,cursor:'pointer'}}>
-        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',wordBreak:'break-all'}}>{r.msg}</div>
-        <div style={{fontSize:10,color:'var(--subtle)',marginTop:2}}>
-          {r.n+'x bei '+users+' Spieler(n), zuletzt '+when}
-        </div>
-        {det}
-      </div>
-    );
-  });
-  return(
-    <div>
-      <div style={{display:'flex',gap:7,marginBottom:8}}>
-        <button onClick={load} disabled={busy} style={btnSt}>
-          {busy?'...':(rows===null?'Reports laden':'Aktualisieren')}
-        </button>
-        {rows&&rows.length>0&&
-          <button onClick={clearAll} disabled={busy}
-            style={Object.assign({},btnSt,{borderColor:'#ef4444',color:'#ef4444'})}>
-            {confirmDel?'Wirklich ALLE loeschen?':'Alle loeschen'}
-          </button>}
-      </div>
-      {rowsUi}
-      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
-    </div>
-  );
-}
-function AdminBugsPanel(props){
-  var[rows,setRows]=React.useState(null);
-  var[busy,setBusy]=React.useState(false);
-  var[msg,setMsg]=React.useState('');
-  var[open,setOpen]=React.useState(-1);
-  var[confirmDel,setConfirmDel]=React.useState(false);
-  var KAT_LABEL={connection:'Verbindung',unfair:'Unfairer Verlust',display:'Anzeige',other:'Sonstiges'};
-  function load(){
-    if(!window.db)return;
-    setBusy(true);setMsg('');setOpen(-1);setConfirmDel(false);
-    window.db.ref('ww_bug_reports').once('value').then(function(snap){
-      var v=snap.val()||{};var list=[];
-      Object.keys(v).forEach(function(uid){
-        Object.keys(v[uid]||{}).forEach(function(pid){
-          var e=v[uid][pid];
-          if(e&&e.text){e=Object.assign({},e);e._uid=uid;e._id=pid;list.push(e);}
-        });
-      });
-      list.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-      setRows(list);setBusy(false);
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
-  }
-  function clearAll(){
-    if(!confirmDel){setConfirmDel(true);return;}
-    if(!window.db)return;
-    setBusy(true);
-    window.db.ref('ww_bug_reports').set(null).then(function(){
-      setRows([]);setBusy(false);setConfirmDel(false);setMsg('Alle geloescht');
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);setConfirmDel(false);});
-  }
-  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
-    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
-    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
-  var rowsUi=null;
-  if(rows&&rows.length===0)rowsUi=<div style={{fontSize:12,color:'var(--subtle)'}}>Keine Bug-Reports.</div>;
-  if(rows&&rows.length>0)rowsUi=rows.map(function(r,idx){
-    var when=new Date(r.ts||0).toLocaleString();
-    var srv=null;
-    try{srv=r.server?JSON.stringify(r.server,null,1):'(Server-Sicht fehlt — Raum war schon weg)';}catch(e){srv='?';}
-    var cli=null;
-    try{cli=r.client?JSON.stringify(r.client,null,1):'(kein Client-Kontext)';}catch(e){cli='?';}
-    var det=null;
-    if(open===idx)det=(
-      <div style={{fontSize:10,color:'var(--subtle)',whiteSpace:'pre-wrap',wordBreak:'break-all',
-        marginTop:5,padding:7,background:'var(--bg)',borderRadius:7}}>
-        {'uid: '+r._uid+'\n\nCLIENT:\n'+cli+'\n\nSERVER:\n'+srv}
-      </div>
-    );
-    var replayBtn=null;
-    if(open===idx&&r.replay&&r.replay.moveHist&&props.onWatch){
-      replayBtn=(
-        <button onClick={function(ev){ev.stopPropagation();props.onWatch(r.replay);}}
-          style={{marginTop:6,padding:'7px 12px',borderRadius:9,border:'none',cursor:'pointer',
-            background:'#3b82f6',color:'white',fontSize:11,fontWeight:800,fontFamily:'system-ui,sans-serif'}}>
-          Replay ansehen ({(r.replay.moveHist||[]).length} Zuege)
-        </button>
-      );
-    }
-    return(
-      <div key={r._uid+'_'+r._id} onClick={function(){setOpen(open===idx?-1:idx);}}
-        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid var(--border)',marginBottom:6,cursor:'pointer'}}>
-        <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:2}}>
-          <span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:'rgba(59,130,246,0.12)',color:'#3b82f6'}}>{KAT_LABEL[r.kat]||r.kat}</span>
-          {r.replay&&r.replay.moveHist?<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:'rgba(22,163,74,0.12)',color:'#16a34a'}}>REPLAY</span>:null}
-          {r.client&&r.client.ranked?<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:'rgba(245,158,11,0.12)',color:'#f59e0b'}}>RANKED</span>:null}
-        </div>
-        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',wordBreak:'break-word'}}>{r.text}</div>
-        <div style={{fontSize:10,color:'var(--subtle)',marginTop:2}}>{when}</div>
-        {det}
-        {replayBtn}
-      </div>
-    );
-  });
-  return(
-    <div>
-      <div style={{display:'flex',gap:7,marginBottom:8}}>
-        <button onClick={load} disabled={busy} style={btnSt}>
-          {busy?'...':(rows===null?'Reports laden':'Aktualisieren')}
-        </button>
-        {rows&&rows.length>0&&
-          <button onClick={clearAll} disabled={busy}
-            style={Object.assign({},btnSt,{borderColor:'#ef4444',color:'#ef4444'})}>
-            {confirmDel?'Wirklich ALLE loeschen?':'Alle loeschen'}
-          </button>}
-      </div>
-      {rowsUi}
-      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
-    </div>
-  );
 }
 function WarnOverlay(props){
   // Verwarnungs-Overlay mit 5s-'Verstanden'-Countdown. Eigene Komponente, damit der
@@ -1828,424 +1559,10 @@ function WarnOverlay(props){
     </div>
   );
 }
-function AdminReportsPanel(){
-  // Moderations-Zentrale: ww_reports (offene Meldungen) + ww_bans (aktive Sperren) + ww_ban_log
-  // (Stufen-Historie) -> Tabs OFFEN/BEOBACHTET/VERWARNT/GESPERRT mit Status pro Spieler.
-  // Alle Reads on-demand (.once) beim Laden, Aktionen via wsCmd (Server prueft ADMIN_UID).
-  // ponytail: ww_ban_log wird komplett gelesen — bei sehr vielen moderierten Spielern spaeter paginieren.
-  var[data,setData]=React.useState(null);   // [{uid,name,reports[],status{},zuletzt}]
-  var[busy,setBusy]=React.useState(false);
-  var[msg,setMsg]=React.useState('');
-  var[tab,setTab]=React.useState('offen');
-  var[openUid,setOpenUid]=React.useState(null);
-  var[openName,setOpenName]=React.useState('');
-  var[lbInfo,setLbInfo]=React.useState(null);
-  var[grund,setGrund]=React.useState('');
-  var[actBusy,setActBusy]=React.useState('');
-  var[actMsg,setActMsg]=React.useState('');
-  var[q,setQ]=React.useState('');
-  var[qRes,setQRes]=React.useState(null);
-  var[chatOpen,setChatOpen]=React.useState({}); // reportId -> Verlauf aufgeklappt
-  var isWide=false;
-  try{ isWide=window.matchMedia&&window.matchMedia('(min-width:1000px)').matches; }catch(e){}
-  var RKAT={reportCheating:'Cheating',reportHateSpeech:'Beleidigung',reportSpam:'Spam',reportOther:'Sonstiges'};
-  var AKT_LABEL={verworfen:'Verworfen',beobachtet:'Beobachtet',verwarnt:'Verwarnt',entsperrt:'Entsperrt',gesperrt_perm:'Gesperrt (permanent)',verwarnung_geloescht:'Verwarnung geloescht'};
-  function aktLabel(a){ if(AKT_LABEL[a])return AKT_LABEL[a]; if(a&&a.indexOf('gesperrt_')===0)return 'Gesperrt ('+a.slice(9)+')'; return a||'?'; }
-  // Stufen aus der Historie ableiten: beobachtet je gesetzt, aktive Verwarnungen (Loeschung setzt
-  // auf 0 zurueck), aktive Sperre aus ww_bans (Ablauf-Check clientseitig nur fuer die Anzeige).
-  function statusAus(logObj,banObj){
-    var list=Object.keys(logObj||{}).map(function(k){return logObj[k]||{};});
-    list.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-    var beob=false,warnAktiv=0;
-    list.forEach(function(l){
-      if(l.aktion==='beobachtet')beob=true;
-      if(l.aktion==='verwarnt')warnAktiv++;
-      if(l.aktion==='verwarnung_geloescht')warnAktiv=0;
-    });
-    var gesperrt=null;
-    if(banObj&&banObj.banned){
-      var u=(typeof banObj.until==='number')?banObj.until:null;
-      if(u===null||u>Date.now())gesperrt={until:u,reason:banObj.reason||null};
-    }
-    return {beobachtet:beob,verwarnt:warnAktiv,gesperrt:gesperrt,log:list.slice().reverse()};
-  }
-  function statusVon(uid){
-    var g=(data||[]).filter(function(x){return x.uid===uid;})[0];
-    return g||{uid:uid,name:'',reports:[],status:statusAus({},null),zuletzt:0};
-  }
-  function load(behalteUid){
-    if(!window.db)return;
-    setBusy(true);setMsg('');
-    if(!behalteUid){setOpenUid(null);setLbInfo(null);}
-    Promise.all([
-      window.db.ref('ww_reports').once('value'),
-      window.db.ref('ww_bans').once('value'),
-      window.db.ref('ww_ban_log').once('value')
-    ]).then(function(res){
-      var rep=res[0].val()||{},bans=res[1].val()||{},logAll=res[2].val()||{};
-      var byUid={};
-      var stelle=function(uid){ if(!byUid[uid])byUid[uid]={uid:uid,name:'',reports:[],log:{},ban:null}; return byUid[uid]; };
-      Object.keys(rep).forEach(function(id){
-        var e=rep[id]; if(!e||!e.reported)return;
-        var g=stelle(e.reported);
-        var e2=Object.assign({},e);e2._id=id;
-        g.reports.push(e2);
-        if(e.reportedName)g.name=e.reportedName;
-      });
-      Object.keys(logAll).forEach(function(uid){ stelle(uid).log=logAll[uid]||{}; });
-      Object.keys(bans).forEach(function(uid){ stelle(uid).ban=bans[uid]; });
-      var list=Object.keys(byUid).map(function(k){
-        var g=byUid[k];
-        g.reports.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-        g.status=statusAus(g.log,g.ban);
-        g.zuletzt=g.reports.length?(g.reports[0].ts||0):(g.status.log.length?(g.status.log[0].ts||0):0);
-        return g;
-      });
-      list.sort(function(a,b){return (b.zuletzt||0)-(a.zuletzt||0);});
-      setData(list);setBusy(false);
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy(false);});
-  }
-  function loadLb(uid){
-    setLbInfo(null);
-    if(!window.db)return;
-    window.db.ref('ww_leaderboard/'+uid).once('value').then(function(snap){
-      var v=snap.val();
-      if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
-      setLbInfo(v||{});
-    }).catch(function(){setLbInfo({});});
-  }
-  function waehle(uid,name,defaultGrund){
-    if(openUid===uid){setOpenUid(null);setLbInfo(null);return;}
-    setOpenUid(uid);setOpenName(name||'?');setActMsg('');
-    setGrund(defaultGrund||'');
-    loadLb(uid);
-  }
-  function doAction(art,reportId){
-    if(actBusy||!openUid)return;
-    var uid=openUid,m=null,ok='';
-    var nm=openName||uid;
-    if(art==='ban24'||art==='ban7'||art==='banperm'){
-      var dur=art==='ban24'?86400000:(art==='ban7'?604800000:null);
-      if(!window.confirm(nm+' ('+uid+') sperren: '+(art==='banperm'?'PERMANENT':(art==='ban24'?'24 Stunden':'7 Tage'))+'?'))return;
-      m={type:'admin_ban_set',uid:uid,reason:(grund.trim()||'other'),durationMs:dur,reportId:reportId||null};ok='admin_ban_ok';
-    }else if(art==='unban'){
-      if(!window.confirm(nm+' ('+uid+') entsperren?'))return;
-      m={type:'admin_unban',uid:uid};ok='admin_ban_ok';
-    }else if(art==='warnclear'){
-      if(!window.confirm('Verwarnung(en) von '+nm+' loeschen? (Karte verschwindet aus dem Postfach)'))return;
-      m={type:'admin_warn_clear',uid:uid};ok='admin_warn_clear_ok';
-    }else{
-      if(art==='verwarnt'&&!window.confirm(nm+' verwarnen? (Spieler sieht Overlay + Postfach-Karte)'))return;
-      m={type:'admin_report_action',uid:uid,aktion:art,grund:(grund.trim()||null),reportId:reportId||null};ok='admin_report_action_ok';
-    }
-    setActBusy(art);setActMsg('');
-    wsCmd(m,ok).then(function(){
-      setActBusy('');setActMsg('OK: '+art);
-      load(uid); // Status/Tabs/Zaehler sofort nachziehen (Spieler wandert ggf. den Tab)
-    }).catch(function(e){
-      setActBusy('');setActMsg('Fehler: '+(e&&e.message?e.message:'?'));
-    });
-  }
-  function doSearch(){
-    var qq=normUser(q);
-    if(qq.length<2||!window.db){setQRes([]);return;}
-    window.db.ref('ww_usernames').orderByKey().startAt(qq).endAt(qq+String.fromCharCode(0xf8ff)).limitToFirst(8).once('value').then(function(snap){
-      var v=snap.val()||{};
-      var list=Object.keys(v).map(function(k){var r=v[k];if(typeof r==='string'){try{r=JSON.parse(r);}catch(e){r=null;}}return r;})
-        .filter(function(r){return r&&r.uid;}).map(function(r){return {uid:r.uid,name:r.name||'?'};});
-      setQRes(list);
-    }).catch(function(e){setQRes([]);setMsg('Suche-Fehler: '+(e&&e.message));});
-  }
-  var btnSt={padding:'8px 12px',borderRadius:9,border:'1.5px solid var(--border)',
-    background:'var(--card)',color:'var(--text)',fontSize:12,fontWeight:700,
-    cursor:'pointer',fontFamily:'system-ui,sans-serif'};
-  var aBtn=function(label,art,color,reportId,aus){
-    var on=actBusy===art;
-    var tot=!!actBusy||!!aus;
-    return <button key={art} disabled={tot} onClick={function(){doAction(art,reportId);}}
-      style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid '+(aus?'var(--border)':color),background:'transparent',
-        color:aus?'var(--subtle)':color,fontSize:11,fontWeight:800,cursor:tot?'default':'pointer',
-        fontFamily:'system-ui,sans-serif',opacity:(actBusy&&!on)?0.5:(aus?0.6:1)}}>
-      {on?'...':label}
-    </button>;
-  };
-  var badgeVon=function(st){
-    if(st.gesperrt)return {txt:st.gesperrt.until?('GESPERRT bis '+new Date(st.gesperrt.until).toLocaleString()):'GESPERRT PERMANENT',bg:'rgba(185,28,28,0.25)',col:'#fca5a5'};
-    if(st.verwarnt>0)return {txt:'VERWARNT '+st.verwarnt+'×',bg:'rgba(245,158,11,0.14)',col:'#f59e0b'};
-    if(st.beobachtet)return {txt:'BEOBACHTET',bg:'rgba(59,130,246,0.14)',col:'#3b82f6'};
-    return {txt:'NEU',bg:'rgba(139,155,184,0.15)',col:'var(--subtle)'};
-  };
-  // Match-Beweis als lesbarer deutscher Satz statt JSON (Tunay 2026-07-10: "weiss nicht was gemacht wurde")
-  var evidMatchTxt=function(ev){
-    if(ev.live)return 'MATCH lief bei der Meldung noch (kein Endstand)';
-    var teile=[];
-    if(typeof ev.winner==='number'){
-      if(typeof ev.reportedNr==='number')teile.push(ev.winner===ev.reportedNr?'Der GEMELDETE hat GEWONNEN':'Der Gemeldete hat verloren');
-      else teile.push('Sieger: Spieler '+(ev.winner+1));
-    }
-    var wrMap={forfeit:'Offline-Zeit aufgebraucht',timeout:'Bedenkzeit abgelaufen',goal:'Ziel erreicht'};
-    if(ev.winReason)teile.push('Grund: '+(wrMap[ev.winReason]||ev.winReason));
-    if(typeof ev.dauerMs==='number'&&ev.dauerMs>0){var edm=Math.floor(ev.dauerMs/60000),eds=Math.floor((ev.dauerMs%60000)/1000);teile.push('Dauer '+edm+':'+(eds<10?'0':'')+eds+' Min');}
-    teile.push(ev.ranked?'Ranked':'Casual');
-    if(ev.moveCountP&&typeof ev.moveCountP[0]==='number'&&typeof ev.moveCountP[1]==='number')teile.push('Zuege '+ev.moveCountP[0]+' / '+ev.moveCountP[1]);
-    return 'MATCH-ERGEBNIS: '+teile.join(' · ');
-  };
-  // Detail-Block: Stufenleiste + Meldungen (Chat-Verlauf aufklappbar) + Aktionen + Historie
-  var detailUi=function(g){
-    var st=g.status;
-    var newestId=g.reports.length>0?g.reports[0]._id:null;
-    var ratingTxt='';
-    if(lbInfo){
-      var rc=lbInfo.classic&&lbInfo.classic.rating,rd=lbInfo.duel&&lbInfo.duel.rating;
-      ratingTxt=(typeof rc==='number'?('Classic '+rc):'')+(typeof rd==='number'?((rc?' | ':'')+'Duel '+rd):'');
-      if(!ratingTxt)ratingTxt='kein Rating';
-    }
-    var stufeSt=function(an,col){return {fontSize:10,fontWeight:800,padding:'5px 10px',borderRadius:9,
-      border:'1.5px solid '+(an?col:'var(--border)'),color:an?col:'var(--subtle)'};};
-    return(
-      <div style={{marginTop:6}} onClick={function(ev){ev.stopPropagation();}}>
-        <div style={{fontSize:10,color:'var(--subtle)',marginBottom:6,wordBreak:'break-all'}}>
-          UID: {g.uid}{lbInfo?(' | ELO: '+ratingTxt):''}
-        </div>
-        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
-          <span style={stufeSt(st.beobachtet,'#3b82f6')}>{st.beobachtet?'✓ BEOBACHTET':'BEOBACHTET –'}</span>
-          <span style={stufeSt(st.verwarnt>0,'#f59e0b')}>{st.verwarnt>0?('✓ VERWARNT '+st.verwarnt+'×'):'VERWARNT 0×'}</span>
-          <span style={stufeSt(!!st.gesperrt,'#ef4444')}>{st.gesperrt?(st.gesperrt.until?('GESPERRT bis '+new Date(st.gesperrt.until).toLocaleString()):'GESPERRT PERMANENT'):'NICHT GESPERRT'}</span>
-        </div>
-        {g.reports.length>0&&<div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'8px 0 4px'}}>MELDUNGEN ({g.reports.length})</div>}
-        {g.reports.map(function(r,ri){
-          var ev=r.evidence||null;
-          var ktx=(ev&&ev.kontext&&ev.kontext.length)?ev.kontext:null; // Chat-Verlauf bei JEDER Meldung, wenn im Match gechattet wurde
-          var offen=!!chatOpen[r._id];
-          var melderTxt=r.reporterName||(String(r.reporter||'?').slice(0,10)+'…');
-          return(
-            <div key={r._id||ri} style={{marginBottom:8,padding:'10px 12px',background:'var(--bg)',borderRadius:9,
-              border:'1px solid var(--border)'}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:6}}>
-                <span style={{fontSize:11,fontWeight:800,color:'#fff',background:'#ef4444',padding:'3px 9px',borderRadius:7}}>{RKAT[r.reason]||r.reason}</span>
-                <span style={{fontSize:11,color:'var(--text)',fontWeight:600}}>von {melderTxt}</span>
-                <span style={{fontSize:10,color:'var(--subtle)',marginLeft:'auto'}}>{new Date(r.ts||0).toLocaleString()}</span>
-              </div>
-              {r.text?(
-                <div style={{fontSize:12,color:'var(--text)',fontStyle:'italic',padding:'6px 9px',
-                  background:'var(--card)',borderRadius:7,marginBottom:6,wordBreak:'break-word'}}>{'“'+r.text+'”'}</div>
-              ):null}
-              {ev&&ev.kind==='chat'?(
-                <div style={{fontSize:12,color:'#fca5a5',fontWeight:700,padding:'6px 9px',
-                  background:'rgba(239,68,68,0.1)',borderRadius:7,marginBottom:6,wordBreak:'break-word'}}>
-                  Gemeldete Nachricht: {'“'+(ev.text||'')+'”'}
-                </div>
-              ):null}
-              {ev&&ev.kind==='match'?(
-                <div style={{fontSize:11,color:'var(--subtle)',marginBottom:6,wordBreak:'break-word'}}>{evidMatchTxt(ev)}</div>
-              ):null}
-              {ktx?(
-                <div>
-                  <button onClick={function(){var n=Object.assign({},chatOpen);n[r._id]=!offen;setChatOpen(n);}}
-                    style={{background:offen?'var(--card)':'#3b82f6',border:'1.5px solid '+(offen?'var(--border)':'#3b82f6'),
-                      borderRadius:8,color:offen?'var(--text)':'#fff',fontSize:11,fontWeight:800,
-                      padding:'6px 11px',cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
-                    {offen?'Chat-Verlauf zuklappen':('Ganzen Chat lesen ('+ktx.length+')')}
-                  </button>
-                  {offen&&(
-                    <div style={{marginTop:6,border:'1.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
-                      {ktx.map(function(cm,ci){
-                        var istGemeldet=(typeof ev.ts==='number')&&cm.ts===ev.ts;
-                        var istTaeter=cm.from===ev.reportedNr;
-                        return(
-                          <div key={ci} style={{display:'flex',gap:8,padding:'6px 10px',fontSize:12,
-                            borderTop:ci>0?'1px solid var(--border)':'none',
-                            background:istGemeldet?'rgba(239,68,68,0.14)':'transparent',
-                            borderLeft:istGemeldet?'3px solid #ef4444':'3px solid transparent'}}>
-                            <span style={{fontWeight:800,minWidth:80,color:istTaeter?'#ef4444':'var(--subtle)'}}>{cm.name}</span>
-                            <span style={{color:istGemeldet?'#fca5a5':'var(--text)',fontWeight:istGemeldet?700:500,wordBreak:'break-word'}}>{cm.text}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ):null}
-            </div>
-          );
-        })}
-        <input value={grund} onChange={function(e){setGrund(e.target.value);}} placeholder="Grund (Kategorie-Key wird beim Spieler uebersetzt)"
-          style={{width:'100%',padding:'8px 10px',borderRadius:9,fontSize:11,background:'var(--bg)',
-            border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
-            boxSizing:'border-box',outline:'none',margin:'8px 0 6px'}}/>
-        {st.gesperrt&&(
-          <div style={{fontSize:11,fontWeight:800,color:'#fca5a5',background:'rgba(185,28,28,0.16)',
-            border:'1.5px solid rgba(185,28,28,0.4)',borderRadius:8,padding:'7px 10px',marginBottom:6}}>
-            Dieser Spieler ist GESPERRT — nur „Entsperren" ist moeglich. Fall gilt als erledigt.
-          </div>
-        )}
-        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:5}}>
-          {aBtn('Verwerfen','verworfen','#64748b',newestId,g.reports.length===0||!!st.gesperrt)}
-          {aBtn(st.beobachtet?'✓ Beobachtet':'Beobachten','beobachtet','#3b82f6',newestId,st.beobachtet||!!st.gesperrt)}
-          {aBtn(st.verwarnt>0?('✓ Verwarnt '+st.verwarnt+'×'):'Verwarnen …','verwarnt','#f59e0b',newestId,st.verwarnt>0||!!st.gesperrt)}
-          {st.verwarnt>0&&!st.gesperrt&&aBtn('Verwarnung loeschen','warnclear','#f59e0b',null,false)}
-        </div>
-        <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-          {aBtn('Sperren 24h …','ban24','#ef4444',newestId,!!st.gesperrt)}
-          {aBtn('Sperren 7T …','ban7','#ef4444',newestId,!!st.gesperrt)}
-          {aBtn('PERMANENT …','banperm','#dc2626',newestId,!!st.gesperrt)}
-          {aBtn('Entsperren','unban','#16a34a',null,!st.gesperrt)}
-        </div>
-        {actMsg&&<div style={{fontSize:11,fontWeight:700,marginTop:6,color:actMsg.indexOf('Fehler')===0?'#ef4444':'#16a34a'}}>{actMsg}</div>}
-        <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:0.8,margin:'10px 0 4px'}}>HISTORIE (ww_ban_log)</div>
-        {st.log.length===0?<div style={{fontSize:10,color:'var(--subtle)'}}>keine Eintraege</div>:
-          st.log.map(function(l,li){
-            return <div key={li} style={{fontSize:10,color:'var(--subtle)',marginBottom:2}}>
-              {new Date(l.ts||0).toLocaleString()+' — '+aktLabel(l.aktion)+(l.grund?(' ('+l.grund+')'):'')+(l.beweise?(' · '+l.beweise.length+' Meldung(en) archiviert'):'')}
-            </div>;
-          })}
-      </div>
-    );
-  };
-  // Tab-Zuordnung: GESPERRT > VERWARNT > BEOBACHTET; OFFEN = hat unerledigte Meldungen
-  var inTab=function(g,t){
-    var st=g.status;
-    if(t==='offen')return g.reports.length>0;
-    if(t==='gesperrt')return !!st.gesperrt;
-    if(t==='verwarnt')return !st.gesperrt&&st.verwarnt>0;
-    if(t==='beobachtet')return !st.gesperrt&&st.verwarnt===0&&st.beobachtet;
-    return false;
-  };
-  var alle=data||[];
-  var tabs=[['offen','OFFEN','#ef4444'],['beobachtet','BEOBACHTET','#3b82f6'],['verwarnt','VERWARNT','#f59e0b'],['gesperrt','GESPERRT','#dc2626']];
-  var sichtbar=alle.filter(function(g){return inTab(g,tab);});
-  var offenes=openUid?statusVon(openUid):null;
-  if(offenes&&openUid&&!offenes.name)offenes=Object.assign({},offenes,{name:openName});
-  var karteUi=function(g){
-    var sel=openUid===g.uid;
-    var b=badgeVon(g.status);
-    var anzeigeName=g.name||(g.uid.slice(0,10)+'…');
-    // Spieler MIT Stufe (beobachtet/verwarnt/gesperrt) UND neuer Meldung = Wiederholungsfall -> rot markieren
-    var wiederholer=g.reports.length>0&&(g.status.beobachtet||g.status.verwarnt>0||!!g.status.gesperrt);
-    return(
-      <div key={g.uid} onClick={function(){waehle(g.uid,anzeigeName,g.reports[0]?g.reports[0].reason:'');}}
-        style={{padding:'8px 10px',borderRadius:9,background:'var(--card)',
-          border:'1.5px solid '+(sel?'rgba(239,68,68,0.5)':(wiederholer?'rgba(239,68,68,0.45)':'var(--border)')),marginBottom:6,cursor:'pointer'}}>
-        <div style={{display:'flex',gap:6,alignItems:'center'}}>
-          {g.reports.length>0&&<span style={{fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:7,
-            background:wiederholer?'#ef4444':'rgba(239,68,68,0.12)',color:wiederholer?'#fff':'#ef4444'}}>{g.reports.length}{'× GEMELDET'}</span>}
-          <span style={{fontSize:12,fontWeight:800,color:'var(--text)',wordBreak:'break-all'}}>{anzeigeName}</span>
-          <span style={{fontSize:9,color:'var(--subtle)',marginLeft:'auto'}}>{g.zuletzt?new Date(g.zuletzt).toLocaleDateString():''}</span>
-        </div>
-        <div style={{marginTop:5}}>
-          <span style={{fontSize:9,fontWeight:800,padding:'2px 8px',borderRadius:7,letterSpacing:0.5,background:b.bg,color:b.col}}>{b.txt}</span>
-        </div>
-        {!isWide&&sel&&offenes&&detailUi(offenes)}
-      </div>
-    );
-  };
-  var listeUi=null;
-  if(data&&sichtbar.length===0)listeUi=<div style={{fontSize:12,color:'var(--subtle)',marginBottom:6}}>Keine Eintraege in diesem Tab.</div>;
-  if(data&&sichtbar.length>0)listeUi=sichtbar.map(karteUi);
-  var qResUi=null;
-  if(qRes&&qRes.length===0)qResUi=<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>Kein Treffer.</div>;
-  if(qRes&&qRes.length>0)qResUi=qRes.map(function(r){
-    var g=statusVon(r.uid);
-    if(!g.name)g=Object.assign({},g,{name:r.name});
-    return karteUi(g);
-  });
-  return(
-    <div>
-      <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
-        {tabs.map(function(t){
-          var n=alle.filter(function(g){return inTab(g,t[0]);}).length;
-          var an=tab===t[0];
-          return(
-            <button key={t[0]} onClick={function(){setTab(t[0]);}}
-              style={{padding:'7px 11px',borderRadius:9,border:'1.5px solid '+(an?t[2]+'88':'var(--border)'),
-                background:an?'var(--bg)':'var(--card)',color:an?'var(--text)':'var(--subtle)',
-                fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'system-ui,sans-serif'}}>
-              {t[1]}{data?(' '+n):''}
-            </button>
-          );
-        })}
-        <button onClick={function(){load(openUid);}} disabled={busy} style={btnSt}>
-          {busy?'...':(data===null?'Laden':'Aktualisieren')}
-        </button>
-      </div>
-      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginBottom:6}}>{msg}</div>}
-      <div style={isWide?{display:'grid',gridTemplateColumns:'340px 1fr',gap:14,alignItems:'start'}:{}}>
-        <div>
-          {listeUi}
-          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,margin:'12px 0 4px'}}>SPIELER-SUCHE (NAME {'→'} UID + HISTORIE)</div>
-          <div style={{display:'flex',gap:6}}>
-            <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Spielername"
-              onKeyDown={function(e){if(e.key==='Enter')doSearch();}}
-              style={{flex:1,padding:'8px 10px',borderRadius:9,fontSize:12,background:'var(--bg)',
-                border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,sans-serif',
-                boxSizing:'border-box',outline:'none',minWidth:0}}/>
-            <button onClick={doSearch} style={btnSt}>Suchen</button>
-          </div>
-          {qResUi}
-        </div>
-        {isWide&&(
-          <div style={{padding:'10px 12px',borderRadius:11,background:'var(--card)',border:'1.5px solid var(--border)'}}>
-            {(openUid&&offenes)?(
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{offenes.name||openName}</div>
-                {detailUi(offenes)}
-              </div>
-            ):(
-              <div style={{fontSize:11,color:'var(--subtle)'}}>Spieler links anklicken — Details, Beweise und Aktionen erscheinen hier.</div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-function AdminFlagsPanel(){
-  var[flags,setFlags]=React.useState({XP_SYSTEM:false,COIN_SYSTEM:false});
-  var[busy,setBusy]=React.useState('');
-  var[msg,setMsg]=React.useState('');
-  React.useEffect(function(){
-    if(!window.db)return;
-    var ref=window.db.ref('ww_flags');
-    ref.on('value',function(snap){
-      var v=snap.val()||{};
-      setFlags({XP_SYSTEM:!!v.XP_SYSTEM,COIN_SYSTEM:!!v.COIN_SYSTEM});
-    });
-    return function(){ref.off('value');};
-  },[]);
-  function toggle(flag){
-    var newVal=!flags[flag];
-    setBusy(flag);setMsg('');
-    adminFlagWsCmd(flag,newVal).then(function(){
-      setMsg(flag+' = '+newVal);setBusy('');
-    }).catch(function(e){setMsg('Fehler: '+(e&&e.message));setBusy('');});
-  }
-  return(
-    <div>
-      {[['XP_SYSTEM','XP-System (Level)','#7c3aed'],['COIN_SYSTEM','Coin-System','#f59e0b']].map(function(f){
-        var on=flags[f[0]];
-        return(
-          <button key={f[0]} onClick={function(){toggle(f[0]);}} disabled={busy===f[0]}
-            style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-              padding:'10px 12px',borderRadius:9,background:'var(--card)',
-              border:'1.5px solid '+(on?f[2]+'66':'var(--border)'),cursor:'pointer',
-              fontFamily:'system-ui,sans-serif',width:'100%',marginBottom:7,
-              opacity:busy===f[0]?0.6:1}}>
-            <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{f[1]}</span>
-            <span style={{fontSize:11,fontWeight:800,color:on?f[2]:'var(--subtle)',
-              background:on?f[2]+'22':'var(--bg)',borderRadius:6,padding:'3px 8px'}}>
-              {busy===f[0]?'...':(on?'AN':'AUS')}
-            </span>
-          </button>
-        );
-      })}
-      {msg&&<div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{msg}</div>}
-    </div>
-  );
-}
-// Dedizierter Kurz-WS: auth -> Befehl -> auf okType warten. Genutzt fuer Admin-Befehle (Coins,
-// Bans, Report-Aktionen) UND seit der F9/F10-Umstellung fuer die server-autoritative Namensvergabe
-// und die eigene Ranglisten-Auskunft. Mit errType loest das Promise auch auf der Fehlerantwort auf,
-// statt in den Timeout zu laufen — der Aufrufer prueft dann d.type.
+// Dedizierter Kurz-WS: auth -> Befehl -> auf okType warten. Genutzt fuer die server-autoritative Namensvergabe,
+// den E-Mail-Code und die eigene Ranglisten-Auskunft (Admin-Befehle laufen seit A3 nur ueber die Admin-Seite).
+// Mit errType loest das Promise auch auf der Fehlerantwort auf, statt in den Timeout zu laufen — der Aufrufer
+// prueft dann d.type.
 async function wsCmd(msg,okType,errType){
   return new Promise(function(resolve,reject){
     var ws=new WebSocket(WW_URL);
@@ -2616,78 +1933,6 @@ function MailCodeStep(props){
       {phase==='done'&&<button data-mc="los" onClick={function(){props.onDone(prof);}} style={knopf}>{t('mc_doneGo')}</button>}
     </div>
   );
-}
-function AdminCoinsPanel(){
-  var[uid,setUid]=React.useState('');
-  var[amt,setAmt]=React.useState('');
-  var[res,setRes]=React.useState(null);
-  var[busy,setBusy]=React.useState(false);
-  var inpSt={width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,
-    background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-    fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none'};
-  var doCmd=function(action){
-    if(busy||!uid.trim())return;
-    var uidV=uid.trim();
-    var amtV=parseInt(amt,10);
-    if(action!=='get'&&isNaN(amtV)){setRes({ok:false,msg:'Betrag eingeben'});return;}
-    setBusy(true);setRes(null);
-    var msgObj={type:'admin_coins_'+action,uid:uidV};
-    if(action!=='get')msgObj.amount=amtV;
-    wsCmd(msgObj,'admin_coins_ok').then(function(r){
-      var extra=r.added!==undefined?(' ('+r.added+')'):'';
-      setRes({ok:true,msg:uidV+': '+r.balance+' Coins'+extra});
-      setBusy(false);
-    }).catch(function(e){
-      setRes({ok:false,msg:e&&e.message?e.message:'Fehler'});
-      setBusy(false);
-    });
-  };
-  var btnBase={padding:'9px 6px',borderRadius:9,border:'none',fontWeight:700,fontSize:12,
-    fontFamily:'system-ui,-apple-system,sans-serif',cursor:'pointer'};
-  var canAmt=!busy&&!!uid.trim()&&!!amt;
-  return (
-    <div>
-      <input value={uid} onChange={function(e){setUid(e.target.value.trim());}} placeholder="Firebase UID" style={Object.assign({},inpSt,{marginBottom:8})}/>
-      <input value={amt} onChange={function(e){setAmt(e.target.value);}} placeholder="Betrag (z.B. 100)" style={Object.assign({},inpSt,{marginBottom:10})}/>
-      {res&&<div style={{fontSize:12,color:res.ok?'#16a34a':'#ef4444',fontWeight:700,marginBottom:8,wordBreak:'break-all'}}>{res.msg}</div>}
-      <div style={{display:'flex',gap:6}}>
-        <button disabled={busy||!uid.trim()} onClick={function(){doCmd('get');}} style={Object.assign({},btnBase,{flex:1,background:(busy||!uid.trim())?'var(--bg)':'#3b82f6',color:(busy||!uid.trim())?'var(--subtle)':'white'})}>
-          {busy?'…':'Abrufen'}
-        </button>
-        <button disabled={!canAmt} onClick={function(){doCmd('set');}} style={Object.assign({},btnBase,{flex:1,background:canAmt?'#f59e0b':'var(--bg)',color:canAmt?'white':'var(--subtle)'})}>
-          {busy?'…':'Setzen'}
-        </button>
-        <button disabled={!canAmt} onClick={function(){doCmd('add');}} style={Object.assign({},btnBase,{flex:1,background:canAmt?'#16a34a':'var(--bg)',color:canAmt?'white':'var(--subtle)'})}>
-          {busy?'…':'Hinzufügen'}
-        </button>
-      </div>
-    </div>
-  );
-}
-async function adminMigrateStats(fromUid,toUid){
-  // Kopiert Stats + ELO vom alten Konto (fromUid) ins neue Konto (toUid).
-  // Name, Farbe und Friends des neuen Kontos bleiben unveraendert.
-  // Wird verwendet wenn ein Nutzer versehentlich ein Duplikat-Konto erstellt hat.
-  if(!fromUid||!toUid||fromUid===toUid)throw new Error('Ungueltige UIDs');
-  const parseRaw=r=>{const v=r.val();return v?(typeof v==='string'?JSON.parse(v):v):null;};
-  const[oldProfSnap,newProfSnap,oldLbSnap]=await Promise.all([
-    window.db.ref('ww_profiles/'+fromUid).once('value'),
-    window.db.ref('ww_profiles/'+toUid).once('value'),
-    window.db.ref('ww_leaderboard/'+fromUid).once('value'),
-  ]);
-  const oldProf=parseRaw(oldProfSnap);
-  const newProf=parseRaw(newProfSnap);
-  const oldLb=oldLbSnap.val();
-  if(!oldProf)throw new Error('Alt-Profil nicht gefunden: '+fromUid);
-  if(!newProf)throw new Error('Ziel-Profil nicht gefunden: '+toUid);
-  const mergedProf={...newProf,stats:oldProf.stats||{}};
-  await window.db.ref('ww_profiles/'+toUid).set(JSON.stringify(mergedProf));
-  if(oldLb){
-    const parsedLb=typeof oldLb==='string'?JSON.parse(oldLb):oldLb;
-    parsedLb.name=newProf.name;parsedLb.color=newProf.color;
-    await window.db.ref('ww_leaderboard/'+toUid).set(parsedLb);
-  }
-  return{ok:true,from:oldProf.name||fromUid,to:newProf.name||toUid};
 }
 async function registerAccount(email,name,pw,color){
   const key=normUser(name);
@@ -3582,171 +2827,6 @@ function WeltligaTabelle({t,lang,darkMode,account}){
       ))}
     </div>
   );
-}
-function AdminWhoAmI(){
-  // Zeigt die eigene Firebase-UID an (fuer die Firebase-Regel) + ob eingeloggt
-  var u=null;
-  try{u=firebase.auth().currentUser;}catch(e){}
-  var uid=u?u.uid:'';
-  var email=u&&u.email?u.email:'';
-  var anon=u?!!u.isAnonymous:true;
-  var copy=function(){ try{navigator.clipboard.writeText(uid);}catch(e){} };
-  return(
-    <div style={{marginBottom:16,padding:'12px',borderRadius:12,background:'var(--bg)',border:'1.5px solid var(--border)'}}>
-      <div style={{fontSize:10,fontWeight:800,color:'var(--subtle)',letterSpacing:1.2,marginBottom:8,textTransform:'uppercase'}}>DEIN ACCOUNT (FUER FIREBASE-REGEL)</div>
-      {anon?(
-        <div style={{fontSize:12,color:'#ef4444',fontWeight:600,lineHeight:1.4}}>Nicht eingeloggt (Gast). Logge dich mit E-Mail/Google ein, dann erscheint hier deine UID.</div>
-      ):(
-        <div>
-          {email?<div style={{fontSize:12,color:'var(--subtle)',marginBottom:4}}>{email}</div>:null}
-          <div style={{fontSize:12,color:'var(--text)',fontFamily:'monospace',wordBreak:'break-all',marginBottom:8}}>{uid}</div>
-          <button onClick={copy} style={{fontSize:12,fontWeight:700,padding:'6px 12px',borderRadius:8,border:'1.5px solid var(--border)',background:'var(--card)',color:'var(--text)',cursor:'pointer'}}>UID kopieren</button>
-        </div>
-      )}
-    </div>
-  );
-}
-function AdminSection({label,children}){
-  return(
-    <div style={{marginBottom:16}}>
-      <div style={{fontSize:10,fontWeight:800,color:'var(--subtle)',letterSpacing:1.2,marginBottom:8,textTransform:'uppercase'}}>{label}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:7,padding:'12px',borderRadius:12,
-        background:'var(--bg)',border:'1.5px solid var(--border)'}}>
-        {children}
-      </div>
-    </div>
-  );
-}
-function AdminToggle({label,on,onClick,accent}){
-  const col=accent?(on?'#f59e0b':'var(--border)'):(on?'#16a34a':'var(--border)');
-  return(
-    <button onClick={onClick} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-      padding:'10px 12px',borderRadius:9,background:'var(--card)',
-      border:'1.5px solid '+(on&&accent?'#f59e0b44':'var(--border)'),cursor:'pointer',
-      fontFamily:'system-ui,-apple-system,sans-serif',width:'100%',
-      boxShadow:on&&accent?'0 2px 8px rgba(245,158,11,0.2)':'none'}}>
-      <span style={{fontSize:13,fontWeight:700,color:'var(--text)',textAlign:'left'}}>{label}</span>
-      <div style={{width:40,height:24,borderRadius:12,background:col,position:'relative',
-        transition:'background 0.2s',flexShrink:0,marginLeft:8}}>
-        <div style={{position:'absolute',top:2,left:on?18:2,width:20,height:20,borderRadius:'50%',
-          background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
-      </div>
-    </button>
-  );
-}
-function AdminConfirmAction({label,confirmLabel,btnLabel,danger,active,onConfirm}){
-  const[confirm,setConfirm]=React.useState(false);
-  if(confirm)return(
-    <div style={{background:danger?'rgba(239,68,68,0.08)':'rgba(245,158,11,0.08)',
-      border:'1.5px solid '+(danger?'#ef4444':'#f59e0b'),borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:13,fontWeight:700,color:danger?'#ef4444':'#f59e0b',marginBottom:10,display:'flex',alignItems:'center',gap:6}}><WarningIcon size={14} color={danger?'#ef4444':'#f59e0b'}/> {confirmLabel}</div>
-      <div style={{display:'flex',gap:8}}>
-        <button onClick={()=>{setConfirm(false);onConfirm();}} style={{flex:1,padding:'10px',borderRadius:9,
-          background:danger?'#ef4444':'#f59e0b',color:'white',border:'none',cursor:'pointer',
-          fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{btnLabel}</button>
-        <button onClick={()=>setConfirm(false)} style={{flex:1,padding:'10px',borderRadius:9,
-          background:'var(--card)',color:'var(--text)',border:'1.5px solid var(--border)',
-          cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>Abbrechen</button>
-      </div>
-    </div>
-  );
-  return(
-    <button onClick={()=>setConfirm(true)} style={{width:'100%',padding:'10px 12px',borderRadius:9,
-      background:active?(danger?'rgba(239,68,68,0.12)':'rgba(245,158,11,0.12)'):'var(--card)',
-      border:'1.5px solid '+(active?(danger?'#ef4444':'#f59e0b'):'var(--border)'),
-      cursor:'pointer',fontWeight:700,fontSize:13,color:active?(danger?'#ef4444':'#f59e0b'):'var(--text)',
-      fontFamily:'system-ui,-apple-system,sans-serif',textAlign:'left',display:'flex',alignItems:'center',gap:8}}>
-      <div style={{width:10,height:10,borderRadius:'50%',background:active?(danger?'#ef4444':'#f59e0b'):'var(--border)',flexShrink:0}}/> {label}
-    </button>
-  );
-}
-function FixNamesAdmin(){
-  const[busy,setBusy]=React.useState(false);
-  const[result,setResult]=React.useState(null);
-  const[err,setErr]=React.useState('');
-  const doFix=async()=>{
-    setBusy(true);setResult(null);setErr('');
-    try{
-      const n=await adminFixLeaderboardNames();
-      setResult(n);
-      setTimeout(()=>setResult(null),5000);
-    }catch(e){setErr(e&&e.message?e.message:'Fehler');}
-    setBusy(false);
-  };
-  return(
-    <div style={{marginTop:8}}>
-      {result!==null&&<div style={{fontSize:12,color:'#16a34a',fontWeight:700,marginBottom:6}}>✓ {result} Namen korrigiert</div>}
-      {err&&<div style={{fontSize:11,color:'#ef4444',marginBottom:6,wordBreak:'break-all'}}>{err}</div>}
-      <button onClick={doFix} disabled={busy} style={{width:'100%',padding:'10px',borderRadius:10,
-        background:'var(--bg)',color:'#3b82f6',border:'1.5px solid #3b82f644',cursor:busy?'wait':'pointer',
-        fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',opacity:busy?0.6:1}}>
-        {busy?'⏳ Läuft…':'🔧 Spieler-Namen im Leaderboard fixen'}
-      </button>
-    </div>
-  );
-}
-function RankedResetAdmin({t}){
-  const[step,setStep]=React.useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=busy, 4=done, 5=error
-  const[errMsg,setErrMsg]=React.useState('');
-  const doReset=async()=>{
-    setStep(3);setErrMsg('');
-    try{
-      await adminResetAllRanked();
-      setStep(4);
-      setTimeout(()=>setStep(0),4000);
-    }catch(e){
-      setErrMsg(e&&e.message?e.message:'Unbekannter Fehler');
-      setStep(5);
-    }
-  };
-  if(step===0)return(
-    <div>
-      <button onClick={()=>setStep(1)} style={{width:'100%',padding:'11px',borderRadius:10,
-        background:'var(--bg)',color:'#f59e0b',border:'1.5px solid #f59e0b44',cursor:'pointer',
-        fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-        <span style={{display:'inline-flex',alignItems:'center',gap:6}}><TrophySmIcon size={15} color="#f59e0b"/>{t('adminResetRanked')}</span>
-      </button>
-      <FixNamesAdmin/>
-    </div>
-  );
-  if(step===1)return(
-    <div style={{background:'rgba(245,158,11,0.08)',border:'1.5px solid #f59e0b',borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:13,fontWeight:700,color:'#f59e0b',marginBottom:10}}>{t('adminResetRankedWarn')}</div>
-      <div style={{display:'flex',gap:8}}>
-        <button onClick={()=>setStep(2)} style={{flex:1,padding:'10px',borderRadius:9,background:'#f59e0b',
-          color:'#fff',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-          fontFamily:'system-ui,-apple-system,sans-serif'}}>Weiter →</button>
-        <button onClick={()=>setStep(0)} style={{flex:1,padding:'10px',borderRadius:9,background:'var(--bg)',
-          color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-          fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('cancel')}</button>
-      </div>
-    </div>
-  );
-  if(step===2)return(
-    <div style={{background:'rgba(239,68,68,0.1)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4,display:'flex',alignItems:'center',gap:6}}><WarningIcon size={13} color="#ef4444"/> Letzte Bestätigung</div>
-      <div style={{fontSize:12,color:'var(--subtle)',marginBottom:10}}>Alle ELO-Wertungen werden auf 1000 zurückgesetzt. Nicht rückgängig machbar.</div>
-      <div style={{display:'flex',gap:8}}>
-        <button onClick={doReset} style={{flex:1,padding:'10px',borderRadius:9,background:'#ef4444',
-          color:'#fff',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-          fontFamily:'system-ui,-apple-system,sans-serif'}}>Jetzt zurücksetzen</button>
-        <button onClick={()=>setStep(0)} style={{flex:1,padding:'10px',borderRadius:9,background:'var(--bg)',
-          color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-          fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('cancel')}</button>
-      </div>
-    </div>
-  );
-  if(step===3)return <div style={{textAlign:'center',padding:'14px',color:'var(--subtle)',fontSize:13,fontWeight:600}}>⏳ Wird zurückgesetzt…</div>;
-  if(step===5)return(
-    <div style={{background:'rgba(239,68,68,0.1)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px'}}>
-      <div style={{fontSize:12,fontWeight:700,color:'#ef4444',marginBottom:6}}>Fehler beim Zurücksetzen:</div>
-      <div style={{fontSize:11,color:'var(--subtle)',wordBreak:'break-all',marginBottom:8}}>{errMsg}</div>
-      <button onClick={()=>setStep(0)} style={{padding:'8px 16px',borderRadius:8,background:'var(--card)',
-        color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontSize:12,
-        fontFamily:'system-ui,-apple-system,sans-serif'}}>Schließen</button>
-    </div>
-  );
-  return <div style={{textAlign:'center',padding:'12px',color:'#16a34a',fontSize:13,fontWeight:700}}>✓ {t('adminResetRankedDone')}</div>;
 }
 function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpSystemOn}){
   const[showNC,setShowNC]=React.useState(false);
@@ -4760,10 +3840,6 @@ function App(){
   const[pendingGoogleUser,setPendingGoogleUser]=useState(null);
 
   const[updateAvailable,setUpdateAvailable]=useState(false);
-  const[adminTaps,setAdminTaps]=useState(0);
-  const[showAdminUnlock,setShowAdminUnlock]=useState(false);
-  const[adminUnlockPw,setAdminUnlockPw]=useState('');
-  const[adminUnlockErr,setAdminUnlockErr]=useState(false);
   const[googleName,setGoogleName]=useState('');
   const[googleColor,setGoogleColor]=useState(AVATAR_COLORS[0]);
   const[googleNameErr,setGoogleNameErr]=useState('');
@@ -4915,7 +3991,7 @@ function App(){
   const[adminCfg,setAdminCfg]=useState(DEFAULT_ADMIN_CFG); // frueh deklariert: wird unten in useEffect-Deps genutzt (sonst Safari TDZ)
   useEffect(()=>{
     if(screen!=='menu')return;
-    if(adminCfg.maintenance&&!isAdmin())return;
+    if(adminCfg.maintenance)return;
     let cancelled=false;
     const load=async()=>{
       if(document.hidden)return;
@@ -4934,7 +4010,7 @@ function App(){
   // Server-Endpunkt /weltliga: Server-RAM-Cache (hoechstens 2 kleine DB-Reads pro Minute fuer ALLE Spieler), Browser haelt 60 s.
   useEffect(()=>{
     if(screen!=='menu')return;
-    if(adminCfg.maintenance&&!isAdmin())return;
+    if(adminCfg.maintenance)return;
     let weg=false;
     wlHoleJson('/weltliga').then(function(d){
       if(weg||!d)return;
@@ -4945,7 +4021,7 @@ function App(){
   },[screen,adminCfg.maintenance]);
   // Presence-Heartbeat: solange eingeloggt → online setzen alle 25s
   useEffect(()=>{
-    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: nicht als online melden
+    if(adminCfg.maintenance)return; // Wartungsmodus: nicht als online melden
     var authU=firebase.auth().currentUser;
     const key=account?account.key:(authU?authU.uid:GUEST_ID);
     const name=getDisplayName(account);
@@ -5144,34 +4220,16 @@ function App(){
     if(!joinCancelledRef.current){setNavDir('back');setScreen('friends');}
   };
   const[adminCfgReady,setAdminCfgReady]=useState(false);
-  const[showAdmin,setShowAdmin]=useState(false);
   const[showTutorial,setShowTutorial]=useState(false);
   const[tutStep,setTutStep]=useState(0);
   const[helpKey,setHelpKey]=useState(null);
   useEffect(()=>{try{if(localStorage.getItem('ww_tut_seen')!=='1')setShowTutorial(true);}catch{}},[]);
   const closeTutorial=()=>{setShowTutorial(false);setTutStep(0);try{localStorage.setItem('ww_tut_seen','1');}catch{}};
   const openTutorial=()=>{setShowOptions(false);setTutStep(0);setShowTutorial(true);};
-  const[adminFlash,setAdminFlash]=useState('');
-  const[clearConfirm,setClearConfirm]=useState(false);
-  const[nrBusy,setNrBusy]=useState(false);
-  const[nrMsg,setNrMsg]=useState('');
-  const[nrLeer,setNrLeer]=useState(null);
-  const[bcTitle,setBcTitle]=useState('');
-  const[bcMsg,setBcMsg]=useState('');
-  const[bcImportance,setBcImportance]=useState('normal');
-  const[bcFontSize,setBcFontSize]=useState('medium');
-  const[bcDays,setBcDays]=useState(7);
-  const[adminAccounts,setAdminAccounts]=useState(null);
-  const[adminAccountsLoading,setAdminAccountsLoading]=useState(false);
-  const[adminMigrateFrom,setAdminMigrateFrom]=useState('');
-  const[adminMigrateTo,setAdminMigrateTo]=useState('');
-  const[adminMigrateResult,setAdminMigrateResult]=useState('');
-  const[adminMigrateBusy,setAdminMigrateBusy]=useState(false);
   const[coins,setCoins]=useState(null);
   const[xp,setXp]=useState(null);
   const[xpGainAnim,setXpGainAnim]=useState(null);
   const[xpSystemOn,setXpSystemOn]=useState(false);
-  const[announceDur,setAnnounceDur]=useState(0);
   const[announceVisible,setAnnounceVisible]=useState(true);
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
@@ -5229,7 +4287,7 @@ function App(){
   // URL ?join=CODE → automatisch zum Freund-Beitritt
   useEffect(()=>{
     if(!window.db)return;
-    if(adminCfg.maintenance&&!isAdmin())return; // Wartungsmodus: keinen Broadcast-Listener anhängen
+    if(adminCfg.maintenance)return; // Wartungsmodus: keinen Broadcast-Listener anhängen
     var bcRef=window.db.ref('ww_broadcasts');
     var bcCb=bcRef.on('value',function(snap){
       var val=snap.val();
@@ -5307,11 +4365,7 @@ function App(){
     try{localStorage.setItem(kontoKey('ww_dismissed_ids',account),JSON.stringify(nd));}catch(e){}
   };
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
-  // Admin: Config speichern (schreibt global, alle Clients übernehmen live)
-  const saveAdminCfg=(cfg)=>{const merged=mergeAdminCfg(cfg);setAdminCfg(merged);stoSet(ADMIN_CFG_KEY,merged);};
-  const toggleFeature=(key)=>{const f={...adminCfg.features};f[key]=!f[key];saveAdminCfg({...adminCfg,features:f});};
-  var feat=function(key){return isAdmin()||(adminCfg.features&&!!adminCfg.features[key]);};
-  const clearOpenLobbies=async()=>{try{await window.db.ref('barricade_2v2_open').remove();setAdminFlash('Offene Lobbys geleert');setTimeout(()=>setAdminFlash(''),2000);}catch(e){setAdminFlash('Fehler');setTimeout(()=>setAdminFlash(''),2000);}};
+  var feat=function(key){return !!(adminCfg.features&&adminCfg.features[key]);};
 
   const[pA,setPA]=useState({r:ROWS-1,c:2});
   const[pB,setPB]=useState({r:ROWS-1,c:6});
@@ -7730,7 +6784,7 @@ function App(){
         </div>
       );
     }
-    if(adminCfg.maintenance&&!isAdmin()){
+    if(adminCfg.maintenance){
       return(
         <div style={{...sPage,background:'transparent',position:'relative',zIndex:1,justifyContent:'space-between',paddingBottom:'calc(env(safe-area-inset-bottom) + 28px)'}}>
           <MenuBG dark={darkMode}/>
@@ -7816,13 +6870,6 @@ function App(){
           <LevelBadge level={levelAusXp(xp)} size='sm'/>
         </div>
       )}
-      {isAdmin()&&(
-        <button onClick={()=>setShowAdmin(true)} style={{
-          position:'fixed',top:'calc(env(safe-area-inset-top) + 14px)',left:62,
-          width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',
-          cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
-          boxShadow:'0 2px 10px rgba(245,158,11,0.4)',zIndex:100}}><ShieldSmIcon size={20} color="#fff"/></button>
-      )}
       {adminCfg.announce&&(adminCfg.announceUntil===0||Date.now()<adminCfg.announceUntil)?(
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 62px)',
           left:0,right:0,display:'flex',justifyContent:'center',
@@ -7879,11 +6926,7 @@ function App(){
             <BrickWallIcon size={42} light/>
           </div>
         </div>
-        <div onClick={()=>{
-          const next=adminTaps+1;
-          setAdminTaps(next);
-          if(next>=10){setAdminTaps(0);if(isAdmin())setShowAdmin(true);}
-        }} style={{fontSize:32,fontWeight:900,letterSpacing:-1.8,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
+        <div style={{fontSize:32,fontWeight:900,letterSpacing:-1.8,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
         <div style={{fontSize:10,fontWeight:800,letterSpacing:3,color:'var(--subtle)',marginTop:8,textTransform:'uppercase',userSelect:'none'}}>{t('subtitle')}</div>
         {/* Dynamischer Unter-Slogan */}
         <div style={{
@@ -8346,427 +7389,10 @@ function App(){
           </div>
         </div>
       )}
-      {showAdmin&&isAdmin()&&(
-        <div onClick={()=>setShowAdmin(false)} style={{position:'fixed',inset:0,
-          background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',
-          zIndex:650,padding:16}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'var(--card)',borderRadius:20,
-            padding:'20px 18px 18px',width:'100%',
-            maxWidth:(window.matchMedia&&window.matchMedia('(min-width:1000px)').matches)?1280:360, // Mac/Desktop: volle Breite fuer die Moderations-Zentrale, Handy unveraendert
-            maxHeight:'90vh',overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch',
-            boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
-
-            {/* Header */}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-              <div style={{fontSize:17,fontWeight:900,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}><ShieldSmIcon size={18} color="#8b5cf6"/> Admin-Panel</div>
-              <button onClick={()=>setShowAdmin(false)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--subtle)',padding:0,lineHeight:1}}>×</button>
-            </div>
-            <div style={{fontSize:11,color:'var(--subtle)',marginBottom:18,fontWeight:500}}>Änderungen gelten sofort für alle Spieler.</div>
-
-            <AdminWhoAmI/>
-
-            <AdminSection label="SPIELMODI">
-              {[['online','Online-Lobby',<GlobeIcon size={13} color="var(--subtle)"/>],['friend','Mit Freund',<PeopleIcon size={13} color="var(--subtle)"/>],['bots','Gegen Bots',<BotIcon size={13} color="var(--subtle)"/>],['local','Lokal',<PhoneIcon size={13} color="var(--subtle)"/>],['twovtwo','2 vs 2',<SwordsIcon size={13} color="var(--subtle)"/>]].map(function(f){
-                return <AdminToggle key={f[0]} label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'flex'}}>{f[2]}</span>{f[1]}</span>} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
-              })}
-            </AdminSection>
-
-            <AdminSection label="SPIEL-MODI & OPTIONEN">
-              {[['blitz','Blitz (Kurz-Timer)',<ModeGlyph kind="bolt" size={12} color="var(--subtle)"/>],['chaos','Chaos (Drop)',<DiceIcon size={13} color="var(--subtle)"/>],['drop','Zufalls-Wände',<RainIcon size={13} color="var(--subtle)"/>],['hammer','Hammer-Modus',<HammerIcon size={13}/>]].map(function(f){
-                return <AdminToggle key={f[0]} label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'flex'}}>{f[2]}</span>{f[1]}</span>} on={adminCfg.features[f[0]]} onClick={()=>toggleFeature(f[0])}/>;
-              })}
-            </AdminSection>
-
-            <AdminSection label="DUELL-MODI">
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><SwordsIcon size={13} color="var(--subtle)"/>Duell-Spielfeld aktiv</span>} on={adminCfg.features.duel} onClick={()=>toggleFeature('duel')} accent/>
-              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.duel?1:0.4}}>
-                <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:2}}>Welche Feldgrößen wählbar:</div>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{fontSize:11}}>+</span> Blitz-Duell (7x7)</span>} on={adminCfg.features.duelBlitz} onClick={()=>{if(adminCfg.features.duel)toggleFeature('duelBlitz');}}/>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{fontSize:11}}>+</span> Standard-Duell (9x9)</span>} on={adminCfg.features.duelStandard} onClick={()=>{if(adminCfg.features.duel)toggleFeature('duelStandard');}}/>
-              </div>
-            </AdminSection>
-
-            <AdminSection label="RACE-MODI">
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>Race-Spielfeld aktiv</span>} on={adminCfg.features.race} onClick={()=>toggleFeature('race')} accent/>
-              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.race?1:0.4}}>
-                <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:2}}>Welche Zeitmodi wählbar:</div>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>3 Minuten</span>} on={adminCfg.features.classicTime3} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime3');}}/>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>5 Minuten</span>} on={adminCfg.features.classicTime5} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime5');}}/>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>8 Minuten</span>} on={adminCfg.features.classicTime8} onClick={()=>{if(adminCfg.features.race)toggleFeature('classicTime8');}}/>
-              </div>
-            </AdminSection>
-
-            <AdminSection label="ZEITMODI — BLITZ">
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginBottom:6}}>Nur aktiv wenn Blitz-Modus an:</div>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>5 Sekunden / Zug</span>} on={adminCfg.features.blitzTime5} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime5');}}/>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>8 Sekunden / Zug</span>} on={adminCfg.features.blitzTime8} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime8');}}/>
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="bolt" size={11} color="var(--subtle)"/>10 Sekunden / Zug</span>} on={adminCfg.features.blitzTime10} onClick={()=>{if(adminCfg.features.blitz)toggleFeature('blitzTime10');}}/>
-            </AdminSection>
-
-            <AdminSection label="RANKED-SYSTEM">
-              <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:6}}><SwordsIcon size={13} color="var(--subtle)"/>Ranked aktiv</span>} on={adminCfg.features.ranked} onClick={()=>toggleFeature('ranked')} accent/>
-              <div style={{paddingLeft:12,borderLeft:'2px solid var(--border)',marginLeft:4,display:'flex',flexDirection:'column',gap:7,opacity:adminCfg.features.ranked?1:0.4}}>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><ModeGlyph kind="clock" size={11} color="var(--subtle)"/>Classic Ranked (3 Min)</span>} on={adminCfg.features.rankedClassic} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedClassic');}}/>
-                <AdminToggle label={<span style={{display:'inline-flex',alignItems:'center',gap:5}}><SwordsIcon size={11} color="var(--subtle)"/>Duell Ranked (3 Min)</span>} on={adminCfg.features.rankedDuel} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedDuel');}}/>
-                <div style={{marginTop:4,paddingTop:10,borderTop:'1px solid var(--border)'}}>
-                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:7}}>EVENT-MODUS</div>
-                  <AdminToggle label="Chaos-Modi für Ranked freischalten" on={adminCfg.features.rankedChaosEvent} onClick={()=>{if(adminCfg.features.ranked)toggleFeature('rankedChaosEvent');}}/>
-                </div>
-              </div>
-              <div style={{marginTop:10}}>
-                <RankedResetAdmin t={t}/>
-              </div>
-            </AdminSection>
-
-            <AdminSection label="SPIELER-SICHTBARKEIT">
-              <AdminToggle label="Online-Status sichtbar (wer ist online)" on={adminCfg.features.showPresence} onClick={()=>toggleFeature('showPresence')}/>
-              <AdminToggle label="In-Runde-Status sichtbar (wer spielt gerade)" on={adminCfg.features.showInGame} onClick={()=>toggleFeature('showInGame')}/>
-            </AdminSection>
-
-            <AdminSection label="ANKÜNDIGUNG (BANNER)">
-              <input value={adminCfg.announce} onChange={e=>setAdminCfg({...adminCfg,announce:e.target.value})}
-                placeholder="z.B. Event-Weekend: Chaos Ranked aktiv!"
-                style={{width:'100%',padding:'11px 12px',borderRadius:10,fontSize:13,
-                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>ANZEIGEDAUER</div>
-              <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
-                {[[0,'Immer'],[30,'30 Min'],[60,'1 Std'],[120,'2 Std'],[480,'8 Std'],[1440,'24 Std']].map(function(o){
-                  const sel=announceDur===o[0];
-                  return <button key={o[0]} onClick={()=>setAnnounceDur(o[0])} style={{
-                    padding:'6px 10px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
-                    background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
-                    border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),
-                    fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
-                })}
-              </div>
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>{const until=announceDur===0?0:Date.now()+announceDur*60000;saveAdminCfg({...adminCfg,announceUntil:until});}} style={{flex:1,padding:'10px',borderRadius:10,
-                  background:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>Setzen</button>
-                <button onClick={()=>saveAdminCfg({...adminCfg,announce:'',announceUntil:0})} style={{padding:'10px 14px',borderRadius:10,
-                  background:'var(--bg)',color:'var(--subtle)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>Löschen</button>
-              </div>
-            </AdminSection>
-
-            {/* ── ACCOUNTS ── */}
-            <AdminSection label="ACCOUNTS">
-              <button onClick={async function(){
-                setAdminAccountsLoading(true);
-                try{
-                  var snap=await window.db.ref('ww_profiles').once('value');
-                  var val=snap.val();
-                  if(!val){setAdminAccounts([]);setAdminAccountsLoading(false);return;}
-                  var list=Object.entries(val).map(function(e){
-                    var uid=e[0];var raw=e[1];
-                    try{
-                      var p=typeof raw==='string'?JSON.parse(raw):raw;
-                      return{uid:uid,name:p.name||'?',color:p.color||'#8b5cf6',
-                        games:(p.stats&&p.stats.games)||0,wins:(p.stats&&p.stats.wins)||0,
-                        created:p.created||0,
-                        eloClassic:(p.stats&&p.stats.ranked&&p.stats.ranked.classic&&p.stats.ranked.classic.rating)||null,
-                        eloDuel:(p.stats&&p.stats.ranked&&p.stats.ranked.duel&&p.stats.ranked.duel.rating)||null};
-                    }catch(e2){return{uid:uid,name:'[Fehler]',games:0,wins:0,created:0,color:'#64748b',eloClassic:null,eloDuel:null};}
-                  }).sort(function(a,b){return b.created-a.created;});
-                  setAdminAccounts(list);
-                }catch(e){setAdminAccounts([]);}
-                setAdminAccountsLoading(false);
-              }} style={{width:'100%',padding:'10px',borderRadius:10,
-                background:'#3b82f6',color:'white',border:'none',cursor:'pointer',
-                fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif',marginBottom:10}}>
-                {adminAccountsLoading?'Lädt...':'Accounts laden'}
-              </button>
-              {adminAccounts!==null&&(
-                <div>
-                  <div style={{fontSize:11,color:'var(--subtle)',fontWeight:700,marginBottom:8}}>
-                    {adminAccounts.length} Accounts gesamt
-                  </div>
-                  <div style={{maxHeight:320,overflowY:'auto',WebkitOverflowScrolling:'touch',touchAction:'pan-y',
-                    border:'1px solid var(--border)',borderRadius:10,background:'var(--bg)'}}>
-                    {adminAccounts.length===0?(
-                      <div style={{padding:'20px',textAlign:'center',color:'var(--subtle)',fontSize:12}}>Keine Accounts</div>
-                    ):adminAccounts.map(function(acc,i){
-                      var d=acc.created?new Date(acc.created):null;
-                      var dateStr=d?(d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear()):'?';
-                      var wr=acc.games>0?Math.round((acc.wins/acc.games)*100):0;
-                      return(
-                        <div key={acc.uid} style={{
-                          padding:'10px 12px',
-                          borderBottom:i<adminAccounts.length-1?'1px solid var(--border)':'none',
-                          display:'flex',alignItems:'center',gap:10}}>
-                          <div style={{width:28,height:28,borderRadius:'50%',background:acc.color,
-                            display:'flex',alignItems:'center',justifyContent:'center',
-                            flexShrink:0,fontSize:12,fontWeight:900,color:'#fff'}}>
-                            {(acc.name||'?').slice(0,1).toUpperCase()}
-                          </div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:13,fontWeight:800,color:'var(--text)',
-                              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{acc.name}</div>
-                            <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600}}>
-                              {dateStr} · {acc.games}G · {wr}% · {acc.eloClassic?('R:'+acc.eloClassic):''}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </AdminSection>
-
-            {/* ── FEATURE FLAGS ── */}
-            <AdminSection label="FEATURE FLAGS">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                XP- und Coin-System live ein-/ausschalten. Wirkt sofort auf den Server.
-              </div>
-              <AdminFlagsPanel/>
-            </AdminSection>
-
-            {/* ── FEHLER-REPORTS ── */}
-            <AdminSection label="FEHLER-REPORTS">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                JS-Fehler der Spieler (ww_error_reports). Laden nur auf Klick, kein Dauer-Listener.
-              </div>
-              <AdminErrorsPanel/>
-            </AdminSection>
-
-            {/* ── BUG-REPORTS (SPIELER) ── */}
-            <AdminSection label="BUG-REPORTS (SPIELER)">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                Spieler-Meldungen vom Endscreen-Button (ww_bug_reports) — mit Replay + Server-Sicht. Laden nur auf Klick.
-              </div>
-              <AdminBugsPanel onWatch={function(entry){
-                try{applyBoardSize(entry.map||'classic',entry.duelSize||'standard');}catch(e){}
-                replayZurueckRef.current='menu'; // Admin-Panel liegt ueber dem Menue und ist danach wieder offen
-                setReplayHistEntry(entry);
-                setReplayStep(0);
-                setScreen('replay');
-              }}/>
-            </AdminSection>
-
-            {/* ── MELDUNGEN (SPIELER) ── */}
-            <AdminSection label="MELDUNGEN (SPIELER)">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                Spieler-Meldungen (ww_reports) gruppiert nach gemeldetem Spieler, mit Server-Beweis + Ban-Werkzeug. Laden nur auf Klick.
-              </div>
-              <AdminReportsPanel/>
-            </AdminSection>
-
-            {/* ── COINS & SHOP ── */}
-            <AdminSection label="COINS & SHOP">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                Coins direkt vergeben oder korrigieren. Nur Server darf ww_coins schreiben — Verbindung zum WS-Server nötig.
-              </div>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>COIN-VERWALTUNG (UID aus der Liste oben)</div>
-              <AdminCoinsPanel/>
-              <div style={{marginTop:14,padding:'12px 14px',borderRadius:10,background:'var(--bg)',border:'1.5px solid var(--border)',textAlign:'center'}}>
-                <div style={{fontSize:12,fontWeight:800,color:'var(--subtle)',marginBottom:3}}>Shop</div>
-                <div style={{fontSize:11,color:'var(--subtle)'}}>Coming Soon — Shop wird später freigeschaltet</div>
-              </div>
-            </AdminSection>
-
-            {/* ── KONTO-MIGRATION ── */}
-            <AdminSection label="KONTO-MIGRATION (STATS-TRANSFER)">
-              <div style={{fontSize:11,color:'var(--subtle)',marginBottom:10,lineHeight:1.5}}>
-                Wenn ein Nutzer versehentlich ein Duplikat-Konto erstellt hat: Stats + ELO vom alten Konto ins neue übertragen. Name/Farbe bleiben unberührt.
-              </div>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:4}}>ALTES KONTO (UID aus der Liste oben)</div>
-              <input value={adminMigrateFrom} onChange={e=>setAdminMigrateFrom(e.target.value.trim())}
-                placeholder="Alt-UID (Quelle)"
-                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:4}}>NEUES KONTO (Ziel-UID, behält seinen Namen)</div>
-              <input value={adminMigrateTo} onChange={e=>setAdminMigrateTo(e.target.value.trim())}
-                placeholder="Neu-UID (Ziel)"
-                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:12,background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:10}}/>
-              {adminMigrateResult&&<div style={{fontSize:12,color:adminMigrateResult.startsWith('Fehler')?'#ef4444':'#16a34a',fontWeight:700,marginBottom:8,textAlign:'center'}}>{adminMigrateResult}</div>}
-              <button disabled={adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo} onClick={async function(){
-                if(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)return;
-                if(!window.confirm('Stats von "'+adminMigrateFrom+'" nach "'+adminMigrateTo+'" übertragen? Dies überschreibt die Stats des Ziel-Kontos.'))return;
-                setAdminMigrateBusy(true);setAdminMigrateResult('');
-                try{
-                  const r=await adminMigrateStats(adminMigrateFrom,adminMigrateTo);
-                  setAdminMigrateResult('Fertig: '+r.from+' → '+r.to);
-                  setAdminMigrateFrom('');setAdminMigrateTo('');
-                }catch(e){setAdminMigrateResult('Fehler: '+(e&&e.message?e.message:String(e)));}
-                setAdminMigrateBusy(false);
-              }} style={{width:'100%',padding:'11px',borderRadius:10,
-                background:(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)?'var(--border)':'#dc2626',
-                color:'white',border:'none',cursor:(adminMigrateBusy||!adminMigrateFrom||!adminMigrateTo)?'default':'pointer',
-                fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                {adminMigrateBusy?'Überträgt...':'Stats übertragen'}
-              </button>
-            </AdminSection>
-
-            {/* ── NACHRICHTEN ── */}
-            <AdminSection label="NACHRICHTEN (POSTKASTEN)">
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>TITEL (optional)</div>
-              <input value={bcTitle} onChange={e=>setBcTitle(e.target.value)}
-                placeholder="z.B. Event-Wochenende!"
-                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:13,
-                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>NACHRICHT</div>
-              <textarea value={bcMsg} onChange={e=>setBcMsg(e.target.value)}
-                placeholder="Deine Nachricht an alle Spieler..."
-                rows={3}
-                style={{width:'100%',padding:'10px 12px',borderRadius:10,fontSize:13,resize:'vertical',
-                  background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',
-                  fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:8}}/>
-              <div style={{display:'flex',gap:8,marginBottom:8}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>WICHTIGKEIT</div>
-                  <div style={{display:'flex',gap:4}}>
-                    {[['normal','Info','#6366f1'],['important','Update','#f59e0b'],['critical','Wichtig','#ef4444']].map(function(o){
-                      var sel=bcImportance===o[0];
-                      return <button key={o[0]} onClick={()=>setBcImportance(o[0])} style={{
-                        flex:1,padding:'6px 4px',borderRadius:8,fontSize:10,fontWeight:800,cursor:'pointer',
-                        background:sel?o[2]:'var(--bg)',color:sel?'white':o[2],
-                        border:'1.5px solid '+o[2],fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
-                    })}
-                  </div>
-                </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>SCHRIFTGRÖSSE</div>
-                  <div style={{display:'flex',gap:4}}>
-                    {[['small','S'],['medium','M'],['large','L']].map(function(o){
-                      var sel=bcFontSize===o[0];
-                      return <button key={o[0]} onClick={()=>setBcFontSize(o[0])} style={{
-                        flex:1,padding:'6px 4px',borderRadius:8,fontSize:10,fontWeight:800,cursor:'pointer',
-                        background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
-                        border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
-                    })}
-                  </div>
-                </div>
-              </div>
-              <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:5}}>GÜLTIG FÜR</div>
-              <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:10}}>
-                {[[1,'1 Tag'],[3,'3 Tage'],[7,'7 Tage'],[14,'14 Tage'],[30,'30 Tage'],[0,'Immer']].map(function(o){
-                  var sel=bcDays===o[0];
-                  return <button key={o[0]} onClick={()=>setBcDays(o[0])} style={{
-                    padding:'5px 9px',borderRadius:8,fontSize:10,fontWeight:700,cursor:'pointer',
-                    background:sel?'#3b82f6':'var(--bg)',color:sel?'white':'var(--text)',
-                    border:'1.5px solid '+(sel?'#3b82f6':'var(--border)'),fontFamily:'system-ui,-apple-system,sans-serif'}}>{o[1]}</button>;
-                })}
-              </div>
-              <button onClick={function(){
-                if(!bcMsg.trim())return;
-                var id='bc_'+Date.now();
-                var expiresAt=bcDays===0?0:Date.now()+bcDays*86400000;
-                window.db.ref('ww_broadcasts/'+id).set({
-                  title:bcTitle.trim(),message:bcMsg.trim(),
-                  importance:bcImportance,fontSize:bcFontSize,
-                  createdAt:Date.now(),expiresAt:expiresAt
-                }).then(function(){
-                  setBcTitle('');setBcMsg('');setBcImportance('normal');setBcFontSize('medium');setBcDays(7);
-                  setAdminFlash('Nachricht gesendet!');setTimeout(function(){setAdminFlash('');},2500);
-                }).catch(function(){setAdminFlash('Fehler!');setTimeout(function(){setAdminFlash('');},2000);});
-              }} style={{width:'100%',padding:'11px',borderRadius:10,
-                background:bcMsg.trim()?'linear-gradient(135deg,#fbbf24,#f59e0b)':'var(--bg)',
-                color:bcMsg.trim()?'#1a1220':'var(--subtle)',border:'none',cursor:bcMsg.trim()?'pointer':'default',
-                fontWeight:900,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                Nachricht senden
-              </button>
-              {broadcasts.length>0&&(
-                <div style={{marginTop:10}}>
-                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:0.8,marginBottom:6}}>AKTIVE NACHRICHTEN ({broadcasts.length})</div>
-                  {broadcasts.map(function(b){
-                    return(
-                      <div key={b.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-                        padding:'8px 10px',borderRadius:9,background:'var(--bg)',border:'1px solid var(--border)',marginBottom:5}}>
-                        <div style={{fontSize:12,fontWeight:700,color:'var(--text)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginRight:8}}>
-                          {b.title||b.message.slice(0,40)}
-                        </div>
-                        <button onClick={function(){window.db.ref('ww_broadcasts/'+b.id).remove();}} style={{
-                          background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:7,
-                          padding:'4px 8px',fontSize:11,fontWeight:700,cursor:'pointer',
-                          fontFamily:'system-ui,-apple-system,sans-serif',flexShrink:0}}>Löschen</button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </AdminSection>
-
-            {/* ── 🔧 WARTUNG & AUFRÄUMEN ── */}
-            <AdminSection label="🔧 WARTUNG & AUFRÄUMEN">
-              {/* Wartungsmodus mit Bestätigung */}
-              <AdminConfirmAction
-                label={adminCfg.maintenance?'Wartungsmodus aktiv — Spiel gesperrt':'Wartungsmodus einschalten'}
-                confirmLabel="Wirklich einschalten? Alle Spieler werden ausgesperrt."
-                btnLabel={adminCfg.maintenance?'Deaktivieren':'Aktivieren'}
-                danger={!adminCfg.maintenance}
-                active={adminCfg.maintenance}
-                onConfirm={()=>saveAdminCfg({...adminCfg,maintenance:!adminCfg.maintenance})}/>
-              <div style={{marginTop:8}}>
-                {clearConfirm?(
-                  <div style={{background:'rgba(239,68,68,0.08)',border:'1.5px solid #ef4444',borderRadius:10,padding:'12px 14px'}}>
-                    <div style={{fontSize:13,fontWeight:700,color:'#ef4444',marginBottom:10}}>Wirklich alle offenen Lobbys leeren?</div>
-                    <div style={{display:'flex',gap:8}}>
-                      <button onClick={()=>{setClearConfirm(false);clearOpenLobbies();}} style={{flex:1,padding:'10px',borderRadius:9,
-                        background:'#ef4444',color:'white',border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-                        fontFamily:'system-ui,-apple-system,sans-serif'}}>Ja, leeren</button>
-                      <button onClick={()=>setClearConfirm(false)} style={{flex:1,padding:'10px',borderRadius:9,
-                        background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:13,
-                        fontFamily:'system-ui,-apple-system,sans-serif'}}>Abbrechen</button>
-                    </div>
-                  </div>
-                ):(
-                  <button onClick={()=>setClearConfirm(true)} style={{width:'100%',padding:'11px',borderRadius:10,
-                    background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',
-                    fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                    🧹 Offene Lobbys leeren
-                  </button>
-                )}
-              </div>
-              {/* Namens-Index pruefen: Pflichtschritt nach einem Rules-Publish.
-                  Muss "Arbeitsliste LEER" melden — sonst schreibt noch etwas dagegen. */}
-              <div style={{marginTop:8}}>
-                <button disabled={nrBusy} onClick={()=>{
-                  setNrBusy(true);setNrMsg('');setNrLeer(null);
-                  wsCmd({type:'admin_name_reconcile'},'admin_name_reconcile_ok').then(function(d){
-                    setNrBusy(false);
-                    var istLeer=!!(d&&d.leer);
-                    setNrLeer(istLeer);
-                    var rd=(d&&typeof d.runden==='number')?d.runden:null;
-                    var rest=(d&&typeof d.rest==='number')?d.rest:null;
-                    setNrMsg(istLeer?('Arbeitsliste LEER'+(rd!==null?' (nach '+rd+' Durchlaeufen)':'')):
-                      ('NICHT leer'+(rest!==null?' — '+rest+' Rest-Eintraege':'')+'. Es schreibt noch etwas dagegen: nicht weitermachen, nachsehen.'));
-                  }).catch(function(e){
-                    setNrBusy(false);setNrLeer(false);
-                    setNrMsg('Fehlgeschlagen: '+((e&&e.message)?e.message:'unbekannt'));
-                  });
-                }} style={{width:'100%',padding:'11px',borderRadius:10,
-                  background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',
-                  cursor:nrBusy?'default':'pointer',opacity:nrBusy?0.6:1,
-                  fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  {nrBusy?'Prueft…':'🔁 Namens-Index pruefen'}
-                </button>
-                {nrMsg?(
-                  <div style={{marginTop:8,padding:'10px 12px',borderRadius:9,fontSize:12.5,fontWeight:700,
-                    background:nrLeer?'rgba(22,163,74,0.10)':'rgba(239,68,68,0.10)',
-                    border:'1.5px solid '+(nrLeer?'#16a34a':'#ef4444'),
-                    color:nrLeer?'#16a34a':'#ef4444'}}>{nrMsg}</div>
-                ):null}
-              </div>
-            </AdminSection>
-
-            {adminFlash?<div style={{textAlign:'center',fontSize:12,color:'#16a34a',fontWeight:700,marginTop:10}}>{adminFlash}</div>:null}
-            <button onClick={()=>{setShowAdmin(false);window.location.reload();}} style={{
-              width:'100%',padding:'10px',marginTop:14,borderRadius:10,
-              background:'#fee2e2',color:'#dc2626',border:'1.5px solid #fecaca',
-              cursor:'pointer',fontWeight:700,fontSize:12,
-              fontFamily:'system-ui,-apple-system,sans-serif'}}>
-              Admin-Modus beenden
-            </button>
-          </div>
-        </div>
-      )}
       {showTutorial&&<TutorialModal t={t} darkMode={darkMode} step={tutStep} setStep={setTutStep} onClose={closeTutorial}/>}
       {helpKey&&<ModeHelpModal kind={helpKey} lang={lang} onClose={()=>setHelpKey(null)}/>}
 
 
-      {/* showAdminUnlock entfernt: Admin-Zugang nur per Firebase-Auth */}
 
       {/* Update-Banner */}
       {updateAvailable&&(
@@ -9102,9 +7728,9 @@ function App(){
           <div style={{opacity:feat('blitz')?1:0.45,position:'relative'}}>
             <SectionHeader icon={<ModeGlyph kind="bolt" size={12} color="#64748b"/>} label={t('modeBlitz').toUpperCase() + ' · ' + t('perTurn').toUpperCase()}/>
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime5'))&&!isAdmin()}/>
-              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime8'))&&!isAdmin()}/>
-              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime10'))&&!isAdmin()}/>
+              <TimeBtn val="blitz-5" label={'5 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime5'))}/>
+              <TimeBtn val="blitz-8" label={'8 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime8'))}/>
+              <TimeBtn val="blitz-10" label={'10 '+t('secLabel')} disabled={(!feat('blitz')||!feat('blitzTime10'))}/>
               <HelpDot onClick={()=>setHelpKey('blitz')}/>
             </div>
           </div>
@@ -9253,7 +7879,7 @@ function App(){
 
   if(screen==='ranked'){
     return <RankedScreen account={account} t={t} darkMode={darkMode} goBack={goBack} wsRouter={wsLobbyTrampRef.current}
-      onStart={doStartRanked} features={isAdmin()?Object.assign({},adminCfg.features,{ranked:true,rankedClassic:true,rankedDuel:true,rankedChaosEvent:true}):adminCfg.features}/>;
+      onStart={doStartRanked} features={adminCfg.features}/>;
   }
 
   if(screen==='weltliga'){
