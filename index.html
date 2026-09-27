@@ -1133,7 +1133,7 @@ var WSNET={
       if(d.type==='reconnect_failed'){ self.token=null; self.live=false; self._clearResume(); self._dbg('reconnect_failed - Raum/Token weg'); } // toter Token: nie wieder damit reconnecten
       if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; self._lastOppRating=d.oppRating||1000; self._lastRankedMode=d.rankedMode||d.mode||'classic'; self._saveResume(); if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
-      if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self._clearResume(); if(d.grund!=='declined') self.rankedOn=false; }
+      if(d.type==='ranked_cancelled'){ self.roomId=null; self.token=null; self.role=null; self._clearResume(); if(d.grund!=='declined'&&d.grund!=='gegner_weg') self.rankedOn=false; } // declined/gegner_weg: der Server hat uns zurueck in die Suche gesetzt
       // Takeover: ein anderes Geraet hat den Raum-Slot uebernommen. JEDEN Reconnect-Ausloeser abraeumen,
       // sonst versucht dieser tote Socket ewig neu zu verbinden. onState bleibt gesetzt -> UI-Meldung folgt unten.
       if(d.type==='session_replaced'){ self.rankedOn=false; self.browseOn=false; self.roomId=null; self.role=null; self.token=null; self.live=false; self.spectateCode=null; self._clearResume(); self._stopHb(); if(self._lp){ clearInterval(self._lp); self._lp=null; } }
@@ -2337,6 +2337,8 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
       if(d&&d.type==='ranked_found'){ try{playSound('pickup');}catch(e){} try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){} }
       if(d&&d.type==='ranked_found'&&d.isLargeGap){ setPreMatch(d); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
+      // Gegner hat abgelehnt oder ist nach dem Fund still verschwunden: der Server setzt uns zurueck in die Suche (ranked_waiting folgt)
+      if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){ setPreMatch(null); setPreMatchTimer(15); return; }
       if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
       // Gegner gefunden, aber der Server kennt den Raum nicht mehr (Absturz ohne Uebergabe): sonst lief die Suche ewig weiter,
       // und der zentrale Handler legte unter dem Ranked-Code eine normale Lobby an. Socket zu, Hinweis, zurueck wie bei ranked_denied.
@@ -2609,6 +2611,8 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
       if(d&&d.type==='wl_suche'){setSuche(d.suche||{});return;}
       if(d&&d.type==='ranked_waiting'){setQueue({ts:Date.now()});setElapsed(0);return;}
       if(d&&d.type==='ranked_found'){try{playSound('pickup');}catch(e){}try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}var fl=d.lands||[],ich=d.deineNummer===1?1:0;setGefunden([fl[ich],fl[1-ich]]);return;} // eigene Flagge zuerst
+      // Gegner hat abgelehnt oder ist nach dem Fund still verschwunden: der Server setzt uns zurueck in die Suche (ranked_waiting folgt)
+      if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){setGefunden(null);return;}
       if(d&&d.type==='ranked_denied'){var g=d.grund;setMsg(g==='login'?t('rankedLoginHint'):g==='busy'?t('rankedBusy'):g==='land'?t('wl_fehlerLand'):t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();if(g==='land')setWaehlen(true);},2500);return;}
       if(d&&d.type==='reconnect_failed'){try{WSNET.close();}catch(e){}setMsg(t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();},2500);return;}
       if(d&&d.type==='session_replaced'){setMsg(t('sessionReplaced'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();goBack();},1800);return;}
