@@ -657,6 +657,9 @@
   .ww-pcard .ww-sheen2{position:absolute;top:0;bottom:0;width:38%;left:-50%;pointer-events:none;background:linear-gradient(105deg,transparent,rgba(255,255,255,0.28),transparent);}
   .ww-pcard.pA{background:linear-gradient(150deg,#e54d3c,#b41d1d);}
   .ww-pcard.pB{background:linear-gradient(150deg,#4385ee,#1b4cc0);}
+  .ww-pcard.wlhell .ww-pinfo,.ww-pcard.wlhell .ww-pclock{color:#0f172a;}
+  .ww-pcard.wlhell .ww-pwalls{color:#334155;}
+  .ww-pcard.wlhell .ww-pclock{background:rgba(15,23,42,0.07);border-color:rgba(15,23,42,0.16);}
   .ww-pcard.dim{filter:saturate(0.55) brightness(0.82);box-shadow:0 4px 12px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);}
   .ww-pcard.pA.live{box-shadow:0 7px 22px rgba(229,77,60,0.45),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28);transform:translateY(-1px);}
   .ww-pcard.pB.live{box-shadow:0 7px 22px rgba(67,133,238,0.45),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28);transform:translateY(-1px);}
@@ -2281,32 +2284,42 @@ var WL_LAND_SET=Object.create(null); // ohne Prototyp: "constructor" o.ae. ist n
 WL_LAENDER.forEach(function(c){WL_LAND_SET[c]=true;});
 function wlIstLand(c){return typeof c==='string'&&WL_LAND_SET[c]===true;}
 // Flaggen-Datei (flag-icons 7.5.0, MIT, liegt unter flags/). quadrat=true: 1x1-Fassung fuer die runden Steine.
-// Kartenfarben der Weltliga (Tunay 2026-09-26, "Karte B"): je Land Hauptfarbe + zweite Farbe der Flagge als [Farbton, Saettigung,
-// Farbton2, Saettigung2], aus den 1x1-Flaggen gemessen (Bildrund, ohne Weiss/Schwarz/Grau; Saettigung 12 = neutral).
-var WL_FARBEN={AD:[52,80,350,80],AE:[0,80,137,80],AF:[0,80,120,80],AG:[205,80,355,79],AI:[220,80,355,79],AL:[0,80,215,12],AM:[222,80,40,80],AO:[0,80,56,80],AQ:[213,57,215,12],AR:[210,55,45,58],AS:[240,80,354,77],AT:[355,79,215,12],AU:[240,80,0,80],AW:[200,57,60,80],AX:[48,80,210,80],AZ:[355,80,120,46],BA:[240,80,48,80],BB:[223,80,46,80],BD:[351,80,160,80],BE:[52,80,351,80],BF:[102,80,0,80],BG:[160,80,5,80],BH:[355,79,215,12],BI:[350,80,132,77],BJ:[100,80,5,80],BL:[351,80,223,80],BM:[355,79,240,80],BN:[56,80,355,79],BO:[56,80,146,80],BQ:[220,55,353,75],BR:[137,58,56,80],BS:[185,80,56,80],BT:[13,80,215,12],BV:[0,69,220,80],BW:[192,80,215,12],BY:[355,79,146,80],BZ:[218,80,315,44],CA:[5,80,215,12],CC:[120,80,56,80],CD:[212,80,355,79],CF:[0,80,120,80],CG:[60,80,0,80],CH:[0,80,215,12],CI:[120,80,36,80],CK:[240,80,355,79],CL:[5,80,222,80],CM:[355,79,51,80],CN:[355,80,60,80],CO:[56,80,232,80],CR:[0,80,240,80],CU:[0,79,225,80],CV:[231,80,5,69],CW:[223,80,56,80],CX:[146,70,228,80],CY:[32,80,215,12],CZ:[0,80,210,67],DE:[0,80,48,80],DJ:[120,80,220,80],DK:[355,79,215,12],DM:[112,80,5,80],DO:[355,79,220,80],DZ:[150,80,350,80],EC:[56,80,232,80],EE:[206,80,215,12],EG:[355,79,40,77],EH:[0,79,146,80],ER:[349,80,210,80],ES:[44,80,215,12],ET:[105,80,5,80],FI:[220,80,215,12],FJ:[202,74,355,79],FK:[220,80,355,79],FM:[214,59,215,12],FO:[0,69,220,80],FR:[0,80,240,80],GA:[56,80,207,80],GB:[355,79,220,80],GD:[51,80,163,80],GE:[0,80,215,12],GF:[0,80,240,80],GG:[355,80,51,80],GH:[51,80,150,80],GI:[0,80,215,12],GL:[346,80,215,12],GM:[120,80,240,80],GN:[60,80,120,80],GP:[0,80,240,80],GQ:[5,80,100,80],GR:[210,80,215,12],GS:[240,80,355,79],GT:[207,65,48,63],GU:[223,50,349,80],GW:[147,80,51,80],GY:[100,80,52,80],HK:[355,80,215,12],HM:[240,80,0,80],HN:[185,80,215,12],HR:[0,80,240,73],HT:[350,80,227,80],HU:[98,80,10,80],ID:[356,80,215,12],IE:[28,80,147,80],IM:[0,80,215,12],IN:[112,80,30,80],IO:[240,80,355,79],IQ:[355,79,146,80],IR:[0,80,137,58],IS:[220,80,0,69],IT:[354,67,147,80],JE:[355,79,52,80],JM:[48,80,120,80],JO:[0,80,120,80],JP:[349,80,215,12],KE:[0,80,120,80],KG:[0,80,60,80],KH:[351,80,228,80],KI:[5,80,202,80],KM:[137,58,223,50],KN:[0,80,102,80],KP:[0,80,220,46],KR:[354,67,216,80],KW:[351,80,138,80],KY:[240,80,355,79],KZ:[190,80,55,80],LA:[220,80,355,79],LB:[0,80,150,80],LC:[200,80,48,80],LI:[355,79,223,80],LK:[0,55,168,80],LR:[0,80,240,80],LS:[147,80,227,80],LT:[160,80,0,67],LU:[194,80,355,80],LV:[345,73,215,12],LY:[137,58,356,80],MA:[0,67,150,80],MC:[351,80,215,12],MD:[52,80,5,80],ME:[0,80,215,12],MF:[0,80,240,80],MG:[146,80,0,80],MH:[223,50,33,76],MK:[0,80,56,80],ML:[60,80,0,80],MM:[120,53,48,80],MN:[207,80,355,69],MO:[163,80,215,12],MP:[202,80,215,12],MQ:[150,80,355,80],MR:[150,80,354,67],MS:[220,80,355,79],MT:[355,79,215,12],MU:[48,80,240,62],MV:[350,80,146,80],MW:[4,80,130,55],MX:[355,79,160,80],MY:[0,80,240,80],MZ:[0,80,48,80],NA:[0,80,102,80],NC:[56,80,147,80],NE:[21,80,131,80],NF:[112,80,215,12],NG:[158,80,215,12],NI:[210,80,45,80],NL:[220,55,353,75],NO:[355,80,220,80],NP:[0,80,240,80],NR:[223,80,44,80],NU:[52,80,355,79],NZ:[223,80,355,79],OM:[0,80,133,80],PA:[240,80,0,80],PE:[355,80,215,12],PF:[5,80,220,47],PG:[0,80,48,80],PH:[355,79,222,80],PK:[120,80,215,12],PL:[350,80,215,12],PM:[0,80,240,80],PN:[223,80,355,79],PR:[220,80,0,80],PS:[355,80,140,80],PT:[0,80,120,80],PW:[200,65,52,80],PY:[222,80,5,80],QA:[343,70,215,12],RE:[351,80,223,80],RO:[52,80,5,80],RS:[206,80,0,57],RU:[222,80,5,80],RW:[194,80,52,80],SA:[150,57,215,12],SB:[240,80,120,80],SC:[0,69,48,80],SD:[120,80,0,80],SE:[207,80,48,80],SG:[0,80,215,12],SH:[355,79,220,80],SI:[240,80,0,80],SJ:[0,80,220,80],SK:[355,80,216,80],SL:[240,80,120,80],SM:[194,80,135,54],SN:[60,80,137,80],SO:[207,80,215,12],SR:[349,80,120,36],SS:[216,80,142,80],ST:[127,75,48,80],SV:[216,80,60,70],SX:[227,80,355,80],SY:[146,80,355,79],SZ:[0,80,225,53],TC:[220,80,355,79],TD:[48,80,345,80],TF:[227,80,355,80],TG:[0,80,56,80],TH:[347,75,215,12],TJ:[120,80,0,80],TK:[223,80,52,80],TL:[0,80,48,80],TM:[142,80,26,50],TN:[356,80,215,12],TO:[0,80,215,12],TR:[356,80,215,12],TT:[0,80,215,12],TV:[195,80,355,79],TW:[0,80,240,80],TZ:[120,80,204,80],UA:[52,80,213,80],UG:[56,80,215,12],UM:[225,57,352,53],US:[225,57,352,53],UY:[222,80,49,79],UZ:[132,77,191,80],VA:[56,80,215,12],VC:[60,80,113,80],VE:[223,80,355,79],VG:[240,80,355,79],VI:[42,67,228,62],VN:[5,80,60,80],VU:[147,80,350,80],WF:[0,80,240,80],WS:[355,79,223,80],YE:[0,80,215,12],YT:[0,80,240,80],ZA:[154,80,240,80],ZM:[112,80,5,80],ZW:[52,80,0,80]};
-function wlFarbWahl(c,i){var f=WL_FARBEN[c];return f?[f[i*2],f[i*2+1]]:[215,12];}
-function wlFarbNah(a,b){ // aehnlich = beide neutral, oder beide farbig mit nahem Farbton (Kartentext + Karten muessen sich unterscheiden)
-  var na=a[1]<25,nb=b[1]<25;if(na||nb)return na&&nb;
-  var d=Math.abs(a[0]-b[0]);return Math.min(d,360-d)<35;
+// Kartenfarben der Weltliga (Tunay 2026-09-26 "Karte B", 2026-09-27 "immer die passende, perfekte Farbe"): je Land die echten
+// Farben der Flagge, bunte zuerst (nach Flaechenanteil), dann Weiss 'w' und Schwarz 'k'; bunt = 'Farbton.Saettigung'.
+// Aus den 1x1-Flaggen gemessen (Bildrund); am Ende jeder Liste stehen Weiss/Schwarz als Ausweichfarbe (kein Grau).
+var WL_FARBEN={AD:'52.80,350.80,234.80,w',AE:'0.80,w,k',AF:'0.80,120.80,k,w',AG:'205.80,355.79,k,w',AI:'220.80,355.79,w,k',AL:'0.80,k,w',AM:'222.80,40.80,355.80,w',AO:'0.80,56.80,k,w',AQ:'213.57,w,k',AR:'210.55,w,k',AS:'240.80,354.77,w,k',AT:'355.79,w,k',AU:'240.80,0.80,w,k',AW:'200.57,60.80,w,k',AX:'48.80,210.80,350.80,w',AZ:'355.80,120.46,193.80,w',BA:'240.80,48.80,w,k',BB:'223.80,46.80,w,k',BD:'351.80,160.80,w,k',BE:'52.80,351.80,k,w',BF:'102.80,0.80,60.80,w',BG:'160.80,5.80,w,k',BH:'355.79,w,k',BI:'350.80,132.77,w,k',BJ:'100.80,5.80,52.80,w',BL:'351.80,223.80,w,k',BM:'355.79,w,k',BN:'56.80,w,k',BO:'56.80,146.80,5.80,w',BQ:'220.55,353.75,w,k',BR:'137.58,56.80,225.62,w',BS:'185.80,56.80,k,w',BT:'51.80,13.80,w,k',BV:'0.69,220.80,w,k',BW:'192.80,k,w',BY:'355.79,146.80,w,k',BZ:'218.80,w,k',CA:'5.80,w,k',CC:'120.80,56.80,w,k',CD:'212.80,355.79,51.80,w',CF:'0.80,120.80,w,k',CG:'60.80,0.80,120.80,w',CH:'0.80,w,k',CI:'120.80,36.80,w,k',CK:'240.80,355.79,w,k',CL:'5.80,222.80,w,k',CM:'355.79,51.80,163.80,w',CN:'355.80,w,k',CO:'56.80,232.80,355.80,w',CR:'0.80,240.80,w,k',CU:'0.79,225.80,w,k',CV:'231.80,5.69,w,k',CW:'223.80,56.80,w,k',CX:'146.70,228.80,w,k',CY:'32.80,w,k',CZ:'0.80,210.67,w,k',DE:'0.80,48.80,k,w',DJ:'120.80,220.80,w,k',DK:'355.79,w,k',DM:'112.80,5.80,k,w',DO:'220.80,355.79,w,k',DZ:'150.80,350.80,w,k',EC:'56.80,232.80,355.80,w',EE:'206.80,k,w',EG:'355.79,w,k',EH:'0.79,146.80,w,k',ER:'349.80,137.58,40.68,w',ES:'44.80,0.75,w,k',ET:'105.80,46.80,5.80,w',FI:'220.80,w,k',FJ:'202.74,355.79,w,k',FK:'220.80,355.79,w,k',FM:'214.59,w,k',FO:'0.69,220.80,w,k',FR:'0.80,240.80,w,k',GA:'56.80,207.80,102.80,w',GB:'355.79,220.80,w,k',GD:'51.80,163.80,355.79,w',GE:'0.80,w,k',GF:'0.80,240.80,w,k',GG:'355.80,51.80,w,k',GH:'51.80,150.80,355.79,w',GI:'0.80,w,k',GL:'346.80,w,k',GM:'120.80,240.80,0.80,w',GN:'60.80,120.80,0.80,w',GP:'0.80,240.80,w,k',GQ:'5.80,100.80,w,k',GR:'210.80,w,k',GS:'240.80,355.79,w,k',GT:'207.65,w,k',GU:'223.50,w,k',GW:'147.80,51.80,355.79,w',GY:'100.80,52.80,5.80,w',HK:'355.80,w,k',HM:'240.80,0.80,w,k',HN:'185.80,w,k',HR:'0.80,240.73,w,k',HT:'350.80,227.80,w,k',HU:'98.80,10.80,w,k',ID:'356.80,w,k',IE:'28.80,147.80,w,k',IM:'0.80,w,k',IN:'112.80,30.80,w,k',IO:'240.80,355.79,w,k',IQ:'355.79,w,k',IR:'0.80,137.58,w,k',IS:'220.80,0.69,w,k',IT:'354.67,147.80,w,k',JE:'355.79,w,k',JM:'48.80,120.80,k,w',JO:'0.80,120.80,k,w',JP:'349.80,w,k',KE:'0.80,120.80,k,w',KG:'0.80,32.80,w,k',KH:'351.80,228.80,w,k',KI:'5.80,202.80,w,k',KM:'137.58,223.50,w,k',KN:'0.80,102.80,k,w',KP:'0.80,220.46,w,k',KR:'354.67,216.80,w,k',KW:'351.80,k,w',KY:'240.80,355.79,w,k',KZ:'190.80,55.80,120.42,w',LA:'220.80,355.79,w,k',LB:'0.80,150.80,w,k',LC:'200.80,48.80,k,w',LI:'355.79,223.80,w,k',LK:'0.55,44.80,168.80,w',LR:'0.80,240.80,w,k',LS:'147.80,227.80,w,k',LT:'160.80,0.67,43.80,w',LU:'194.80,355.80,w,k',LV:'345.73,w,k',LY:'137.58,356.80,k,w',MA:'0.67,w,k',MC:'351.80,w,k',MD:'52.80,5.80,220.80,w',ME:'0.80,40.57,w,k',MF:'0.80,240.80,w,k',MG:'146.80,0.80,w,k',MH:'223.50,33.76,w,k',MK:'0.80,56.80,30.80,w',ML:'60.80,0.80,120.80,w',MM:'120.53,48.80,355.80,w',MN:'207.80,355.69,52.80,w',MO:'163.80,w,k',MP:'202.80,w,k',MQ:'150.80,355.80,k,w',MR:'150.80,354.67,48.80,w',MS:'220.80,185.80,355.79,w',MT:'355.79,w,k',MU:'48.80,240.62,147.80,w',MV:'350.80,146.80,w,k',MW:'4.80,130.55,k,w',MX:'355.79,160.80,w,k',MY:'0.80,240.80,w,k',MZ:'0.80,48.80,120.80,w',NA:'0.80,102.80,214.50,w',NC:'56.80,147.80,222.80,w',NE:'21.80,131.80,w,k',NF:'112.80,w,k',NG:'158.80,w,k',NI:'210.80,w,k',NL:'220.55,353.75,w,k',NO:'355.80,220.80,w,k',NP:'0.80,240.80,w,k',NR:'223.80,44.80,w,k',NU:'52.80,w,k',NZ:'223.80,355.79,w,k',OM:'0.80,133.80,w,k',PA:'240.80,0.80,w,k',PE:'355.80,w,k',PF:'5.80,w,k',PG:'0.80,48.80,k,w',PH:'355.79,222.80,w,k',PK:'120.80,w,k',PL:'350.80,w,k',PM:'0.80,240.80,w,k',PN:'223.80,355.79,w,k',PR:'220.80,0.80,w,k',PS:'355.80,140.80,k,w',PT:'0.80,120.80,w,k',PW:'200.65,52.80,w,k',PY:'222.80,5.80,w,k',QA:'343.70,w,k',RE:'351.80,223.80,w,k',RO:'52.80,5.80,220.80,w',RS:'206.80,0.57,w,k',RU:'222.80,5.80,w,k',RW:'194.80,52.80,135.44,w',SA:'150.57,w,k',SB:'240.80,120.80,48.80,w',SC:'0.69,48.80,w,k',SD:'120.80,0.80,k,w',SE:'207.80,48.80,w,k',SG:'0.80,w,k',SH:'355.79,220.80,w,k',SI:'240.80,0.80,w,k',SJ:'0.80,220.80,w,k',SK:'355.80,216.80,w,k',SL:'240.80,120.80,w,k',SM:'194.80,w,k',SN:'60.80,137.80,0.80,w',SO:'207.80,w,k',SR:'349.80,120.36,w,k',SS:'216.80,142.80,k,w',ST:'127.75,48.80,350.80,w',SV:'216.80,w,k',SX:'227.80,355.80,w,k',SY:'146.80,w,k',SZ:'0.80,225.53,52.80,w',TC:'220.80,51.80,355.79,w',TD:'48.80,345.80,220.80,w',TF:'227.80,355.80,w,k',TG:'0.80,56.80,112.80,w',TH:'240.29,347.75,w,k',TJ:'120.80,0.80,w,k',TK:'223.80,52.80,w,k',TL:'0.80,48.80,k,w',TM:'142.80,26.50,355.69,w',TN:'356.80,w,k',TO:'0.80,w,k',TR:'356.80,w,k',TT:'0.80,k,w',TV:'195.80,355.79,w,k',TW:'0.80,240.80,w,k',TZ:'120.80,204.80,k,w',UA:'52.80,213.80,w,k',UG:'56.80,14.80,k,w',UM:'225.57,352.53,w,k',US:'225.57,352.53,w,k',UY:'222.80,w,k',UZ:'132.77,191.80,w,k',VA:'56.80,w,k',VC:'60.80,113.80,210.80,w',VE:'223.80,355.79,48.80,w',VG:'240.80,355.79,w,k',VI:'42.67,w,k',VN:'5.80,60.80,w,k',VU:'147.80,350.80,k,w',WF:'0.80,240.80,w,k',WS:'355.79,223.80,w,k',YE:'0.80,w,k',YT:'0.80,240.80,w,k',ZA:'154.80,240.80,5.80,w',ZM:'112.80,5.80,k,w',ZW:'52.80,0.80,w,k'};
+function wlFarbListe(c){
+  return (WL_FARBEN[c]||'w,k').split(',').map(function(x){if(x==='w'||x==='k')return {t:x};var a=x.split('.');return {t:'c',h:+a[0],s:+a[1]};});
 }
-// Farben beider Karten [A, B]: Hauptfarben; ist es zu aehnlich, nimmt B seine zweite Farbe, dann A, zuletzt neutral.
+function wlFarbNah(a,b){ // zu aehnlich: gleiche Art (Weiss/Schwarz) oder bunt mit nahem Farbton
+  if(a.t!=='c'||b.t!=='c')return a.t===b.t;
+  var d=Math.abs(a.h-b.h);return Math.min(d,360-d)<35;
+}
+// Farben beider Karten [A, B]: aus allen Kombinationen der Flaggenfarben die unterscheidbare mit den WICHTIGSTEN Farben
+// (kleinste Kostensumme; bei Gleichstand behaelt A seine Hauptfarbe). Beispiel Tuerkei gegen Peru (beide Rot-Weiss): Rot gegen Weiss.
 function wlKartenFarben(lands){
   if(!lands)return null;
-  var a=wlFarbWahl(lands[0],0),b=wlFarbWahl(lands[1],0);
-  if(wlFarbNah(a,b)){
-    var b2=wlFarbWahl(lands[1],1),a2=wlFarbWahl(lands[0],1);
-    if(b2[1]>=25&&!wlFarbNah(a,b2))b=b2;else if(a2[1]>=25&&!wlFarbNah(a2,b))a=a2;else if(!wlFarbNah(a,b2))b=b2;else b=[215,12];
+  var la=wlFarbListe(lands[0]),lb=wlFarbListe(lands[1]),best=null,bc=99;
+  for(var i=0;i<la.length;i++)for(var j=0;j<lb.length;j++){
+    // Kosten = Rang der Farbe in ihrer Flagge; Weiss/Schwarz +0,5 (lieber eine zweite bunte Farbe, z.B. DE Gold statt Tuerkei Weiss)
+    var k=i+j+(la[i].t!=='c'?0.5:0)+(lb[j].t!=='c'?0.5:0);
+    if(wlFarbNah(la[i],lb[j])||k>=bc)continue;
+    bc=k;best=[la[i],lb[j]];
   }
-  return [a,b];
+  return best||[la[0],{t:la[0].t==='k'?'w':'k'}];
 }
-// Kartenhintergrund + Leuchten: dunkel genug fuer weisse Schrift (Gelbtoene noch dunkler)
-function wlKartenStil(hs,live){
-  var h=hs[0],s=hs[1],y=(h>=35&&h<=75)?8:0;
-  var hell='hsl('+h+','+s+'%,'+(40-y)+'%)',dunkel='hsl('+h+','+s+'%,'+(27-y)+'%)';
-  var st={background:'linear-gradient(150deg,'+hell+','+dunkel+')'};
+// Kartenhintergrund + Leuchten: bunt dunkel genug fuer weisse Schrift (Gelbtoene noch dunkler), Weiss hell mit dunkler Schrift
+function wlKartenStil(f,live){
+  if(f.t==='w')return {background:'linear-gradient(150deg,#f8fafc,#d2dae6)',boxShadow:'0 '+(live?7:4)+'px '+(live?22:12)+'px rgba(148,163,184,'+(live?0.55:0.3)+'),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -3px 7px rgba(0,0,0,0.12)'};
+  if(f.t==='k')return {background:'linear-gradient(150deg,#3b4658,#141a26)'};
+  var h=f.h,s=f.s,y=(h>=35&&h<=75)?8:0;
+  var st={background:'linear-gradient(150deg,hsl('+h+','+s+'%,'+(40-y)+'%),hsl('+h+','+s+'%,'+(27-y)+'%))'};
   if(live)st.boxShadow='0 7px 22px hsla('+h+','+s+'%,'+(45-y)+'%,0.5),inset 0 1px 0 rgba(255,255,255,0.2),inset 0 -3px 7px rgba(0,0,0,0.28)';
   return st;
 }
+// Farbe fuer Schrift/Linien am Brett (auf hellem und dunklem Grund lesbar) und fuer Mauern
+function wlTextFarbe(f,al){return f.t==='c'?('hsla('+f.h+','+f.s+'%,45%,'+(al===undefined?1:al)+')'):f.t==='w'?('rgba(148,163,184,'+(al===undefined?1:al)+')'):('rgba(71,85,105,'+(al===undefined?1:al)+')');}
+function wlWandFarbe(f){return f.t==='c'?('hsl('+f.h+','+f.s+'%,45%)'):f.t==='w'?'#f1f5f9':'#334155';}
 function wlFlagge(c,quadrat){return wlIstLand(c)?'flags/'+(quadrat?'1x1':'4x3')+'/'+c.toLowerCase()+'.svg':'';}
 // Laendername in der Spielsprache ueber die eingebaute Browser-Funktion; ohne sie steht der Code da.
 var WL_DN={};
@@ -5705,7 +5718,7 @@ function App(){
   var _skA=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[0]&&matchSkins[0].stone)?STONE_SKINS[matchSkins[0].stone]:null;
   var _skB=(!wlLands&&gameMode==='online'&&matchSkins&&matchSkins[1]&&matchSkins[1].stone)?STONE_SKINS[matchSkins[1].stone]:null;
   const wlKarten=wlLands?wlKartenFarben(wlLands):null; // Weltliga: Kartenfarben aus den Flaggen
-  const spFarbe=p=>wlKarten?('hsl('+wlKarten[p==='A'?0:1][0]+','+wlKarten[p==='A'?0:1][1]+'%,45%)'):PC[p]; // Farbe der Namenszeilen am Brett
+  const spFarbe=p=>wlKarten?wlTextFarbe(wlKarten[p==='A'?0:1]):PC[p]; // Farbe der Namenszeilen am Brett
   const MC={A:_skA?_skA.c:PC.A,B:_skB?_skB.c:PC.B};
   const MD={A:_skA?_skA.d:PD.A,B:_skB?_skB.d:PD.B};
   var _mySkinEntry=(gameMode==='online'&&matchSkins)?matchSkins[onlineRole==='B'?1:0]:null;
@@ -10048,7 +10061,7 @@ function App(){
     const rLands=rEntry?(rEntry.wl||null):wlLands; // Weltliga: Flaggen-Steine wie im Spiel
     const rKarten=rLands?wlKartenFarben(rLands):null; // Weltliga: Farben der Karten = Farben im Replay (Legende, Ziel-Zeilen)
     // Spielerfarbe im Replay: Weltliga = Kartenfarbe aus der Flagge (al = Deckkraft), sonst Rot/Blau (suffix = Hex-Deckkraft)
-    const rCol=(p,al,suffix)=>rKarten?('hsla('+rKarten[p==='A'?0:1][0]+','+rKarten[p==='A'?0:1][1]+'%,45%,'+(al===undefined?1:al)+')'):(PC[p]+(suffix||''));
+    const rCol=(p,al,suffix)=>rKarten?wlTextFarbe(rKarten[p==='A'?0:1],al):(PC[p]+(suffix||''));
     const isEnd=replayStep>=rMoves.length;
     const rBoardFlip=rEntry?(rEntry.myRole==='B'&&rEntry.map==='duel'):(gameMode==='online'&&onlineRole==='B'&&selectedMap==='duel');
     // Emote aus aktuellem Move
@@ -10136,7 +10149,7 @@ function App(){
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
             // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
-            var wallColor=owner?rCol(owner):(darkMode?'#e2e8f0':'#1e293b');
+            var wallColor=owner&&rKarten?wlWandFarbe(rKarten[owner==='A'?0:1]):owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
             return <Wall key={k} wkey={k} color={wallColor} opacity={1} steel={isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
           })}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
@@ -10897,7 +10910,7 @@ function App(){
           return(
             <React.Fragment key={p}>
             <div onClick={canTapProfile?openOppProfile:undefined}
-              className={"ww-pcard p"+p+(active?" live":" dim")}
+              className={"ww-pcard p"+p+(active?" live":" dim")+(wlKarten&&wlKarten[p==='A'?0:1].t==='w'?" wlhell":"")}
               style={{cursor:canTapProfile?'pointer':'default',...(wlKarten?wlKartenStil(wlKarten[p==='A'?0:1],active):null)}}>
               <div className="ww-sheen2"/>
               {spectatorCount>0&&gameMode==='online'&&(
@@ -10925,7 +10938,7 @@ function App(){
               </div>
               <div className="ww-pinfo">
                 {classic&&(
-                  <div className="ww-ptimetop" style={{color:timeLeft[p]<=30?'#fde047':'#fff'}}>
+                  <div className="ww-ptimetop" style={{color:wlKarten&&wlKarten[p==='A'?0:1].t==='w'?(timeLeft[p]<=30?'#b91c1c':'#0f172a'):timeLeft[p]<=30?'#fde047':'#fff'}}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.9,flexShrink:0}}><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
                     <span>{Math.floor(timeLeft[p]/60)}:{(timeLeft[p]%60).toString().padStart(2,'0')}</span>
                     <span className="ww-ptcap">{t('timeLabel')}</span>
