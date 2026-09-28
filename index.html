@@ -6630,9 +6630,10 @@ function App(){
         const rel=getRel(x,y-OFFSET);
         if(rel){
           const key=snapWall(rel.x,rel.y,dragging.orient);
-          if(window.__wandBest){
-            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz
-            setPendingWall({key,x,y:y-OFFSET});
+          if(window.__wandBest&&wandGueltig(key)){
+            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz.
+            // Etwas HOEHER als die Wand selbst, sonst verdeckt der Knopf genau die Stelle.
+            setPendingWall({key,x,y:y-OFFSET-CELL-46});
             setDragging(null);
             return;
           }
@@ -6716,6 +6717,18 @@ function App(){
     const x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;
     setPendingWall(null); // neuer Drag verwirft eine noch offene Bestaetigung
     setDragging({orient,dragPlayer:turn});setGhostPos({x,y});setPreviewKey(null);setSnapPos(null);setFlash('');
+  };
+
+  // Nur pruefen, ob eine Wand ueberhaupt gueltig waere (z.B. nicht ein Team komplett einsperrt) —
+  // ohne sie zu setzen. Fuer die Einstellung 'Wand bestaetigen': eine unmoegliche Wand fragt gar
+  // nicht erst nach Bestaetigung, das waere irritierend (Tunay 2026-09-28).
+  const wandGueltig=(key)=>{
+    const sc=S.current;
+    if(wsSpiel())return!!tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
+    _hamCtx=sc.hammerMode?buildHamCtx(sc.hammers,sc.hammerHeld,sc.pA,sc.pB):null;
+    const ok=!!tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
+    _hamCtx=null;
+    return ok;
   };
 
   // Wand wirklich setzen (online optimistisch + WSNET, sonst lokal + doSync). Gemeinsam fuer den
@@ -11991,9 +12004,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         const rel=getRel(x,y-OFFSET);
         if(rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=-CELL2&&rel.y<=ROWS2*CELL2+CELL2){
           const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
-          if(window.__wandBest){
-            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz
-            setPendingWall({key,x,y:y-OFFSET});
+          if(window.__wandBest&&tryWall2(key,St.current.walls,St.current.tokens,ROWS2,COLS2)){
+            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz.
+            // Etwas HOEHER als die Wand selbst, sonst verdeckt der Knopf genau die Stelle. Eine unmoegliche
+            // Wand (sperrt ein Team ein) fragt gar nicht erst (Tunay 2026-09-28).
+            setPendingWall({key,x,y:y-OFFSET-CELL2-46});
             setDragging(null);
             return;
           }
