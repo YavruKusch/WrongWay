@@ -78,6 +78,9 @@
     font-family:system-ui,-apple-system,sans-serif;transition:background-color 0.25s;}
   html.dark{background-color:#0a1020;}
   #root{width:100%;min-height:100vh;min-height:100dvh;background:transparent;}
+  /* Werbeplaetze (js/werbung.js): die App liegt nur im freien Bereich. transform macht #root zum Bezugsrahmen fuer
+     position:fixed, so rutschen Leisten und Randknoepfe mit, statt unter der Werbung zu liegen; aeltere 100vh-Bildschirme scrollen im Rest */
+  html.ww-werbung-unten #root,html.ww-werbung-seiten #root{position:fixed;top:0;left:var(--ww-werbung-seite,0px);right:var(--ww-werbung-seite,0px);bottom:var(--ww-werbung-unten,0px);width:auto;min-height:0;overflow-x:hidden;overflow-y:auto;transform:translateZ(0);}
   input,button{-webkit-appearance:none;font-family:inherit;}
   button{transition:transform 0.1s cubic-bezier(0.34,1.56,0.64,1);touch-action:manipulation;}
   button:active{transform:scale(0.94);}
@@ -880,11 +883,12 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=115"></script>
+<script src="js/i18n.js?v=117"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
 <script src="js/sound.js"></script>
+<script src="js/werbung.js?v=4"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -1226,7 +1230,7 @@ var PVCACHE={ts:0,online:0,inGame:0};
 var LOBBY_CLEAN_TS={t:0};
 // Globale Admin-Config (in Firebase unter ADMIN_CFG_KEY, von allen Clients live gelesen)
 const ADMIN_CFG_KEY='barricade_admin_config';
-const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true},announce:'',announceUntil:0,maintenance:false};
+const DEFAULT_ADMIN_CFG={features:{online:false,friend:false,bots:true,local:true,twovtwo:false,chaos:false,drop:false,hammer:false,blitz:false,classicTime3:true,classicTime5:true,classicTime8:true,blitzTime5:true,blitzTime8:true,blitzTime10:true,duelBlitz:false,duelStandard:true,ranked:false,rankedClassic:false,rankedDuel:false,rankedChaosEvent:false,showPresence:true,showInGame:true,race:true,duel:true,werbung:false,werbungVollbild:false},announce:'',announceUntil:0,maintenance:false};
 // A5 "Schalter pro Gruppe" (Admin-Seite): ein Feature kann per featureGroups auf 'app' oder 'browser' eingeschraenkt
 // sein — der Bool-Wert im Schalter bleibt unveraendert, ein Client ausserhalb der Gruppe sieht ihn aber als AUS.
 // index.html laeuft nie als Capacitor-App, istApp ist hier also immer false.
@@ -1239,7 +1243,9 @@ function gruppenGefiltert(feats,gruppen,istApp){
   });
   return out;
 }
-function mergeAdminCfg(cfg){return {features:gruppenGefiltert({...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},cfg&&cfg.featureGroups,false),announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance)};}
+// Revanche: faelliges Vollbild zuerst (js/werbung.js), danach weiter wie immer
+function nachWerbung(fn){if(window.WWWerbung)WWWerbung.weiter(fn);else fn();}
+function mergeAdminCfg(cfg){return {features:gruppenGefiltert({...DEFAULT_ADMIN_CFG.features,...(cfg&&cfg.features?cfg.features:{})},cfg&&cfg.featureGroups,false),announce:cfg&&cfg.announce?cfg.announce:'',announceUntil:cfg&&cfg.announceUntil?cfg.announceUntil:0,maintenance:!!(cfg&&cfg.maintenance),werbungJedes:cfg?cfg.werbungJedes:undefined};}
 // Erklärtexte für Modi-Hilfe (umkreistes ?)
 const MODE_HELP={
   de:{
@@ -3869,7 +3875,7 @@ function LevelBadge(props){
 function App(){
   const[screen,setScreen]=useState('menu');
   const[legalTab,setLegalTab]=useState('impressum');
-  const[cookieConsent,setCookieConsent]=useState(function(){try{return localStorage.getItem('ww_cookie_consent')||null;}catch(e){return null;}});
+  const[cookieConsent,setCookieConsent]=useState(function(){try{return localStorage.getItem('ww_cookie_consent2')||null;}catch(e){return null;}}); // 2: Text nennt seit der Werbung Google, fruehere Zustimmungen gelten dafuer nicht
   const[navDir,setNavDir]=useState('fwd'); // Richtung für Seitenwechsel-Animation
   const[gameMode,setGameMode]=useState(null);
   const[onlineRole,setOnlineRole]=useState(null);
@@ -3927,6 +3933,11 @@ function App(){
   useEffect(()=>{window.__hapticOn=hapticOn;try{localStorage.setItem('ww_haptic',hapticOn?'1':'0');}catch{}},[hapticOn]);
   const[soundOn,setSoundOn]=useState(()=>{try{return localStorage.getItem('ww_sound')!=='0';}catch{return true;}});
   useEffect(()=>{window.__soundOn=soundOn;try{localStorage.setItem('ww_sound',soundOn?'1':'0');}catch{}},[soundOn]);
+  // Wand-Bestaetigung (Tunay 2026-09-28, gegen Versehen-Klicks): vor dem Setzen einer Mauer extra
+  // Haekchen/Kreuz. Standard AUS. Gelesen im Wand-Drag (onEnd unten), nicht als window-Global noetig —
+  // derselbe App-Baustein wie die Einstellungsseite.
+  const[wandBest,setWandBest]=useState(()=>{try{return localStorage.getItem('ww_wandbestaetigen')==='1';}catch{return false;}});
+  useEffect(()=>{window.__wandBest=wandBest;try{if(wandBest)localStorage.setItem('ww_wandbestaetigen','1');else localStorage.removeItem('ww_wandbestaetigen');}catch{}},[wandBest]);
   // ── Account / Login ──
   const[account,setAccount]=useState(null);
   const[pendingGoogleUser,setPendingGoogleUser]=useState(null);
@@ -4562,6 +4573,7 @@ function App(){
   const[ghostPos,setGhostPos]=useState({x:0,y:0});
   const[previewKey,setPreviewKey]=useState(null);
   const[snapPos,setSnapPos]=useState(null);
+  const[pendingWall,setPendingWall]=useState(null); // {key,x,y}: wartet auf Haekchen/Kreuz (Einstellung 'Wand bestaetigen')
   const[replayStep,setReplayStep]=useState(0);
   const[replayHistEntry,setReplayHistEntry]=useState(null);
   const[replayPlaying,setReplayPlaying]=useState(false); // Replay laeuft von selbst
@@ -4652,7 +4664,10 @@ function App(){
       var pending=pendingXpUpdateRef.current;
       if(pending){setXpGainAnim(pending);pendingXpUpdateRef.current=null;}
     }
+    // Werbung: Match zaehlen, Plaetze je Bildschirm, Vollbild erst beim Weg ins Menue (js/werbung.js)
+    if(window.WWWerbung){if(screen==='end')WWWerbung.matchEnde();WWWerbung.bildschirm(screen);}
   },[screen]);
+  useEffect(()=>{if(window.WWWerbung)WWWerbung.konfig(adminCfg,cookieConsent==='all');},[adminCfg,cookieConsent]);
 
   // Audio-Context nach Tab-Wechsel/Hintergrund wieder aufwecken
   useEffect(()=>{
@@ -6615,37 +6630,13 @@ function App(){
         const rel=getRel(x,y-OFFSET);
         if(rel){
           const key=snapWall(rel.x,rel.y,dragging.orient);
-          if(wsSpiel()){
-            // Optimistisch: Wand lokal pruefen+setzen, Server bestaetigt parallel
-            const sc=S.current;
-            if(sc.barrLeft[sc.turn]>0&&!introSperreRef.current){
-              const next=tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
-              if(next){
-                // Blitz: bei faktisch abgelaufener Zeit nur senden, nicht optimistisch setzen (kein Zurueckspringen)
-                var _blitzAbgelaufenW=(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('blitz-')===0&&wsTurnEndsRef.current&&Date.now()>wsTurnEndsRef.current);
-                if(!_blitzAbgelaufenW){ playSound('wall'); setWalls(next); setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1}); setTurn(sc.turn==='A'?'B':'A'); }
-                pendingWsRef.current={kind:'wall',key:key,tries:0};
-                WSNET.wall(key);
-              }else setFlash(t('invalidPos'));
-            }
-            setDragging(null);setPreviewKey(null);setSnapPos(null);
+          if(window.__wandBest){
+            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz
+            setPendingWall({key,x,y:y-OFFSET});
+            setDragging(null);
             return;
           }
-          const{walls:w,pA:a,pB:b,barrLeft:bl,turn:curT,moveHist:mh}=S.current;
-          if(bl[curT]>0){
-            _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b):null;
-            const next=tryWall(key,w,a,b,goalRowOf('A',S.current.selectedMap),goalRowOf('B',S.current.selectedMap));
-            _hamCtx=null;
-            if(next){
-              playSound('wall');
-              setWalls(next);
-              const newBl={...bl,[curT]:bl[curT]-1};setBarrLeft(newBl);
-              const nm=[...mh,{type:'wall',p:curT,k:key}];setMoveHist(nm);
-              const newTurn=curT==='A'?'B':'A';setTurn(newTurn);setFlash('');
-              doSync({pA:a,pB:b,walls:next,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:S.current.chaosItem});
-              setTimeout(()=>{if(gameContainerRef.current)gameContainerRef.current.scrollTop=savedScroll.current;},0);
-            }else setFlash(t('invalidPos'));
-          }
+          placeWallDrag(key);
         }
       }
       setDragging(null);setPreviewKey(null);setSnapPos(null);
@@ -6723,7 +6714,49 @@ function App(){
     if(!e.touches)e.preventDefault(); // nur Maus: kein Text-Select
     savedScroll.current=gameContainerRef.current?gameContainerRef.current.scrollTop:0;
     const x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;
+    setPendingWall(null); // neuer Drag verwirft eine noch offene Bestaetigung
     setDragging({orient,dragPlayer:turn});setGhostPos({x,y});setPreviewKey(null);setSnapPos(null);setFlash('');
+  };
+
+  // Wand wirklich setzen (online optimistisch + WSNET, sonst lokal + doSync). Gemeinsam fuer den
+  // direkten Drag-Weg und die Bestaetigung (Einstellung 'Wand bestaetigen', gegen Versehen-Klicks).
+  const placeWallDrag=(key)=>{
+    if(wsSpiel()){
+      const sc=S.current;
+      if(sc.barrLeft[sc.turn]>0&&!introSperreRef.current){
+        const next=tryWall(key,sc.walls,sc.pA,sc.pB,goalRowOf('A',sc.selectedMap),goalRowOf('B',sc.selectedMap));
+        if(next){
+          // Blitz: bei faktisch abgelaufener Zeit nur senden, nicht optimistisch setzen (kein Zurueckspringen)
+          var _blitzAbgelaufenW=(typeof S.current.gameTimeMode==='string'&&S.current.gameTimeMode.indexOf('blitz-')===0&&wsTurnEndsRef.current&&Date.now()>wsTurnEndsRef.current);
+          if(!_blitzAbgelaufenW){ playSound('wall'); setWalls(next); setBarrLeft({...sc.barrLeft,[sc.turn]:sc.barrLeft[sc.turn]-1}); setTurn(sc.turn==='A'?'B':'A'); }
+          pendingWsRef.current={kind:'wall',key:key,tries:0};
+          WSNET.wall(key);
+        }else setFlash(t('invalidPos'));
+      }
+      return;
+    }
+    const{walls:w,pA:a,pB:b,barrLeft:bl,turn:curT,moveHist:mh}=S.current;
+    if(bl[curT]>0){
+      _hamCtx=S.current.hammerMode?buildHamCtx(S.current.hammers,S.current.hammerHeld,a,b):null;
+      const next=tryWall(key,w,a,b,goalRowOf('A',S.current.selectedMap),goalRowOf('B',S.current.selectedMap));
+      _hamCtx=null;
+      if(next){
+        playSound('wall');
+        setWalls(next);
+        const newBl={...bl,[curT]:bl[curT]-1};setBarrLeft(newBl);
+        const nm=[...mh,{type:'wall',p:curT,k:key}];setMoveHist(nm);
+        const newTurn=curT==='A'?'B':'A';setTurn(newTurn);setFlash('');
+        doSync({pA:a,pB:b,walls:next,barrLeft:newBl,turn:newTurn,winner:null,moves:nm,chaosItem:S.current.chaosItem});
+        setTimeout(()=>{if(gameContainerRef.current)gameContainerRef.current.scrollTop=savedScroll.current;},0);
+      }else setFlash(t('invalidPos'));
+    }
+  };
+  const confirmPendingWall=()=>{
+    if(pendingWall)placeWallDrag(pendingWall.key);
+    setPendingWall(null);setPreviewKey(null);setSnapPos(null);
+  };
+  const cancelPendingWall=()=>{
+    setPendingWall(null);setPreviewKey(null);setSnapPos(null);
   };
 
   const previewValid=useMemo(()=>{
@@ -6910,6 +6943,8 @@ function App(){
       :gameTimeMode==='blitz-8'?'8'+t('secLabel')+' '+t('perTurn')
       :gameTimeMode==='blitz-10'?'10'+t('secLabel')+' '+t('perTurn')
       :t('noTimer');
+    // Handy mit Werbung: oben statt Logo + Schriftzug ein Werbeplatz (js/werbung.js)
+    const kopfWerbung=!!(window.WWWerbung&&WWWerbung.kopfAktiv(adminCfg,cookieConsent==='all'));
     return(
     <div style={{...sPage,position:'relative',zIndex:1,
       paddingBottom:'calc(70px + env(safe-area-inset-bottom, 0px))',
@@ -7009,21 +7044,25 @@ function App(){
         </div>
       )}
       <div style={{textAlign:'center',marginBottom:30,position:'relative',zIndex:1}}>
-        <div style={{marginBottom:14,display:'flex',justifyContent:'center'}}>
-          <div style={{width:78,height:78,borderRadius:22,
-            background:selectedMap==='duel'
-              ?'linear-gradient(140deg,#8b5cf6 0%,#6d28d9 52%,#4c1d95 100%)'
-              :'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            boxShadow:selectedMap==='duel'
-              ?'0 12px 30px rgba(139,92,246,0.42),inset 0 1px 1px rgba(255,255,255,0.35)'
-              :'0 12px 30px rgba(99,102,241,0.32),inset 0 1px 1px rgba(255,255,255,0.35)',
-            transition:'all 0.5s ease'}}>
-            <BrickWallIcon size={42} light/>
+        {kopfWerbung?(
+          <div ref={function(el){if(el&&window.WWWerbung)WWWerbung.kopf(el);}} style={{width:320,maxWidth:'100%',height:100,margin:'42px auto 4px'}}/>
+        ):(<>
+          <div style={{marginBottom:14,display:'flex',justifyContent:'center'}}>
+            <div style={{width:78,height:78,borderRadius:22,
+              background:selectedMap==='duel'
+                ?'linear-gradient(140deg,#8b5cf6 0%,#6d28d9 52%,#4c1d95 100%)'
+                :'linear-gradient(140deg,#ef4444 0%,#8b5cf6 52%,#3b82f6 100%)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:selectedMap==='duel'
+                ?'0 12px 30px rgba(139,92,246,0.42),inset 0 1px 1px rgba(255,255,255,0.35)'
+                :'0 12px 30px rgba(99,102,241,0.32),inset 0 1px 1px rgba(255,255,255,0.35)',
+              transition:'all 0.5s ease'}}>
+              <BrickWallIcon size={42} light/>
+            </div>
           </div>
-        </div>
-        <div style={{fontSize:32,fontWeight:900,letterSpacing:-1.8,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
-        <div style={{fontSize:10,fontWeight:800,letterSpacing:3,color:'var(--subtle)',marginTop:8,textTransform:'uppercase',userSelect:'none'}}>{t('subtitle')}</div>
+          <div style={{fontSize:32,fontWeight:900,letterSpacing:-1.8,color:'var(--text)',lineHeight:1,cursor:'default',userSelect:'none'}}>{t('title')}</div>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:3,color:'var(--subtle)',marginTop:8,textTransform:'uppercase',userSelect:'none'}}>{t('subtitle')}</div>
+        </>)}
         {/* Dynamischer Unter-Slogan */}
         <div style={{
           marginTop:10,
@@ -7330,6 +7369,25 @@ function App(){
                         boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
                     </div>
                   </button>
+                  {/* Wand-Bestaetigung (Tunay 2026-09-28, gegen Versehen-Klicks) */}
+                  <div style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1,margin:'16px 0 8px'}}>
+                    {t('wallConfirm').toUpperCase()}
+                  </div>
+                  <button onClick={()=>setWandBest(v=>!v)} style={{
+                    width:'100%',padding:'12px 14px',borderRadius:10,
+                    background:'var(--bg)',border:'1.5px solid var(--border)',cursor:'pointer',
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{wandBest?(lang==='tr'?'Açık':lang==='fr'?'Activé':lang==='en'?'On':'An'):(lang==='tr'?'Kapalı':lang==='fr'?'Désactivé':lang==='en'?'Off':'Aus')}</span>
+                    <div style={{width:44,height:26,borderRadius:13,
+                      background:wandBest?'#16a34a':'var(--border)',
+                      position:'relative',transition:'background 0.2s'}}>
+                      <div style={{position:'absolute',top:3,left:wandBest?20:3,width:20,height:20,
+                        borderRadius:'50%',background:'white',transition:'left 0.2s',
+                        boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                    </div>
+                  </button>
+                  <div style={{fontSize:11,color:'var(--subtle)',marginTop:6,lineHeight:1.4}}>{t('wallConfirmHint')}</div>
                 </div>
               )}
 
@@ -7570,19 +7628,18 @@ function App(){
               {lang==='de'?'Cookies & Einwilligungen':lang==='tr'?'\u00c7erezler & Onay':lang==='fr'?'Cookies & Consentement':'Cookies & Consent'}
             </div>
             <div style={{fontSize:12,color:'var(--subtle)',lineHeight:1.6,marginBottom:14}}>
-              {lang==='de'?'Wir nutzen notwendige Cookies f\u00fcr den Spielbetrieb. Mit deiner Einwilligung k\u00f6nnen zuk\u00fcnftig personalisierte Werbeanzeigen eingeblendet werden.':
-               lang==='tr'?'Oyun i\u00e7in gerekli \u00e7erezler kullan\u0131yoruz. Onay\u0131n\u0131zla gelecekte ki\u015fiselle\u015ftirilmi\u015f reklamlar g\u00f6sterilebilir.':
-               lang==='fr'?'Nous utilisons des cookies n\u00e9cessaires au jeu. Avec votre consentement, des publicit\u00e9s personnalis\u00e9es pourront \u00eatre affich\u00e9es.':
-               'We use necessary cookies for the game. With your consent, personalized ads may be shown in the future.'}
+              {t('werbungFrage')+' '}
+              <span onClick={function(){setNavDir('fwd');setScreen('legal');}} style={{textDecoration:'underline',cursor:'pointer'}}>{t('werbungMehr')}</span>
             </div>
             <div style={{display:'flex',gap:8}}>
-              <button onClick={function(){try{localStorage.setItem('ww_cookie_consent','necessary');}catch(e){}setCookieConsent('necessary');}}
+              {/* KVKK: Ablehnen und Zustimmen gleich gross und gleich auffaellig */}
+              <button onClick={function(){try{localStorage.setItem('ww_cookie_consent2','necessary');}catch(e){}setCookieConsent('necessary');}}
                 style={{flex:1,padding:'11px 8px',borderRadius:11,background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                {lang==='de'?'Nur notwendige':lang==='tr'?'Yaln\u0131zca gerekli':lang==='fr'?'N\u00e9cessaires':'Necessary only'}
+                {t('werbungNein')}
               </button>
-              <button onClick={function(){try{localStorage.setItem('ww_cookie_consent','all');}catch(e){}setCookieConsent('all');}}
-                style={{flex:1.4,padding:'11px 8px',borderRadius:11,background:'linear-gradient(135deg,#16a34a,#15803d)',color:'#fff',border:'none',cursor:'pointer',fontWeight:800,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',boxShadow:'0 2px 10px rgba(22,163,74,0.35)'}}>
-                {lang==='de'?'Alle akzeptieren':lang==='tr'?'T\u00fcm\u00fcn\u00fc kabul et':lang==='fr'?'Tout accepter':'Accept all'}
+              <button onClick={function(){try{localStorage.setItem('ww_cookie_consent2','all');}catch(e){}setCookieConsent('all');}}
+                style={{flex:1,padding:'11px 8px',borderRadius:11,background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',cursor:'pointer',fontWeight:700,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                {t('werbungJa')}
               </button>
             </div>
           </div>
@@ -8064,7 +8121,7 @@ function App(){
             {'\u00a9'} {new Date().getFullYear()} Wrong Way Studios
           </div>
           <div style={{textAlign:'center',marginTop:10}}>
-            <button onClick={function(){try{localStorage.removeItem('ww_cookie_consent');}catch(e){}setCookieConsent(null);goBack();}} style={{background:'none',border:'1px solid var(--border)',color:'var(--subtle)',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif',padding:'8px 16px',borderRadius:8}}>
+            <button onClick={function(){try{localStorage.removeItem('ww_cookie_consent2');}catch(e){}setCookieConsent(null);goBack();}} style={{background:'none',border:'1px solid var(--border)',color:'var(--subtle)',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'system-ui,-apple-system,sans-serif',padding:'8px 16px',borderRadius:8}}>
               {ll==='de'?'Cookie-Einstellungen zur\u00fccksetzen':ll==='tr'?'\u00c7erez ayarlar\u0131n\u0131 s\u0131f\u0131rla':'Reset cookie settings'}
             </button>
           </div>
@@ -9323,14 +9380,14 @@ function App(){
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
                 title={t('rematch')} desc={t('rematchDescLocal')||'Same mode, new round'}
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
-                onClick={()=>initGame(gameMode,'A',null,true)}/>
+                onClick={()=>nachWerbung(()=>initGame(gameMode,'A',null,true))}/>
             )}
             {gameMode==='online'&&!isRanked&&!oppLeft&&!otherDeclined&&!myRematch&&(
               <MenuItem icon={<RematchIcon size={18} color="#fff"/>}
                 iconBg="linear-gradient(135deg,#16a34a,#15803d)"
                 title={t('rematch')} desc={t('rematchDescOnline')||'Challenge opponent to rematch'}
                 highlight highlightBg="linear-gradient(135deg,#16a34a,#15803d)"
-                onClick={requestRematch}/>
+                onClick={()=>nachWerbung(requestRematch)}/>
             )}
             {gameMode==='online'&&oppAccountKey&&(!account||oppAccountKey!==account.key)&&(
               <MenuItem icon={<TrophySmIcon size={18} color="#fff"/>}
@@ -9613,6 +9670,21 @@ function App(){
           left:ghostPos.x-24,top:ghostPos.y-24-90,
           animation:'hammer-float 1s ease-in-out infinite'}}>
           <HammerIcon size={48}/>
+        </div>
+      )}
+
+      {/* Wand-Bestaetigung (Einstellung 'Wand bestaetigen'): Haekchen setzt exakt die stehen
+          gebliebene Vorschau, Kreuz verwirft sie. */}
+      {pendingWall&&!winner&&(
+        <div style={{position:'fixed',left:pendingWall.x,top:pendingWall.y,transform:'translate(-50%,-50%)',display:'flex',gap:10,zIndex:1001}}>
+          <button onClick={cancelPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#ef4444',color:'#fff',
+            display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+          <button onClick={confirmPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#22c55e',color:'#fff',
+            display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
         </div>
       )}
 
@@ -11402,13 +11474,13 @@ function GBtn({onClick,children,dark,blue,outline}){
 const rBtn=dis=>({padding:'10px 24px',background:dis?'var(--border)':'#1e293b',color:dis?'var(--subtle)':'white',
   border:'none',borderRadius:10,cursor:dis?'not-allowed':'pointer',fontWeight:700,fontSize:16,
   fontFamily:'system-ui,-apple-system,sans-serif'});
-const sPage={height:'100dvh',boxSizing:'border-box',background:'transparent',display:'flex',flexDirection:'column',
+const sPage={height:'calc(100dvh - var(--ww-werbung-unten, 0px))',boxSizing:'border-box',background:'transparent',display:'flex',flexDirection:'column',
   alignItems:'center',justifyContent:'flex-start',
   paddingTop:'calc(env(safe-area-inset-top) + 20px)',
   paddingBottom:60,paddingLeft:20,paddingRight:20,
   fontFamily:'system-ui,-apple-system,sans-serif',
   overflowY:'auto',touchAction:'pan-y'};
-const sCont={height:'100dvh',boxSizing:'border-box',background:'var(--bg)',display:'flex',flexDirection:'column',
+const sCont={height:'calc(100dvh - var(--ww-werbung-unten, 0px))',boxSizing:'border-box',background:'var(--bg)',display:'flex',flexDirection:'column',
   alignItems:'center',
   paddingTop:'calc(env(safe-area-inset-top) + 12px)',paddingLeft:8,paddingRight:8,paddingBottom:8,
   fontFamily:'system-ui,-apple-system,sans-serif',userSelect:'none',WebkitUserSelect:'none',
@@ -11440,6 +11512,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const[previewKey,setPreviewKey]=React.useState(null);
   const[previewValid,setPreviewValid]=React.useState(true);
   const[snapPos,setSnapPos]=React.useState(null);
+  const[pendingWall,setPendingWall]=React.useState(null); // {key,x,y}: wartet auf Haekchen/Kreuz (Einstellung 'Wand bestaetigen')
   const[celebrating,setCelebrating]=React.useState(false);
   const[danceStyle,setDanceStyle]=React.useState('robot');
   const[danceSpeed,setDanceSpeed]=React.useState('slow');
@@ -11862,7 +11935,36 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
   const startDrag=(e,orient)=>{
     if(!canPlace)return;e.preventDefault();
     const pt=e.touches?e.touches[0]:e;
+    setPendingWall(null); // neuer Drag verwirft eine noch offene Bestaetigung
     setDragging({orient});setGhostPos({x:pt.clientX,y:pt.clientY});
+  };
+
+  // Wand wirklich setzen (online per WSNET/Firebase-Sync, sonst lokal). Gemeinsam fuer den direkten
+  // Drag-Weg und die Bestaetigung (Einstellung 'Wand bestaetigen', gegen Versehen-Klicks).
+  const placeWall2Drag=(key)=>{
+    const{walls:w,tokens:tk,barr:bl,turn:tn,isOnline:io}=St.current;
+    const tmm=TEAM_2V2(tn);
+    if(bl[tmm]>0){
+      const next=tryWall2(key,w,tk,ROWS2,COLS2);
+      if(next){
+        playSound('wall');
+        const nextTurn=(io&&useWS)?tv2NextLocal(tn,St.current.removed||{}):NEXT_2V2[tn];
+        if(io&&useWS)wsLastSlotRef.current[nextTurn.charAt(0)]=nextTurn;
+        const newBl={A:bl.A,B:bl.B};newBl[tmm]=bl[tmm]-1;
+        setWalls(next);setBarr(newBl);setFlash('');setTurn(nextTurn);
+        if(io){
+          if(useWS){try{WSNET.wall(key);}catch(e){}}
+          else doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null,reached:St.current.reached});
+        }
+      }else setFlash(t('invalidPos'));
+    }
+  };
+  const confirmPendingWall=()=>{
+    if(pendingWall)placeWall2Drag(pendingWall.key);
+    setPendingWall(null);setPreviewKey(null);setSnapPos(null);
+  };
+  const cancelPendingWall=()=>{
+    setPendingWall(null);setPreviewKey(null);setSnapPos(null);
   };
 
   // ── Drag-Wand ──
@@ -11889,22 +11991,13 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         const rel=getRel(x,y-OFFSET);
         if(rel&&rel.x>=0&&rel.x<=COLS2*CELL2&&rel.y>=-CELL2&&rel.y<=ROWS2*CELL2+CELL2){
           const key=snapWall2(rel.x,rel.y,dragging.orient,ROWS2,COLS2,CELL2);
-          const{walls:w,tokens:tk,barr:bl,turn:tn,isOnline:io}=St.current;
-          const tmm=TEAM_2V2(tn);
-          if(bl[tmm]>0){
-            const next=tryWall2(key,w,tk,ROWS2,COLS2);
-            if(next){
-              playSound('wall');
-              const nextTurn=(io&&useWS)?tv2NextLocal(tn,St.current.removed||{}):NEXT_2V2[tn];
-              if(io&&useWS)wsLastSlotRef.current[nextTurn.charAt(0)]=nextTurn;
-              const newBl={A:bl.A,B:bl.B};newBl[tmm]=bl[tmm]-1;
-              setWalls(next);setBarr(newBl);setFlash('');setTurn(nextTurn);
-              if(io){
-                if(useWS){try{WSNET.wall(key);}catch(e){}}
-                else doSync2v2({tokens:tk,walls:next,barr:newBl,turn:nextTurn,winner:null,reached:St.current.reached});
-              }
-            }else setFlash(t('invalidPos'));
+          if(window.__wandBest){
+            // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Platzierung wartet auf Haekchen/Kreuz
+            setPendingWall({key,x,y:y-OFFSET});
+            setDragging(null);
+            return;
           }
+          placeWall2Drag(key);
         }
       }
       setDragging(null);setPreviewKey(null);setSnapPos(null);
@@ -12502,6 +12595,20 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
         });})}
         {Array.from(walls).map(k=><Wall2 key={k} wkey={k} color={darkMode?'#e2e8f0':'#1e293b'} opacity={1} animate/>)}
         {previewKey&&<Wall2 wkey={previewKey} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
+        {/* Wand-Bestaetigung (Einstellung 'Wand bestaetigen'): Haekchen setzt exakt die stehen
+            gebliebene Vorschau, Kreuz verwirft sie. */}
+        {pendingWall&&!winner&&(
+          <div style={{position:'fixed',left:pendingWall.x,top:pendingWall.y,transform:'translate(-50%,-50%)',display:'flex',gap:10,zIndex:1001}}>
+            <button onClick={cancelPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#ef4444',color:'#fff',
+              display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+            <button onClick={confirmPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#22c55e',color:'#fff',
+              display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+        )}
         {ORDER_2V2.map(function(id){
           const pos=tokens[id];const active=turn===id&&!winner;
           if(!pos||removed[id])return null;
