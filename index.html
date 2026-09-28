@@ -880,7 +880,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=114"></script>
+<script src="js/i18n.js?v=115"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=3"></script>
@@ -1722,6 +1722,15 @@ function wlErgebnisText(erg,t,sprache){
   if(erg.grund==='paar')return t('wl_keinPunktPaar');
   if(erg.grund==='tag')return t('wl_keinPunktTag');
   return t('wl_keinPunkt');
+}
+// Wochen-Anzeige (Tunay 2026-09-28): Server-Felder wn (Wochennummer, null vor Woche 1) und bis (Ende der Woche, ms, UTC).
+function wlWocheText(wn,t){return typeof wn==='number'&&wn>0?t('wl_woche').replace('{n}',String(wn)):'';}
+function wlDatum(ms,sprache){try{return new Date(ms).toLocaleDateString(sprache||'en',{day:'2-digit',month:'2-digit',timeZone:'UTC'});}catch(e){return '';}}
+function wlZeitraum(bis,sprache){return typeof bis==='number'?wlDatum(bis-7*864e5,sprache)+' – '+wlDatum(bis-864e5,sprache):'';}
+function wlRestText(bis,jetzt,t){
+  if(typeof bis!=='number')return '';
+  var r=Math.max(0,bis-jetzt),d=Math.floor(r/864e5),h=Math.floor(r%864e5/36e5),m=Math.floor(r%36e5/6e4);
+  return d>0?t('wl_endetIn').replace('{d}',String(d)).replace('{h}',String(h)):t('wl_endetInKurz').replace('{h}',String(h)).replace('{m}',String(m));
 }
 // ===== Weltliga: reine Helfer (Ende) =====
 // Eigene kleine Verbindung des Weltliga-Bildschirms: Landwahl (wl_land_holen/_setzen) und Live-Anzeige (wl_suche).
@@ -2803,6 +2812,16 @@ function WeltligaTabelle({t,lang,darkMode,account}){
   const[fehler,setFehler]=React.useState(false);
   const[land,setLand]=React.useState(null);
   const[spieler,setSpieler]=React.useState(null);
+  const[alle,setAlle]=React.useState(null); // "Alle Wochen": null | 'liste' | eine Woche {w,wn,bis,l}
+  const[wochen,setWochen]=React.useState(null);
+  const[jetzt,setJetzt]=React.useState(Date.now());
+  React.useEffect(function(){var iv=setInterval(function(){setJetzt(Date.now());},30000);return function(){clearInterval(iv);};},[]);
+  React.useEffect(function(){
+    if(alle!=='liste'||wochen)return;
+    var weg=false;
+    wlHoleJson('/weltliga?wochen=1').then(function(d){if(!weg)setWochen(d&&d.wochen?d.wochen:[]);});
+    return function(){weg=true;};
+  },[alle,wochen]);
   React.useEffect(function(){
     var weg=false;
     wlHoleJson('/weltliga').then(function(d){if(weg)return;if(d)setDaten(d);else setFehler(true);});
@@ -2826,9 +2845,45 @@ function WeltligaTabelle({t,lang,darkMode,account}){
   var leer=function(text){return <div style={{textAlign:'center',padding:'32px 16px',background:card,borderRadius:16,border:'1.5px solid '+border,fontSize:13,fontWeight:700,color:muted}}>{text}</div>;};
   return(
     <div data-wl="tab">
+      {daten&&daten.wn?(
+        <div data-wl="woche" style={{background:'linear-gradient(135deg,#6d28d9,#a855f7)',borderRadius:16,padding:'14px 16px',marginBottom:10,textAlign:'center',color:'#ffffff',boxShadow:'0 6px 18px rgba(109,40,217,0.35)'}}>
+          <div style={{fontSize:26,fontWeight:900,letterSpacing:1.5,textTransform:'uppercase',lineHeight:1.1}}>{wlWocheText(daten.wn,t)}</div>
+          <div style={{fontSize:12,fontWeight:700,opacity:0.9,marginTop:4}}>{wlZeitraum(daten.bis,lang)+' · '+wlRestText(daten.bis,jetzt,t)}</div>
+        </div>
+      ):null}
       <div data-wl="tagesgrenze" style={{fontSize:12,fontWeight:700,color:muted,lineHeight:1.5,textAlign:'center',marginBottom:10}}>{t('wl_tagesgrenze')}</div>
+      {alle?(
+        <div data-wl="allewochen">
+          <button data-wl="allezurueck" onClick={function(){setAlle(alle==='liste'?null:'liste');}} style={{...zeileSt,marginBottom:10,cursor:'pointer',color:txt,fontSize:14,fontWeight:800}}>
+            <span style={{color:muted}}>{'‹'}</span><span style={{flex:1}}>{alle==='liste'?t('wl_alleWochenTitel'):wlWocheText(alle.wn,t)+' · '+wlZeitraum(alle.bis,lang)}</span>
+          </button>
+          {alle==='liste'?(!wochen?leer(t('leaderboardLoading')):wochen.length===0?leer(t('wl_leer')):(
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {wochen.map(function(wo,i){return(
+                <button key={wo.w} data-wl-woche={wo.wn} onClick={function(){setAlle(wo);}} style={{...zeileSt,cursor:'pointer'}}>
+                  <span style={{fontSize:14,fontWeight:900,color:txt,whiteSpace:'nowrap'}}>{wlWocheText(wo.wn,t)}</span>
+                  {i===0?<span style={{fontSize:9,fontWeight:900,background:'#16a34a',color:'#fff',padding:'2px 6px',borderRadius:6,letterSpacing:0.5,textTransform:'uppercase'}}>{t('wl_laeuft')}</span>:null}
+                  <span style={{flex:1}}></span>
+                  {wo.l.slice(0,3).map(function(e,j){return(
+                    <span key={e[0]} style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:11,fontWeight:900,color:muted}}>{j+1}<WlFlagge land={e[0]} h={16}/></span>);})}
+                  <span style={{color:muted,marginLeft:4}}>{'›'}</span>
+                </button>);})}
+            </div>
+          )):(alle.l.length===0?leer(t('wl_leer')):(
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {alle.l.map(function(e,i){return(
+                <div key={e[0]} data-wl-woche-land={e[0]} style={zeileSt}>
+                  <span style={{width:28,textAlign:'center',fontSize:13,fontWeight:800,color:muted}}>{'#'+(i+1)}</span>
+                  <WlFlagge land={e[0]} h={18}/>
+                  <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:800,color:txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{wlLandName(e[0],lang)}</span>
+                  <span style={{fontSize:18,fontWeight:900,color:txt}}>{e[1]}</span>
+                </div>);})}
+            </div>
+          ))}
+        </div>
+      ):(<div>
       <div style={{display:'flex',gap:3,background:dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',borderRadius:10,padding:3,border:'1.5px solid '+border,marginBottom:14}}>
-        <button data-wl-z="w" onClick={function(){setZ('w');}} style={tabSt(z==='w')}>{t('wl_dieseWoche')}</button>
+        <button data-wl-z="w" onClick={function(){setZ('w');}} style={tabSt(z==='w')}>{(daten&&wlWocheText(daten.wn,t))||t('wl_dieseWoche')}</button>
         <button data-wl-z="e" onClick={function(){setZ('e');}} style={tabSt(z==='e')}>{t('wl_fuerImmer')}</button>
       </div>
       {land?(
@@ -2859,6 +2914,8 @@ function WeltligaTabelle({t,lang,darkMode,account}){
             </button>);})}
         </div>
       ))}
+      {!land&&daten&&daten.wn?<button data-wl="allewochenknopf" onClick={function(){setWochen(null);setAlle('liste');}} style={{...zeileSt,marginTop:12,justifyContent:'center',cursor:'pointer',color:'#8b5cf6',fontSize:14,fontWeight:900,border:'1.5px solid #8b5cf6'}}>{t('wl_alleWochen')}</button>:null}
+      </div>)}
     </div>
   );
 }
