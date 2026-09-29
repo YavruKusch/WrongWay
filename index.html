@@ -983,6 +983,34 @@ var WSNET={
   // Token nicht abraeumen: sonst gingen die Zuege nicht mehr an den Server, obwohl der Spieler dort
   // im Match bleibt (Spieler-Report 2026-08-01 "Zug springt immer wieder zurueck", Verlust auf Zeit).
   live:false, _rebindAt:0,
+  // Hintergrund-Trennung (Tunay 2026-09-29, wie Clash Royale): jede laengere Verbindung (dieser Socket, der des
+  // Weltliga-Bildschirms) meldet dem Server, ob die Seite verdeckt ist. Ab da zaehlt die Admin-Statistik nichts mehr, und
+  // nach VERDECKT_MS trennt der Server mit Code 4010 — nie im laufenden Spiel und nie kurz vor dessen Start. Neu verbunden
+  // wird erst, wenn die Seite wieder sichtbar ist, und zwar still (kein ws_closed). Eine Suche, die so lange verdeckt war,
+  // ist beendet (Tunay-Wahl: abbrechen, neu druecken). Tests: leitungtest.js (H), hintergrundtest.js (Server)
+  VERDECKT_MS:60000, _verdecktAb:0, _ruht:false, _socks:[], _wartend:[],
+  _versteckt:function(){ try{ return !!document.hidden; }catch(e){ return false; } },
+  _melde:function(ws){ try{ if(ws.readyState===1)ws.send(JSON.stringify({type:'verdeckt',an:this._versteckt()})); }catch(e){} },
+  // Beim Oeffnen einer laengeren Verbindung aufrufen: geht sie im Hintergrund auf, erfaehrt der Server es sofort.
+  _an:function(ws){ this._socks.push(ws); if(this._versteckt())this._melde(ws); },
+  // fn nach ms — solange die Seite verdeckt ist aber erst beim Zurueckkommen (ein Neuaufbau im Hintergrund waere nutzlos).
+  _nachher:function(fn,ms){ if(this._versteckt()){ this._wartend.push(fn); return 0; } return setTimeout(fn,ms); },
+  _sichtbarkeit:function(){
+    var self=this;
+    self._socks=self._socks.filter(function(w){ return w.readyState<2; });
+    self._socks.forEach(function(w){ self._melde(w); });
+    if(self._versteckt()){ if(!self._verdecktAb)self._verdecktAb=Date.now(); return; }
+    var weg=self._verdecktAb?Date.now()-self._verdecktAb:0; self._verdecktAb=0;
+    var wart=self._wartend; self._wartend=[]; wart.forEach(function(f){ try{ f(); }catch(e){} });
+    // Suche so lange verdeckt, dass der Server sie beendet hat: die Anzeige erfaehrt es hier (auch wenn die Nachricht nie ankam)
+    if(weg>=self.VERDECKT_MS&&self.rankedOn&&!self.roomId){ var cb=self.onState; self.cancelRanked(); if(cb)cb({type:'ranked_cancelled',grund:'verdeckt'}); }
+    if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
+    if(!self.sock||self.sock.readyState!==1){ self._open(); return; }
+    self._probe(); // nach dem Hintergrund: lebt die Leitung noch?
+    if(self.roomId){ try{ self.requestSync(); }catch(e){} }
+    else if(self.spectateCode){ try{ self._send({type:'spectate_join',code:self.spectateCode}); }catch(e){} }
+    else { try{ var lmv={type:'list_lobbies'}; if(self.browseMode)lmv.mode=self.browseMode; self._send(lmv); }catch(e){} }
+  },
   // Zuschauer: eigener State-Kanal ueber denselben Socket, ruehrt roomId/role/token nicht an.
   watchRoom:function(code,onSpectate){
     this.spectateCode=code; this.onSpectate=onSpectate;
@@ -1060,6 +1088,7 @@ var WSNET={
     var self=this;
     if(!self.roomId&&!self.browseOn&&!self.rankedOn&&!self.spectateCode)return;
     if(self.sock&&(self.sock.readyState===0||self.sock.readyState===1))return;
+    if(self._ruht){ if(self._versteckt())return; self._ruht=false; } // verdeckt getrennt (4010): erst beim Zurueckkommen neu
     try{ self.sock=new WebSocket(WW_URL); }catch(e){ return; }
     var _mySock=self.sock;
     // Verbindungsaufbau-Timeout: haengt der Socket im CONNECTING-Zustand fest (Netzwechsel, totes WLAN),
@@ -1089,6 +1118,7 @@ var WSNET={
       var _rcSent=false;
       var _rc=function(){ if(_rcSent||self.sock!==_mySock||!self.roomId||!self.token)return; _rcSent=true; self._send({type:'reconnect',token:self.token}); };
       if(self.live)_rc();
+      self._an(_mySock);
       var _rcTmr=setTimeout(_rc,1500);
       var _after=function(tok){
         clearTimeout(_rcTmr);
@@ -1146,7 +1176,8 @@ var WSNET={
     // Ein ersetzter Socket meldet sein Ende oft erst viel spaeter (tote Leitung: der Browser wartet bis zu
     // 60 s auf den Abschluss). Das darf die laengst stehende neue Verbindung nicht als "weg" melden — sonst
     // blieb die Vollbild-Sperre "Verbindung wird wiederhergestellt" im eigenen Zug stehen (Verlust auf Zeit).
-    self.sock.onclose=function(){ clearTimeout(_connTmr); if(self.sock!==_mySock)return; self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
+    // Trennung wegen Verdeckens (4010): kein ws_closed — die Anzeige bleibt, beim Zurueckkommen verbindet _open still neu.
+    self.sock.onclose=function(ev){ clearTimeout(_connTmr); if(self.sock!==_mySock)return; if(ev&&ev.code===4010){ self._ruht=true; self._dbg('verdeckt getrennt'); } else { self._dbg('getrennt'); if(self.onState)self.onState({type:'ws_closed'}); } if(self.roomId||self.browseOn||self.rankedOn||self.spectateCode){ setTimeout(function(){ self._open(); },1500); } };
   },
   _send:function(o){ if(this.sock&&this.sock.readyState===1)this.sock.send(JSON.stringify(o)); },
   _startHb:function(){
@@ -1205,7 +1236,7 @@ var WSNET={
   }
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
-try{ document.addEventListener('visibilitychange',function(){ if(document.hidden)return; if(!WSNET.roomId&&!WSNET.browseOn&&!WSNET.rankedOn&&!WSNET.spectateCode)return; if(!WSNET.sock||WSNET.sock.readyState!==1){ WSNET._open(); return; } WSNET._probe(); if(WSNET.roomId){ try{ WSNET.requestSync(); }catch(e){} } else if(WSNET.spectateCode){ try{ WSNET._send({type:'spectate_join',code:WSNET.spectateCode}); }catch(e){} } else { try{ var lmv={type:'list_lobbies'}; if(WSNET.browseMode)lmv.mode=WSNET.browseMode; WSNET._send(lmv); }catch(e){} } }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ WSNET._sichtbarkeit(); }); }catch(e){}
 // iOS Safari stellt einen geschlossenen Tab beim Wiederoeffnen manchmal aus dem bfcache wieder her
 // (eingefrorener alter Seitenzustand, KEIN echter Reload - unser ganzer Reconnect-Code laeuft dann
 // nie erneut). e.persisted===true erkennt genau diesen Fall -> echten Reload erzwingen.
@@ -1750,6 +1781,7 @@ function wlVerbindung(onMsg){
     try{ws=new WebSocket(WW_URL);}catch(e){tmr=setTimeout(auf,3000);return;}
     var meins=ws;
     ws.onopen=function(){
+      WSNET._an(meins); // Hintergrund-Trennung wie der Spiel-Socket (siehe WSNET)
       var u=null;try{u=firebase.auth().currentUser;}catch(e){}
       var los=function(tok){
         if(aus||ws!==meins||meins.readyState!==1)return;
@@ -1759,7 +1791,7 @@ function wlVerbindung(onMsg){
       if(u&&!u.isAnonymous&&u.getIdToken)u.getIdToken().then(los,function(){los(null);});else los(null);
     };
     ws.onmessage=function(ev){if(ws!==meins)return;var d;try{d=JSON.parse(ev.data);}catch(e){return;}onMsg(d);};
-    ws.onclose=function(){if(ws!==meins)return;ws=null;if(!aus)tmr=setTimeout(auf,3000);};
+    ws.onclose=function(){if(ws!==meins)return;ws=null;if(!aus)tmr=WSNET._nachher(auf,3000);};
   };
   auf();
   return {
@@ -2355,6 +2387,8 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
       if(d&&d.type==='ranked_waiting'){ setQueue({mode:d.mode,ts:Date.now()}); setElapsed(0); return; }
       // Gegner hat abgelehnt oder ist nach dem Fund still verschwunden: der Server setzt uns zurueck in die Suche (ranked_waiting folgt)
       if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){ setPreMatch(null); setPreMatchTimer(15); return; }
+      // Zu lange verdeckt: der Server hat die Suche beendet, der Spieler startet sie selbst neu (Tunay-Wahl, WSNET._sichtbarkeit)
+      if(d&&d.type==='ranked_cancelled'&&d.grund==='verdeckt'){ leaveQueue(); return; }
       if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
       // Gegner gefunden, aber der Server kennt den Raum nicht mehr (Absturz ohne Uebergabe): sonst lief die Suche ewig weiter,
       // und der zentrale Handler legte unter dem Ranked-Code eine normale Lobby an. Socket zu, Hinweis, zurueck wie bei ranked_denied.
@@ -2629,6 +2663,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
       if(d&&d.type==='ranked_found'){try{playSound('pickup');}catch(e){}try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}var fl=d.lands||[],ich=d.deineNummer===1?1:0;setGefunden([fl[ich],fl[1-ich]]);return;} // eigene Flagge zuerst
       // Gegner hat abgelehnt oder ist nach dem Fund still verschwunden: der Server setzt uns zurueck in die Suche (ranked_waiting folgt)
       if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){setGefunden(null);return;}
+      if(d&&d.type==='ranked_cancelled'&&d.grund==='verdeckt'){leaveQueue();return;} // zu lange verdeckt: Suche beendet (wie RankedScreen)
       if(d&&d.type==='ranked_denied'){var g=d.grund;setMsg(g==='login'?t('rankedLoginHint'):g==='busy'?t('rankedBusy'):g==='land'?t('wl_fehlerLand'):t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();if(g==='land')setWaehlen(true);},2500);return;}
       if(d&&d.type==='reconnect_failed'){try{WSNET.close();}catch(e){}setMsg(t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();},2500);return;}
       if(d&&d.type==='session_replaced'){setMsg(t('sessionReplaced'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();goBack();},1800);return;}
