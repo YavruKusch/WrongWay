@@ -3874,14 +3874,15 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
     </div>
   );
 }
-// XP → Level (identische Formel wie Server: XP fuer Level n = 25*n^2)
-function levelAusXp(totalXp){var lv=0;var rem=typeof totalXp==='number'?totalXp:0;while(lv<100){var needed=25*(lv+1)*(lv+1);if(rem<needed)break;rem-=needed;lv++;}return lv;}
+// XP → Level (Tunay 2026-09-29): Level n-1 -> n kostet 100 + 1,5*n^2 XP; xpFuerLevel(n) = Gesamt-XP bis Level n.
+// ZEICHENGLEICH mit dem Server (index.js) und der App (account-helpers.js) — prueft xptest.js im Server-Repo.
+function xpFuerLevel(n){ return Math.ceil(100 * n + n * (n + 1) * (2 * n + 1) / 4); }
+function levelAusXp(totalXp){ var x = typeof totalXp === 'number' ? totalXp : 0, lv = 0; while (lv < 100 && x >= xpFuerLevel(lv + 1)) lv++; return lv; }
 
 // XP-Fortschritt: Level, XP innerhalb des Levels, XP bis zum naechsten Level, Prozentwert
 function xpProgress(totalXp){
-  var lv=0;var rem=typeof totalXp==='number'?totalXp:0;
-  while(lv<100){var needed=25*(lv+1)*(lv+1);if(rem<needed)break;rem-=needed;lv++;}
-  var needed2=lv>=100?0:25*(lv+1)*(lv+1);
+  var x=typeof totalXp==='number'?totalXp:0;var lv=levelAusXp(x);
+  var rem=x-xpFuerLevel(lv);var needed2=lv>=100?0:xpFuerLevel(lv+1)-xpFuerLevel(lv);
   var pct=lv>=100?100:Math.min(100,Math.round(rem/needed2*100));
   return {level:lv,current:lv>=100?0:rem,needed:needed2,pct:pct};
 }
