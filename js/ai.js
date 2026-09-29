@@ -773,13 +773,39 @@ function applyMovesWithOwner(moveList,step,map){
   let pA={...sp.A},pB={...sp.B};
   const walls=new Set();
   const wallOwner={};
+  const golden=new Set(); // gefallene Drop-Waende (goldene Optik wie im Spiel)
   for(let i=0;i<Math.min(step,moveList.length);i++){
     const m=moveList[i];
-    if(m.d)walls.add(m.d); // gefallene Drop-Wand, ohne Besitzer
+    if(m.d){walls.add(m.d);golden.add(m.d);} // gefallene Drop-Wand, ohne Besitzer
     if(m.type==='emote')continue;
     if(m.type==='move'){if(m.p==='A')pA={r:m.r,c:m.c};else pB={r:m.r,c:m.c};}
-    else if(m.type==='break'){walls.delete(m.k);delete wallOwner[m.k];}
+    else if(m.type==='break'){walls.delete(m.k);delete wallOwner[m.k];golden.delete(m.k);}
     else{walls.add(m.k);wallOwner[m.k]=m.p||null;}
   }
-  return{pA,pB,walls,wallOwner};
+  return{pA,pB,walls,wallOwner,golden};
+}
+// Gegenstaende im Replay: Chaos-Kiste (ci), liegende Haemmer (h), wer einen haelt (hd) — Folgen-Felder der Verlaufs-
+// Eintraege (Server seit 2026-09-26, lokale Spiele stempeln sie selbst). hm = Hammer-Modus: dort liegen zu Beginn
+// die drei Start-Haemmer (aus der Brettgroesse, wie beim Server).
+function applyItems(moveList,step,hm){
+  let chaosItem=null,hammers=hm?makeHammers():[],held={A:false,B:false};
+  for(let i=0;i<Math.min(step,moveList.length);i++){
+    const m=moveList[i];
+    if(m.ci!==undefined)chaosItem=m.ci||null;
+    if(m.h)hammers=m.h;
+    if(m.hd)held={A:!!m.hd.A,B:!!m.hd.B};
+  }
+  return{chaosItem,hammers,held};
+}
+// Lokale Spiele (Bot, 2 Spieler an einem Geraet): was am letzten Verlaufs-Eintrag fehlt, damit der Verlauf den aktuellen
+// Stand von Kiste/Haemmern/Haltern kennt — leer, wenn er schon stimmt. Online schreibt der Server diese Felder selbst.
+function itemStempel(moveList,hm,chaosItem,hammers,held){
+  const it=applyItems(moveList,moveList.length,hm);
+  const nh=function(l){return JSON.stringify(l.map(function(x){return{r:x.r,c:x.c,id:x.id};}));};
+  const add={};
+  const ci=chaosItem?{r:chaosItem.r,c:chaosItem.c}:null;
+  if(JSON.stringify(it.chaosItem)!==JSON.stringify(ci))add.ci=ci;
+  if(nh(it.hammers)!==nh(hammers))add.h=JSON.parse(nh(hammers));
+  if(it.held.A!==!!held.A||it.held.B!==!!held.B)add.hd={A:!!held.A,B:!!held.B};
+  return add;
 }

@@ -4707,6 +4707,7 @@ function App(){
   // WS-Spiel: Namen/Rolle/Brett SOFORT aus match_start/resync. Nach einem Neuladen im Endbildschirm ruft der resync
   // triggerWin, bevor React rendert — S.current ist dann noch der leere Startzustand (Replay stand doppelt, als "local" ohne Namen)
   const wsMetaRef=useRef(null);
+  const hmSpielRef=useRef(false); // war das laufende/letzte Spiel ein Hammer-Spiel? (der Admin-Schalter setzt hammerMode mitten im Spiel auf aus — das Replay braucht die Start-Haemmer trotzdem)
   // Paket Spielstart (2026-09-23): spielt ein App-Spieler mit, startet der Server die Zugzeit erst nach dessen Intro
   // (match_start/rematch_start/resync tragen intro, der Start kommt als state mit los). Bis dahin: keine Zuege, die
   // Uhr steht. Der Browser zeigt selbst kein Intro. Test: scripts/online-e2e/intro.mjs (wrongway-server)
@@ -4746,7 +4747,7 @@ function App(){
           ts:Date.now(),winner:p,moveHist:mh,
           map:s.selectedMap||'classic',duelSize:s.duelSize||'standard',
           nameA:pA,nameB:pB,gameMode:s.gameMode||'local',myRole:s.onlineRole||null,
-          hm:!!s.hammerMode, // Hammer-Modus: nur dann ist die Randwand im Replay Metall
+          hm:!!s.hammerMode||hmSpielRef.current, // Hammer-Modus: nur dann ist die Randwand im Replay Metall
           wl:s.wlLands||null // Weltliga: Laender [A, B] fuer die Flaggen-Steine im Replay
         });
       }
@@ -5043,6 +5044,9 @@ function App(){
         else if(d.lm.type==='break')lmEnt={type:'break',p:lp,k:d.lm.k};
         else lmEnt={type:'move',p:lp,r:d.lm.r,c:d.lm.c};
         if(d.lm.d)lmEnt.d=d.lm.d; // gefallene Drop-Wand fuers Replay (Folgen-Feld des Servers seit 2026-09-26)
+        if(d.lm.ci!==undefined)lmEnt.ci=d.lm.ci; // Chaos-Kiste erschienen / eingesammelt (null)
+        if(d.lm.h)lmEnt.h=d.lm.h; // liegende Haemmer nach dieser Aktion
+        if(d.lm.hd)lmEnt.hd=d.lm.hd; // wer einen Hammer haelt
         mh=((neuSp?null:S.current.moveHist)||[]).concat([lmEnt]);
         setMoveHist(mh);
         if(lp!==S.current.onlineRole)playSound(d.lm.type==='wall'?'wall':d.lm.type==='break'?'break':'move');
@@ -5362,6 +5366,15 @@ function App(){
     if(!isTimerMode(gameTimeMode))return;
     setTurnTimeLeft(getTurnTime(gameTimeMode));
   },[turn,gameNum,gameTimeMode]);
+
+  useEffect(()=>{if(moveHist.length===0||hammerMode)hmSpielRef.current=hammerMode;},[moveHist.length,hammerMode]);
+  // ── Replay-Stempel (lokale Spiele: Bot, 2 Spieler an einem Geraet): Kiste/Haemmer/Halter am letzten Verlaufs-Eintrag
+  // festhalten, sobald sie vom Stand des Verlaufs abweichen — wie es der Server im Online-Spiel selbst tut ──
+  useEffect(()=>{
+    if(screen!=='game'||winner||!moveHist.length||!(chaosMode||hammerMode)||(gameMode==='online'&&wsSpiel()))return;
+    const add=itemStempel(moveHist,hammerMode,chaosItem,hammers,hammerHeld);
+    if(Object.keys(add).length)setMoveHist(function(prev){return prev.length?prev.slice(0,-1).concat([Object.assign({},prev[prev.length-1],add)]):prev;});
+  },[moveHist,chaosItem,hammers,hammerHeld,winner,screen]);
 
   // ── Chaos-Item Spawn ──
   useEffect(()=>{
@@ -8906,6 +8919,13 @@ function App(){
     const rSize=rEntry?rEntry.duelSize:duelSize;
     applyBoardSize(rMap,rSize);
     const rs=applyMovesWithOwner(rMoves,replayStep,rMap);
+    const rHm=rEntry?!!rEntry.hm:(hammerMode||hmSpielRef.current);
+    const rItems=applyItems(rMoves,replayStep,rHm);
+    // Was der letzte Zug weggenommen hat (Kiste/Hammer eingesammelt): fliegt mit der Einsammel-Animation davon, wie im Spiel
+    const rPrevItems=replayStep>0?applyItems(rMoves,replayStep-1,rHm):null;
+    const rGone=rPrevItems?rPrevItems.hammers.filter(function(h){return !rItems.hammers.some(function(x){return x.id===h.id;});}):[];
+    const rCrateGone=rPrevItems&&rPrevItems.chaosItem&&!rItems.chaosItem?rPrevItems.chaosItem:null;
+    const rBreakOwner=replayStep>0&&rMoves[replayStep-1].type==='break'?applyMovesWithOwner(rMoves,replayStep-1,rMap).wallOwner[rMoves[replayStep-1].k]:null;
     // Zuletzt ausgefuehrter Eintrag (der Stand auf dem Brett); vorher stand hier der NAECHSTE, der letzte Zug fehlte nie angezeigt
     const curMove=replayStep>0?rMoves[replayStep-1]:null;
     const progress=rMoves.length>0?Math.round((replayStep/rMoves.length)*100):0;
@@ -8917,6 +8937,8 @@ function App(){
     const rLands=rEntry?(rEntry.wl||null):wlLands; // Weltliga: Flaggen-Steine wie im Spiel
     const rKarten=rLands?wlKartenFarben(rLands):null; // Weltliga: Farben der Karten = Farben im Replay (Legende, Ziel-Zeilen)
     // Spielerfarbe im Replay: Weltliga = Kartenfarbe aus der Flagge (al = Deckkraft), sonst Rot/Blau (suffix = Hex-Deckkraft)
+    // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
+    const rWandFarbe=function(owner){return owner&&rKarten?wlWandFarbe(rKarten[owner==='A'?0:1]):owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');};
     const rCol=(p,al,suffix)=>rKarten?wlTextFarbe(rKarten[p==='A'?0:1],al):(PC[p]+(suffix||''));
     const RC=rKarten?{A:wlHex(rKarten[0]),B:wlHex(rKarten[1])}:PC,RD=rKarten?{A:wlHex(rKarten[0],true),B:wlHex(rKarten[1],true)}:PD; // wie MC/MD im Spiel
     const isEnd=replayStep>=rMoves.length;
@@ -9001,14 +9023,35 @@ function App(){
             backgroundSize:`${CELL}px ${CELL}px,${CELL}px ${CELL}px,${CELL}px ${CELL}px`}}/>
           {[...rs.walls].map(function(k){
             var owner=rs.wallOwner[k];
-            // Weltliga (Tunay 2026-09-27): die Mauer hat die Kartenfarbe (= Flaggenfarbe) ihres Besitzers, kein Rand
-            var wallColor=owner&&rKarten?wlWandFarbe(rKarten[owner==='A'?0:1]):owner?PC[owner]:(darkMode?'#e2e8f0':'#1e293b');
-            return <Wall key={k} wkey={k} color={wallColor} opacity={1} animate={curMove&&curMove.k===k&&curMove.type==='wall'} steel={(rEntry?!!rEntry.hm:hammerMode)&&isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
+            var wallColor=rWandFarbe(owner);
+            return <Wall key={k} wkey={k} color={wallColor} opacity={1} animate={curMove&&(curMove.k===k&&curMove.type==='wall'||curMove.d===k)} golden={rs.golden.has(k)} steel={(rEntry?!!rEntry.hm:hammerMode)&&isSteelWall(k)} steelColor={owner&&!rLands?PC[owner]:null} wandFarbe={rLands&&owner?rCol(owner):null}/>;
           })}
+          {curMove&&curMove.type==='break'&&<BreakingWallM key={'brk'+replayStep} wkey={curMove.k} color={rWandFarbe(rBreakOwner)}/>}
+          {rItems.chaosItem&&(
+            <div data-replay-kiste="1" style={{position:'absolute',left:rItems.chaosItem.c*CELL,top:rItems.chaosItem.r*CELL,width:CELL,height:CELL,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:15,transform:rBoardFlip?'scaleY(-1)':'none'}}>
+              <div style={{animation:'hammer-float 2.6s ease-in-out infinite'}}><div style={{animation:'hammer-shine 2s ease-in-out infinite'}}><CrateIcon size={Math.round(CELL*0.72)}/></div></div>
+            </div>
+          )}
+          {rItems.hammers.map(function(h){return(
+            <div key={h.id} data-replay-hammer={h.id} style={{position:'absolute',left:h.c*CELL,top:h.r*CELL,width:CELL,height:CELL,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:15,transform:rBoardFlip?'scaleY(-1)':'none'}}>
+              <div style={{animation:'hammer-float 2.4s ease-in-out infinite'}}><div style={{animation:'hammer-shine 2s ease-in-out infinite'}}><HammerIcon size={Math.round(CELL*0.72)}/></div></div>
+            </div>
+          );})}
+          {rGone.map(function(h){return(
+            <div key={'col'+h.id+replayStep} data-replay-weg={h.id} style={{position:'absolute',left:h.c*CELL,top:h.r*CELL,width:CELL,height:CELL,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:18,transform:rBoardFlip?'scaleY(-1)':'none'}}>
+              <div style={{animation:'item-collect 0.6s ease-out forwards'}}><HammerIcon size={Math.round(CELL*0.72)}/></div>
+            </div>
+          );})}
+          {rCrateGone&&(
+            <div key={'colc'+replayStep} data-replay-weg="kiste" style={{position:'absolute',left:rCrateGone.c*CELL,top:rCrateGone.r*CELL,width:CELL,height:CELL,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:18,transform:rBoardFlip?'scaleY(-1)':'none'}}>
+              <div style={{animation:'item-collect 0.6s ease-out forwards'}}><CrateIcon size={Math.round(CELL*0.72)}/></div>
+            </div>
+          )}
           {['A','B'].map(function(p){var pos=p==='A'?rs.pA:rs.pB;var sz=Math.round(CELL*0.66),off=(CELL-sz)/2;return(
             <div key={p} style={{position:'absolute',left:pos.c*CELL+off,top:pos.r*CELL+off,width:sz,height:sz,
               transition:'left 0.15s ease,top 0.15s ease',zIndex:20,pointerEvents:'none',transform:rBoardFlip?'scaleY(-1)':'none'}}>
               <Piece color={RC[p]} dark={RD[p]} size={sz} flag={rLands?rLands[p==='A'?0:1]:null}/>
+              {rItems.held[p]&&<div data-replay-held={p} style={{position:'absolute',right:-7,top:-9,zIndex:2}}><HammerIcon size={Math.round(CELL*0.44)}/></div>}
             </div>
           );})}
         </div>
@@ -11360,12 +11403,12 @@ function HammerIcon({size}){
     <path d="M8 7.6 L19 3.9" stroke="rgba(255,255,255,0.65)" strokeWidth="1.1" strokeLinecap="round"/>
   </svg>;
 }
-function BreakingWall({wkey,dark}){
+function BreakingWall({wkey,dark,color}){
   const p=wallPos(wkey);
   const isH=wkey[0]==='H';
-  const col=dark?'#e2e8f0':'#1e293b';
+  const col=color||(dark?'#e2e8f0':'#1e293b');
   const debris=[0,1,2,3,4];
-  return <div style={{position:'absolute',...p,zIndex:30,pointerEvents:'none'}}>
+  return <div data-wand-bruch={wkey} style={{position:'absolute',...p,zIndex:30,pointerEvents:'none'}}>
     <div style={{position:'absolute',inset:0,background:col,borderRadius:WW/2,
       transformOrigin:'center',animation:'wall-break 0.45s ease-in forwards'}}/>
     {debris.map(i=>{
@@ -11381,6 +11424,7 @@ function BreakingWall({wkey,dark}){
     })}
   </div>;
 }
+const BreakingWallM=React.memo(BreakingWall); // Replay: die zufaellig fliegenden Truemmer aendern sich nicht bei jedem Neuzeichnen
 function ScreenHead({icon,iconBg,title,sub}){
   return(
     <div style={{textAlign:'center',marginBottom:24,position:'relative',zIndex:1}}>
