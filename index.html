@@ -932,7 +932,7 @@ function getDisplayName(account){return account?account.name:GUEST_ID;}
 
 // ── WebSocket-Anbindung an den Spiel-Server (server-autoritativ, nur Classic) ──
 // Standardmaessig AUS. Mit ?ws=1 in der URL aktiv (zum Testen auf Staging).
-var WW_URL='wss://wrongway-server-production.up.railway.app';
+var WW_URL='wss://ws.wrongway.app';
 // Faehigkeits-Kennzeichen fuer den Rules-Rollout (Codex-R3 F6). 1 = dieser Client kommt ohne
 // direkte Namens-Writes und ohne direkte Ranglisten-Reads aus, ist also mit den verschaerften
 // Firebase-Regeln kompatibel. ALTE Seiten senden es nicht -> der Server sieht 0 und kann die
