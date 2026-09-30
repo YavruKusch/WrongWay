@@ -191,6 +191,7 @@ function isSteelWall(key){
   // Horizontale Mauer direkt vor einem Ziel ist unzerstörbar.
   // Klassisch: nur oben (Reihe 0). Duell: oben (0) UND unten (ROWS-2).
   const parts=key.split('-');
+  if(parts[0]==='V'){const vr=+parts[1];return vr<=1||(CUR_MAP==='duel'&&vr>=ROWS-3);}
   if(parts[0]!=='H')return false;
   if(parts[1]==='0')return true;
   if(CUR_MAP==='duel'&&parts[1]===String(ROWS-2))return true;
