@@ -4077,11 +4077,13 @@ function App(){
   },[]);
   // Gegner-Level aus ww_profiles laden wenn oppAccountKey bekannt
   useEffect(function(){
-    if(!window.db||!oppAccountKey){setOppLevel(null);return;}
+    // Nur angemeldet lesbar (Regeln): ohne Anmeldung gab es nur permission_denied in den Fehlerberichten
+    var fuL=null;try{fuL=firebase.auth().currentUser;}catch(e){}
+    if(!window.db||!oppAccountKey||!fuL){setOppLevel(null);return;}
     window.db.ref('ww_levels/'+oppAccountKey).once('value',function(snap){
       var v=snap.val();
       setOppLevel(typeof v==='number'?v:null);
-    });
+    },function(){setOppLevel(null);});
   },[oppAccountKey]);
   const doAuth=async()=>{
     if(authBusy)return;
@@ -5245,6 +5247,14 @@ function App(){
     if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='session_replaced'){ try{WSNET.close();}catch(e){} setFlash(t('sessionReplaced')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='resync'&&!d.gestartet&&WSNET.roomId&&d.settings&&d.settings.ranked){ try{WSNET._send({type:'ranked_confirm'});}catch(e){} return; }
+    // Seite neu geladen, waehrend die eigene Lobby wartete (iOS laedt verdeckte Tabs und Web-Apps oft neu): zurueck in den
+    // Warte-Bildschirm mit dem Code. Vorher stand man im Menue, hielt die Lobby fuer weg, und der geteilte Code verfiel.
+    if(d.type==='resync'&&!d.gestartet&&WSNET.roomId){
+      var stR=d.settings||{}; var rolR=d.deineNummer===0?'A':'B';
+      WSNET.role=rolR; WSNET.settings=stR; // spaeteres Neu-Anlegen (reconnect_failed) mit denselben Einstellungen
+      if(S.current.screen!=='waiting'){ setLobbyId(WSNET.roomId);setOnlineRole(rolR);setPrivateCode(rolR==='A'&&stR.priv?WSNET.roomId:null);setOppOffline(false);setFlash('');setNavDir('fwd');setScreen('waiting'); }
+      return;
+    }
     // Gegenseite ist im Warte-Screen offline bzw. wieder da. Der Warte-Screen laeuft ueber DIESEN
     // Handler, nicht ueber applyServerState (das ist erst ab dem laufenden Match der onState) —
     // ohne diesen Zweig kaeme die Meldung des Servers nie an und man wartet weiter blind.
@@ -5337,8 +5347,10 @@ function App(){
       } return;
     }
     if(d.type==='reconnect_failed'){
-      // Server kennt Token nicht mehr (Restart) — Raum neu anlegen/beitreten
-      if(WSNET.roomId){ if(WSNET.role==='A')WSNET._send(WSNET._createMsg()); else WSNET._send(WSNET._joinMsg()); }
+      // Server kennt Token nicht mehr (Restart) — Raum neu anlegen/beitreten, aber nur im Warte-Bildschirm. Nach einem
+      // Neuladen (Menue) legte das sonst still eine Lobby an, in die Fremde eintreten konnten.
+      if(WSNET.roomId&&S.current.screen==='waiting'){ if(WSNET.role==='A')WSNET._send(WSNET._createMsg()); else WSNET._send(WSNET._joinMsg()); }
+      else if(WSNET.roomId){ try{WSNET.leaveRoom();}catch(e){} }
       return;
     }
   };
