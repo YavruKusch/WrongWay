@@ -11280,7 +11280,7 @@ function OppProfileModal({data,onClose,darkMode,t}){
           <div style={{textAlign:'center',padding:'16px 0'}}>
             <div style={{fontSize:32,marginBottom:8}}>🔒</div>
             <div style={{fontSize:16,fontWeight:800,color:txt,marginBottom:4}}>{data.name}</div>
-            <div style={{fontSize:13,color:muted}}>Profil ist privat</div>
+            <div style={{fontSize:13,color:muted}}>{t('profilePrivate')}</div>
           </div>
         ):(
           <div>
@@ -11294,7 +11294,7 @@ function OppProfileModal({data,onClose,darkMode,t}){
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:18,fontWeight:900,color:txt,letterSpacing:-0.3,marginBottom:2}}>{data.name}</div>
                 <div style={{fontSize:12,fontWeight:700,color:muted,display:'flex',alignItems:'center',gap:5}}>
-                  <TierIcon icon={tier.icon} size={13}/>{tier.label} · {(data.stats&&data.stats.games)||0} Spiele
+                  <TierIcon icon={tier.icon} size={13}/>{tier.label} · {(data.stats&&data.stats.games)||0} {t('gamesPlayed')}
                 </div>
               </div>
             </div>
