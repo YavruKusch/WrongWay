@@ -1197,21 +1197,32 @@ var WSNET={
     try{ s.send(JSON.stringify({type:'ping'})); }catch(e){}
     setTimeout(function(){ if(self.sock===s&&self._probeAt&&Date.now()-self._probeAt>=4000)self._ersetzen(); },4000);
   },
+  // Geraet meldet "offline" (WLAN aus, Flugmodus, Funkloch): sofort Lade-Screen und neue Leitung, statt erst per Probe zu merken,
+  // dass die alte tot ist. "online": sofort neu verbinden (auch einen gerade ins Leere laufenden Aufbau ersetzen). Test: offline.mjs
+  _offline:function(){ if(this.sock&&this.sock.readyState===1&&(this.roomId||this.rankedOn||this.browseOn||this.spectateCode))this._ersetzen(); },
+  _online:function(){
+    if(!this.roomId&&!this.browseOn&&!this.rankedOn&&!this.spectateCode)return;
+    if(this.sock&&this.sock.readyState===1){ this._probe(); return; }
+    if(this.sock&&this.sock.readyState===0){ var s=this.sock; this.sock=null; try{ s.onclose=null; s.close(); }catch(e){} }
+    this._open();
+  },
   _ersetzen:function(){
     var s=this.sock; this.sock=null; this._probeAt=0; this._dbg('Leitung tot -> neu');
     try{ s.close(); }catch(e){}
     if(this.onState)this.onState({type:'ws_closed'});
     this._open();
   },
-  move:function(to){ this._send({type:'move',to:to}); },
-  wall:function(key){ this._send({type:'wall',key:key}); },
+  // Nach jedem eigenen Zug die Leitung pruefen: ist sie still gestorben, merkt das die Probe nach 4 s (Lade-Screen), statt erst
+  // beim naechsten Herzschlag (bis 10 s) — so lange sah der Spieler seinen Zug, der nie ankam.
+  move:function(to){ this._send({type:'move',to:to}); this._probe(); },
+  wall:function(key){ this._send({type:'wall',key:key}); this._probe(); },
   giveUp:function(){ this._send({type:'give_up'}); },
   bugReport:function(payload){ var m={type:'bug_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
   playerReport:function(payload){ var m={type:'player_report'}; for(var k in payload){ if(Object.prototype.hasOwnProperty.call(payload,k))m[k]=payload[k]; } this._send(m); },
   timeout:function(){ this._send({type:'timeout'}); },
   skipTurn:function(){ this._send({type:'skip'}); },
   requestSync:function(){ this._send({type:'sync'}); this._probe(); },
-  breakWall:function(key){ this._send({type:'break',key:key}); },
+  breakWall:function(key){ this._send({type:'break',key:key}); this._probe(); },
   rematch:function(){ this._send({type:'rematch'}); },
   rematchCancel:function(){ this._send({type:'rematch_cancel'}); },
   _dbg:function(msg){ if(!WS_DEBUG)return; try{ var el=document.getElementById('wsdbg'); if(!el){ el=document.createElement('div'); el.id='wsdbg'; el.style.cssText='position:fixed;top:4px;left:4px;z-index:999999;background:#000;color:#0f0;font:bold 12px monospace;padding:3px 8px;border-radius:5px;'; if(document.body)document.body.appendChild(el); } if(el)el.textContent='WS: '+msg; }catch(e){} },
@@ -1231,6 +1242,7 @@ var WSNET={
 };
 if(WS_ENABLED){ try{ WSNET._dbg('bereit (ws=1)'); }catch(e){} }
 try{ document.addEventListener('visibilitychange',function(){ WSNET._sichtbarkeit(); }); }catch(e){}
+try{ window.addEventListener('offline',function(){ WSNET._offline(); }); window.addEventListener('online',function(){ WSNET._online(); }); }catch(e){}
 // iOS Safari stellt einen geschlossenen Tab beim Wiederoeffnen manchmal aus dem bfcache wieder her
 // (eingefrorener alter Seitenzustand, KEIN echter Reload - unser ganzer Reconnect-Code laeuft dann
 // nie erneut). e.persisted===true erkennt genau diesen Fall -> echten Reload erzwingen.
@@ -5044,15 +5056,20 @@ function App(){
       }
       if((d.type==='match_start'||d.type==='resync')&&d.skins!==undefined)setMatchSkins(d.skins||null);
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
-      if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
-      if(d.walls){ setWalls(new Set(d.walls)); }
-      if(d.barr){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
+      // Eigener Zug noch unterwegs (Leitung war weg) und der Server meldet: ich bin noch dran, ohne meinen Zug -> er wird
+      // unten erneut gesendet. Bis dahin den gezeigten Zug stehen lassen; vorher sprang die Figur zurueck und erst mit der
+      // Bestaetigung wieder vor (Tunay 2026-10-01). Wird er abgelehnt, holt der error-Zweig den echten Stand. Test: offline.mjs
+      var pendH=pendingWsRef.current, myNrH=(typeof d.deineNummer==='number')?d.deineNummer:(S.current.onlineRole==='A'?0:1);
+      var halten=!!(pendH&&pendH.tries<3&&d.type!=='match_start'&&!neuSp&&(d.winner===undefined||d.winner===null)&&!(d.lm&&d.lm.p===myNrH)&&d.amZug===myNrH);
+      if(d.pos&&!halten){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
+      if(d.walls&&!halten){ setWalls(new Set(d.walls)); }
+      if(d.barr&&!halten){ setBarrLeft({A:d.barr[0],B:d.barr[1]}); }
       if(d.hammers!==undefined){ setHammers(d.hammers); }
       if(d.held){ var ph=S.current.hammerHeld||{A:false,B:false}; if((d.held.A&&!ph.A)||(d.held.B&&!ph.B))playSound('pickup'); setHammerHeld(d.held); }
       if(d.used){ setHammerUsed(d.used); }
       if(d.golden){ if(d.golden.length>(S.current.goldenWalls?S.current.goldenWalls.size:0))playSound('wall'); setGoldenWalls(new Set(d.golden)); }
       if(d.chaosItem!==undefined){ if(d.chaosItem&&!S.current.chaosItem)playSound('wall'); if(!d.chaosItem&&S.current.chaosItem&&!d.winner)playSound('wall'); setChaosItem(d.chaosItem); }
-      if(typeof d.amZug==='number'){ setTurn(d.amZug===0?'A':'B'); }
+      if(typeof d.amZug==='number'&&!halten){ setTurn(d.amZug===0?'A':'B'); }
       if(typeof d.turnMs==='number'){ wsTurnEndsRawRef.current=d.turnMs>0?(Date.now()+d.turnMs):0; wsTurnEndsRef.current=wsTurnEndsRawRef.current?(wsTurnEndsRawRef.current-Math.min((WSNET.rtt||0)/2,d.turnMs/2)):0; }
       // Ranked-Uhr-Anker vom Server: Anzeige wird hieraus abgeleitet (keine Drift, kein Freeze-Fehler)
       if(d.clk&&d.clk.length===2){ clkAnchorRef.current={at:Date.now(),rem:[d.clk[0],d.clk[1]],active:(typeof d.amZug==='number'?d.amZug:null)}; }
