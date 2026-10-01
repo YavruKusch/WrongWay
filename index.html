@@ -3423,6 +3423,7 @@ function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
   const[tab,setTab]=React.useState(startTab==='weltliga'?'weltliga':'ranked'); // Reiter: Ranked (ELO) | Weltliga (Laender)
   const[raw,setRaw]=React.useState(_lbCache.data||{});
   const[loading,setLoading]=React.useState(!_lbCache.data);
+  const[profModal,setProfModal]=React.useState(null);
   const dk=darkMode;
   const bg=dk?'#0a1020':'#f8f9fa';
   const card=dk?'#161e33':'#ffffff';
@@ -3461,6 +3462,18 @@ function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
 
   const MEDAL=['🥇','🥈','🥉'];
   const myKey=account?account.key:null;
+  // Name antippen: Profil des Spielers laden (1 Read, ww_profiles/<uid>); privat -> nur Schloss, keine Werte.
+  const openProf=async(e)=>{
+    setProfModal({loading:true,name:e.name,profilePublic:true,color:e.color});
+    try{
+      const prof=await stoGet(PROFILE_KEY(e.key));
+      const pub=!prof||prof.profilePublic!==false;
+      setProfModal({loading:false,name:(prof&&prof.name)||e.name,color:(prof&&prof.color)||e.color,profilePublic:pub,
+        stats:pub&&prof?prof.stats:null,ranked:pub&&prof&&prof.stats?prof.stats.ranked:null});
+    }catch(err){
+      setProfModal({loading:false,name:e.name,color:e.color,profilePublic:true,stats:null,ranked:null});
+    }
+  };
 
   return(
     <div style={{minHeight:'100vh',minHeight:'100dvh',background:'transparent',
@@ -3518,7 +3531,7 @@ function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
                   const pc=podiumColors[podiumIdx.indexOf(idx)];
                   const bc=borderColors[podiumIdx.indexOf(idx)];
                   return(
-                    <div key={e.key} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                    <div key={e.key} onClick={()=>openProf(e)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,cursor:'pointer'}}>
                       <div style={{width:44,height:44,borderRadius:'50%',background:e.color||'#8b5cf6',
                         border:'2.5px solid '+bc,display:'flex',alignItems:'center',justifyContent:'center',
                         boxShadow:`0 4px 16px ${e.color||'#8b5cf6'}60`,flexShrink:0}}>
@@ -3546,7 +3559,7 @@ function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
               const isMe=e.key===myKey;
               const top3=i<3;
               return(
-                <div key={e.key} style={{display:'flex',alignItems:'center',gap:10,
+                <div key={e.key} onClick={()=>openProf(e)} style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',
                   padding:'10px 14px',borderRadius:14,
                   background:isMe?(dk?'rgba(139,92,246,0.18)':'rgba(139,92,246,0.08)'):card,
                   border:`1.5px solid ${isMe?'#8b5cf6':(top3&&i===0?'rgba(245,158,11,0.4)':border)}`,
@@ -3594,6 +3607,7 @@ function LeaderboardScreen({t,darkMode,goBack,account,lang,startTab}){
             })}
           </div>
         )}
+        {profModal&&<OppProfileModal data={profModal} onClose={()=>setProfModal(null)} darkMode={darkMode} t={t}/>}
         {/* Refresh (nur Ranked — die Weltliga-Tabelle laedt beim Oeffnen selbst) */}
         {tab!=='weltliga'&&!loading&&(
           <button onClick={load} style={{width:'100%',marginTop:14,padding:'12px',borderRadius:12,
