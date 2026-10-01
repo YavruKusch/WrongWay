@@ -9958,7 +9958,9 @@ function App(){
         </div>
       )}
 
-      {flash&&<div style={{color:'#ef4444',fontSize:11,marginBottom:4,fontWeight:500}}>{flash}</div>}
+      {flash&&<div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 10px)',left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
+        <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
+      </div>}
 
       {/* Goal-Richtungsanzeige oben */}
       <div className="ww-goalext t" style={{width:COLS*CELL+26,color:selectedMap==='duel'?(gameMode==='online'&&onlineRole==='B'?spFarbe('B'):spFarbe('A')):'#16a34a'}}>
