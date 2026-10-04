@@ -1517,6 +1517,7 @@ async function changeAccountName(uid,newName){
   const newKey=normUser(newName);
   if(newKey.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(newKey))return{err:'badChars'};
+  if(newKey==='player')return{err:'taken'}; // Standardname, siehe createGoogleProfile
   const prof=await stoGet(PROFILE_KEY(uid));
   if(!prof)return{err:'notFound'};
   if(normUser(prof.name)===newKey)return{err:'sameName'};
@@ -1854,6 +1855,7 @@ function MailCodeStep(props){
       if(weg.current)return;
       setBusy(false);
       if(r.prof){setProf(r.prof);setMeldung(null);setPhase('done');return;}
+      if(r.needName){props.onNeedName(r.user);return;}
       if(r.err==='notVerified'){rot('mc_fbNotYet');return;}
       if(r.err==='login'){props.onRelogin(email,'mc_loginAgain');return;}
       rot('auth_network');
@@ -2005,6 +2007,7 @@ async function registerAccount(email,name,pw,color){
   const key=normUser(name);
   if(key.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(key))return{err:'badChars'};
+  if(key==='player')return{err:'taken'}; // Standardname, siehe createGoogleProfile
   if((pw||'').length<6)return{err:'pwShort'};
   const em=(email||'').trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return{err:'emailInvalid'};
@@ -2015,10 +2018,12 @@ async function registerAccount(email,name,pw,color){
   // Gast-Session (anonyme UID) wird dabei UPGEGRADET statt ersetzt: gleiche UID behaelt
   // serverseitige Coins/XP/Inventar — sonst strandet der Gast-Fortschritt auf der alten UID.
   let cred;
+  let gastUpgrade=false;
   try{
     const curU=firebase.auth().currentUser;
     if(curU&&curU.isAnonymous){
       cred=await curU.linkWithCredential(firebase.auth.EmailAuthProvider.credential(em,pw));
+      gastUpgrade=true;
     }else{
       cred=await firebase.auth().createUserWithEmailAndPassword(em,pw);
     }
@@ -2043,17 +2048,43 @@ async function registerAccount(email,name,pw,color){
   // Profil mit einem Namen, der jemand anderem gehoert.
   const claim=await nameClaimWsCmd(name.trim());
   if(claim.err){
-    try{await firebase.auth().signOut();}catch(e){}
+    // Eindeutig abgelehnt (vergeben, Zeichen, Tageslimit): nichts ist reserviert, das neue Konto geht wieder weg.
+    // Sonst bliebe ein Konto OHNE Profil mit "E-Mail schon vergeben" zurueck (Ursache der Profile "Player").
+    // Unklar (Verbindungsfehler): der Name koennte schon reserviert sein, dann bleibt das Konto, und die
+    // Namensabfrage beim naechsten Login (loginProfil) heilt es.
+    if(claim.err==='taken'||claim.err==='badChars'||claim.err==='nameLimit')await kontoZuruecknehmen(cred.user,gastUpgrade);
+    else{try{await firebase.auth().signOut();}catch(e){}}
     return{err:claim.err};
   }
   const prof={name:name.trim(),color:color||AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
   const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok){
-    try{await firebase.auth().signOut();}catch(e){}
+    try{await firebase.auth().signOut();}catch(e){} // Name ist reserviert: Konto behalten, der naechste Login legt das Profil an
     return{err:'network'};
   }
   // Paket E-Mail-Code: angemeldet bleiben, der Code-Schritt uebernimmt (den Code schickt der Server).
   return{step:'code',email:cred.user.email||em};
+}
+// Registrierung gescheitert, nachdem das Konto schon angelegt war: Konto wieder entfernen. Gast-Upgrade: nur das
+// Passwort wieder abhaengen, das Gast-Konto (Coins/XP) bleibt. Gelingt das nicht, wenigstens abmelden.
+async function kontoZuruecknehmen(user,gastUpgrade){
+  try{
+    if(gastUpgrade)await user.unlink('password');
+    else await user.delete();
+    return;
+  }catch(e){}
+  try{await firebase.auth().signOut();}catch(e){}
+}
+// Ein Profil, das KEINEN gewaehlten Namen hat: fehlt, ohne Namen, oder das Standard-Profil "Player" (rote Standardfarbe),
+// das fruehere Fassungen einem Konto ohne Profil stumm anlegten. Solche Konten waehlen jetzt einen Namen.
+function profilBrauchtName(prof){
+  if(!prof||typeof prof.name!=='string'||!prof.name.trim())return true;
+  return prof.name==='Player'&&prof.color===AVATAR_COLORS[0];
+}
+// Nur Passwort angemeldet (kein Google): steuert Hinweistext im Namensfenster und das isGoogle-Merkmal des Profils.
+function kontoNurPasswort(u){
+  var ps=(u&&u.providerData)||[];
+  return ps.length>0&&ps.every(function(p){return p&&p.providerId==='password';});
 }
 async function loginAccount(email,pw){
   const em=(email||'').trim();
@@ -2073,13 +2104,15 @@ async function loginAccount(email,pw){
 }
 // Profil eines frisch angemeldeten Passwort-Kontos (auch nach dem Code-Schritt). Ein Lesefehler ist NICHT "kein
 // Profil": sonst ueberschriebe der Minimal-Eintrag das echte Profil (Name, Statistik) -> {err:'network'}.
+// Kein Profil (abgebrochene Registrierung) oder nur das Standard-Profil "Player": NICHTS wird geschrieben, der Nutzer
+// waehlt einen Namen (needName, gleiches Namensfenster wie bei Google). Frueher legte das stumm "Player" an.
 async function loginProfil(uid){
   let prof;
   try{prof=await stoGetStreng(PROFILE_KEY(uid));}catch(e){return{err:'network'};}
-  if(!prof){
-    // Auth-Konto ohne Profil (z.B. abgebrochene Registrierung) -> minimal anlegen
-    prof={name:'Player',color:AVATAR_COLORS[0],created:Date.now(),stats:freshAccountStats()};
-    await stoSet(PROFILE_KEY(uid),prof);
+  if(profilBrauchtName(prof)){
+    var u=firebase.auth().currentUser;
+    if(!u||u.uid!==uid)return{err:'login'};
+    return{needName:true,user:u};
   }
   return{prof:{...prof,key:uid}};
 }
@@ -2093,25 +2126,33 @@ async function getGoogleProfile(googleUser){
   catch(fbErr){const e=new Error('fb_read');e.isFbError=true;throw e;}
   const prof=raw?(typeof raw==='string'?JSON.parse(raw):raw):null;
   if(!prof)return null;
-  // Profil-Reparatur: fehlende Pflichtfelder ergaenzen
-  if(!prof.stats||!prof.name){
-    const repaired=Object.assign({name:'Player',color:AVATAR_COLORS[0],stats:freshAccountStats()},prof,{isGoogle:true});
+  // Profil ohne gewaehlten Namen (leer / Standard "Player"): wie ein neuer Nutzer behandeln -> Namensfenster.
+  // Frueher wurde hier stumm "Player" gespeichert.
+  if(profilBrauchtName(prof))return null;
+  // Profil-Reparatur: fehlende Statistik ergaenzen
+  if(!prof.stats){
+    const repaired=Object.assign({color:AVATAR_COLORS[0],stats:freshAccountStats()},prof,{isGoogle:true});
     await stoSet(PROFILE_KEY(uid),repaired);
     return{...repaired,key:uid,isGoogle:true};
   }
   return{...prof,key:uid,isGoogle:true};
 }
+// Legt das Profil an, auch fuer Passwort-Konten ohne Profil und fuer ein vorhandenes Profil ohne gewaehlten Namen
+// (Standard "Player"): dort bleiben Statistik und Farbe, nur der Name kommt dazu. Der Name "player" ist gesperrt,
+// sonst erkennt profilBrauchtName ihn bei jedem Login wieder als Standard.
 async function createGoogleProfile(googleUser,name,color){
   const nameKey=normUser(name);
   if(nameKey.length<3)return{err:'tooShort'};
   if(!/^[a-z0-9_]+$/.test(nameKey))return{err:'badChars'};
+  if(nameKey==='player')return{err:'taken'};
+  const istG=!kontoNurPasswort(googleUser);
   const uid=googleUser.uid;
   // Race-Condition-Schutz: Profil bereits vorhanden? Strict-Read: bei Firebase-Fehler ABBRUCH statt
   // null-Rueckgabe, die das Ueberschreiben eines bestehenden Profils ausloesen wuerde.
   let alreadyExists;
   try{const _s=await window.db.ref(PROFILE_KEY(uid)).once('value');const _r=_s.val();alreadyExists=_r?(typeof _r==='string'?JSON.parse(_r):_r):null;}
   catch(e){return{err:'network'};}
-  if(alreadyExists)return{prof:{...alreadyExists,key:uid,isGoogle:true}};
+  if(alreadyExists&&!profilBrauchtName(alreadyExists))return{prof:{...alreadyExists,key:uid,isGoogle:istG}};
   const existing=await stoGet(USERNAME_KEY(nameKey));
   if(existing&&existing.uid!==uid)return{err:'taken'};
   // Warten bis RTDB-Token nach Google-Login aktuell ist
@@ -2123,10 +2164,11 @@ async function createGoogleProfile(googleUser,name,color){
   // F10: Namen zuerst server-seitig reservieren (siehe registerAccount).
   const claim=await nameClaimWsCmd(name.trim());
   if(claim.err)return{err:claim.err};
-  const prof={name:name.trim(),color:color||AVATAR_COLORS[0],isGoogle:true,created:Date.now(),stats:freshAccountStats()};
+  const alt=alreadyExists||{};
+  const prof=Object.assign({},alt,{name:name.trim(),color:color||alt.color||AVATAR_COLORS[0],created:alt.created||Date.now(),stats:alt.stats||freshAccountStats()},istG?{isGoogle:true}:{});
   const ok=await stoSet(PROFILE_KEY(uid),prof);
   if(!ok)return{err:'network'};
-  return{prof:{...prof,key:uid,isGoogle:true}};
+  return{prof:{...prof,key:uid,isGoogle:istG}};
 }
 async function fetchAccount(key){
   const prof=await stoGet(PROFILE_KEY(key));
@@ -4041,6 +4083,10 @@ function App(){
         return;
       }
       const prof=await stoGet(PROFILE_KEY(uid));
+      // Profil gelesen, aber ohne gewaehlten Namen (leer / Standard "Player"): NICHT als "Player" anmelden — beim Login
+      // laeuft das Namensfenster (loginProfil), und ein schon gespeicherter "Player" wird hier zurueckgenommen. Ein Lesefehler
+      // (prof null) meldet NIEMANDEN ab.
+      if(prof&&profilBrauchtName(prof)){setAccount(null);return;}
       if(prof&&prof.name){
         // F9: eigenes ELO vom Server holen statt direkt aus der Rangliste zu lesen — der Knoten
         // ist fuer Clients zu (er traegt server-interne Settlement-Marker).
@@ -4127,6 +4173,8 @@ function App(){
     // Paket E-Mail-Code: Konto steht, E-Mail noch unbestaetigt -> Code-Schritt. Das Passwort bleibt nur fuer die
     // stille Neu-Anmeldung nach einer Adressaenderung im Speicher, bis der Schritt endet.
     if(res.step==='code'){setMailStep({email:res.email,pw:authPw});setAuthName('');setAuthPw('');return;}
+    // Konto ohne gewaehlten Namen (Profil fehlt / Standard "Player"): gleiches Namensfenster wie bei Google
+    if(res.needName){setPendingGoogleUser(res.user);setGoogleName('');setGoogleNameErr('');setAuthPw('');setAuthErr('');return;}
     if(res.err){setAuthErr(t('auth_'+res.err));return;}
     setAccount(res.prof);
     setAuthName('');setAuthEmail('');setAuthPw('');setAuthErr('');
@@ -8292,6 +8340,7 @@ function App(){
           <MenuBG dark={darkMode}/>
           <MailCodeStep t={t} lang={lang} email={mailStep.email} pw={mailStep.pw} inputStyle={inputStyle} backStyle={backChevron} onRelogin={mcRelogin}
             onBack={function(){try{firebase.auth().signOut();}catch(e){}setMailStep(null);setAuthMode('login');setAuthErr('');}}
+            onNeedName={function(u){setMailStep(null);setPendingGoogleUser(u);setGoogleName('');setGoogleNameErr('');setAuthErr('');}}
             onDone={function(prof){setMailStep(null);setAccount(prof);setAuthEmail('');setAuthErr('');setNavDir('back');setScreen('menu');}}/>
         </div>
       );
@@ -8413,9 +8462,9 @@ function App(){
                 <div style={{textAlign:'center',marginBottom:18}}>
                   <div style={{fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5}}>{t('chooseUsername')}</div>
                   <div style={{fontSize:12,color:'var(--subtle)',marginTop:5}}>{t('usernameHint')}</div>
-                  <div style={{fontSize:11,color:'#f59e0b',marginTop:8,padding:'6px 10px',background:'rgba(245,158,11,0.1)',borderRadius:8,fontWeight:600,lineHeight:1.4}}>
+                  {!kontoNurPasswort(pendingGoogleUser)&&<div style={{fontSize:11,color:'#f59e0b',marginTop:8,padding:'6px 10px',background:'rgba(245,158,11,0.1)',borderRadius:8,fontWeight:600,lineHeight:1.4}}>
                     {t('googleHatKonto')}
-                  </div>
+                  </div>}
                 </div>
                 <input value={googleName} onChange={e=>setGoogleName(e.target.value)}
                   placeholder={t('username')} maxLength={16} autoCapitalize="off" autoCorrect="off"
