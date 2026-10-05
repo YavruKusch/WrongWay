@@ -3993,6 +3993,7 @@ function App(){
   const[oppLevel,setOppLevel]=useState(null);
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
+  const[tv2JoinCode,setTv2JoinCode]=useState(null); // Code einer 2v2-Lobby, die in der normalen Lobby-Liste angetippt wurde
   const[serverOnline,setServerOnline]=useState(true);
   // WS-Lobby: Router fuer Server-Nachrichten VOR Match-Start. Das Trampolin ist stabil,
   // der Inhalt wird pro Render frisch zugewiesen (keine Stale-Closures).
@@ -6260,13 +6261,16 @@ function App(){
   useEffect(()=>{
     if(!WS_ENABLED||screen!=='online')return;
     setLobbyList([]);
+    // mode 'alle': 1v1- UND 2v2-Lobbys in einer Liste (Tunay 2026-10-05); 2v2-Eintraege kommen als {code,name,count,mode:'2v2',age} ohne settings.
+    // Ein aelterer Server kennt 'alle' nicht und liefert nur 1v1.
     WSNET.startBrowse(function(lobbies){
       var now=Date.now();
       setLobbyList((lobbies||[]).map(function(L){
+        if(L.mode==='2v2')return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),tv2:true,count:L.count||1};
         var st=L.settings||{};
         return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),tm:st.tm,ch:st.ch?1:0,br:st.barr,map:st.map,dp:st.dp,hm:st.hm?1:0};
       }));
-    },wsLobbyTrampRef.current);
+    },wsLobbyTrampRef.current,'alle');
     return function(){WSNET.stopBrowse();};
   },[screen]);
 
@@ -7028,7 +7032,7 @@ function App(){
   }
 
   // ── 2v2 (Beta) Mount ──
-  if(screen==='twovtwo')return <TwoVTwo t={t} darkMode={darkMode} account={account} onRecordResult={(won)=>{const acc=accRef.current;if(!acc)return;const ns=applyMatchResult(acc.stats||freshAccountStats(),won,'2v2');const na={...acc,stats:ns};setAccount(na);saveAccountProfile(acc.key,{stats:ns});}} onExit={()=>{setNavDir('back');setScreen('menu');}}/>;
+  if(screen==='twovtwo')return <TwoVTwo t={t} darkMode={darkMode} account={account} joinCode={tv2JoinCode} onJoinCodeUsed={()=>setTv2JoinCode(null)} onRecordResult={(won)=>{const acc=accRef.current;if(!acc)return;const ns=applyMatchResult(acc.stats||freshAccountStats(),won,'2v2');const na={...acc,stats:ns};setAccount(na);saveAccountProfile(acc.key,{stats:ns});}} onExit={()=>{setTv2JoinCode(null);setNavDir('back');setScreen('menu');}}/>;
 
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
@@ -8584,6 +8588,7 @@ function App(){
   );
 
   // ── ONLINE ──────────────────────────────────────────────
+  const lobbyShown=lobbyList.filter(function(l){return !l.tv2||feat('twovtwo');});
   if(screen==='online') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
@@ -8644,10 +8649,10 @@ function App(){
             <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5}}>{t('live')}</span>
             <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginLeft:4}}>· {t('openLobbies')}</span>
           </div>
-          {lobbyList.length>0&&(
+          {lobbyShown.length>0&&(
             <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',
               background:'rgba(59,130,246,0.1)',padding:'2px 8px',borderRadius:10}}>
-              {lobbyList.length} {t('lobbyCount')}
+              {lobbyShown.length} {t('lobbyCount')}
             </div>
           )}
         </div>
@@ -8659,7 +8664,7 @@ function App(){
           borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',
           WebkitOverflowScrolling:'touch',
           boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
-          {lobbyList.length===0?(
+          {lobbyShown.length===0?(
             <div style={{padding:'34px 20px',textAlign:'center'}}>
               <div style={{marginBottom:8,opacity:0.4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="var(--muted)"/></div>
               <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:4}}>{t('noLobbies')}</div>
@@ -8667,28 +8672,28 @@ function App(){
             </div>
           ):(
             <div style={{padding:6,display:'flex',flexDirection:'column',gap:5}}>
-              {lobbyList.map(l=>{
+              {lobbyShown.map(l=>{
                 const age=Math.max(0,Math.floor((Date.now()-l.ts)/1000));
                 const ageLabel=age<60?`${age}s`:`${Math.floor(age/60)}m`;
                 const tm=l.tm||'none';
                 const isClassic=tm.indexOf('classic-')===0;
                 const isBlitz=tm.indexOf('blitz-')===0;
                 return(
-                  <div key={l.id} onClick={()=>joinLobby(l.id)}
+                  <div key={l.id} onClick={()=>{if(l.tv2){setTv2JoinCode(l.id);setNavDir('fwd');setScreen('twovtwo');}else joinLobby(l.id);}}
                     style={{padding:'10px 12px',background:'var(--bg)',borderRadius:9,
                       border:'1px solid var(--border-soft)',cursor:'pointer',
                       transition:'all 0.15s'}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:l.tm||l.ch?6:0}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:l.tm||l.ch||l.tv2?6:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:10}}>
-                        <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg,#ef4444,#3b82f6)',
+                        <div style={{width:30,height:30,borderRadius:8,background:l.tv2?'linear-gradient(135deg,#ef4444,#8b5cf6)':'linear-gradient(135deg,#ef4444,#3b82f6)',
                           display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,
-                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}><SwordsIcon size={16} color="#fff"/></div>
+                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>{l.tv2?<PeopleIcon size={16} color="#fff"/>:<SwordsIcon size={16} color="#fff"/>}</div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:0.5}}>
                             {t('lobby')} {l.id.slice(0,4).toUpperCase()}
                           </div>
                           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:1}}>
-                            {ageLabel} · 1/2
+                            {ageLabel} · {l.tv2?(l.count+'/4'):'1/2'}
                           </div>
                         </div>
                       </div>
@@ -8698,6 +8703,11 @@ function App(){
                         {t('join')}
                       </div>
                     </div>
+                    {l.tv2&&(
+                      <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
+                        <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,background:'rgba(234,88,12,0.15)',color:'#c2410c'}}>{'2 vs 2'}</div>
+                      </div>
+                    )}
                     {(isClassic||isBlitz||l.ch||l.br||l.map)&&(
                       <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
                         {l.map&&(
@@ -11689,7 +11699,7 @@ const backChevron={position:'fixed',left:'calc(10px + env(safe-area-inset-left, 
   boxShadow:'0 3px 0 rgba(0,0,0,0.08),0 2px 8px rgba(0,0,0,0.06)',fontFamily:'system-ui,-apple-system,sans-serif'};
 
 // ── 2v2 (Beta) – eigenständige Komponente mit Online-Lobby ──
-function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
+function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUsed}){
   const[wallBarPos]=React.useState(function(){try{return localStorage.getItem('ww_wallbarpos')||'bottom';}catch(e){return 'bottom';}});
   const[sub,setSub]=React.useState('config');
   const[tokens,setTokens]=React.useState({A1:{r:ROWS2-1,c:3},A2:{r:ROWS2-1,c:5},B1:{r:0,c:3},B2:{r:0,c:5}});
@@ -11865,6 +11875,14 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult}){
     setLobbyCode(code);setIsHost(data.host===uid);setIsOnline(true);setLobbyPlayers(updated.players);
     setSub('lobby');
   };
+
+  // Aus der normalen Lobby-Liste (2v2-Eintrag angetippt): einmalig direkt mit dem Code beitreten
+  React.useEffect(()=>{
+    if(!joinCode)return;
+    if(onJoinCodeUsed)onJoinCodeUsed();
+    setSub('online');
+    joinByCode(joinCode);
+  },[]);
 
   // ── Online: Team wechseln (frei – Start nur bei 2+2) ──
   const switchTeam=async()=>{
