@@ -2732,7 +2732,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
     if(queue)return;
     var v=wlVerbindung(function(d){
       if(!mountedRef.current)return;
-      if(d.type==='wl_land'){setWl({land:d.land||null,neu:d.neu||null,ab:d.ab||null,mein:d.mein||null,clip:d.clip===1});setWlFehler('');if(d.suche)setSuche(d.suche);if(account&&!d.land)setWaehlen(true);return;}
+      if(d.type==='wl_land'){try{if(account)localStorage.setItem('ww_land_'+account.key,d.land||'');}catch(e){}setWl({land:d.land||null,neu:d.neu||null,ab:d.ab||null,mein:d.mein||null,clip:d.clip===1});setWlFehler('');if(d.suche)setSuche(d.suche);if(account&&!d.land)setWaehlen(true);return;}
       if(d.type==='wl_suche'){setSuche(d.suche||{});return;}
       if(d.type==='wl_land_fehler'){setWlFehler(d.grund==='login'?t('rankedLoginHint'):t('rankedRetry'));return;}
     });
@@ -3010,6 +3010,7 @@ function WeltligaTabelle({t,lang,darkMode,account}){
   );
 }
 function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpSystemOn}){
+  var meinLand='';try{meinLand=localStorage.getItem('ww_land_'+account.key)||'';}catch(e){}if(!wlIstLand(meinLand))meinLand='';
   const[showNC,setShowNC]=React.useState(false);
   const[ncInput,setNcInput]=React.useState('');
   const[ncErr,setNcErr]=React.useState('');
@@ -3161,7 +3162,7 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
               </div>
             )}
           </div>
-          <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{account.name}</div>
+          <div style={{fontSize:22,fontWeight:900,color:txt,letterSpacing:-0.5}}>{meinLand?<span style={{marginRight:7}}><WlFlagge land={meinLand} h={18}/></span>:null}{account.name}</div>
           {xpSystemOn&&xp!==null&&(
             <div style={{fontSize:11,color:muted,fontWeight:700,marginTop:3}}>{xp+' XP'}</div>
           )}
@@ -3978,6 +3979,7 @@ function App(){
   const[navDir,setNavDir]=useState('fwd'); // Richtung für Seitenwechsel-Animation
   const[gameMode,setGameMode]=useState(null);
   const[onlineRole,setOnlineRole]=useState(null);
+  const[matchFlaggen,setMatchFlaggen]=useState(null); // Weltliga-Land je Spieler A/B (Server, jedes Spiel): kleine Flagge vor dem Namen
   const[matchSkins,setMatchSkins]=useState(null); // vom Server besitz-validiert: [{stone,board},{stone,board}] je Spieler A/B
   const[playerNames,setPlayerNames]=useState({A:null,B:null});
   const[isRanked,setIsRanked]=useState(false);
@@ -4795,6 +4797,10 @@ function App(){
     };
   },[]);
 
+  // Land vor dem Namen (nur Online, nicht in der Weltliga: dort ist die Flagge schon der Stein). Gast/ohne Wahl = nichts.
+  const pflagge=p=>{if(wlLands||gameMode!=='online'||!matchFlaggen)return null;var c=matchFlaggen[p==='A'?0:1];return wlIstLand(c)?<span style={{marginRight:4}}><WlFlagge land={c} h={11}/></span>:null;};
+  // Eigenes Land fuers Profil merken (der Browser hat kein eigenes Abfrage-Fenster): aktualisiert sich mit jedem Online-Spiel und in der Weltliga
+  React.useEffect(()=>{if(matchFlaggen&&account&&onlineRole&&gameMode==='online'){try{localStorage.setItem('ww_land_'+account.key,matchFlaggen[onlineRole==='A'?0:1]||'');}catch(e){}}},[matchFlaggen,onlineRole,account]);
   const pname=p=>{if(gameMode==='online'){if(playerNames[p])return playerNames[p];return p===onlineRole?(account?account.name:GUEST_ID):(t('opponent')||'Gegner');}return p==='A'?t('red'):t('blue');};
   const isOwnLoss=w=>{
     if(!w)return false;
@@ -5026,6 +5032,7 @@ function App(){
   // Spieler blieb im Endbildschirm, waehrend im neuen Spiel seine Uhr lief). Test: scripts/online-e2e/revanche.mjs
   const neueRunde=(d)=>{
     if(d.skins!==undefined)setMatchSkins(d.skins||null);
+    if(d.flaggen!==undefined)setMatchFlaggen(d.flaggen||null);
     if(d.pos){ setPA({...d.pos[0]}); setPB({...d.pos[1]}); }
     setWalls(new Set(d.walls||[]));
     if(d.barr)setBarrLeft({A:d.barr[0],B:d.barr[1]});
@@ -5119,6 +5126,7 @@ function App(){
         applyBoardSize((d.map==='duel')?'duel':'classic',(d.map==='duel'&&d.cols===7)?'blitz':'standard');
       }
       if((d.type==='match_start'||d.type==='resync')&&d.skins!==undefined)setMatchSkins(d.skins||null);
+      if((d.type==='match_start'||d.type==='resync')&&d.flaggen!==undefined)setMatchFlaggen(d.flaggen||null);
       if(typeof d.deineNummer==='number')setOnlineRole(d.deineNummer===0?'A':'B');
       // Eigener Zug noch unterwegs (Leitung war weg) und der Server meldet: ich bin noch dran, ohne meinen Zug -> er wird
       // unten erneut gesendet. Bis dahin den gezeigten Zug stehen lassen; vorher sprang die Figur zurueck und erst mit der
@@ -5343,7 +5351,7 @@ function App(){
     if(d.type==='opponent_back'&&S.current.screen==='waiting'){ setOppOffline(false); return; }
     if(d.type==='match_start'||(d.type==='resync'&&d.gestartet)){
       var st=d.settings||{}; var role=d.deineNummer===0?'A':'B';
-      setMatchSkins(d.skins||null);
+      setMatchSkins(d.skins||null);setMatchFlaggen(d.flaggen||null);
       // Weltliga: die Laender beider Spieler (nach Spielernummer) stehen in den Raum-Einstellungen (match_start + resync)
       setWlLands((st.rankedMode==='weltliga'&&st.lands&&wlIstLand(st.lands[0])&&wlIstLand(st.lands[1]))?[st.lands[0],st.lands[1]]:null);
       var mapS=st.map==='duel'?'duel':'classic'; var sizeS=st.size==='blitz'?'blitz':'standard';
@@ -5369,7 +5377,7 @@ function App(){
     }
     if(d.type==='lobby_ready'){
       // Firebase-Modus-Match: Server hat gepaart, Raum geloescht — Match laeuft klassisch ueber barricade_game_
-      setMatchSkins(d.skins||null);
+      setMatchSkins(d.skins||null);setMatchFlaggen(d.flaggen||null);
       var stF=d.settings||{};var nmF=d.namen||[];var akF=d.akeys||[];
       var codeF=d.code||WSNET.roomId; var myNr=d.deineNummer;
       try{WSNET.close();}catch(e){}
@@ -9382,7 +9390,7 @@ function App(){
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
                   <div style={{fontSize:11,fontWeight:800,color:MC.A,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
-                    {pname('A')}
+                    {pflagge('A')}{pname('A')}
                   </div>
                   {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:MC.A,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
                   {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
@@ -9422,7 +9430,7 @@ function App(){
                     boxShadow:'0 3px 8px rgba(0,0,0,0.3),inset 0 1px 2px rgba(255,255,255,0.25)'}}/>
                   <div style={{fontSize:11,fontWeight:800,color:MC.B,letterSpacing:0.3,
                     whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:80,margin:'0 auto'}}>
-                    {pname('B')}
+                    {pflagge('B')}{pname('B')}
                   </div>
                   {winner==='B'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:MC.B,opacity:0.7,marginTop:2}}>{'WIN'}</div>}
                   {winner==='A'&&<div style={{fontSize:8,fontWeight:900,letterSpacing:1,color:'var(--subtle)',opacity:0.5,marginTop:2}}>{'LOSS'}</div>}
@@ -9759,7 +9767,7 @@ function App(){
               </div>
               <div style={{fontSize:21,fontWeight:800,color:'#fff',letterSpacing:-0.3,maxWidth:'78vw',
                 textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
-                textShadow:'0 2px 14px rgba(0,0,0,0.65)'}}>{pname(introOppRole)}</div>
+                textShadow:'0 2px 14px rgba(0,0,0,0.65)'}}>{pflagge(introOppRole)}{pname(introOppRole)}</div>
             </div>
           </div>
           {/* Eigenes Banner (unten) */}
@@ -9775,7 +9783,7 @@ function App(){
               animation:'intro-block-bot 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s both'}}>
               <div style={{fontSize:21,fontWeight:800,color:'#fff',letterSpacing:-0.3,maxWidth:'82vw',
                 textAlign:'center',textShadow:'0 2px 14px rgba(0,0,0,0.65)',display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
-                <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0}}>{pname(introMyRole)}</span>
+                {pflagge(introMyRole)}<span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0}}>{pname(introMyRole)}</span>
                 {gameMode==='online'&&<span style={{flexShrink:0,fontSize:10,fontWeight:900,letterSpacing:0.5,
                   background:MC[introMyRole],color:'#fff',padding:'3px 8px',borderRadius:8,
                   boxShadow:`0 2px 8px ${MC[introMyRole]}80`}}>{t('you').toUpperCase()}</span>}
@@ -10011,7 +10019,7 @@ function App(){
                     <span className="ww-ptcap">{t('timeLabel')}</span>
                   </div>
                 )}
-                <div className="ww-pname">{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
+                <div className="ww-pname">{pflagge(p)}{pname(p)}{canTapProfile?<span style={{opacity:0.55,marginLeft:3,fontSize:11,fontWeight:900}}>{'\u2197'}</span>:null}</div>
                 {wlLands?(<div data-wl-landname={wlLands[p==='A'?0:1]} style={{fontSize:9,fontWeight:800,color:'var(--text)',opacity:0.55,letterSpacing:0.3,marginTop:1,lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{wlLandName(wlLands[p==='A'?0:1],lang)}</div>)
                   :(isRanked&&_eloVal&&(<div style={{fontSize:9,fontWeight:800,color:'var(--text)',opacity:0.55,letterSpacing:0.3,marginTop:1,lineHeight:1}}>{_eloVal+' ELO'}</div>))}
                 <div className="ww-pwalls">
