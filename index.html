@@ -878,7 +878,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=121"></script>
+<script src="js/i18n.js?v=122"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=4"></script>
@@ -3184,10 +3184,10 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
 
         {/* Konto-Übersicht */}
         <div style={{background:card,border:'1.5px solid '+border,borderRadius:14,padding:'14px 16px',marginBottom:14}}>
-          <div style={{fontSize:10,color:muted,fontWeight:700,letterSpacing:1,marginBottom:10}}>KONTO-DATEN</div>
+          <div style={{fontSize:10,color:muted,fontWeight:700,letterSpacing:1,marginBottom:10}}>{t('accountData')}</div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:12,color:muted,fontWeight:600}}>Benutzername</span>
+              <span style={{fontSize:12,color:muted,fontWeight:600}}>{t('username')}</span>
               <span style={{fontSize:13,fontWeight:800,color:txt}}>{account.name}</span>
             </div>
             {accEmail&&(
@@ -3197,11 +3197,11 @@ function ProfileScreen({account,onUpdate,onLogout,t,darkMode,goBack,xp,coins,xpS
               </div>
             )}
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:12,color:muted,fontWeight:600}}>Passwort</span>
-              <span style={{fontSize:13,fontWeight:700,color:txt,letterSpacing:2}}>{account.isGoogle?'Google-Konto':'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}</span>
+              <span style={{fontSize:12,color:muted,fontWeight:600}}>{t('password')}</span>
+              <span style={{fontSize:13,fontWeight:700,color:txt,letterSpacing:2}}>{account.isGoogle?t('googleAccount'):'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}</span>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:12,color:muted,fontWeight:600}}>Farbe</span>
+              <span style={{fontSize:12,color:muted,fontWeight:600}}>{t('chooseColor')}</span>
               <div style={{width:22,height:22,borderRadius:'50%',background:account.color,boxShadow:'0 2px 6px '+account.color+'88'}}/>
             </div>
           </div>
@@ -5201,7 +5201,7 @@ function App(){
       setChatMsgs(prev=>[...prev,{u:(d.from===0?'A':'B'),m:d.text,ts:d.ts}].slice(-30));
       setTimeout(()=>{if(chatScrollRef.current){chatScrollRef.current.scrollTop=chatScrollRef.current.scrollHeight;}},50);
     }else if(d.type==='emote'){
-      var myNrEmo=onlineRole==='A'?0:1;
+      var myNrEmo=S.current.onlineRole==='A'?0:1;
       if(d.from!==myNrEmo){
         showEmote(d.from===0?'A':'B',d.emote);
         if(!S.current.winner)setMoveHist(function(prev){return prev.concat([{type:'emote',p:d.from===0?'A':'B',emote:d.emote}]);}); // Replay zeigt auch die Emotes des Gegners (wie die eigenen, nur waehrend des Spiels)
@@ -8326,9 +8326,9 @@ function App(){
       }
     }).catch(function(e){
       if(e.code==='auth/account-exists-with-different-credential'||e.code==='auth/email-already-in-use'){
-        setAuthErr('Diese E-Mail ist bereits per E-Mail/Passwort registriert. Bitte dort anmelden.');
+        setAuthErr(t('authEmailPw'));
       }else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
-        setAuthErr('Google Login fehlgeschlagen');
+        setAuthErr(t('authGoogleFail'));
       }
     });
   };
@@ -11856,7 +11856,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
   // ── Online: Lobby beitreten (per Code-Eingabe) ──
   const joinLobby=async()=>{
     const code=joinInput.trim().toUpperCase();
-    if(!/^[A-Z0-9]{4}$/.test(code)){setJoinError('Ungültiger Code (4 Zeichen)');return;}
+    if(!/^[A-Z0-9]{4}$/.test(code)){setJoinError(t('joinCodeInvalid'));return;}
     joinByCode(code);
   };
   // ── Online: Lobby beitreten (per Code, von Liste oder Eingabe) ──
