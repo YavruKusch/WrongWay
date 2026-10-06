@@ -878,7 +878,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=120"></script>
+<script src="js/i18n.js?v=121"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=4"></script>
@@ -987,7 +987,7 @@ var WSNET={
   _versteckt:function(){ try{ return !!document.hidden; }catch(e){ return false; } },
   _melde:function(ws){ try{ if(ws.readyState===1)ws.send(JSON.stringify({type:'verdeckt',an:this._versteckt()})); }catch(e){} },
   // Beim Oeffnen einer laengeren Verbindung aufrufen: geht sie im Hintergrund auf, erfaehrt der Server es sofort.
-  _an:function(ws){ this._socks.push(ws); if(this._versteckt())this._melde(ws); },
+  _an:function(ws){ this._socks=this._socks.filter(function(w){return w.readyState<2;}); this._socks.push(ws); if(this._versteckt())this._melde(ws); },
   // fn nach ms — solange die Seite verdeckt ist aber erst beim Zurueckkommen (ein Neuaufbau im Hintergrund waere nutzlos).
   _nachher:function(fn,ms){ if(this._versteckt()){ this._wartend.push(fn); return 0; } return setTimeout(fn,ms); },
   _sichtbarkeit:function(){
@@ -4481,6 +4481,7 @@ function App(){
     const unsub=firebase.auth().onAuthStateChanged(firebaseUser=>{
       if(!firebaseUser)return;
       clearTimeout(timeout);
+      if(ref&&cb)ref.off('value',cb); // Auth-Wechsel (anonym -> Login): alten Listener abmelden, sonst haengt nach jedem Wechsel ein weiterer
       ref=window.db.ref(ADMIN_CFG_KEY);
       // NUR der Listener: dessen erstes Event liefert die Daten bereits.
       // Vorher: once() + on() = derselbe Download zweimal bei jedem App-Start.
