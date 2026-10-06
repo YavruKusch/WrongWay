@@ -878,7 +878,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=119"></script>
+<script src="js/i18n.js?v=120"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=1"></script>
 <script src="js/ai.js?v=4"></script>
@@ -2858,7 +2858,8 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
       {waehlen&&account?(
         <div data-wl="wahl" style={{position:'fixed',inset:0,zIndex:400,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end'}} onClick={function(){setWaehlen(false);setFilter('');}}>
           <div onClick={function(e){e.stopPropagation();}} style={{width:'100%',height:'82vh',boxSizing:'border-box',display:'flex',flexDirection:'column',borderRadius:'22px 22px 0 0',background:dk?'#0f172a':'#ffffff',border:'1.5px solid '+border,padding:'18px 16px calc(env(safe-area-inset-bottom,0px) + 16px)'}}>
-            <div style={{fontSize:17,fontWeight:900,color:txt,textAlign:'center',marginBottom:12}}>{t('wl_landWaehlen')}</div>
+            <div style={{fontSize:17,fontWeight:900,color:txt,textAlign:'center',marginBottom:6}}>{t('wl_landWaehlen')}</div>
+            <div data-wl="hinweis" style={{fontSize:12,fontWeight:600,color:muted,textAlign:'center',lineHeight:1.4,marginBottom:10}}>{t('wl_hinweis')}</div>
             <input data-wl="filter" value={filter} onChange={function(e){setFilter(e.target.value);}} placeholder={t('wl_landSuchen')}
               style={{width:'100%',boxSizing:'border-box',padding:'11px 14px',borderRadius:12,border:'1.5px solid '+border,background:card,color:txt,fontSize:16,fontWeight:600,marginBottom:10,fontFamily:'system-ui,-apple-system,sans-serif'}}/>
             <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
@@ -2879,6 +2880,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
             <WlFlagge land={frage} h={36}/>
             <div style={{fontSize:14,fontWeight:700,color:txt,margin:'12px 0 16px',lineHeight:1.5}}>
               {(!land?t('wl_bestaetigErst'):(frage===land?t('wl_bleibst'):t('wl_bestaetigWechsel'))).replace('{land}',wlLandName(frage,lang))}
+              <div data-wl="sichtbar" style={{fontSize:12,fontWeight:600,color:muted,marginTop:8}}>{t('wl_sichtbar')}</div>
             </div>
             <div style={{display:'flex',gap:10}}>
               <button onClick={function(){setFrage(null);}} style={{...leise,flex:1}}>{t('cancel')}</button>
