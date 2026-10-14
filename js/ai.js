@@ -249,7 +249,7 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
   const humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
-  if(aiD===1)return{type:'move',pos:aiPath[1]};
+  if(aiD===1){const gm=getMovesFrom(aiPos,humanPos,walls).find(m=>m.r===aiGoal);if(gm)return{type:'move',pos:gm};}
 
   // Easy: nimmt das Item nur wenn quasi gratis (Detour-Toleranz in shouldPickupItem niedrig)
   if(chaosItem){
@@ -274,8 +274,8 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
       if(!next)continue;
       const nh=bfsPath(humanPos,next,humGoal),na=bfsPath(aiPos,next,aiGoal);
       if(!nh||!na)continue;
-      // Gelockert: Gegner muss um ≥1 verlangsamt werden, AI darf max ≤2 leiden
-      if((nh.length-1)-humD>=1&&(na.length-1)-aiD<=2){
+      // Nur Waende, die dem Gegner mehr Schritte kosten als mir selbst (frueher durfte ich bis zu 2 verlieren: 15-40 % der Waende waren netto nutzlos)
+      if((nh.length-1)-humD-((na.length-1)-aiD)>=1){
         return{type:'barricade',walls:next};
       }
     }
@@ -290,7 +290,7 @@ function aiNormal(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
   const aiPath=bfsPath(aiPos,walls,aiGoal),humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
-  if(aiD===1)return{type:'move',pos:aiPath[1]};
+  if(aiD===1){const gm=getMovesFrom(aiPos,humanPos,walls).find(m=>m.r===aiGoal);if(gm)return{type:'move',pos:gm};}
   // Item einsammeln wenn lohnenswert
   if(chaosItem){
     const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,barrLeft,aiGoal);
@@ -361,7 +361,7 @@ function aiDuel(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,hu
       const alt=initMoves.filter(mv=>!recent.slice(0,4).some(p=>p.r===mv.r&&p.c===mv.c));
       if(alt.length>0)return{type:'move',pos:alt[0]};
     }
-    return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};
+    return m?{type:'move',pos:m}:(initMoves.length?{type:'move',pos:initMoves[0]}:null);
   };
 
   // 2) Gegner führt (humD < aiD): aggressiv blocken (70%)
@@ -422,7 +422,7 @@ function aiDuelNormal(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiG
   const aiPath=bfsPath(aiPos,walls,aiGoal),humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return{type:'move',pos:initMoves[0]||aiPos};
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
-  const advance=()=>{const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);return m?{type:'move',pos:m}:{type:'move',pos:(initMoves[0]||aiPath[1])};};
+  const advance=()=>{const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);return m?{type:'move',pos:m}:(initMoves.length?{type:'move',pos:initMoves[0]}:null);};
   if(chaosItem){const pick=shouldPickupItem(aiPos,humanPos,walls,aiPath,chaosItem,aiBarr,aiGoal);if(pick)return{type:'move',pos:pick};}
   const block=aiBarr>0?duelBestWall(aiPos,humanPos,walls,aiGoal,humGoal):null;
   // Gegner fuehrt oder gleichauf -> aggressiv blocken
@@ -742,8 +742,8 @@ function aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal=0,
 
   // Fallback: vorwärts gehen wenn nichts gefunden
   if(!bestAction){
-    const aiPath=bfsPath(aiPos,walls,aiGoal);
-    if(aiPath&&aiPath.length>1)return{type:'move',pos:aiPath[1]};
+    const aiPath=bfsPath(aiPos,walls,aiGoal),sm=aiPath&&moveTowardGoal(aiPos,humanPos,walls,aiPath);
+    if(sm)return{type:'move',pos:sm};
     const fm=getMovesFrom(aiPos,humanPos,walls);
     if(fm.length)return{type:'move',pos:fm[0]};
     return null;

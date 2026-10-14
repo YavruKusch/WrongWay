@@ -25,6 +25,8 @@ function botMerkmale(dMe, dOp, wMe, wOp) {
   ];
 }
 
+// Duell 7x7 Hard: wb ist fuer alle drei Stile -40 (Stufen-Messung 2026-10-14, 300 Partien je Gegner): ein positiver Wand-Bonus liess Mauerer/Konter
+// Waende ohne Gegenwert setzen und treten (netto nutzlose Waende 12 -> 7 %, Pendeln 3 -> 2,5 %, Siegquote gegen den alten Stand 48 -> 63 %).
 // Spielstile je Modus (race = Classic, duel9/duel7 = Duell) und Stufe. Felder:
 // g Gewichte der Merkmale, tol Zufalls-Spielraum (Zuege so nah am besten gelten als gleich gut),
 // wb Wand-Neigung, kr Strafe fuers Zuruecklaufen, vd Vorwaertsdrang, k/k1 Wand-Kandidaten im Vorausrechnen,
@@ -57,9 +59,9 @@ var BOT_STILE = {
   },
   duel7: {
     hard: [
-      {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":24,"wb":40,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1},
+      {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1},
       {"n":"Renner","g":[44.3,100,59.6,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":40,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1},
-      {"n":"Konter","g":[44.3,100,47.7,0,0,55.8],"tol":24,"wb":0,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":420000,"f":0,"fn":1}
+      {"n":"Konter","g":[44.3,100,47.7,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":420000,"f":0,"fn":1}
     ],
     normal: [
       {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":40,"wb":40,"kr":60,"vd":0,"k":3,"k1":2,"tl":4,"b":2000,"f":0.175,"fn":3},
