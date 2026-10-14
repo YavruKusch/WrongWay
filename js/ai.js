@@ -218,11 +218,18 @@ function aiNeu(stufe,aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal
   return next?{type:'barricade',walls:next}:null;
 }
 
+// Bedenkzeit des Bots vor jedem Zug: wie ein Mensch mal schneller, mal langsamer (Mittel aus zwei Zufallszahlen = meist mittig, selten ganz kurz/lang).
+// Vorher fest 500/700/1100 ms. Mindestens 500 ms, damit der Zug nie "springt".
+function aiDenkzeit(stufe){
+  const r=(Math.random()+Math.random())/2,b=stufe==='hard'?[900,1900]:stufe==='easy'?[500,1500]:[600,1500];
+  return Math.round(b[0]+(b[1]-b[0])*r);
+}
+
 function aiMove(aiPos,humanPos,walls,aiBarr,humBarr,difficulty,recentAi,chaosItem,aiGoal=0,humGoal=0){
   difficulty=difficulty||'normal';
   if(difficulty!=='easy'&&_botSpiel.an&&!chaosItem){const d=aiNeu(difficulty,aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal);if(d)return d;}
   if(difficulty==='hard')return aiHard(aiPos,humanPos,walls,aiBarr,humBarr,recentAi,chaosItem,aiGoal,humGoal);
-  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
+  if(difficulty==='easy')return aiEasy(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal,recentAi);
   return aiNormal(aiPos,humanPos,walls,aiBarr,chaosItem,aiGoal,humGoal);
 }
 
@@ -242,14 +249,22 @@ function moveTowardGoal(aiPos,humanPos,walls,aiPath){
   return null;
 }
 
-function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
-  // Schrittrichtung Richtung eigenes Ziel (oben=-1, unten=+1)
-  const fwd=aiGoal>aiPos.r?1:-1;
+// Einfach = ein ANFAENGER, kein kaputter Bot (Tunay 2026-10-14: "sehr schlecht, menschlich, jede Partie anders"). Er geht meist den kuerzesten Weg,
+// macht aber oft einen Seitenschritt statt vorwaerts (nie zurueck aufs gerade verlassene Feld), sieht einen Sieg im naechsten Zug immer, setzt
+// selten und spaet Waende (nur wenn der Gegner gleichauf oder vorne ist, nur auf dem Gegnerweg, nie mit Nettoverlust) und hoechstens 2-6 pro Partie.
+// Der Charakter (Fehlerlust, Wandlust, Wandvorrat) kommt je Partie aus _botSpiel.zw — jede Partie spielt sich anders.
+function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0,recentAi){
+  const zw=_botSpiel.zw||[];
+  const pFehler=0.14+0.08*(zw[0]||0),pWand=0.20+0.10*(zw[1]||0),vorrat=Math.max(2,4+Math.round(2*(zw[2]||0)));
+  if(_botSpiel.e0===undefined)_botSpiel.e0=barrLeft;
   const aiPath=bfsPath(aiPos,walls,aiGoal);
   const humPath=bfsPath(humanPos,walls,humGoal);
   if(!aiPath)return null;
   const aiD=aiPath.length-1,humD=humPath?humPath.length-1:999;
-  if(aiD===1){const gm=getMovesFrom(aiPos,humanPos,walls).find(m=>m.r===aiGoal);if(gm)return{type:'move',pos:gm};}
+  const legal=getMovesFrom(aiPos,humanPos,walls);
+  // Sieg im naechsten Zug: nur ueber legale Zuege (der Gegner kann auf dem Zielfeld stehen)
+  const sieg=legal.find(m=>m.r===aiGoal);
+  if(sieg)return{type:'move',pos:sieg};
 
   // Easy: nimmt das Item nur wenn quasi gratis (Detour-Toleranz in shouldPickupItem niedrig)
   if(chaosItem){
@@ -257,14 +272,10 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
     if(pick)return{type:'move',pos:pick};
   }
 
-  // Easy: Setzt jetzt deutlich häufiger Mauern, aber wählt suboptimal
-  // Mauer-Bedingungen gelockert: Gegner führt oder ist im vorderen Drittel
-  const shouldConsiderWall=barrLeft>0&&(humD<=aiD+3||humD<=6);
-  // Zufällige Chance, manchmal Mauer auch ohne starken Grund
-  const proactive=barrLeft>0&&humD<=aiD+5&&Math.random()<0.45;
-  if(shouldConsiderWall||proactive){
-    const cands=wallCandidates(humanPos,walls,5,humGoal);
-    // Zufällige Reihenfolge → suboptimale Wahl
+  // Waende: selten, nur gegen einen gleichauf liegenden oder fuehrenden Gegner, nur mit Nettogewinn >= 0 und Gegnerverlust >= 1
+  const benutzt=_botSpiel.e0-barrLeft;
+  if(barrLeft>0&&benutzt<vorrat&&humD<=aiD+2&&Math.random()<pWand){
+    const cands=wallCandidates(humanPos,walls,4,humGoal);
     for(let i=cands.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [cands[i],cands[j]]=[cands[j],cands[i]];
@@ -274,15 +285,31 @@ function aiEasy(aiPos,humanPos,walls,barrLeft,chaosItem,aiGoal=0,humGoal=0){
       if(!next)continue;
       const nh=bfsPath(humanPos,next,humGoal),na=bfsPath(aiPos,next,aiGoal);
       if(!nh||!na)continue;
-      // Nur Waende, die dem Gegner mehr Schritte kosten als mir selbst (frueher durfte ich bis zu 2 verlieren: 15-40 % der Waende waren netto nutzlos)
-      if((nh.length-1)-humD-((na.length-1)-aiD)>=1){
-        return{type:'barricade',walls:next};
-      }
+      const gewinn=(nh.length-1)-humD,kosten=(na.length-1)-aiD;
+      if(gewinn>=1&&gewinn-kosten>=0)return{type:'barricade',walls:next};
     }
   }
+
+  // Seitenschritt statt vorwaerts (menschlicher Fehler): ein legaler Zug, der den Abstand zum Ziel nicht verkuerzt, aber auch nicht
+  // zurueck auf eines der letzten Felder fuehrt
   const m=moveTowardGoal(aiPos,humanPos,walls,aiPath);
-  if(m)return{type:'move',pos:m};
-  const fallback=getMovesFrom(aiPos,humanPos,walls);
+  if(Math.random()<pFehler){
+    const letzte=(recentAi||[]).slice(0,3);
+    const seit=legal.filter(c=>{
+      if(letzte.some(p=>p.r===c.r&&p.c===c.c))return false;
+      if(m&&c.r===m.r&&c.c===m.c)return false;
+      const pc=bfsPath(c,walls,aiGoal);
+      return pc&&pc.length-1===aiD;
+    });
+    if(seit.length)return{type:'move',pos:seit[Math.floor(Math.random()*seit.length)]};
+  }
+  if(m){
+    // mehrere gleich kurze Wege: einen zufaellig waehlen (statt immer denselben) — jede Partie sieht anders aus
+    const vor=legal.filter(c=>{const pc=bfsPath(c,walls,aiGoal);return pc&&pc.length-1===aiD-1;});
+    if(vor.length>1)return{type:'move',pos:vor[Math.floor(Math.random()*vor.length)]};
+    return{type:'move',pos:m};
+  }
+  const fallback=legal;
   return fallback.length?{type:'move',pos:fallback[0]}:null;
 }
 
