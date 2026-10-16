@@ -878,7 +878,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=125"></script>
+<script src="js/i18n.js?v=126"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=2"></script>
 <script src="js/ai.js?v=6"></script>
@@ -13388,7 +13388,8 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
     const wasOver=St.current.over;
     setGs(function(old){return Object.assign({},old||{},d);}); // seat/rows/cols/mitte kommen nur in den Antworten an den Einzelnen, der Rundruf traegt sie nicht
     if(d.rej&&was)flashMsg(t('invalidPos'),1500);
-    if(d.skipped&&St.current.seat>=0&&d.skipped.indexOf(St.current.seat)>=0)flashMsg(t('khSkipped'),2500);
+    if(d.zuglimit!==undefined&&d.zuglimit!==null&&d.zuglimit===St.current.seat&&!(d.timeout===d.zuglimit))flashMsg(t('khZugzeitDu'),3000);
+    else if(d.skipped&&St.current.seat>=0&&d.skipped.indexOf(St.current.seat)>=0)flashMsg(t('khSkipped'),2500);
     if(!wasOver&&d.winner!==null&&d.winner!==undefined&&d.winner===St.current.seat)playSound('win');
     if(St.current.sub!=='game')setSub('game');
   };
@@ -13644,6 +13645,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
   const nameOf=i=>names[i]||colName(i);
   const turnName=gs.turn>=0?nameOf(gs.turn):'';
   const myMs=seat>=0?clkOf(seat):0;
+  const zrMs=(!over&&gs.turn>=0&&typeof gs.zr==='number')?Math.max(0,gs.zr-(nowMs-recvRef.current)):-1;   // Rest der Zugzeit des Spielers am Zug (der Server schickt zr, Tunay-Wahl 2026-10-16)
   const boardBg=darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)';
   const lineCol=darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)';
   const boardW=C*CELLK;
@@ -13679,6 +13681,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
       {!over&&<div data-e2e="kh-status" style={{position:'relative',zIndex:2,fontSize:11,fontWeight:800,letterSpacing:0.5,marginBottom:6,padding:'4px 12px',borderRadius:8,
         background:gs.turn>=0?(KH_COL[gs.turn]+'22'):'rgba(100,116,139,0.15)',color:gs.turn>=0?KH_COL[gs.turn]:'var(--subtle)'}}>
         {amOut?t('khOutTime'):(myTurn?(t('khYourTurn')+' · '+khFmt(myMs)):(turnName?(turnName+' '+t('khTurnOf')):'…'))}
+        {zrMs>=0&&!amOut&&<span data-e2e="kh-zug" style={{marginLeft:8,fontVariantNumeric:'tabular-nums',color:zrMs<=10000?'#ef4444':'inherit'}}>{'· '+t('khMoveShort')+' '+Math.ceil(zrMs/1000)+' '+t('secLabel')}</span>}
       </div>}
 
       {/* Brett (gedreht, damit man selbst unten sitzt) */}
