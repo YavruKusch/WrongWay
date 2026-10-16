@@ -878,12 +878,12 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=122"></script>
+<script src="js/i18n.js?v=123"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=2"></script>
 <script src="js/ai.js?v=6"></script>
 <script src="js/sound.js"></script>
-<script src="js/werbung.js?v=4"></script>
+<script src="js/werbung.js?v=5"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -1032,8 +1032,8 @@ var WSNET={
     this._startHb();
   },
   // Raum per Code beitreten (Liste, Code-Eingabe, Einladung, ?join-Link)
-  joinRoom:function(code,meta,onState){
-    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this.live=false; this._jr=false;
+  joinRoom:function(code,meta,onState,mode){
+    this.roomId=code; this.role='B'; this.onState=onState; this.settings=null; this.meta=meta||null; this.token=null; this.live=false; this._jr=false; this.joinMode=mode||null;
     this._dbg('beitritt '+code);
     if(this.sock&&this.sock.readyState===1){ this._send(this._joinMsg()); }
     else{ this._open(); }
@@ -1054,7 +1054,7 @@ var WSNET={
   confirmRanked:function(){ try{ this._send({type:'ranked_confirm'}); }catch(e){} },
   declineRanked:function(){ if(this.live)return; try{ this._send({type:'ranked_decline'}); }catch(e){} this.roomId=null; this.token=null; this.role=null; this.rankedOn=true; },
   _createMsg:function(){ var m={type:'create_room',roomId:this.roomId,settings:this.settings||{}}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
-  _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
+  _joinMsg:function(){ var m={type:'join_room',code:this.roomId}; if(this.joinMode)m.mode=this.joinMode; if(this.meta){ m.name=this.meta.name; m.akey=this.meta.akey; } if(this.equip)m.equip=this.equip; return m; },
   // Warteraum bewusst verlassen: Server raeumt sofort auf, Code wird frei
   leaveRoom:function(){
     try{ this._send({type:'leave_room'}); }catch(e){}
@@ -1158,7 +1158,7 @@ var WSNET={
       if(d.type==='state'&&d.winner!==undefined&&d.winner!==null)self._dbg('Runde vorbei');
       if(d.type==='error')self._dbg('FEHLER: '+(d.grund||'?'));
       if(d.type==='room_created'||d.type==='room_joined'||d.type==='match_start'||d.type==='resync'){ if(d.token){ self.token=d.token; self._saveResume(); } }
-      if((d.type==='match_start'||(d.type==='resync'&&d.gestartet)||d.type==='tv2_match'||(d.type==='tv2_resync'&&d.phase==='game'))&&self.roomId)self.live=true;
+      if((d.type==='match_start'||(d.type==='resync'&&d.gestartet)||d.type==='tv2_match'||(d.type==='tv2_resync'&&d.phase==='game')||d.type==='kh_match'||(d.type==='kh_resync'&&d.phase==='game'))&&self.roomId)self.live=true;
       if(d.type==='reconnect_failed'){ self.token=null; self.live=false; self._clearResume(); self._dbg('reconnect_failed - Raum/Token weg'); } // toter Token: nie wieder damit reconnecten
       if(d.type==='ranked_found'){ self.roomId=d.code; self.token=d.token||null; self.role=(d.deineNummer===0?'A':'B'); self.rankedOn=false; self._lastOppRating=d.oppRating||1000; self._lastRankedMode=d.rankedMode||d.mode||'classic'; self._saveResume(); if(!d.isLargeGap){ try{ self._send({type:'ranked_confirm'}); }catch(e){} } }
       if(d.type==='ranked_denied'){ self.rankedOn=false; }
@@ -3998,6 +3998,8 @@ function App(){
   const[lobbyId,setLobbyId]=useState(null);
   const[lobbyList,setLobbyList]=useState([]);
   const[tv2JoinCode,setTv2JoinCode]=useState(null); // Code einer 2v2-Lobby, die in der normalen Lobby-Liste angetippt wurde
+  const[khJoinCode,setKhJoinCode]=useState(null); // Code einer King-of-the-Hill-Lobby aus der normalen Lobby-Liste
+  const[khResume,setKhResume]=useState(false); // Rueckkehr nach Neuladen: Raum + Token liegen schon in WSNET
   const[serverOnline,setServerOnline]=useState(true);
   // WS-Lobby: Router fuer Server-Nachrichten VOR Match-Start. Das Trampolin ist stabil,
   // der Inhalt wird pro Render frisch zugewiesen (keine Stale-Closures).
@@ -4582,6 +4584,7 @@ function App(){
   };
   const changeLang=l=>{setLang(l);try{localStorage.setItem('ww_lang',l);}catch{}};
   var feat=function(key){return !!(adminCfg.features&&adminCfg.features[key]);};
+  var khAn=!(adminCfg.features&&adminCfg.features.kinghill===false); // King of the Hill: an, solange der Schalter nicht ausdruecklich auf aus steht
 
   const[pA,setPA]=useState({r:ROWS-1,c:2});
   const[pB,setPB]=useState({r:ROWS-1,c:6});
@@ -5335,6 +5338,8 @@ function App(){
   // Plain-Assignment pro Render (kein Hook, kein TDZ) — alle referenzierten Funktionen existieren hier bereits.
   wsLobbyMsgRef.current=function(d){
     if(!d||!d.type)return;
+    // King of the Hill: Seite neu geladen / Rueckkehr aus dem Hintergrund mit gespeichertem Raum-Token. Der Bildschirm holt sich den Stand selbst (sync).
+    if((d.type==='kh_resync'||d.type==='kh_lobby'||d.type==='kh_match')&&S.current.screen!=='kinghill'){ setKhJoinCode(null); setKhResume(true); setNavDir('fwd'); setScreen('kinghill'); return; }
     if(d.type==='ranked_denied'){ try{WSNET.cancelRanked();}catch(e){} setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='ranked_cancelled'){ try{WSNET.close();}catch(e){} setFlash(t('wsRoomGone')); setNavDir('back'); setScreen('menu'); return; }
     if(d.type==='session_replaced'){ try{WSNET.close();}catch(e){} setFlash(t('sessionReplaced')); setNavDir('back'); setScreen('menu'); return; }
@@ -6285,10 +6290,11 @@ function App(){
       var now=Date.now();
       setLobbyList((lobbies||[]).map(function(L){
         if(L.mode==='2v2')return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),tv2:true,count:L.count||1};
+        if(L.mode==='kh')return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),kh:true,count:L.count||1};
         var st=L.settings||{};
         return {id:L.code,hostName:L.name||'',ts:now-((L.age||0)*1000),tm:st.tm,ch:st.ch?1:0,br:st.barr,map:st.map,dp:st.dp,hm:st.hm?1:0};
       }));
-    },wsLobbyTrampRef.current,'alle');
+    },wsLobbyTrampRef.current,'komplett');
     return function(){WSNET.stopBrowse();};
   },[screen]);
 
@@ -7052,6 +7058,9 @@ function App(){
   // ── 2v2 (Beta) Mount ──
   if(screen==='twovtwo')return <TwoVTwo t={t} darkMode={darkMode} account={account} joinCode={tv2JoinCode} onJoinCodeUsed={()=>setTv2JoinCode(null)} onRecordResult={(won)=>{const acc=accRef.current;if(!acc)return;const ns=applyMatchResult(acc.stats||freshAccountStats(),won,'2v2');const na={...acc,stats:ns};setAccount(na);saveAccountProfile(acc.key,{stats:ns});}} onExit={()=>{setTv2JoinCode(null);setNavDir('back');setScreen('menu');}}/>;
 
+  // ── King of the Hill (4 Spieler) Mount ──
+  if(screen==='kinghill')return <KingHill t={t} darkMode={darkMode} account={account} joinCode={khJoinCode} resume={khResume} onJoinCodeUsed={()=>setKhJoinCode(null)} onExit={()=>{setKhJoinCode(null);setKhResume(false);setNavDir('back');setScreen('menu');}}/>;
+
   // ── MENU ──────────────────────────────────────────────────
   if(screen==='menu'){
     // Config noch nicht geladen — Ladescreen
@@ -7348,6 +7357,10 @@ function App(){
           icon={<PeopleIcon size={19} color="#fff"/>} iconBg="linear-gradient(135deg,#ef4444,#8b5cf6)"
           title={'2 vs 2'} desc={t('teamModeDesc')}
           onClick={()=>{setNavDir('fwd');setScreen('twovtwo');}}/>}
+        {khAn&&<MenuItem
+          icon={<CrownIcon size={19} color="#fff"/>} iconBg="linear-gradient(135deg,#f97316,#ef4444)"
+          title={t('khTitle')} desc={t('khMenuDesc')}
+          onClick={()=>{setKhResume(false);setKhJoinCode(null);setNavDir('fwd');setScreen('kinghill');}}/>}
         {feat('local')&&<MenuItem
           icon={<PhoneIcon size={19}/>} iconBg="linear-gradient(135deg,#14b8a6,#0d9488)"
           title={t('localPlay')} desc={t('localDesc')}
@@ -8606,7 +8619,7 @@ function App(){
   );
 
   // ── ONLINE ──────────────────────────────────────────────
-  const lobbyShown=lobbyList.filter(function(l){return !l.tv2||feat('twovtwo');});
+  const lobbyShown=lobbyList.filter(function(l){return (!l.tv2||feat('twovtwo'))&&(!l.kh||khAn);});
   if(screen==='online') return (
     <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
       <MenuBG dark={darkMode}/>
@@ -8697,21 +8710,21 @@ function App(){
                 const isClassic=tm.indexOf('classic-')===0;
                 const isBlitz=tm.indexOf('blitz-')===0;
                 return(
-                  <div key={l.id} onClick={()=>{if(l.tv2){setTv2JoinCode(l.id);setNavDir('fwd');setScreen('twovtwo');}else joinLobby(l.id);}}
+                  <div key={l.id} onClick={()=>{if(l.kh){setKhResume(false);setKhJoinCode(l.id);setNavDir('fwd');setScreen('kinghill');}else if(l.tv2){setTv2JoinCode(l.id);setNavDir('fwd');setScreen('twovtwo');}else joinLobby(l.id);}}
                     style={{padding:'10px 12px',background:'var(--bg)',borderRadius:9,
                       border:'1px solid var(--border-soft)',cursor:'pointer',
                       transition:'all 0.15s'}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:l.tm||l.ch||l.tv2?6:0}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:l.tm||l.ch||l.tv2||l.kh?6:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:10}}>
-                        <div style={{width:30,height:30,borderRadius:8,background:l.tv2?'linear-gradient(135deg,#ef4444,#8b5cf6)':'linear-gradient(135deg,#ef4444,#3b82f6)',
+                        <div style={{width:30,height:30,borderRadius:8,background:l.kh?'linear-gradient(135deg,#f97316,#ef4444)':l.tv2?'linear-gradient(135deg,#ef4444,#8b5cf6)':'linear-gradient(135deg,#ef4444,#3b82f6)',
                           display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,
-                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>{l.tv2?<PeopleIcon size={16} color="#fff"/>:<SwordsIcon size={16} color="#fff"/>}</div>
+                          boxShadow:'0 2px 6px rgba(0,0,0,0.12)'}}>{l.kh?<CrownIcon size={16} color="#fff"/>:l.tv2?<PeopleIcon size={16} color="#fff"/>:<SwordsIcon size={16} color="#fff"/>}</div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:0.5}}>
                             {t('lobby')} {l.id.slice(0,4).toUpperCase()}
                           </div>
                           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:1}}>
-                            {ageLabel} · {l.tv2?(l.count+'/4'):'1/2'}
+                            {ageLabel} · {(l.tv2||l.kh)?(l.count+'/4'):'1/2'}
                           </div>
                         </div>
                       </div>
@@ -8724,6 +8737,11 @@ function App(){
                     {l.tv2&&(
                       <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
                         <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,background:'rgba(234,88,12,0.15)',color:'#c2410c'}}>{'2 vs 2'}</div>
+                      </div>
+                    )}
+                    {l.kh&&(
+                      <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:40}}>
+                        <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,background:'rgba(249,115,22,0.15)',color:'#c2410c'}}>{t('khTitle')}</div>
                       </div>
                     )}
                     {(isClassic||isBlitz||l.ch||l.br||l.map)&&(
@@ -11050,8 +11068,8 @@ function Wall({wkey,color,opacity,animate,golden,steel,steelColor,wandFarbe}){ /
     {!golden&&<div className="ww-wall-gloss"/>}
   </div>;
 }
-function Wall2({wkey,color,opacity,animate}){
-  const p=wallPos2(wkey,CELL2);
+function Wall2({wkey,color,opacity,animate,cell}){
+  const p=wallPos2(wkey,cell||CELL2);
   const isH=wkey[0]==='H';
   const enterAnim=isH?'wall-enter-h':'wall-enter-v';
   return <div style={{position:'absolute',...p,background:color,
@@ -13020,6 +13038,621 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
               left:ghostPos.x-(dragging.orient==='H'?CELL2:WW2/2),
               top:ghostPos.y-(dragging.orient==='V'?CELL2:WW2/2)-90,
               boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
+      )}
+    </div>
+  );
+}
+
+// ── King of the Hill (4 Spieler, 11x11, Ziel = Mitte) ─────────────────────────────────────────────────────────
+// Browser-Gegenstueck zur App. Der Server (kinghill.js) entscheidet alles; der Browser zeigt nur an und sendet kh_move/kh_wall mit der
+// Stand-Version. Farben fest nach Platz wie in der App (Rot oben, Blau rechts, Gruen unten, Orange links): der Browser hat keinen Shop,
+// und vier verschiedene Farben halten die Spieler auseinander. Ungewertet (keine Coins/XP/ELO). Aufbau und Stil wie 2v2.
+const CELLK=Math.max(24,Math.min(36,Math.floor((Math.min(window.innerWidth,520)-42)/11)));
+const KH_COL=['#ef4444','#3b82f6','#22c55e','#f97316'];
+const KH_DARK=['#7f1d1d','#1e3a5f','#14532d','#9a3412'];
+const KH_ROT=[180,90,0,270]; // Drehung des Bretts, damit der eigene Platz unten sitzt (Platz 0 oben, 1 rechts, 2 unten, 3 links)
+// Hat dieses Feld einen Weg zur Mitte? (Breitensuche ueber die Waende, Figuren zaehlen nicht - wie im Server)
+function khHasWay(pos,walls,R,C,m){
+  if(pos.r===m.r&&pos.c===m.c)return true;
+  const vis=new Uint8Array(R*C),q=[pos.r*C+pos.c],ds=[[-1,0],[1,0],[0,-1],[0,1]];
+  vis[q[0]]=1;
+  for(let h=0;h<q.length;h++){
+    const r=(q[h]/C)|0,c=q[h]%C;
+    for(let d=0;d<4;d++){
+      const nr=r+ds[d][0],nc=c+ds[d][1];
+      if(nr<0||nr>=R||nc<0||nc>=C||vis[nr*C+nc]||edgeBlocked(r,c,nr,nc,walls))continue;
+      if(nr===m.r&&nc===m.c)return true;
+      vis[nr*C+nc]=1;q.push(nr*C+nc);
+    }
+  }
+  return false;
+}
+// Mauer legal? Geometrie + JEDE nicht ausgeschiedene Figur behaelt einen Weg zur Mitte (der Server prueft dasselbe, hier nur fuer Vorschau/Sofort-Rueckmeldung)
+function khWallOk(key,walls,tokens,out,R,C,m){
+  if(!wallGeomOk2(key,walls))return false;
+  const nx=new Set(walls);nx.add(key);
+  for(let i=0;i<tokens.length;i++){if(!tokens[i]||(out&&out[i]))continue;if(!khHasWay(tokens[i],nx,R,C,m))return false;}
+  return true;
+}
+function khFmt(ms){const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
+function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
+  const[sub,setSub]=React.useState('start'); // start | lobby | game
+  const[lobbyCode,setLobbyCode]=React.useState('');
+  const[players,setPlayers]=React.useState([]); // [{name,on,host}] in Beitrittsreihenfolge
+  const[isHost,setIsHost]=React.useState(false);
+  const[loading,setLoading]=React.useState(false);
+  const[joinInput,setJoinInput]=React.useState('');
+  const[error,setError]=React.useState('');
+  const[flash,setFlash]=React.useState('');
+  const[codeFlash,setCodeFlash]=React.useState(false);
+  const[openLobbies,setOpenLobbies]=React.useState([]);
+  const[listLoading,setListLoading]=React.useState(false);
+  const[gs,setGs]=React.useState(null); // letzter Stand vom Server
+  const[,setTick]=React.useState(0);    // nur zum Neuzeichnen der Uhr
+  const[dragging,setDragging]=React.useState(null); // {orient: 'H'|'V'} in BILDSCHIRM-Richtung
+  const[ghostPos,setGhostPos]=React.useState({x:0,y:0});
+  const[previewKey,setPreviewKey]=React.useState(null);
+  const[previewValid,setPreviewValid]=React.useState(true);
+  const[pendingWall,setPendingWall]=React.useState(null); // Einstellung 'Wand bestaetigen': {key,x,y}
+  const[leaveAsk,setLeaveAsk]=React.useState(false);
+  const[conn,setConn]=React.useState(true);
+  const wsMsgRef=React.useRef(null);
+  const wsTrampRef=React.useRef(null);
+  if(!wsTrampRef.current){wsTrampRef.current=function(d){if(wsMsgRef.current)wsMsgRef.current(d);};}
+  const wsActiveRef=React.useRef(false);
+  const mountedRef=React.useRef(true);
+  const srTimerRef=React.useRef(null);
+  const gridRef=React.useRef(null);
+  const prevRef=React.useRef(null);             // Schluessel der Wand-Vorschau unter dem Finger
+  const pendRef=React.useRef({v:-1,at:0});      // gesendete Aktion, deren Antwort noch aussteht
+  const recvRef=React.useRef(0);                // Zeitpunkt des letzten Stands: die Uhr zaehlt von dort herunter
+  const guestRef=React.useRef('Gast-'+Math.random().toString(36).slice(2,6).toUpperCase());
+  const St=React.useRef({});
+
+  const seat=gs&&typeof gs.seat==='number'?gs.seat:-1;
+  const R=gs&&gs.rows?gs.rows:11,C=gs&&gs.cols?gs.cols:11,M=gs&&gs.mitte?gs.mitte:{r:5,c:5};
+  const over=!!gs&&gs.winner!==null&&gs.winner!==undefined;
+  const walls=new Set(gs&&gs.walls?gs.walls:[]);
+  const rot=seat>=0?KH_ROT[seat]:0;
+  const out=gs&&gs.out?gs.out:[];
+  const amOut=seat>=0&&!!out[seat];
+  const myTurn=!!gs&&!over&&seat>=0&&gs.turn===seat&&!amOut;
+  const cur=gs&&seat>=0&&gs.tokens?gs.tokens[seat]:null;
+  const others=gs&&gs.tokens?gs.tokens.filter(function(p,i){return p&&i!==seat&&!out[i];}):[];
+  const canPlace=myTurn&&!!gs.barr&&gs.barr[seat]>0;
+  const dots=myTurn&&!dragging&&cur?validMoves2(cur,others,walls,R,C):[];
+  const sz=Math.round(CELLK*0.66),off=(CELLK-sz)/2;
+  St.current={gs:gs,seat:seat,sub:sub,over:over,myTurn:myTurn,canPlace:canPlace,walls:walls,R:R,C:C,M:M,rot:rot,out:out};
+
+  const wsMeta=()=>({name:(account&&account.name)?account.name:guestRef.current,akey:(account&&account.key)?account.key:null});
+  const resetAll=()=>{
+    setGs(null);setPlayers([]);setLobbyCode('');setIsHost(false);setLoading(false);setFlash('');setLeaveAsk(false);
+    setPendingWall(null);setPreviewKey(null);setDragging(null);pendRef.current={v:-1,at:0};
+  };
+  const flashMsg=(txt,ms)=>{setFlash(txt);setTimeout(function(){if(mountedRef.current)setFlash('');},ms||2200);};
+
+  // ── Lobby erstellen / beitreten ──
+  const createLobby=()=>{
+    setError('');resetAll();setLoading(true);
+    wsActiveRef.current=true;
+    WSNET.openLobby(randId(4),{mode:'kh'},wsMeta(),wsTrampRef.current);
+  };
+  const joinByCode=(code)=>{
+    setError('');resetAll();setLoading(true);
+    wsActiveRef.current=true;
+    WSNET.joinRoom(code,wsMeta(),wsTrampRef.current,'kh');
+  };
+  const joinTyped=()=>{
+    const code=joinInput.trim().toUpperCase();
+    if(!/^[A-Z0-9]{4}$/.test(code)){setError(t('joinCodeInvalid'));return;}
+    joinByCode(code);
+  };
+  const startGame=()=>{try{WSNET._send({type:'kh_start'});}catch(e){}};
+  const leaveToStart=()=>{
+    wsActiveRef.current=false;
+    try{WSNET.leaveRoom();}catch(e){}
+    resetAll();setSub('start');
+  };
+  const exitToMenu=()=>{
+    wsActiveRef.current=false;
+    try{WSNET.leaveRoom();}catch(e){}
+    onExit();
+  };
+  const backPressed=()=>{
+    if(sub==='start'){onExit();return;}
+    if(sub==='lobby'){leaveToStart();return;}
+    if(over||amOut){exitToMenu();return;}
+    setLeaveAsk(true);
+  };
+
+  // ── Eingaben: Zug und Mauer (nur senden, der Server antwortet mit dem neuen Stand) ──
+  const pend=()=>{const p=pendRef.current,s=St.current.gs;return !!s&&p.v===s.v&&Date.now()-p.at<3000;};
+  const moveTo=(r,c)=>{
+    const s=St.current;
+    if(!s.myTurn||dragging||pend())return;
+    if(!dots.some(function(m){return m.r===r&&m.c===c;}))return;
+    playSound('move');
+    pendRef.current={v:s.gs.v,at:Date.now()};
+    try{WSNET._send({type:'kh_move',to:{r:r,c:c},v:s.gs.v});WSNET._probe();}catch(e){}
+  };
+  const placeWall=(key)=>{
+    const s=St.current;
+    if(!s.canPlace||pend())return;
+    if(!khWallOk(key,s.walls,s.gs.tokens||[],s.out,s.R,s.C,s.M)){flashMsg(t('invalidPos'),1800);return;}
+    playSound('wall');
+    pendRef.current={v:s.gs.v,at:Date.now()};
+    try{WSNET._send({type:'kh_wall',key:key,v:s.gs.v});WSNET._probe();}catch(e){}
+  };
+  const startDrag=(e,orient)=>{
+    if(!canPlace)return;e.preventDefault();
+    const pt=e.touches?e.touches[0]:e;
+    setPendingWall(null);setDragging({orient:orient});setGhostPos({x:pt.clientX,y:pt.clientY});
+  };
+  const confirmPendingWall=()=>{if(pendingWall)placeWall(pendingWall.key);setPendingWall(null);setPreviewKey(null);prevRef.current=null;};
+  const cancelPendingWall=()=>{setPendingWall(null);setPreviewKey(null);prevRef.current=null;};
+
+  // ── Wand ziehen (Bildschirm-Punkt -> Brett-Punkt ueber die Drehung des Bretts) ──
+  React.useEffect(()=>{
+    if(!dragging)return;
+    const OFFSET=90;
+    const toBoard=(x,y)=>{
+      if(!gridRef.current)return null;
+      const rect=gridRef.current.getBoundingClientRect();
+      const k=((St.current.rot/90)|0)%4,co=[1,0,-1,0][k],si=[0,1,0,-1][k];
+      const dx=x-(rect.left+rect.width/2),dy=y-(rect.top+rect.height/2),hs=rect.width/2;
+      return{x:hs+(co*dx+si*dy),y:hs+(-si*dx+co*dy),rect:rect};
+    };
+    const boardOrient=()=>{const odd=((St.current.rot/90)|0)%2===1;return odd?(dragging.orient==='H'?'V':'H'):dragging.orient;};
+    const keyAt=(x,y)=>{
+      const s=St.current,rel=toBoard(x,y-OFFSET);
+      if(!rel)return null;
+      const inZone=y<=rel.rect.bottom+90&&y>=rel.rect.top-20;
+      if(!inZone||rel.x<0||rel.x>s.C*CELLK||rel.y<-CELLK||rel.y>s.R*CELLK+CELLK)return null;
+      return snapWall2(rel.x,rel.y,boardOrient(),s.R,s.C,CELLK);
+    };
+    const onMove=(x,y)=>{
+      setGhostPos({x:x,y:y});
+      const key=keyAt(x,y);
+      prevRef.current=key;setPreviewKey(key);
+      if(key){const s=St.current;setPreviewValid(khWallOk(key,s.walls,s.gs.tokens||[],s.out,s.R,s.C,s.M));}
+    };
+    const onEnd=(x,y)=>{
+      const key=keyAt(x,y)||prevRef.current;
+      if(key){
+        const s=St.current;
+        if(window.__wandBest&&khWallOk(key,s.walls,s.gs.tokens||[],s.out,s.R,s.C,s.M)){
+          // Einstellung 'Wand bestaetigen': Vorschau bleibt stehen, Haekchen setzt sie, Kreuz verwirft sie
+          setPendingWall({key:key,x:x,y:y-OFFSET-CELLK-46});setDragging(null);return;
+        }
+        placeWall(key);
+      }
+      setDragging(null);setPreviewKey(null);prevRef.current=null;
+    };
+    const mm=e=>onMove(e.clientX,e.clientY);
+    const mu=e=>onEnd(e.clientX,e.clientY);
+    const tmv=e=>{e.preventDefault();const p=e.touches[0];onMove(p.clientX,p.clientY);};
+    const te=e=>{e.preventDefault();const p=e.changedTouches[0];onEnd(p.clientX,p.clientY);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+    document.addEventListener('touchmove',tmv,{passive:false});document.addEventListener('touchend',te);
+    return function(){document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('touchmove',tmv);document.removeEventListener('touchend',te);};
+  },[dragging]);
+
+  // ── Server-Nachrichten (Plain-Assignment NACH allen Deklarationen) ──
+  const applyState=(d)=>{
+    const was=pendRef.current.v>=0;
+    pendRef.current={v:-1,at:0};
+    recvRef.current=Date.now();
+    const wasOver=St.current.over;
+    setGs(function(old){return Object.assign({},old||{},d);}); // seat/rows/cols/mitte kommen nur in den Antworten an den Einzelnen, der Rundruf traegt sie nicht
+    if(d.rej&&was)flashMsg(t('invalidPos'),1500);
+    if(d.skipped&&St.current.seat>=0&&d.skipped.indexOf(St.current.seat)>=0)flashMsg(t('khSkipped'),2500);
+    if(!wasOver&&d.winner!==null&&d.winner!==undefined&&d.winner===St.current.seat)playSound('win');
+    if(St.current.sub!=='game')setSub('game');
+  };
+  wsMsgRef.current=function(d){
+    if(!d||!d.type)return;
+    if(d.type==='ws_closed'){setConn(false);return;}
+    setConn(true);
+    if(d.type==='ws_open')return;
+    if(d.type==='room_created'||d.type==='room_joined'){
+      setLobbyCode(d.code);
+      if(WSNET.roomId!==d.code)WSNET.roomId=d.code;
+      setError('');
+      return;
+    }
+    if(d.type==='kh_lobby'){
+      setPlayers(d.players||[]);setIsHost(!!d.host);setLoading(false);
+      if(d.code)setLobbyCode(d.code);
+      if(St.current.sub!=='game')setSub('lobby');
+      return;
+    }
+    if(d.type==='kh_match'){
+      setLoading(false);setFlash('');
+      applyState(d);
+      return;
+    }
+    if(d.type==='kh_state'){applyState(d);return;}
+    if(d.type==='kh_resync'){
+      if(d.phase==='game')applyState(d);
+      return; // phase 'lobby': der Server schickt direkt danach kh_lobby
+    }
+    if(d.type==='error'){
+      const g=d.grund||'';
+      if(g==='raum nicht gefunden'||g==='raum nicht verfuegbar'){setError(t('tv2NotFound'));setLoading(false);wsActiveRef.current=false;try{WSNET.leaveRoom();}catch(e){}}
+      else if(g==='raum voll'){setError(t('lobbyFull4'));setLoading(false);wsActiveRef.current=false;try{WSNET.leaveRoom();}catch(e){}}
+      else if(g==='falscher modus'){setError(t('khWrongMode'));setLoading(false);wsActiveRef.current=false;try{WSNET.leaveRoom();}catch(e){}}
+      else if(g==='nur host')flashMsg(t('khHostOnly'),2200);
+      else if(g==='spieler fehlen')flashMsg(t('khNeed4'),2500);
+      else if(g==='spieler getrennt')flashMsg(t('tv2NotAllOn'),2500);
+      else if(St.current.sub==='start'&&loading){setError(t('khJoinFail'));setLoading(false);}
+      return;
+    }
+    if(d.type==='session_replaced'){
+      if(St.current.sub==='lobby'||St.current.sub==='game'){
+        wsActiveRef.current=false;
+        try{WSNET.close();}catch(e){}
+        resetAll();setSub('start');setError(t('sessionReplaced'));
+        srTimerRef.current=setTimeout(function(){srTimerRef.current=null;if(mountedRef.current)onExit();},1800); // Takeover: kurz Meldung, dann Hauptmenue
+      }
+      return;
+    }
+    if(d.type==='reconnect_failed'){
+      if(St.current.sub==='lobby'||St.current.sub==='game'||St.current.sub==='start'){
+        wsActiveRef.current=false;
+        try{WSNET.close();}catch(e){}
+        resetAll();setSub('start');setError(t('tv2ConnLost'));
+      }
+      return;
+    }
+  };
+
+  // Beitritt aus der Lobby-Liste des Hauptmenues bzw. Rueckkehr nach Neuladen/Seitenwechsel (Raum + Token liegen schon in WSNET)
+  React.useEffect(()=>{
+    if(resume){
+      wsActiveRef.current=true;WSNET.onState=wsTrampRef.current;setLoading(true);
+      if(WSNET.roomId)setLobbyCode(WSNET.roomId);
+      try{WSNET.requestSync();}catch(e){}
+      return;
+    }
+    if(joinCode){if(onJoinCodeUsed)onJoinCodeUsed();joinByCode(joinCode);}
+  },[]);
+
+  // Liste offener King-of-the-Hill-Lobbys (nur auf dem Startbildschirm)
+  React.useEffect(()=>{
+    if(sub!=='start'||(resume&&loading))return;
+    setListLoading(true);
+    WSNET.startBrowse(function(list){
+      const o=[],arr=list||[];
+      for(let i=0;i<arr.length;i++){if(arr[i].mode==='kh')o.push({code:arr[i].code,count:arr[i].count||1});}
+      setOpenLobbies(o);setListLoading(false);
+    },wsTrampRef.current,'kh');
+    return function(){WSNET.stopBrowse();};
+  },[sub,loading]);
+
+  // Uhr: zeichnet zweimal pro Sekunde neu, solange gespielt wird
+  React.useEffect(()=>{
+    if(sub!=='game'||over)return;
+    const iv=setInterval(function(){setTick(function(n){return n+1;});},500);
+    return function(){clearInterval(iv);};
+  },[sub,over]);
+
+  // Anti-Deadlock wie 2v2: wer nicht dran ist (oder dessen Aktion ohne Antwort blieb), holt alle 4 s den echten Stand; requestSync prueft die Leitung mit
+  React.useEffect(()=>{
+    if(sub!=='game')return;
+    const iv=setInterval(function(){
+      const s=St.current;
+      if(!s.gs||s.over||s.out[s.seat])return;
+      if(s.myTurn&&!(pendRef.current.v>=0&&Date.now()-pendRef.current.at>=3000))return;
+      try{WSNET.requestSync();}catch(e){}
+      try{if(!WSNET.sock||WSNET.sock.readyState!==1)WSNET._open();}catch(e){}
+    },4000);
+    return function(){clearInterval(iv);};
+  },[sub]);
+
+  // Beim Verlassen der Komponente sauber abmelden
+  React.useEffect(()=>{
+    return function(){
+      mountedRef.current=false;
+      if(srTimerRef.current){clearTimeout(srTimerRef.current);srTimerRef.current=null;}
+      try{WSNET.stopBrowse();}catch(e){}
+      if(wsActiveRef.current){wsActiveRef.current=false;try{WSNET.leaveRoom();}catch(e){}}
+    };
+  },[]);
+
+  const chev=<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+  const colName=i=>t('khColor'+i);
+  const connBanner=!conn?<div style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 8px)',left:0,right:0,textAlign:'center',zIndex:700,pointerEvents:'none'}}>
+    <span style={{background:'rgba(245,158,11,0.95)',color:'#fff',padding:'5px 14px',borderRadius:14,fontSize:11,fontWeight:800}}>{t('connecting')}</span></div>:null;
+
+  // ── START: erstellen / Liste / Code ──
+  if(sub==='start'&&resume&&loading)return <div style={{...sPage,background:'transparent'}}><MenuBG dark={darkMode}/>{connBanner}</div>;
+  if(sub==='start'){
+    return(
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={backPressed} style={backChevron}>{chev}{t('tutBack')}</button>
+        {connBanner}
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+          <div style={{textAlign:'center',marginBottom:16}}>
+            <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}>
+              <div style={{width:64,height:64,borderRadius:18,background:'linear-gradient(140deg,#ef4444 0%,#f97316 34%,#22c55e 68%,#3b82f6 100%)',
+                display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 10px 28px rgba(99,102,241,0.3)'}}>
+                <CrownIcon size={32} color="#fff"/>
+              </div>
+            </div>
+            <div style={{fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.8}}>{t('khTitle')}</div>
+            <div style={{fontSize:11,color:'var(--subtle)',marginTop:4}}>{t('khMenuDesc')}</div>
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'14px 16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            {[t('khRule1'),t('khRule2'),t('khRule3')].map(function(rule,ri){
+              return(
+                <div key={ri} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:ri<2?8:0}}>
+                  <span style={{color:'#8b5cf6',fontWeight:900,fontSize:13,lineHeight:1.5,flexShrink:0}}>{'›'}</span>
+                  <span style={{fontSize:12,color:'var(--text)',lineHeight:1.5}}>{rule}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            <button data-e2e="kh-create" onClick={createLobby} disabled={loading} style={{width:'100%',padding:'13px',
+              background:loading?'var(--border)':'#3b82f6',color:loading?'var(--subtle)':'white',border:'none',borderRadius:10,
+              cursor:loading?'not-allowed':'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:loading?'none':'0 2px 8px rgba(59,130,246,0.3)'}}>
+              {loading?t('khCreating'):t('khCreate')}
+            </button>
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'16px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>{t('tv2OpenLob')}</div>
+            {openLobbies.length===0?(
+              <div style={{textAlign:'center',padding:'10px 0',fontSize:12,color:'var(--subtle)',fontWeight:500}}>{listLoading?t('loading'):t('noLobbiesCreate')}</div>
+            ):(
+              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:180,overflowY:'auto',touchAction:'pan-y',WebkitOverflowScrolling:'touch'}}>
+                {openLobbies.map(function(lob){
+                  return(
+                    <button key={lob.code} data-e2e={'kh-open-'+lob.code} onClick={function(){joinByCode(lob.code);}} disabled={loading}
+                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:'var(--bg)',
+                        border:'1.5px solid var(--border)',cursor:'pointer',width:'100%',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                      <span style={{fontSize:16,fontWeight:900,letterSpacing:3,color:'var(--text)'}}>{lob.code}</span>
+                      <span style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:11,fontWeight:700,color:'var(--subtle)'}}>{lob.count}/4</span>
+                        <span style={{display:'flex',gap:3}}>{[0,1,2,3].map(i=><span key={i} style={{width:7,height:7,borderRadius:'50%',background:i<lob.count?KH_COL[i]:'var(--border)'}}/>)}</span>
+                        <span style={{fontSize:11,fontWeight:800,color:'#3b82f6'}}>{'→'}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'16px',border:'1.5px solid var(--border)',boxShadow:'var(--shadow-soft)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--subtle)',letterSpacing:1.5,marginBottom:10}}>{t('tv2CodeJoin')}</div>
+            <input data-e2e="kh-code" value={joinInput} onChange={e=>setJoinInput(e.target.value.toUpperCase().slice(0,4))} placeholder={t('tv2CodePh')} maxLength={4}
+              style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:20,fontWeight:800,textAlign:'center',letterSpacing:4,textTransform:'uppercase',
+                background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontFamily:'system-ui,-apple-system,sans-serif',boxSizing:'border-box',outline:'none',marginBottom:10}}/>
+            <button data-e2e="kh-join" onClick={joinTyped} disabled={loading||joinInput.length!==4} style={{width:'100%',padding:'13px',
+              background:loading||joinInput.length!==4?'var(--border)':'#1e293b',color:loading||joinInput.length!==4?'var(--subtle)':'white',border:'none',borderRadius:10,
+              cursor:loading||joinInput.length!==4?'not-allowed':'pointer',fontWeight:800,fontSize:14,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {loading?t('joiningGame'):t('joinSuffix')}
+            </button>
+            {error?<div data-e2e="kh-error" style={{marginTop:10,fontSize:12,color:'#ef4444',fontWeight:600,textAlign:'center'}}>{error}</div>:null}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LOBBY: Warteraum, genau vier Spieler ──
+  if(sub==='lobby'){
+    const allOn=players.length===4&&players.every(function(p){return p.on!==false;});
+    const copyCode=()=>{try{navigator.clipboard.writeText(lobbyCode);}catch(e){}setCodeFlash(true);setTimeout(function(){setCodeFlash(false);},1500);};
+    return(
+      <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 20px)',background:'transparent',position:'relative',zIndex:1}}>
+        <MenuBG dark={darkMode}/>
+        <button onClick={backPressed} style={backChevron}>{chev}{t('tutBack')}</button>
+        {connBanner}
+        <div style={{width:'100%',maxWidth:340,position:'relative',zIndex:1}}>
+          <div style={{textAlign:'center',marginBottom:16}}>
+            <div style={{fontSize:12,color:'var(--subtle)',fontWeight:600,letterSpacing:1,marginBottom:6}}>{t('tv2LobbyCode')}</div>
+            <button data-e2e="kh-lobbycode" onClick={copyCode} style={{display:'inline-flex',alignItems:'center',gap:10,background:'var(--card)',border:'2px solid var(--border)',borderRadius:14,
+              padding:'10px 20px',cursor:'pointer',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              <span style={{fontSize:28,fontWeight:900,letterSpacing:6,color:'var(--text)'}}>{lobbyCode}</span>
+              <span style={{fontSize:11,fontWeight:700,color:codeFlash?'#16a34a':'var(--subtle)'}}>{codeFlash?t('tv2Copied'):t('tv2Copy')}</span>
+            </button>
+            <div style={{fontSize:10,color:'var(--subtle)',marginTop:8,fontWeight:500}}>{t('shareCode')}</div>
+          </div>
+          <div style={{background:'var(--card)',borderRadius:16,padding:'12px',border:'1.5px solid var(--border)',marginBottom:14,boxShadow:'var(--shadow-soft)'}}>
+            {[0,1,2,3].map(function(i){
+              const p=players[i];
+              return(
+                <div key={i} data-e2e={'kh-slot-'+i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 10px',borderRadius:10,marginBottom:i<3?4:0,
+                  background:p?'var(--bg)':'transparent',border:'1.5px dashed '+(p?'transparent':'var(--border)'),opacity:p&&p.on===false?0.55:1}}>
+                  <div style={{width:26,height:26,borderRadius:'50%',background:p?KH_COL[i]:'var(--border)',flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0,fontSize:13,fontWeight:700,color:p?'var(--text)':'var(--subtle)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {p?p.name:'…'}{p&&p.on===false?(' · '+t('khOffline')):''}
+                  </div>
+                  {p&&p.host&&<CrownIcon size={14} color="#f59e0b"/>}
+                  <div style={{fontSize:10,fontWeight:800,color:KH_COL[i]}}>{colName(i)}</div>
+                </div>
+              );
+            })}
+          </div>
+          {isHost?(
+            <button data-e2e="kh-start" onClick={startGame} disabled={!allOn} style={{width:'100%',padding:'14px',marginBottom:8,
+              background:allOn?'#16a34a':'var(--border)',color:allOn?'white':'var(--subtle)',border:'none',borderRadius:12,cursor:allOn?'pointer':'not-allowed',
+              fontWeight:800,fontSize:15,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+              {allOn?t('khStart'):(players.length<4?t('khNeed4'):t('tv2NotAllOn'))}
+            </button>
+          ):(
+            <div style={{textAlign:'center',fontSize:12,color:'var(--subtle)',fontWeight:600,padding:'10px 0'}}>{t('khWaitHost')}</div>
+          )}
+          {flash?<div style={{textAlign:'center',fontSize:12,color:'#ef4444',fontWeight:700,marginBottom:8}}>{flash}</div>:null}
+          <button onClick={leaveToStart} style={{width:'100%',padding:'10px',background:'transparent',border:'1.5px solid var(--border)',borderRadius:10,cursor:'pointer',
+            color:'var(--subtle)',fontWeight:600,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('leave')}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SPIEL ──
+  if(!gs)return <div style={{...sPage,background:'transparent'}}><MenuBG dark={darkMode}/></div>;
+  const nowMs=Date.now();
+  const clkOf=i=>{const base=gs.clk&&typeof gs.clk[i]==='number'?gs.clk[i]:0;return (i===gs.turn&&!over)?base-(nowMs-recvRef.current):base;};
+  const names=gs.names||[];
+  const nameOf=i=>names[i]||colName(i);
+  const turnName=gs.turn>=0?nameOf(gs.turn):'';
+  const myMs=seat>=0?clkOf(seat):0;
+  const boardBg=darkMode?'linear-gradient(170deg,#1c2740,#161e33 52%,#0f1729)':'linear-gradient(170deg,#fcfcfb,#f1f3f6 52%,#e9edf2)';
+  const lineCol=darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)';
+  const boardW=C*CELLK;
+  return(
+    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1,paddingBottom:'calc(104px + env(safe-area-inset-bottom, 0px))'}}>
+      <MenuBG dark={darkMode}/>
+      <button onClick={backPressed} style={backChevron}>{chev}{t('tutBack')}</button>
+      {connBanner}
+
+      {/* Vier Spieler-Karten */}
+      <div data-e2e="kh-cards" style={{display:'flex',gap:6,width:Math.min(boardW+26,window.innerWidth-16),maxWidth:'96vw',marginTop:42,marginBottom:6,position:'relative',zIndex:1}}>
+        {[0,1,2,3].map(function(i){
+          const active=gs.turn===i&&!over,isOut=!!out[i],offl=gs.on&&gs.on[i]===false&&!isOut,me=i===seat;
+          const ms=clkOf(i);
+          return(
+            <div key={i} data-e2e={'kh-card-'+i} style={{flex:1,minWidth:0,padding:'6px 4px',borderRadius:12,background:'var(--card)',textAlign:'center',
+              border:'2px solid '+(active?KH_COL[i]:'var(--border)'),boxShadow:active?('0 0 12px '+KH_COL[i]+'66'):'var(--shadow-soft)',opacity:isOut?0.4:(offl?0.6:1)}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:4,minWidth:0}}>
+                <span style={{width:9,height:9,borderRadius:'50%',background:KH_COL[i],flexShrink:0}}/>
+                <span style={{fontSize:10,fontWeight:800,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nameOf(i)}{me?' ★':''}</span>
+              </div>
+              <div style={{fontSize:14,fontWeight:900,fontVariantNumeric:'tabular-nums',color:(active&&ms<=30000)?'#ef4444':'var(--text)',lineHeight:1.3}}>{isOut?'–':khFmt(ms)}</div>
+              <div style={{fontSize:9,fontWeight:700,color:'var(--subtle)',display:'flex',alignItems:'center',justifyContent:'center',gap:3}}>
+                <svg width="10" height="10" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
+                {gs.barr?gs.barr[i]:0}{offl?(' · '+t('khOffline')):''}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Status */}
+      {!over&&<div data-e2e="kh-status" style={{position:'relative',zIndex:2,fontSize:11,fontWeight:800,letterSpacing:0.5,marginBottom:6,padding:'4px 12px',borderRadius:8,
+        background:gs.turn>=0?(KH_COL[gs.turn]+'22'):'rgba(100,116,139,0.15)',color:gs.turn>=0?KH_COL[gs.turn]:'var(--subtle)'}}>
+        {amOut?t('khOutTime'):(myTurn?(t('khYourTurn')+' · '+khFmt(myMs)):(turnName?(turnName+' '+t('khTurnOf')):'…'))}
+      </div>}
+
+      {/* Brett (gedreht, damit man selbst unten sitzt) */}
+      <div style={{position:'relative',width:boardW+26,margin:'0 auto',borderRadius:24,padding:13,
+        background:darkMode?'linear-gradient(160deg,#5f6b7e,#2e3748 36%,#141a26)':'linear-gradient(160deg,#ffffff,#ced6e2 36%,#9aa6ba)',
+        boxShadow:'0 26px 56px rgba(0,0,0,0.5),0 9px 20px rgba(0,0,0,0.38),inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -3px 6px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(0,0,0,0.2)'}}>
+        <div ref={gridRef} data-e2e="kh-board" data-rot={rot} data-turn={gs.turn} data-v={gs.v} data-seat={seat} data-walls={gs.walls?gs.walls.join(','):''} style={{position:'relative',width:boardW,height:R*CELLK,touchAction:'auto',...sGrid,background:boardBg,border:'none',
+          boxShadow:darkMode?'inset 0 0 0 2px #05080f,inset 0 3px 9px rgba(0,0,0,0.18)':'inset 0 0 0 2px #b6bfce,inset 0 3px 9px rgba(0,0,0,0.18)',
+          transform:'rotate('+rot+'deg)'}}>
+          <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:0,
+            backgroundImage:'linear-gradient('+lineCol+' 1px,transparent 1px),linear-gradient(90deg,'+lineCol+' 1px,transparent 1px)',backgroundSize:CELLK+'px '+CELLK+'px'}}/>
+          {Array.from({length:R},function(_,r){return Array.from({length:C},function(_,c){
+            const isMid=r===M.r&&c===M.c;
+            const dot=dots.some(function(m){return m.r===r&&m.c===c;});
+            return(
+              <div key={r+'-'+c} data-e2e={'kh-cell-'+r+'-'+c} data-dot={dot?'1':'0'} onClick={()=>moveTo(r,c)}
+                style={{position:'absolute',left:c*CELLK,top:r*CELLK,width:CELLK,height:CELLK,display:'flex',alignItems:'center',justifyContent:'center',
+                  cursor:dot?'pointer':'default',boxSizing:'border-box'}}>
+                {isMid&&<div style={{position:'absolute',top:0,left:0,right:0,bottom:0,background:'radial-gradient(circle,rgba(245,158,11,0.55),rgba(245,158,11,0.18) 70%)',
+                  boxShadow:'inset 0 0 0 2px rgba(245,158,11,0.8)',pointerEvents:'none',animation:'ww-goalpulse 3s ease-in-out infinite'}}/>}
+                {dot&&<div style={{width:Math.round(CELLK*0.28),height:Math.round(CELLK*0.28),borderRadius:'50%',pointerEvents:'none',
+                  background:'radial-gradient(circle at 40% 34%,rgba(255,255,255,0.6),'+KH_COL[seat]+' 62%,'+KH_DARK[seat]+')',
+                  boxShadow:'0 0 8px '+KH_COL[seat]+'aa,0 1px 2px rgba(0,0,0,0.32)',animation:'ww-dotb 1.7s ease-in-out infinite'}}/>}
+              </div>
+            );
+          });})}
+          {Array.from(walls).map(function(k,wi){const ow=gs.wo&&typeof gs.wo[wi]==='number'?gs.wo[wi]:-1;return <Wall2 key={k} wkey={k} cell={CELLK} color={ow>=0?KH_COL[ow]:(darkMode?'#e2e8f0':'#1e293b')} opacity={1} animate/>;})}
+          {previewKey&&<Wall2 wkey={previewKey} cell={CELLK} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
+          {pendingWall&&!over&&(
+            <div style={{position:'fixed',left:pendingWall.x,top:pendingWall.y,transform:'translate(-50%,-50%)',display:'flex',gap:10,zIndex:1001}}>
+              <button onClick={cancelPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#ef4444',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+              </button>
+              <button onClick={confirmPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#22c55e',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+            </div>
+          )}
+          {[0,1,2,3].map(function(i){
+            const pos=gs.tokens?gs.tokens[i]:null;
+            if(!pos||out[i])return null;
+            const active=gs.turn===i&&!over;
+            return(
+              <div key={i} data-e2e={'kh-token-'+i} data-r={pos.r} data-c={pos.c} data-col={KH_COL[i]} style={{position:'absolute',left:pos.c*CELLK+off,top:pos.r*CELLK+off,width:sz,height:sz,
+                transition:'left 0.25s cubic-bezier(0.34,1.3,0.5,1),top 0.25s cubic-bezier(0.34,1.3,0.5,1)',zIndex:20,pointerEvents:'none',transform:'rotate('+(-rot)+'deg)'}}>
+                {active&&<div style={{position:'absolute',inset:-2,borderRadius:'50%',background:KH_COL[i],animation:'piece-pulse 1.6s ease-in-out infinite'}}/>}
+                <Piece color={KH_COL[i]} dark={KH_DARK[i]} size={sz}/>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {flash&&<div style={{position:'fixed',bottom:120,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
+        <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
+      </div>}
+
+      {/* Mauer-Werkzeug (nur im eigenen Zug aktiv) */}
+      {!over&&!amOut&&(
+        <div style={{position:'fixed',bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',left:'50%',transform:'translateX(-50%)',
+          width:'min('+(boardW+26)+'px, calc(100vw - 20px))',zIndex:200,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',
+          gap:6,pointerEvents:'none',opacity:dragging?0:1,transition:'opacity 0.12s ease'}}>
+          <div className="ww-wallctl" style={{pointerEvents:'none'}}>
+            <div className="wl">
+              <svg width="12" height="12" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2" y="4" width="9" height="6" rx="1"/><rect x="13" y="4" width="9" height="6" rx="1"/><rect x="7" y="12" width="10" height="6" rx="1"/></g></svg>
+              <span>{canPlace?(gs.barr[seat]+' '+t('wallsLeft')):t('opponentTurn')}</span>
+            </div>
+            <div className="tools">
+              {['H','V'].map(function(orient){
+                const colHex=seat>=0?KH_COL[seat]:'#3b82f6';
+                return(
+                  <div key={orient} data-e2e={'kh-wtool-'+orient} className={'ww-wtool'+(canPlace?' armed':'')}
+                    onMouseDown={canPlace?function(e){return startDrag(e,orient);}:undefined} onTouchStart={canPlace?function(e){return startDrag(e,orient);}:undefined}
+                    style={{pointerEvents:'auto',width:orient==='H'?54:36,height:orient==='V'?40:34,cursor:canPlace?'grab':'not-allowed',opacity:canPlace?1:0.4,
+                      borderColor:canPlace?colHex+'99':undefined,touchAction:canPlace?'none':'pan-y'}}>
+                    <div style={{background:colHex,borderRadius:3,width:orient==='H'?34:WW2,height:orient==='V'?22:WW2,boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4),0 2px 4px rgba(0,0,0,0.4)'}}/>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dragging&&(
+        <div style={{position:'fixed',pointerEvents:'none',zIndex:400,borderRadius:WW2/2,opacity:0.75,
+          width:dragging.orient==='H'?CELLK*2:WW2,height:dragging.orient==='V'?CELLK*2:WW2,background:KH_COL[seat>=0?seat:0],
+          left:ghostPos.x-(dragging.orient==='H'?CELLK:WW2/2),top:ghostPos.y-(dragging.orient==='V'?CELLK:WW2/2)-90,boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}/>
+      )}
+
+      {leaveAsk&&!over&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,padding:20}}>
+          <div style={{background:'var(--card)',borderRadius:22,padding:'24px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.3)',width:'100%',maxWidth:300}}>
+            <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16,lineHeight:1.4}}>{t('khLeaveQ')}</div>
+            <div style={{display:'flex',gap:8}}>
+              <button data-e2e="kh-leave-stay" onClick={()=>setLeaveAsk(false)} style={{flex:1,padding:'11px',background:'#16a34a',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontWeight:800,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('khLeaveStay')}</button>
+              <button data-e2e="kh-leave-go" onClick={exitToMenu} style={{flex:1,padding:'11px',background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('leave')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {over&&(
+        <div data-e2e="kh-end" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
+          {gs.winner>=0&&<Confetti color={KH_COL[gs.winner]}/>}
+          <div style={{background:'var(--card)',borderRadius:22,padding:'28px 28px 22px',textAlign:'center',boxShadow:'0 24px 64px rgba(0,0,0,0.3)',position:'relative',width:'100%',maxWidth:300}}>
+            {gs.winner>=0?(
+              <>
+                <div style={{marginBottom:8,display:'flex',justifyContent:'center',animation:'trophy-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both'}}><TrophyIcon size={44}/></div>
+                <div data-e2e="kh-winner" style={{fontSize:19,fontWeight:900,color:KH_COL[gs.winner],letterSpacing:-0.5,marginBottom:16,lineHeight:1.3}}>{gs.winner===seat?t('khYouWin'):(nameOf(gs.winner)+' '+(gs.winReason==='last'?t('khWinLast'):t('khWinCenter')))}</div>
+              </>
+            ):(
+              <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16,lineHeight:1.4}}>{t('khAbandoned')}</div>
+            )}
+            <button data-e2e="kh-end-menu" onClick={exitToMenu} style={{width:'100%',padding:'12px',background:'var(--bg)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif'}}>{t('menu')}</button>
+          </div>
+        </div>
       )}
     </div>
   );

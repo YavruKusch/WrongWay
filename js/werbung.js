@@ -10,7 +10,7 @@
   var BREIT = 1280;                              // ab dieser Fensterbreite Streifen links + rechts
   var UNTEN_H = 60;                              // reservierte Hoehe unten (px)
   var UNTEN_IM_MATCH = false;                    // im Match unten nichts (Spiel-Leisten liegen dort); am PC nur die Streifen
-  var MATCH = { game: 1, twovtwo: 1 };           // Bildschirme mit laufendem Brett
+  var MATCH = { game: 1, twovtwo: 1, kinghill: 1 };           // Bildschirme mit laufendem Brett
   var STANDARD_JEDES = 5;                        // Vollbild nach jedem n-ten Match
 
   var vorschau = /[?&]werbungvorschau=1/.test(location.search);  // graue Kaesten statt echter Werbung
