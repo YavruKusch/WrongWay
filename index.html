@@ -13388,6 +13388,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
     const wasOver=St.current.over;
     setGs(function(old){return Object.assign({},old||{},d);}); // seat/rows/cols/mitte kommen nur in den Antworten an den Einzelnen, der Rundruf traegt sie nicht
     if(d.rej&&was)flashMsg(t('invalidPos'),1500);
+    if(d.lm&&d.lm.s!==St.current.seat)playSound(d.lm.t==='wall'?'wall':'move'); // Zug oder Mauer eines anderen Spielers hoerbar (eigene hoert man schon beim Tippen)
     if(d.zuglimit!==undefined&&d.zuglimit!==null&&d.zuglimit===St.current.seat&&!(d.timeout===d.zuglimit))flashMsg(t('khZugzeitDu'),3000);
     else if(d.skipped&&St.current.seat>=0&&d.skipped.indexOf(St.current.seat)>=0)flashMsg(t('khSkipped'),2500);
     if(!wasOver&&d.winner!==null&&d.winner!==undefined&&d.winner===St.current.seat)playSound('win');
@@ -13650,7 +13651,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
   const lineCol=darkMode?'rgba(255,255,255,0.08)':'rgba(20,28,45,0.11)';
   const boardW=C*CELLK;
   return(
-    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1,paddingBottom:'calc(104px + env(safe-area-inset-bottom, 0px))'}}>
+    <div style={{...sCont,background:'transparent',position:'relative',zIndex:1,paddingBottom:'calc(134px + env(safe-area-inset-bottom, 0px))'}}>
       <MenuBG dark={darkMode}/>
       <button onClick={backPressed} style={backChevron}>{chev}{t('tutBack')}</button>
       {connBanner}
@@ -13710,16 +13711,6 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
           });})}
           {Array.from(walls).map(function(k,wi){const ow=gs.wo&&typeof gs.wo[wi]==='number'?gs.wo[wi]:-1;return <Wall2 key={k} wkey={k} cell={CELLK} color={ow>=0?KH_COL[ow]:(darkMode?'#e2e8f0':'#1e293b')} opacity={1} animate/>;})}
           {previewKey&&<Wall2 wkey={previewKey} cell={CELLK} color={previewValid?'#f59e0b':'#ef4444'} opacity={0.6}/>}
-          {pendingWall&&!over&&(
-            <div style={{position:'fixed',left:pendingWall.x,top:pendingWall.y,transform:'translate(-50%,-50%)',display:'flex',gap:10,zIndex:1001}}>
-              <button onClick={cancelPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#ef4444',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-              </button>
-              <button onClick={confirmPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#22c55e',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </button>
-            </div>
-          )}
           {[0,1,2,3].map(function(i){
             const pos=gs.tokens?gs.tokens[i]:null;
             if(!pos||out[i])return null;
@@ -13735,13 +13726,13 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
         </div>
       </div>
 
-      {flash&&<div style={{position:'fixed',bottom:120,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
+      {flash&&<div style={{position:'fixed',bottom:170,left:0,right:0,textAlign:'center',zIndex:60,pointerEvents:'none'}}>
         <span style={{background:'rgba(239,68,68,0.92)',color:'white',padding:'7px 16px',borderRadius:16,fontSize:12,fontWeight:700}}>{flash}</span>
       </div>}
 
       {/* Mauer-Werkzeug (nur im eigenen Zug aktiv) */}
       {!over&&!amOut&&(
-        <div style={{position:'fixed',bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',left:'50%',transform:'translateX(-50%)',
+        <div style={{position:'fixed',bottom:'calc(44px + env(safe-area-inset-bottom, 0px))',left:'50%',transform:'translateX(-50%)',
           width:'min('+(boardW+26)+'px, calc(100vw - 20px))',zIndex:200,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',
           gap:6,pointerEvents:'none',opacity:dragging?0:1,transition:'opacity 0.12s ease'}}>
           <div className="ww-wallctl" style={{pointerEvents:'none'}}>
@@ -13766,6 +13757,17 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
         </div>
       )}
 
+      {/* Wand-Bestaetigung: AUSSERHALB des gedrehten Bretts. position:fixed innerhalb eines transform-Elements haengt am Element, nicht am Bildschirm: die Haekchen standen verschoben, ganz unten ausserhalb des Sichtbaren (Tunay 2026-10-16) */}
+      {pendingWall&&!over&&(
+        <div style={{position:'fixed',left:pendingWall.x,top:pendingWall.y,transform:'translate(-50%,-50%)',display:'flex',gap:10,zIndex:1001}}>
+          <button data-e2e="kh-wand-no" onClick={cancelPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#ef4444',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+          <button data-e2e="kh-wand-ok" onClick={confirmPendingWall} style={{width:44,height:44,borderRadius:22,border:'none',background:'#22c55e',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(0,0,0,0.4)'}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      )}
       {dragging&&(
         <div style={{position:'fixed',pointerEvents:'none',zIndex:400,borderRadius:WW2/2,opacity:0.75,
           width:dragging.orient==='H'?CELLK*2:WW2,height:dragging.orient==='V'?CELLK*2:WW2,background:KH_COL[seat>=0?seat:0],
