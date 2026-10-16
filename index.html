@@ -9166,7 +9166,7 @@ function App(){
     // Springen/Schritt; f = Zielzug oder Funktion des aktuellen (zwei schnelle Klicks vor dem Neuzeichnen = zwei Zuege)
     const zurStelle=function(f){setReplayPlaying(false);setReplayStep(function(s){var n=typeof f==='function'?f(s):f;return Math.max(0,Math.min(rMoves.length,n));});};
     return (
-      <div style={{...sCont,paddingBottom:80,paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
+      <div style={{...sCont,paddingBottom:'calc(112px + env(safe-area-inset-bottom, 0px))',paddingTop:'calc(env(safe-area-inset-top) + 16px)'}}>
         {/* Gewinner-Tanz am Ende */}
         {isEnd&&rWinner&&replayFeier&&(
           <div data-replay-tanz="1" onClick={function(){setReplayFeier(false);}} style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
@@ -9359,6 +9359,7 @@ function App(){
           setReplayHistEntry(null);
           setScreen(rEntry?replayZurueckRef.current:'end');
         }} style={{
+          position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(14px + env(safe-area-inset-bottom, 0px))',zIndex:300,   // immer erreichbar, auch wenn das Brett hoeher als der Bildschirm ist (Race, Tunay 2026-10-16)
           padding:'11px 28px',borderRadius:12,background:'var(--card)',
           border:'1.5px solid var(--border)',color:'var(--text)',cursor:'pointer',
           fontWeight:700,fontSize:13,fontFamily:'system-ui,-apple-system,sans-serif',
@@ -13239,6 +13240,9 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
   const[pendingWall,setPendingWall]=React.useState(null); // Einstellung 'Wand bestaetigen': {key,x,y}
   const[leaveAsk,setLeaveAsk]=React.useState(false);
   const[conn,setConn]=React.useState(true);
+  const[emotes,setEmotes]=React.useState({}); // Emotes im Spiel (2026-10-16): Platz 0..3 -> {type,id}
+  const[emotePicker,setEmotePicker]=React.useState(false);
+  const[emoteCooldown,setEmoteCooldown]=React.useState(false);
   const wsMsgRef=React.useRef(null);
   const wsTrampRef=React.useRef(null);
   if(!wsTrampRef.current){wsTrampRef.current=function(d){if(wsMsgRef.current)wsMsgRef.current(d);};}
@@ -13273,6 +13277,21 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
     setPendingWall(null);setPreviewKey(null);setDragging(null);pendRef.current={v:-1,at:0};
   };
   const flashMsg=(txt,ms)=>{setFlash(txt);setTimeout(function(){if(mountedRef.current)setFlash('');},ms||2200);};
+  // Emotes (wie im 2v2-Brett): vier Figuren, Abklingzeit, Anzeige unter der Karte des Absenders; der Server gibt sie an alle anderen weiter (kein Echo)
+  const EMOTE_KH=['laugh','cry','angry','confused'];
+  const showEmote=function(platz,type){
+    if(typeof platz!=='number'||platz<0||platz>3||EMOTE_KH.indexOf(type)===-1)return;
+    const id=Date.now()+'-'+Math.random();
+    setEmotes(function(e){const n={...e};n[platz]={type:type,id:id};return n;});
+    setTimeout(function(){if(!mountedRef.current)return;setEmotes(function(e){if(!e[platz]||e[platz].id!==id)return e;const n={...e};delete n[platz];return n;});},2600);
+  };
+  const triggerEmote=function(type){
+    if(emoteCooldown||seat<0||amOut||EMOTE_KH.indexOf(type)===-1)return;
+    setEmoteCooldown(true);setEmotePicker(false);
+    showEmote(seat,type);
+    try{WSNET._send({type:'emote',emote:type});}catch(e){}
+    setTimeout(function(){if(mountedRef.current)setEmoteCooldown(false);},2600);
+  };
 
   // ── Lobby erstellen / beitreten ──
   const createLobby=()=>{
@@ -13399,6 +13418,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
     if(d.type==='ws_closed'){setConn(false);return;}
     setConn(true);
     if(d.type==='ws_open')return;
+    if(d.type==='emote'){showEmote(d.from,d.emote);return;}
     if(d.type==='room_created'||d.type==='room_joined'){
       setLobbyCode(d.code);
       if(WSNET.roomId!==d.code)WSNET.roomId=d.code;
@@ -13662,7 +13682,7 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
           const active=gs.turn===i&&!over,isOut=!!out[i],offl=gs.on&&gs.on[i]===false&&!isOut,me=i===seat;
           const ms=clkOf(i);
           return(
-            <div key={i} data-e2e={'kh-card-'+i} style={{flex:1,minWidth:0,padding:'6px 4px',borderRadius:12,background:'var(--card)',textAlign:'center',
+            <div key={i} data-e2e={'kh-card-'+i} style={{position:'relative',flex:1,minWidth:0,padding:'6px 4px',borderRadius:12,background:'var(--card)',textAlign:'center',
               border:'2px solid '+(active?KH_COL[i]:'var(--border)'),boxShadow:active?('0 0 12px '+KH_COL[i]+'66'):'var(--shadow-soft)',opacity:isOut?0.4:(offl?0.6:1)}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:4,minWidth:0}}>
                 <span style={{width:9,height:9,borderRadius:'50%',background:KH_COL[i],flexShrink:0}}/>
@@ -13673,6 +13693,11 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
                 <svg width="10" height="10" viewBox="0 0 24 24" style={{opacity:0.85}}><g fill="currentColor"><rect x="2" y="5" width="9" height="5" rx="1"/><rect x="13" y="5" width="9" height="5" rx="1"/><rect x="7" y="12" width="10" height="5" rx="1"/></g></svg>
                 {gs.barr?gs.barr[i]:0}{offl?(' · '+t('khOffline')):''}
               </div>
+              {emotes[i]&&(
+                <div key={'emote-'+i+'-'+emotes[i].id} data-e2e={'kh-emote-'+i} data-emote={emotes[i].type} style={{position:'absolute',top:'100%',left:0,right:0,marginTop:6,zIndex:450,display:'flex',justifyContent:'center',pointerEvents:'none'}}>
+                  <div style={{animation:'emote-pop 0.32s cubic-bezier(0.34,1.56,0.64,1) both'}}><EmoteChar color={KH_COL[i]} dark={KH_DARK[i]} type={emotes[i].type}/></div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -13768,6 +13793,33 @@ function KingHill({t,darkMode,onExit,account,joinCode,onJoinCodeUsed,resume}){
           </button>
         </div>
       )}
+      {/* Emotes: Knopf links neben dem Mauer-Werkzeug, Picker darueber */}
+      {!over&&!amOut&&seat>=0&&(
+        <button data-e2e="kh-emote-btn" onClick={()=>!emoteCooldown&&setEmotePicker(function(p){return !p;})} disabled={emoteCooldown} className="ww-iconbtn chat"
+          style={{position:'fixed',left:'calc(10px + env(safe-area-inset-left, 0px))',bottom:'calc(52px + env(safe-area-inset-bottom, 0px))',zIndex:210,
+            opacity:dragging?0:(emoteCooldown?0.5:1),pointerEvents:dragging?'none':'auto',animation:emotePicker?'none':'bubble-pulse 2.5s ease-in-out infinite'}}>
+          <BubbleIcon size={24} color="#6366f1"/>
+        </button>
+      )}
+      {emotePicker&&!over&&(
+        <div onClick={()=>setEmotePicker(false)} style={{position:'fixed',inset:0,zIndex:480}}>
+          <div onClick={function(e){e.stopPropagation();}} style={{position:'fixed',bottom:'calc(112px + env(safe-area-inset-bottom, 0px))',left:'calc(14px + env(safe-area-inset-left, 0px))',
+            background:darkMode?'rgba(22,30,51,0.96)':'rgba(255,255,255,0.97)',borderRadius:18,padding:10,display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,
+            border:'1.5px solid '+(darkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.06)'),boxShadow:'0 8px 28px rgba(0,0,0,0.25)',
+            animation:'picker-pop 0.22s cubic-bezier(0.34,1.56,0.64,1) both',transformOrigin:'bottom left'}}>
+            {EMOTE_KH.map(function(kk){
+              return(
+                <button key={kk} data-e2e={'kh-emote-pick-'+kk} onClick={function(){triggerEmote(kk);}} disabled={emoteCooldown}
+                  style={{width:58,height:58,padding:0,background:darkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)',border:'none',borderRadius:12,
+                    cursor:emoteCooldown?'not-allowed':'pointer',opacity:emoteCooldown?0.4:1,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  <EmoteHead color={KH_COL[seat]} dark={KH_DARK[seat]} type={kk} size={48}/>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {dragging&&(
         <div style={{position:'fixed',pointerEvents:'none',zIndex:400,borderRadius:WW2/2,opacity:0.75,
           width:dragging.orient==='H'?CELLK*2:WW2,height:dragging.orient==='V'?CELLK*2:WW2,background:KH_COL[seat>=0?seat:0],
