@@ -878,7 +878,7 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=124"></script>
+<script src="js/i18n.js?v=125"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=2"></script>
 <script src="js/ai.js?v=6"></script>
@@ -8619,97 +8619,16 @@ function App(){
 
   // ── ONLINE ──────────────────────────────────────────────
   const lobbyShown=lobbyList.filter(function(l){return (!l.tv2||feat('twovtwo'))&&(!l.kh||khAn);});
-  if(screen==='online') return (
-    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
-      <MenuBG dark={darkMode}/>
-      <MapAura map={selectedMap} dark={darkMode}/>
-      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
-      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
-
-        {/* Header */}
-        <ScreenHead icon={<GlobeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
-          title={t('playOnline')} sub={t('vsRandomDesc')}/>
-
-        {/* Server-Status-Banner */}
-        {!serverOnline&&(
-          <div style={{width:'100%',background:'rgba(239,68,68,0.10)',border:'1.5px solid rgba(239,68,68,0.3)',
-            borderRadius:14,padding:'14px 16px',marginBottom:16,textAlign:'center'}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4}}>
-              {navigator.onLine?t('serverFull'):t('serverOffline')}
-            </div>
-            {navigator.onLine&&(
-              <>
-                <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginBottom:12}}>
-                  {t('serverFullSub')}
-                </div>
-                <button onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} style={{
-                  padding:'10px 24px',borderRadius:10,border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
-                  background:'linear-gradient(135deg,#8b5cf6,#6366f1)',color:'#fff',
-                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
-                  {t('serverFullBtn')}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Create section */}
-        <div style={{width:'100%',marginBottom:16}}>
-          <button onClick={()=>createLobby(false)} style={{
-            width:'100%',padding:'14px 16px',background:'#1e293b',color:'white',border:'none',
-            borderRadius:12,fontWeight:700,fontSize:14,cursor:'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            boxShadow:'0 2px 8px rgba(30,41,59,0.18)',
-            fontFamily:'system-ui,-apple-system,sans-serif'}}>
-            <span style={{display:'flex'}}><PlusIcon size={18} color="#fff"/></span>
-            <span>{t('createLobby')}</span>
-          </button>
-          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:6,textAlign:'center'}}>
-            {t('mode')}: {gameTimeMode==='none'?t('noTimer'):gameTimeMode} · {gameBarr} <BrickMini size={10}/>
-          </div>
-        </div>
-
-        {flash&&<div style={{color:'#ef4444',fontSize:12,fontWeight:500,marginBottom:10,width:'100%',textAlign:'center'}}>{flash}</div>}
-
-        {/* Lobby list header */}
-        <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,paddingLeft:2,paddingRight:2}}>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{display:'inline-block',width:6,height:6,borderRadius:'50%',background:'#16a34a',
-              animation:'piece-pulse 1.6s ease-in-out infinite'}}/>
-            <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5}}>{t('live')}</span>
-            <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginLeft:4}}>· {t('openLobbies')}</span>
-          </div>
-          {lobbyShown.length>0&&(
-            <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',
-              background:'rgba(59,130,246,0.1)',padding:'2px 8px',borderRadius:10}}>
-              {lobbyShown.length} {t('lobbyCount')}
-            </div>
-          )}
-        </div>
-
-        {/* Scrollable lobby list */}
-        <div style={{
-          width:'100%',maxHeight:240,overflowY:'auto',overflowX:'hidden',
-          touchAction:'pan-y',
-          borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',
-          WebkitOverflowScrolling:'touch',
-          boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
-          {lobbyShown.length===0?(
-            <div style={{padding:'34px 20px',textAlign:'center'}}>
-              <div style={{marginBottom:8,opacity:0.4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="var(--muted)"/></div>
-              <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:4}}>{t('noLobbies')}</div>
-              <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500}}>{t('noLobbiesHint')}</div>
-            </div>
-          ):(
-            <div style={{padding:6,display:'flex',flexDirection:'column',gap:5}}>
-              {lobbyShown.map(l=>{
+  const lobbies1=lobbyShown.filter(function(l){return !l.tv2&&!l.kh;});      // 1 vs 1
+  const lobbiesMulti=lobbyShown.filter(function(l){return l.tv2||l.kh;});   // Mehrspieler: 2 vs 2 + King of the Hill (Tunay 2026-10-16: immer sichtbar, auch leer)
+  const lobbyZeile=(l)=>{
                 const age=Math.max(0,Math.floor((Date.now()-l.ts)/1000));
                 const ageLabel=age<60?`${age}s`:`${Math.floor(age/60)}m`;
                 const tm=l.tm||'none';
                 const isClassic=tm.indexOf('classic-')===0;
                 const isBlitz=tm.indexOf('blitz-')===0;
                 return(
-                  <div key={l.id} onClick={()=>{if(l.kh){setKhResume(false);setKhJoinCode(l.id);setNavDir('fwd');setScreen('kinghill');}else if(l.tv2){setTv2JoinCode(l.id);setNavDir('fwd');setScreen('twovtwo');}else joinLobby(l.id);}}
+                  <div key={l.id} data-e2e={'lobby-'+l.id} onClick={()=>{if(l.kh){setKhResume(false);setKhJoinCode(l.id);setNavDir('fwd');setScreen('kinghill');}else if(l.tv2){setTv2JoinCode(l.id);setNavDir('fwd');setScreen('twovtwo');}else joinLobby(l.id);}}
                     style={{padding:'10px 12px',background:'var(--bg)',borderRadius:9,
                       border:'1px solid var(--border-soft)',cursor:'pointer',
                       transition:'all 0.15s'}}>
@@ -8780,10 +8699,129 @@ function App(){
                     )}
                   </div>
                 );
-              })}
+  };
+  if(screen==='online') return (
+    <div style={{...sPage,justifyContent:'flex-start',paddingTop:'calc(env(safe-area-inset-top) + 24px)',animation:pageAnim,background:'transparent',position:'relative',zIndex:1}}>
+      <MenuBG dark={darkMode}/>
+      <MapAura map={selectedMap} dark={darkMode}/>
+      <button onClick={goBack} style={backChevron}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>{t('tutBack')}</button>
+      <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',alignItems:'center',position:'relative',zIndex:1}}>
+
+        {/* Header */}
+        <ScreenHead icon={<GlobeIcon size={28} color="#fff"/>} iconBg="linear-gradient(135deg,#3b82f6,#2563eb)"
+          title={t('playOnline')} sub={t('vsRandomDesc')}/>
+
+        {/* Server-Status-Banner */}
+        {!serverOnline&&(
+          <div style={{width:'100%',background:'rgba(239,68,68,0.10)',border:'1.5px solid rgba(239,68,68,0.3)',
+            borderRadius:14,padding:'14px 16px',marginBottom:16,textAlign:'center'}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#ef4444',marginBottom:4}}>
+              {navigator.onLine?t('serverFull'):t('serverOffline')}
+            </div>
+            {navigator.onLine&&(
+              <>
+                <div style={{fontSize:11,color:'var(--subtle)',fontWeight:600,marginBottom:12}}>
+                  {t('serverFullSub')}
+                </div>
+                <button onClick={()=>{setNavDir('fwd');setScreen('difficulty');}} style={{
+                  padding:'10px 24px',borderRadius:10,border:'none',cursor:'pointer',fontWeight:800,fontSize:13,
+                  background:'linear-gradient(135deg,#8b5cf6,#6366f1)',color:'#fff',
+                  fontFamily:'system-ui,-apple-system,sans-serif'}}>
+                  {t('serverFullBtn')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Create section */}
+        <div style={{width:'100%',marginBottom:16}}>
+          <button onClick={()=>createLobby(false)} style={{
+            width:'100%',padding:'14px 16px',background:'#1e293b',color:'white',border:'none',
+            borderRadius:12,fontWeight:700,fontSize:14,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+            boxShadow:'0 2px 8px rgba(30,41,59,0.18)',
+            fontFamily:'system-ui,-apple-system,sans-serif'}}>
+            <span style={{display:'flex'}}><PlusIcon size={18} color="#fff"/></span>
+            <span>{t('createLobby')}</span>
+          </button>
+          <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:6,textAlign:'center'}}>
+            {t('mode')}: {gameTimeMode==='none'?t('noTimer'):gameTimeMode} · {gameBarr} <BrickMini size={10}/>
+          </div>
+        </div>
+
+        {flash&&<div style={{color:'#ef4444',fontSize:12,fontWeight:500,marginBottom:10,width:'100%',textAlign:'center'}}>{flash}</div>}
+
+        {/* Lobby list header */}
+        <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,paddingLeft:2,paddingRight:2}}>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{display:'inline-block',width:6,height:6,borderRadius:'50%',background:'#16a34a',
+              animation:'piece-pulse 1.6s ease-in-out infinite'}}/>
+            <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5}}>{t('live')}</span>
+            <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5,marginLeft:4}}>· 1 VS 1</span>
+          </div>
+          {lobbies1.length>0&&(
+            <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',
+              background:'rgba(59,130,246,0.1)',padding:'2px 8px',borderRadius:10}}>
+              {lobbies1.length} {t('lobbyCount')}
             </div>
           )}
         </div>
+
+        {/* Scrollable lobby list */}
+        <div style={{
+          width:'100%',maxHeight:240,overflowY:'auto',overflowX:'hidden',
+          touchAction:'pan-y',
+          borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',
+          WebkitOverflowScrolling:'touch',
+          boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
+          {lobbies1.length===0?(
+            <div style={{padding:'34px 20px',textAlign:'center'}}>
+              <div style={{marginBottom:8,opacity:0.4,display:'flex',justifyContent:'center'}}><MazeIcon size={30} color="var(--muted)"/></div>
+              <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:4}}>{t('noLobbies')}</div>
+              <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500}}>{t('noLobbiesHint')}</div>
+            </div>
+          ):(
+            <div style={{padding:6,display:'flex',flexDirection:'column',gap:5}}>
+              {lobbies1.map(lobbyZeile)}
+            </div>
+          )}
+        </div>
+
+        {/* Mehrspieler (2 vs 2, King of the Hill): immer sichtbar, auch wenn gerade nichts offen ist */}
+        {(feat('twovtwo')||khAn)&&(
+          <div data-e2e="multi-liste" style={{width:'100%',marginTop:18}}>
+            <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,paddingLeft:2,paddingRight:2}}>
+              <span style={{fontSize:10,color:'var(--subtle)',fontWeight:700,letterSpacing:1.5}}>{t('khMulti').toUpperCase()}</span>
+              {lobbiesMulti.length>0&&(
+                <div style={{fontSize:10,fontWeight:700,color:'#f97316',background:'rgba(249,115,22,0.12)',padding:'2px 8px',borderRadius:10}}>
+                  {lobbiesMulti.length} {t('lobbyCount')}
+                </div>
+              )}
+            </div>
+            <div style={{width:'100%',maxHeight:240,overflowY:'auto',overflowX:'hidden',touchAction:'pan-y',borderRadius:12,background:'var(--card)',
+              border:'1.5px solid var(--border)',WebkitOverflowScrolling:'touch',boxShadow:'inset 0 2px 6px rgba(0,0,0,0.04)'}}>
+              {lobbiesMulti.length===0?(
+                <div style={{padding:'22px 16px',textAlign:'center'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--muted)',marginBottom:4}}>{t('khMultiNone')}</div>
+                  <div style={{fontSize:11,color:'var(--subtle)',fontWeight:500,marginBottom:12}}>{t('khMultiHint')}</div>
+                  <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
+                    {feat('twovtwo')&&<button data-e2e="multi-2v2" onClick={()=>{setTv2JoinCode(null);setNavDir('fwd');setScreen('twovtwo');}} style={{padding:'9px 14px',borderRadius:12,border:'none',cursor:'pointer',
+                      background:'linear-gradient(135deg,#ef4444,#8b5cf6)',color:'#fff',fontWeight:800,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',display:'flex',alignItems:'center',gap:6}}>
+                      <PeopleIcon size={14} color="#fff"/>{'2 vs 2'}</button>}
+                    {khAn&&<button data-e2e="multi-kh" onClick={()=>{setKhResume(false);setKhJoinCode(null);setNavDir('fwd');setScreen('kinghill');}} style={{padding:'9px 14px',borderRadius:12,border:'none',cursor:'pointer',
+                      background:'#f97316',color:'#fff',fontWeight:800,fontSize:12,fontFamily:'system-ui,-apple-system,sans-serif',display:'flex',alignItems:'center',gap:6}}>
+                      <CrownIcon size={14} color="#fff"/>{t('khTitle')}</button>}
+                  </div>
+                </div>
+              ):(
+                <div style={{padding:6,display:'flex',flexDirection:'column',gap:5}}>
+                  {lobbiesMulti.map(lobbyZeile)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
