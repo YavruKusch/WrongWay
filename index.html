@@ -8630,8 +8630,6 @@ function App(){
   const lobbies1=lobbyShown.filter(function(l){return !l.tv2&&!l.kh;});      // 1 vs 1
   const lobbiesMulti=lobbyShown.filter(function(l){return l.tv2||l.kh;});   // Mehrspieler: 2 vs 2 + King of the Hill (Tunay 2026-10-16: immer sichtbar, auch leer)
   const lobbyZeile=(l)=>{
-                const age=Math.max(0,Math.floor((Date.now()-l.ts)/1000));
-                const ageLabel=age<60?`${age}s`:`${Math.floor(age/60)}m`;
                 const tm=l.tm||'none';
                 const isClassic=tm.indexOf('classic-')===0;
                 const isBlitz=tm.indexOf('blitz-')===0;
@@ -8650,7 +8648,7 @@ function App(){
                             {t('lobby')} {l.id.slice(0,4).toUpperCase()}
                           </div>
                           <div style={{fontSize:10,color:'var(--subtle)',fontWeight:600,marginTop:1}}>
-                            {ageLabel} · {(l.tv2||l.kh)?(l.count+'/4'):'1/2'}
+                            {(l.tv2||l.kh)?(l.count+'/4'):'1/2'}
                           </div>
                         </div>
                       </div>
@@ -8691,13 +8689,13 @@ function App(){
                             <ModeGlyph kind="bolt" size={10} color="#d97706"/> {tm==='blitz-5'?'5':tm==='blitz-8'?'8':'10'}{t('secLabel')}
                           </div>
                         )}
-                        {l.ch&&(
+                        {!!l.ch&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'rgba(139,92,246,0.15)',color:'#8b5cf6'}}>
                             <ModeGlyph kind="swirl" size={10} color="#8b5cf6"/> {t('modeChaos')}
                           </div>
                         )}
-                        {l.br&&(
+                        {!!l.br&&(
                           <div style={{padding:'2px 7px',borderRadius:8,fontSize:9,fontWeight:800,letterSpacing:0.3,
                             background:'var(--card)',color:'var(--muted)',border:'1px solid var(--border-soft)'}}>
                             <BrickMini size={9}/> {l.br}
