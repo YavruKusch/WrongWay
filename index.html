@@ -881,7 +881,7 @@
 <script src="js/i18n.js?v=126"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=2"></script>
-<script src="js/ai.js?v=6"></script>
+<script src="js/ai.js?v=7"></script>
 <script src="js/sound.js"></script>
 <script src="js/werbung.js?v=5"></script>
 <script type="text/babel" data-presets="react">
@@ -5796,8 +5796,10 @@ function App(){
       }
       // Zug bestimmen: smarte Hammer-Logik
       let d=null;
-      if(st.hammerMode&&!heldB&&hms&&hms.length){
-        const nh=nearestHammer(b,w,hms);
+      // Nur Haemmer, die der Bot noch aufheben darf (je Welle einer): sonst lief er zu einem, den er nicht nehmen konnte, und pendelte (2026-10-22)
+      const huB=(st.hammerUsed||freshHammerUsed()).B,hmsFrei=(hms||[]).filter(h=>!huB[waveOf(h.id)]);
+      if(st.hammerMode&&!heldB&&hmsFrei.length){
+        const nh=nearestHammer(b,w,hmsFrei);
         const ownPath=bfsPath(b,w,aiGoal);
         const humPath=bfsPath(a,w,humGoal);
         const ownD=ownPath?ownPath.length-1:99;
@@ -5828,6 +5830,8 @@ function App(){
           d=aiMove(b,a,w,bl.B,bl.A,aiDifficulty,recentAi,chaosItem,aiGoal,humGoal);
         }
         _hamCtx=null;
+        // Ziel-Regel (js/ai.js, dieselbe wie bei den Lobby-Bots): nie rueckwaerts, nie pendeln, kein Zickzack, keine Wand ohne Nutzen
+        if(typeof zielRegel==='function')d=zielRegel(d,b,a,w,aiGoal,humGoal,recentAi,chaosItem);
       }
       // ── Gegenpruefung ──
       // Ein Bot-Zug, den die Spielregeln nicht erlauben (frueher: Einfach zog auf das Feld des Gegners und "gewann"), wird nie uebernommen:

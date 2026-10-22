@@ -249,6 +249,39 @@ function moveTowardGoal(aiPos,humanPos,walls,aiPath){
   return null;
 }
 
+// Ziel-Regel (Tunay 2026-10-21/22: "nie hin und her ohne Ziel, nie in die falsche Richtung") fuer den Computer-Gegner UND die Lobby-Bots des Servers
+// (lobbybots.js ruft dieselbe Funktion). Laeuft hinter jeder KI-Entscheidung, nicht hinter Hammer-Umwegen: (1) nie ein Schritt weg vom Ziel, solange
+// einer nach vorn geht (Ausnahme: Chaos-Kiste mit kleinem Umweg), (2) nie zurueck aufs gerade verlassene Feld ohne Fortschritt, (3) nie zwei
+// Seitenschritte hintereinander und hoechstens einer je 4 eigene Zuege (sonst Zickzack), (4) eine Wand nur, wenn sie den Gegner mehr kostet als den Bot.
+// Sonst der Schritt nach vorn (bei mehreren gleich guten zufaellig). recentAi wie ueberall: aktuelles Feld zuerst, dann eigene Zugziele neueste zuerst.
+function zielDist(p,W,g){const x=bfsPath(p,W,g);return x?x.length-1:99;}
+function zielVor(me,op,W,g,d0){
+  let beste=[],bd=d0;
+  getMovesFrom(me,op,W).forEach(m=>{const d=zielDist(m,W,g);if(d<bd){bd=d;beste=[m];}else if(d===bd&&d<d0)beste.push(m);});
+  return beste.length?beste[Math.floor(Math.random()*beste.length)]:null;
+}
+function zielRegel(d,me,op,W,gMe,gOp,recentAi,chaosItem){
+  const zm=_botSpiel.zm||(_botSpiel.zm={n:0,seit:-99});
+  zm.n++;
+  if(!d)return d;
+  const d0=zielDist(me,W,gMe);
+  if(d.type==='move'){
+    const p=d.pos,d1=zielDist(p,W,gMe),fw=zielVor(me,op,W,gMe,d0);
+    if(!fw)return d;                                              // es geht gerade nicht vorwaerts (Gegner im Weg): KI entscheidet
+    if(chaosItem&&d1>=d0){const a=bfsTo(me,chaosItem,W),b=bfsTo(p,chaosItem,W);if(a&&b&&b.length<a.length&&(a.length-1)+zielDist(chaosItem,W,gMe)<=d0+3)return d;}
+    const vorher=(recentAi||[]).find(x=>x.r!==me.r||x.c!==me.c)||null;
+    const zurueck=!!vorher&&p.r===vorher.r&&p.c===vorher.c,warSeit=!!vorher&&zielDist(vorher,W,gMe)<=d0;
+    if(d1>d0||(zurueck&&d1>=d0)||(d1===d0&&(warSeit||zm.n-zm.seit<=4)))return{type:'move',pos:fw};
+    if(d1===d0)zm.seit=zm.n;
+    return d;
+  }
+  if(d.type==='barricade'&&d.walls){
+    const eig=zielDist(me,d.walls,gMe)-d0,geg=zielDist(op,d.walls,gOp)-zielDist(op,W,gOp);
+    if(geg<=eig){const fw=zielVor(me,op,W,gMe,d0)||getMovesFrom(me,op,W)[0];if(fw)return{type:'move',pos:fw};}
+  }
+  return d;
+}
+
 // Einfach = ein ANFAENGER, kein kaputter Bot (Tunay 2026-10-14: "sehr schlecht, menschlich, jede Partie anders"). Er geht meist den kuerzesten Weg,
 // macht aber oft einen Seitenschritt statt vorwaerts (nie zurueck aufs gerade verlassene Feld), sieht einen Sieg im naechsten Zug immer, setzt
 // selten und spaet Waende (nur wenn der Gegner gleichauf oder vorne ist, nur auf dem Gegnerweg, nie mit Nettoverlust) und hoechstens 2-6 pro Partie.
