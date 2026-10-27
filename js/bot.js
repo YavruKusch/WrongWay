@@ -35,9 +35,9 @@ function botMerkmale(dMe, dOp, wMe, wOp) {
 var BOT_STILE = {
   race: {
     hard: [
-      {"n":"Mauerer","g":[53.4,100,131.4,59.2,762.1,-182.9],"tol":24,"wb":40,"kr":200,"vd":60,"k":6,"k1":4,"tl":6,"b":240000,"f":0,"fn":1},
-      {"n":"Renner","g":[53.4,100,205.3,59.2,762.1,-182.9],"tol":24,"wb":-40,"kr":200,"vd":100,"k":6,"k1":4,"tl":6,"b":240000,"f":0,"fn":1},
-      {"n":"Konter","g":[53.4,100,164.2,59.2,762.1,-182.9],"tol":24,"wb":0,"kr":200,"vd":60,"k":6,"k1":4,"tl":4,"b":240000,"f":0,"fn":1}
+      {"n":"Mauerer","g":[53.4,100,131.4,59.2,762.1,-182.9],"tol":24,"wb":40,"kr":200,"vd":60,"k":6,"k1":4,"tl":6,"b":240000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Renner","g":[53.4,100,205.3,59.2,762.1,-182.9],"tol":24,"wb":-40,"kr":200,"vd":100,"k":6,"k1":4,"tl":6,"b":240000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Konter","g":[53.4,100,164.2,59.2,762.1,-182.9],"tol":24,"wb":0,"kr":200,"vd":60,"k":6,"k1":4,"tl":4,"b":240000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50}
     ],
     normal: [
       {"n":"Mauerer","g":[53.4,100,131.4,59.2,762.1,-182.9],"tol":40,"wb":40,"kr":200,"vd":60,"k":3,"k1":2,"tl":4,"b":2000,"f":0.25,"fn":3},
@@ -47,9 +47,9 @@ var BOT_STILE = {
   },
   duel9: {
     hard: [
-      {"n":"Mauerer","g":[42.8,100,141.2,30.4,646.2,-21.9],"tol":24,"wb":20,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":330000,"f":0,"fn":1},
-      {"n":"Renner","g":[42.8,100,196.1,30.4,646.2,-21.9],"tol":24,"wb":-40,"kr":60,"vd":40,"k":6,"k1":4,"tl":6,"b":330000,"f":0,"fn":1},
-      {"n":"Konter","g":[42.8,100,156.9,30.4,646.2,-21.9],"tol":24,"wb":0,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":330000,"f":0,"fn":1}
+      {"n":"Mauerer","g":[42.8,100,141.2,30.4,646.2,-21.9],"tol":24,"wb":20,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":330000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Renner","g":[42.8,100,196.1,30.4,646.2,-21.9],"tol":24,"wb":-40,"kr":60,"vd":40,"k":6,"k1":4,"tl":6,"b":330000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Konter","g":[42.8,100,156.9,30.4,646.2,-21.9],"tol":24,"wb":0,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":330000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50}
     ],
     normal: [
       {"n":"Mauerer","g":[42.8,100,141.2,30.4,646.2,-21.9],"tol":40,"wb":20,"kr":60,"vd":0,"k":3,"k1":2,"tl":4,"b":2000,"f":0.25,"fn":3},
@@ -59,9 +59,9 @@ var BOT_STILE = {
   },
   duel7: {
     hard: [
-      {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1},
-      {"n":"Renner","g":[44.3,100,59.6,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":40,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1},
-      {"n":"Konter","g":[44.3,100,47.7,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":420000,"f":0,"fn":1}
+      {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Renner","g":[44.3,100,59.6,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":40,"k":6,"k1":4,"tl":6,"b":420000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50},
+      {"n":"Konter","g":[44.3,100,47.7,0,0,55.8],"tol":24,"wb":-40,"kr":60,"vd":0,"k":6,"k1":4,"tl":4,"b":420000,"f":0,"fn":1,"xp":2,"ts":3,"nm":50}
     ],
     normal: [
       {"n":"Mauerer","g":[44.3,100,38.2,0,0,55.8],"tol":40,"wb":40,"kr":60,"vd":0,"k":3,"k1":2,"tl":4,"b":2000,"f":0.175,"fn":3},
@@ -95,8 +95,10 @@ function botBrett(R, C) {
 }
 
 // Wand setzen (d=1) oder entfernen (d=-1). v: 0 = waagerecht (H), 1 = senkrecht (V).
+// S.h: Fingerabdruck der gesetzten Waende (fuer den Zwischenspeicher der Fallen-Suche), setzen und entfernen heben sich auf.
 function botWand(S, v, r, c, d) {
   var C = S.C, i = r * (C - 1) + c;
+  if (S.zob) S.h ^= S.zob[v * S.M + i];
   if (v === 0) { S.hw[i] += d; S.dn[r * C + c] += d; S.dn[r * C + c + 1] += d; }
   else { S.vw[i] += d; S.rt[r * C + c] += d; S.rt[(r + 1) * C + c] += d; }
 }
@@ -205,6 +207,110 @@ function botWandZuege(S, s, F0, F1, tl, maxK) {
 }
 function botGibPaar(S, w) { botGib(S, w.f0); if (w.f1 !== w.f0) botGib(S, w.f1); }
 
+// ── Fallen (Tunay 2026-10-27: "nach 2 Barrikaden schon zu 100 % gewonnen") ──
+// Gute Spieler bauen Fallen aus mehreren Waenden: zuerst eine "stille" Wand, die sofort nichts kostet (sie sperrt den Ausweg), dann die Wand, die
+// den Weg um 5-9 Felder verlaengert. Die Suche oben rechnet beim Gegner nur Waende, die sofort etwas kosten - die stille Wand kam darin nie vor,
+// der Bot lief in jede Falle (Aufzeichnungen 27.10.: Extrem verlor gegen Top-Spieler 85-96 %). Darum sucht die Fallen-Suche WAND-PAARE und gibt
+// der Suche in den ersten Halbzuegen zusaetzlich: die Waende eigener starker Paare (eigene Fallen) und Plaetze, die eine Wand eines gegnerischen
+// Paars unmoeglich machen (Ueberlappung/Kreuzung = Schutz-Wand).
+
+// Paare von Spieler a gegen v = 1-a: erste Wand auf einer Kante eines kuerzesten Wegs von v (auch ohne Mehrweg), zweite auf dem kuerzesten Weg
+// danach (bis ts Schritte vor v). Ergebnis: die staerksten Paare {a, b, g} (g = Mehrweg beider zusammen, mindestens 3), hoechstens maxN.
+function botPaare(S, a, F0, F1, ts, maxN) {
+  var v = 1 - a, pv = S.pos[v], Fv = v ? F1 : F0, dv = Fv[pv], M = S.M, W1 = S.C - 1;
+  var k1 = [], k2 = [], res = [], i, j, x, y, v1, r1, c1, v2, r2, c2, Fa, Fb;
+  botKandidaten(S, pv, Fv, ts, k1);
+  for (i = 0; i < k1.length; i++) {
+    x = k1[i]; v1 = x >= M ? 1 : 0; r1 = ((x - v1 * M) / W1) | 0; c1 = x - v1 * M - r1 * W1;
+    if (!botWandFrei(S, v1, r1, c1)) continue;
+    botWand(S, v1, r1, c1, 1);
+    Fa = botNimm(S); botFeld(S, S.goal[v], Fa);
+    if (Fa[pv] < 999) {
+      botKandidaten(S, pv, Fa, ts, k2);
+      for (j = 0; j < k2.length; j++) {
+        y = k2[j]; v2 = y >= M ? 1 : 0; r2 = ((y - v2 * M) / W1) | 0; c2 = y - v2 * M - r2 * W1;
+        if (!botWandFrei(S, v2, r2, c2)) continue;
+        botWand(S, v2, r2, c2, 1);
+        Fb = botNimm(S); botFeld(S, S.goal[v], Fb);
+        if (Fb[pv] < 999 && Fb[pv] - dv >= 3) res.push({ a: x, b: y, g: Fb[pv] - dv, g1: Fa[pv] - dv });
+        botGib(S, Fb);
+        botWand(S, v2, r2, c2, -1);
+      }
+    }
+    botGib(S, Fa);
+    botWand(S, v1, r1, c1, -1);
+  }
+  res.sort(function (p, q) { return q.g - p.g; });
+  if (res.length > maxN) res.length = maxN;
+  return res;
+}
+
+// Plaetze, die Wand idx unmoeglich machen: daneben ueberlappend (gleiche Richtung) oder in der Mitte kreuzend
+function botKonflikte(S, idx, out) {
+  var M = S.M, W1 = S.C - 1, v = idx >= M ? 1 : 0, rc = idx - v * M, r = (rc / W1) | 0, c = rc - r * W1, n = 0;
+  if (v === 0) { if (c > 0) out[n++] = rc - 1; if (c < W1 - 1) out[n++] = rc + 1; out[n++] = M + rc; }
+  else { if (r > 0) out[n++] = M + rc - W1; if (r < S.R - 2) out[n++] = M + rc + W1; out[n++] = rc; }
+  out.length = n;
+  return n;
+}
+
+// Zusaetzliche Wand-Zuege fuer Spieler s (Fallen-Suche): Liste {i, g} nach Wichtigkeit, je Stellung nur einmal gerechnet (Zwischenspeicher).
+function botExtra(S, s, F0, F1) {
+  var key = S.h + ':' + S.pos[0] + ':' + S.pos[1] + ':' + s, c = S.cache.get(key);
+  if (c) return c;
+  var ab = {}, an = {}, liste = [], k = [], i, j, p, ts = S.stil.ts || 3;
+  var nimm = function (tab, idx, g) { if (!(tab[idx] >= g)) tab[idx] = g; };
+  var beste = function (tab, n) {   // die n wichtigsten erlaubten stillen Plaetze einer Tabelle, die noch nicht in der Liste stehen
+    var l = [], x, w;
+    for (x in tab) if (!botHat(liste, +x)) l.push({ i: +x, g: tab[x] });
+    l.sort(function (a, b) { return b.g - a.g; });
+    for (x = 0; x < l.length && n > 0; x++) {
+      w = botWandStill(S, s, F0, F1, l[x].i);
+      if (w) { botGibPaar(S, w); liste.push(l[x]); n--; }
+    }
+  };
+  // Schutz zuerst (eigene Quote, sonst verdraengten eigene Fallen-Ideen die Abwehr): Plaetze, die eine Wand eines gegnerischen Paars unmoeglich
+  // machen. Wichtig ist, was dadurch wegfaellt: die erste Wand traegt das ganze Paar, die zweite nur ihren Teil (g - g1).
+  p = botPaare(S, 1 - s, F0, F1, ts, 4);
+  for (i = 0; i < p.length; i++) {
+    botKonflikte(S, p[i].a, k); for (j = 0; j < k.length; j++) nimm(ab, k[j], p[i].g);
+    botKonflikte(S, p[i].b, k); for (j = 0; j < k.length; j++) nimm(ab, k[j], p[i].g - p[i].g1);
+  }
+  beste(ab, S.stil.xd || 4);
+  p = botPaare(S, s, F0, F1, ts, 3);
+  for (i = 0; i < p.length; i++) { nimm(an, p[i].a, p[i].g); nimm(an, p[i].b, p[i].g); }
+  beste(an, S.stil.xo || 2);
+  S.cache.set(key, liste);
+  return liste;
+}
+
+// Eine stille Wand fuer s pruefen: erlaubt, beide behalten einen Weg, der eigene Weg wird nicht laenger. Liefert {i, f0, f1} oder null.
+function botWandStill(S, s, F0, F1, idx) {
+  var o = 1 - s, me = S.pos[s], op = S.pos[o], dMe = (s ? F1 : F0)[me], M = S.M, W1 = S.C - 1;
+  var v = idx >= M ? 1 : 0, r = ((idx - v * M) / W1) | 0, c = idx - v * M - r * W1, nOp, nMe;
+  if (!botWandFrei(S, v, r, c)) return null;
+  botWand(S, v, r, c, 1);
+  nOp = botNimm(S); botFeld(S, S.goal[o], nOp);
+  nMe = S.same ? nOp : botNimm(S);
+  if (!S.same) botFeld(S, S.goal[s], nMe);
+  botWand(S, v, r, c, -1);
+  if (nOp[op] >= 999 || nMe[me] >= 999 || nMe[me] > dMe) { botGib(S, nOp); if (nMe !== nOp) botGib(S, nMe); return null; }
+  return { i: idx, f0: s ? nOp : nMe, f1: s ? nMe : nOp };
+}
+function botHat(ww, idx) { for (var i = 0; i < ww.length; i++) if (ww[i].i === idx) return true; return false; }
+// Zobrist-Zahlen je Brettgroesse (einmal je Groesse) aus einem eigenen festen Zufall: Math.random bleibt unberuehrt, damit eine Partie mit
+// gleichem Zufall Zug fuer Zug gleich nachspielbar bleibt (bottest)
+var BOT_ZOB = {};
+function botZobrist(M) {
+  var z = BOT_ZOB[M], i, a = 0x9E3779B9 ^ M;
+  if (!z) {
+    z = new Int32Array(2 * M);
+    for (i = 0; i < 2 * M; i++) { a ^= a << 13; a ^= a >>> 17; a ^= a << 5; z[i] = a; }
+    BOT_ZOB[M] = z;
+  }
+  return z;
+}
+
 // Dieselbe Rechnung wie Summe(g[i] * botMerkmale[i]) — ausgeschrieben, weil sie im Vorausrechnen am
 // haeufigsten laeuft (bottest.js prueft die Gleichheit).
 function botWert(S, s, dMe, dOp) {
@@ -218,7 +324,7 @@ function botSuche(S, s, F0, F1, tiefe, alpha, beta, ply) {
   if (--S.kosten < 0) S.abbruch = true;
   if (S.abbruch) return 0;
   var o = 1 - s, me = S.pos[s], op = S.pos[o], Fme = s ? F1 : F0, Fop = s ? F0 : F1;
-  var gz = S.goal[s] * S.C, zz = [], n = botZuege(S, me, op, zz), i, sc, best = -Infinity, ww, w;
+  var gz = S.goal[s] * S.C, zz = [], n = botZuege(S, me, op, zz), i, sc, best = -Infinity, ww, w, ex;
   for (i = 0; i < n; i++) if (zz[i] >= gz && zz[i] < gz + S.C) return BOT_WIN - ply;
   if (tiefe <= 0) return botWert(S, s, Fme[me], Fop[op]);
   zz.sort(function (a, b) { return Fme[a] - Fme[b]; });
@@ -242,6 +348,22 @@ function botSuche(S, s, F0, F1, tiefe, alpha, beta, ply) {
       botGibPaar(S, w);
     }
     if (S.abbruch) return 0;
+    // Fallen-Suche in den ersten Halbzuegen (Stil xp): stille Waende eigener Fallen und Schutz-Waende gegen Fallen des Gegners. Erst ab
+    // Resttiefe 2 - davor kaeme die Antwort, die sie wertvoll macht, gar nicht mehr in der Rechnung vor.
+    if (ply <= S.stil.xp && tiefe >= 2 && alpha < beta) {
+      ex = botExtra(S, s, F0, F1);
+      for (i = 0; i < ex.length && alpha < beta && !S.abbruch; i++) {
+        if (botHat(ww, ex[i].i)) continue;
+        w = botWandStill(S, s, F0, F1, ex[i].i);
+        if (!w) continue;
+        botWandIdx(S, w.i, 1); S.barr[s]--;
+        sc = -botSuche(S, o, w.f0, w.f1, tiefe - 1, -beta, -alpha, ply + 1);
+        botWandIdx(S, w.i, -1); S.barr[s]++;
+        botGibPaar(S, w);
+        if (sc > best) { best = sc; if (sc > alpha) alpha = sc; }
+      }
+      if (S.abbruch) return 0;
+    }
   }
   // Eingesperrt (kein Zug, keine Wand): wie eine normale Stellung bewerten
   return best === -Infinity ? botWert(S, s, Fme[me], Fop[op]) : best;
@@ -253,7 +375,7 @@ function botWurzel(S, wurzel, tiefe) {
   var best = -Infinity, i, m, a, sc, tol = S.stil.tol;
   for (i = 0; i < wurzel.length; i++) {
     m = wurzel[i];
-    a = best === -Infinity ? -Infinity : best - tol - m.bonus - 1;
+    a = best === -Infinity || m.genau ? -Infinity : best - tol - m.bonus - 1;
     if (m.wand >= 0) { botWandIdx(S, m.wand, 1); S.barr[0]--; } else S.pos[0] = m.zug;
     sc = -botSuche(S, 1, m.f0, m.f1, tiefe - 1, -Infinity, -a, 1);
     if (m.wand >= 0) { botWandIdx(S, m.wand, -1); S.barr[0]++; } else S.pos[0] = S.start;
@@ -269,7 +391,8 @@ function botWurzel(S, wurzel, tiefe) {
 // Ergebnis: {type:'move', pos:{r,c}} oder {type:'wall', key:'H-r-c'}
 function botZug(z) {
   var R = z.rows, C = z.cols, S = botBrett(R, C), rnd = z.rnd || Math.random, stil = z.stil;
-  var recent = z.recent || [], i, j, m, tiefe, fertig = 0, best, wahl, kand, zz = [], n, F0, F1, ww, p;
+  var recent = z.recent || [], i, j, m, tiefe, fertig = 0, best, wahl, kand, zz = [], n, F0, F1, ww, p, ex, w, vorn, noetig;
+  S.zob = stil.xp >= 0 ? botZobrist(S.M) : null; S.h = 0; S.cache = new Map();
   (z.walls.forEach ? z.walls : []).forEach(function (k) {
     var a = k.split('-');
     botWand(S, a[0] === 'H' ? 0 : 1, +a[1], +a[2], 1);
@@ -295,11 +418,17 @@ function botZug(z) {
     j = vorher.indexOf(zz[i]);
     if (j >= 0) m.bonus = -stil.kr * (4 - j) / 4;
     if (stil.vd && F0[zz[i]] < F0[S.start]) m.bonus += stil.vd; // Vorwaertsdrang: echter Fortschritt zaehlt extra
+    // Fallen-Suche (nm): Schritte nach vorn genau rechnen - 'noetig' vergleicht mit ihrem Wert, eine grobe Schranke taete es nicht
+    if (stil.nm > 0 && F0[zz[i]] < F0[S.start]) m.genau = true;
     wurzel.push(m);
   }
   if (S.barr[0] > 0) {
     ww = botWandZuege(S, 0, F0, F1, 99, 999);
     for (i = 0; i < ww.length; i++) wurzel.push({ zug: -1, wand: ww[i].i, f0: ww[i].f0, f1: ww[i].f1, bonus: stil.wb, s: 0, ok: -Infinity });
+    if (stil.xp >= 0) {   // Fallen-Suche: stille Waende (eigene Falle vorbereiten, gegnerische unmoeglich machen)
+      ex = botExtra(S, 0, F0, F1);
+      for (i = 0; i < ex.length; i++) if (!botHat(ww, ex[i].i) && (w = botWandStill(S, 0, F0, F1, ex[i].i))) wurzel.push({ zug: -1, wand: w.i, f0: w.f0, f1: w.f1, bonus: stil.wb, s: 0, ok: -Infinity });
+    }
   }
   if (!wurzel.length) return null; // eingesperrt und keine Wand mehr: der alte Bot uebernimmt
   for (tiefe = 1; tiefe <= 12; tiefe++) {
@@ -341,9 +470,15 @@ function botZug(z) {
     kand = kand.filter(function (x) { return x.wand >= 0 || F0[x.zug] < F0[S.start]; });
   }
   wahl = kand[Math.floor(rnd() * kand.length) % kand.length];
+  // Bewusster Zug (Stil nm): eine Wand oder ein Schritt ohne Fortschritt, der um mindestens nm besser ist als der beste Schritt nach vorn - etwa
+  // eine Schutz-Wand gegen eine Falle. Die Ziel-Regel (ai.js) und der Server lassen ihn dann unveraendert (sonst wuerde er durch einen Schritt ersetzt).
+  vorn = -Infinity;
+  for (i = 0; i < wurzel.length; i++) if (wurzel[i].wand < 0 && F0[wurzel[i].zug] < F0[S.start] && wurzel[i].ok - wurzel[i].bonus > vorn) vorn = wurzel[i].ok - wurzel[i].bonus;
+  noetig = stil.nm > 0 && (wahl.wand >= 0 || F0[wahl.zug] >= F0[S.start]) && wahl.ok - wahl.bonus >= vorn + stil.nm;
   if (wahl.wand >= 0) {
     p = wahl.wand; j = p >= S.M ? 1 : 0; p -= j * S.M;
-    return { type: 'wall', key: (j ? 'V-' : 'H-') + ((p / (C - 1)) | 0) + '-' + (p % (C - 1)) };
+    return noetig ? { type: 'wall', key: (j ? 'V-' : 'H-') + ((p / (C - 1)) | 0) + '-' + (p % (C - 1)), noetig: true }
+      : { type: 'wall', key: (j ? 'V-' : 'H-') + ((p / (C - 1)) | 0) + '-' + (p % (C - 1)) };
   }
-  return { type: 'move', pos: { r: (wahl.zug / C) | 0, c: wahl.zug % C } };
+  return noetig ? { type: 'move', pos: { r: (wahl.zug / C) | 0, c: wahl.zug % C }, noetig: true } : { type: 'move', pos: { r: (wahl.zug / C) | 0, c: wahl.zug % C } };
 }

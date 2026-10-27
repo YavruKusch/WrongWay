@@ -215,7 +215,7 @@ function aiNeu(stufe,aiPos,humanPos,walls,aiBarr,humBarr,recentAi,aiGoal,humGoal
   if(d.type==='move')return getMovesFrom(aiPos,humanPos,walls).some(m=>m.r===d.pos.r&&m.c===d.pos.c)?d:null;
   if(aiBarr<=0)return null;
   const next=tryWall(d.key,walls,aiPos,humanPos,aiGoal,humGoal);
-  return next?{type:'barricade',walls:next}:null;
+  return next?(d.noetig?{type:'barricade',walls:next,noetig:true}:{type:'barricade',walls:next}):null;
 }
 
 // Bedenkzeit des Bots vor jedem Zug: wie ein Mensch mal schneller, mal langsamer (Mittel aus zwei Zufallszahlen = meist mittig, selten ganz kurz/lang).
@@ -265,6 +265,8 @@ function zielRegel(d,me,op,W,gMe,gOp,recentAi,chaosItem){
   zm.n++;
   if(!d)return d;
   const d0=zielDist(me,W,gMe);
+  // Bewusster Zug der Fallen-Suche (bot.js 'noetig': deutlich besser als jeder Schritt nach vorn, z.B. Schutz-Wand oder Ausweichen vor einer Falle)
+  if(d.noetig){if(d.type==='move'&&zielDist(d.pos,W,gMe)===d0)zm.seit=zm.n;return d;}
   if(d.type==='move'){
     const p=d.pos,d1=zielDist(p,W,gMe),fw=zielVor(me,op,W,gMe,d0);
     if(!fw)return d;                                              // es geht gerade nicht vorwaerts (Gegner im Weg): KI entscheidet
