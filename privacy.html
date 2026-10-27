@@ -27,7 +27,7 @@
 </head>
 <body>
 <div class="container">
-  <div class="logo">Wrong Way Studios</div>
+  <div class="logo">Wrong Way</div>
   <div class="lang-switch">
     <a href="#" class="active" onclick="setLang('en',this)">English</a>
     <a href="#" onclick="setLang('de',this)">Deutsch</a>
@@ -38,244 +38,361 @@
   <!-- ENGLISH -->
   <div id="sec-en" class="section active">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: July 2026</p>
+    <p class="updated">Last updated: 30 September 2026</p>
 
-    <h2>1. Who We Are</h2>
-    <p>Wrong Way Studios operates the mobile game "Wrong Way: Don't be mad" (the "App"). Contact: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <h2>1. Controller</h2>
+    <p>The controller responsible for processing your data in the game "Wrong Way: Don't be mad" (browser version on wrongway.app and app for iOS/Android) is:</p>
+    <p>Hüseyin Tunay<br>Ömerağa Mah., Tahsin Marmara Sok. No: 8, İzmit / Kocaeli<br>Email: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <p>This policy provides the information required by Art. 10 of the Turkish Personal Data Protection Law No. 6698 (KVKK) and Art. 13 of the EU General Data Protection Regulation (GDPR). The Turkish version is our information notice (Aydınlatma Metni).</p>
 
-    <h2>2. Data We Collect</h2>
-    <p>We collect only what is necessary to operate the game:</p>
+    <h2>2. In short</h2>
     <ul>
-      <li><strong>Account data:</strong> Email address and/or Google account ID (via Firebase Authentication), chosen display name.</li>
-      <li><strong>Game data:</strong> ELO rating, XP, level, coins, owned items (skins, banners), achievements, match history, friend list.</li>
-      <li><strong>Player tag:</strong> A short randomly generated player ID (e.g. #ABC234), not linked to your real name.</li>
-      <li><strong>Technical data:</strong> IP address (retained temporarily for security and anti-abuse purposes only, not stored long-term), device type, app version.</li>
-      <li><strong>Error reports:</strong> If a technical error occurs, the app automatically stores a short report (error message, affected code location, browser/device type, app version, time) under your user ID — at most 10 entries per account, used only to fix bugs. You can also voluntarily send a problem report after an online match (your description, the match history and technical match data) — at most 3 per day. Deleted together with your account.</li>
-      <li><strong>Chat messages:</strong> In-game text chat. Not stored permanently after the match ends. When something is reported, the reported message and the match's chat history are kept for review as context (see section 5).</li>
+      <li>We only process what the game needs. We do not sell data or share it for advertising.</li>
+      <li>No location, no contacts, no photos, no special categories of data (e.g. health).</li>
+      <li>Your player name, your profile and your rankings are visible to other players.</li>
+      <li>You can delete your account yourself at any time (section 7).</li>
     </ul>
-    <p>We do not collect location data, contacts, photos, or any sensitive personal data.</p>
 
-    <h2>3. How We Use Your Data</h2>
+    <h2>3. What data we process and why</h2>
+    <p>We collect data automatically through the game: from what you enter, from gameplay and from the technical connection.</p>
     <ul>
-      <li>To operate the game and synchronize your progress across devices.</li>
-      <li>To display leaderboards and match results.</li>
-      <li>To prevent cheating, abuse, and unauthorized access.</li>
-      <li>To send important service notifications (e.g. account security).</li>
+      <li><strong>Account:</strong> email address, password (only as an encrypted hash at Google Firebase – we never see it), with "Sign in with Google/Apple" the ID and email address of that account, a random account ID. Purpose: signing in and protecting your account. Legal basis: contract (KVKK Art. 5(2)(c); GDPR Art. 6(1)(b)).</li>
+      <li><strong>Verification code:</strong> When you register, we send a 6-digit code to your email address. We only store a hash of the code, its expiry time and the number of attempts – for at most one day. Until code delivery is set up, Google Firebase sends a verification link instead. Purpose: real addresses, protection against mass accounts. Legal basis: contract and legitimate interest (KVKK Art. 5(2)(f); GDPR Art. 6(1)(f)).</li>
+      <li><strong>Profile (visible to others):</strong> player name, colour, creation date, game statistics (games, wins), level, equipped items, player tag (e.g. #ABC234). Other players can retrieve your profile and name; your name appears in rankings and World League lists. With "Profile is private", opponents in a match only see your level instead of your statistics and rating. Legal basis: contract.</li>
+      <li><strong>Game data:</strong> moves, game state, result, match duration, rating (ELO), XP, level, coins with transaction history, virtual items, login calendar and level rewards. Purpose: running the game, progress, fair rating. To prevent point pushing, we count how often the same two accounts score against each other; these counters expire after two days at the latest. Legal basis: contract; fraud prevention legitimate interest.</li>
+      <li><strong>World League:</strong> your chosen country and your points per week and in total, publicly visible with your player name. Your country is also shown as a small flag next to your name in every online match (for your opponent too) and in your profile. For cheat detection we keep a match log (account IDs of both players, opponent's name, countries, time, duration, number of moves, how the match ended); it is deleted after at most 9 weeks. Legal basis: contract; match log legitimate interest.</li>
+      <li><strong>Friends and online status:</strong> friend list, friend requests, invitations, block list; your online status (online, last seen, in a match) is visible to signed-in players. Spectators see the game state and names, not the chat. Legal basis: contract.</li>
+      <li><strong>Chat and emotes:</strong> messages pass through our game server, are filtered automatically and processed only for delivery. So that you can report messages, the server keeps the last lines of the current match (at most 20) in memory; during a server update they are in the database for a few seconds. They are discarded after the match. Legal basis: contract.</li>
+      <li><strong>Reports, moderation, bans:</strong> When something is reported, we store the reporting and the reported account, the reported message, the match chat and the time. For warnings and bans: account ID, reason and duration. Purpose: a safe game, protecting other players, preventing ban evasion. Legal basis: legitimate interest and establishing, exercising or defending rights (KVKK Art. 5(2)(e) and (f); GDPR Art. 6(1)(f)).</li>
+      <li><strong>Error and problem reports:</strong> If a technical error occurs, the game stores a short report (error message, code location, browser/device type, app version, time) under your account ID – at most 10, older ones are overwritten. After an online match you can voluntarily send a problem report (your description, device data, the match history and server data of the match) – at most 3 per day. Purpose: finding and fixing bugs. Legal basis: legitimate interest; for problem reports also your request.</li>
+      <li><strong>Technical data:</strong> the game server uses your IP address only in memory for abuse and overload protection (e.g. limits for code emails); it is not stored in our database. The server also sees whether you use the app or the browser. The hosting provider of the game server keeps server logs (including account IDs in error messages), which it deletes after 30 days at the latest. Legal basis: legitimate interest.</li>
+      <li><strong>Anonymous statistics:</strong> we only count daily totals – connections, playing time, matches per mode, app or browser and a country derived from your language setting. Without account ID and without IP address; it cannot be traced back to you.</li>
+      <li><strong>Support and gifts:</strong> when we change something in your account (e.g. correct coins, gift items or a message, ban), we log what was done, when, to which account and why. Purpose: accountability. Legal basis: legitimate interest.</li>
+      <li><strong>Acceptance of the Terms of Use:</strong> when you sign up (or confirm new terms), we store the time, the version of the terms and whether you used the app or the browser, as proof of the contract. Legal basis: contract and legitimate interest in being able to prove it (KVKK Art. 5(2)(c) and (f); GDPR Art. 6(1)(b) and (f)). Deleted together with your account.</li>
+      <li><strong>Guests:</strong> if you play without an account, Google Firebase creates a random anonymous ID without name or email. Guests do not earn coins or XP.</li>
+      <li><strong>Storage on your device:</strong> settings (language, sound, appearance), sign-in state, your consent choice, a local history of your replays and the guest ID are kept in your browser's or the app's storage. This is technically necessary for the game; without your consent we do not set tracking or advertising cookies.</li>
     </ul>
-    <p>We do not sell your data to third parties. We do not use your data for advertising profiling.</p>
 
-    <h2>4. Third-Party Services</h2>
+    <h2>4. Recipients</h2>
+    <p>To run the game we use these service providers:</p>
     <ul>
-      <li><strong>Google Firebase</strong> (Google LLC) — Authentication, Realtime Database. <a href="https://firebase.google.com/support/privacy" target="_blank">Firebase Privacy Policy</a></li>
-      <li><strong>Railway</strong> — Game server hosting. <a href="https://railway.app/legal/privacy" target="_blank">Railway Privacy Policy</a></li>
-      <li><strong>GitHub Pages</strong> (GitHub, Inc.) — web hosting for the browser version and this page.</li>
-      <li><strong>Google AdMob</strong> (planned) — optional rewarded ads. A consent banner (Google UMP) will ask for permission before any ads are shown; no personalized ads without consent.</li>
+      <li><strong>Google</strong> (Google LLC, USA; Google Ireland Ltd.): Firebase Authentication (sign-in, operated worldwide including the USA), Firebase Realtime Database (storage, data centre in Belgium/EU), daily backups, delivery of Firebase program files (gstatic.com) and "Sign in with Google" if you choose it.</li>
+      <li><strong>Railway Corporation</strong> (USA): operation of the game server (servers in the USA).</li>
+      <li><strong>GitHub, Inc.</strong> (USA): web hosting of the browser version and of these pages. GitHub stores your IP address in server logs.</li>
+      <li><strong>Brevo</strong> (Sendinblue SAS, France; servers in the EU): sending verification codes, once code delivery is set up.</li>
+      <li><strong>Apple Inc.</strong>: "Sign in with Apple" in the iOS app if you choose it.</li>
+      <li><strong>App stores</strong> (Apple App Store, Google Play): distribution of the app under their own privacy terms.</li>
+      <li><strong>Authorities and courts:</strong> only where we are legally obliged.</li>
     </ul>
-    <p><strong>International transfers (GDPR Ch. V / KVKK Art. 9):</strong> data is processed on servers in the EU and the USA (Google, GitHub, Railway). US transfers are based on EU Standard Contractual Clauses. By using the App you expressly consent to this transfer as required by Turkish KVKK Art. 9.</p>
 
-    <h2>5. Data Retention</h2>
-    <p>Your account data is retained as long as your account exists. You can request deletion at any time (see section 7). Temporary data (IP addresses, match logs) is deleted automatically within 30 days. Error reports are deleted together with your account. Reports about rule violations and ban records are kept after account deletion to prevent ban evasion (legitimate interest, Art. 6(1)(f) GDPR). Chat excerpts in reports and moderation logs are removed after 12 months at the latest.</p>
+    <h2>5. International transfers</h2>
+    <p>These providers process data in the EU and in the USA, because we cannot offer the game without them. There is no adequacy decision of the Turkish Data Protection Authority for these countries (KVKK Art. 9). Where the providers make it possible, we conclude the standard contracts under KVKK Art. 9 with them and notify the Authority. For transfers under the GDPR we rely on the EU Standard Contractual Clauses in the providers' data processing terms.</p>
 
-    <h2>6. Children's Privacy</h2>
-    <p>The App is not directed at children under 13. We do not knowingly collect data from children under 13. If you believe a child has provided us with personal data, please contact us so we can delete it.</p>
+    <h2>6. How long we keep data</h2>
+    <ul>
+      <li>Account, profile, game data, friends, error and problem reports: until you delete your account.</li>
+      <li>Verification code data: at most 1 day.</li>
+      <li>World League weekly lists and match log: at most 9 weeks.</li>
+      <li>Counters against point abuse between two accounts: at most 2 days.</li>
+      <li>Unprocessed reports: at most 12 months.</li>
+      <li>Ban and moderation history: as long as needed to prevent ban evasion; chat excerpts in it are deleted after 12 months.</li>
+      <li>Support log (changes to accounts): permanently, for accountability.</li>
+      <li>Server logs of the game server: at most 30 days.</li>
+      <li>Delivery logs of the email service Brevo (recipient address, time, delivery status): 1 month.</li>
+      <li>Database backups: 30 days – deleted data disappears from them by then at the latest.</li>
+    </ul>
 
-    <h2>7. Your Rights — Account Deletion</h2>
-    <p>You have the right to access, correct, or delete your personal data at any time.</p>
-    <p><strong>To delete your account and all associated data:</strong> Open the App → Profile → Settings → Delete Account. This permanently deletes all your data from our servers (except abuse-prevention records — see section 5).</p>
-    <p>You may also send a deletion request to: <a href="mailto:info@hupsy.app">info@hupsy.app</a>. For full details on what is deleted and what is retained, see our <a href="delete-account.html">account deletion page</a>.</p>
-    <p>Under GDPR (EU users) and KVKK (Turkish users), you also have the right to data portability, restriction of processing, and to lodge a complaint with your local data protection authority.</p>
+    <h2>7. Deleting your account</h2>
+    <p>Browser: open your profile → "Delete account". App: Profile → "Danger Zone" → "Delete account". For security you confirm with your password or briefly sign in again with Google or Apple. If you can no longer sign in, write to us from your account's email address. What is deleted and what remains for which reason is described at <a href="https://wrongway.app/delete-account.html">wrongway.app/delete-account.html</a>.</p>
 
-    <h2>8. Security</h2>
-    <p>All data is transmitted over TLS encryption. Game-critical data (coins, items, achievements) is stored exclusively on our server using Firebase Admin SDK — clients cannot modify these values directly.</p>
+    <h2>8. Your rights</h2>
+    <p>Under KVKK Art. 11 you have the right to learn whether your personal data is processed and to request information about it; to learn the purpose and whether it is used accordingly; to know the third parties in Turkey or abroad to whom it is transferred; to have incomplete or incorrect data corrected and data deleted or destroyed, and to request that recipients be notified; to object to a result to your detriment that arises exclusively from automated analysis; and to claim compensation for damage caused by unlawful processing.</p>
+    <p>Under the GDPR you have the rights of access, rectification, erasure, restriction, data portability and to object to processing based on legitimate interest (GDPR Art. 15–21), and the right to withdraw a consent at any time with effect for the future.</p>
+    <p>How to apply: by email from the address registered in your account to <a href="mailto:info@hupsy.app">info@hupsy.app</a>, or in writing to the address in section 1. We answer free of charge and within 30 days at the latest.</p>
+    <p>Complaints: in Turkey to the Personal Data Protection Authority (Kişisel Verileri Koruma Kurumu, <a href="https://www.kvkk.gov.tr">kvkk.gov.tr</a>) after first contacting us; in the EU to the data protection supervisory authority where you live.</p>
 
-    <h2>9. Changes to This Policy</h2>
-    <p>We may update this policy. The "Last updated" date at the top reflects the most recent version. Continued use of the App after changes constitutes acceptance.</p>
+    <h2>9. Children</h2>
+    <p>The game is for people aged 13 and over. If you are younger, please do not create an account. If we learn that an account belongs to a child under 13, we delete it.</p>
+
+    <h2>10. Security</h2>
+    <p>All connections are encrypted (TLS). Only Google Firebase knows passwords, as a hash. Only our server changes game-deciding data such as rating, coins and items; the database access rules block everything that is not explicitly allowed.</p>
+
+    <h2>11. Changes</h2>
+    <p>If the processing changes, we update this policy; the date at the top shows the current version. We announce significant changes in the game.</p>
 
     <div class="contact-box">
-      <p><strong>Contact:</strong> Wrong Way Studios &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+      <p><strong>Contact:</strong> Hüseyin Tunay &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
     </div>
   </div>
 
   <!-- DEUTSCH -->
   <div id="sec-de" class="section">
     <h1>Datenschutzerklärung</h1>
-    <p class="updated">Zuletzt aktualisiert: Juli 2026</p>
+    <p class="updated">Stand: 30. September 2026</p>
 
-    <h2>1. Wer wir sind</h2>
-    <p>Wrong Way Studios betreibt das Mobilspiel "Wrong Way: Don't be mad" (die "App"). Kontakt: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <h2>1. Verantwortlicher</h2>
+    <p>Verantwortlich für die Verarbeitung deiner Daten im Spiel „Wrong Way: Don't be mad" (Browser-Version auf wrongway.app und App für iOS/Android) ist:</p>
+    <p>Hüseyin Tunay<br>Ömerağa Mah., Tahsin Marmara Sok. No: 8, İzmit / Kocaeli<br>E-Mail: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <p>Diese Erklärung erfüllt die Informationspflicht nach Art. 10 des türkischen Datenschutzgesetzes Nr. 6698 (KVKK) und nach Art. 13 der EU-Datenschutz-Grundverordnung (DSGVO). Die türkische Fassung ist unser Aufklärungstext (Aydınlatma Metni).</p>
 
-    <h2>2. Welche Daten wir erheben</h2>
-    <p>Wir erheben nur das, was für den Betrieb des Spiels notwendig ist:</p>
+    <h2>2. Kurz gesagt</h2>
     <ul>
-      <li><strong>Account-Daten:</strong> E-Mail-Adresse und/oder Google-Konto-ID (über Firebase Authentication), gewählter Anzeigename.</li>
-      <li><strong>Spieldaten:</strong> ELO-Rating, XP, Level, Coins, gekaufte Items (Skins, Banner), Achievements, Match-Historie, Freundesliste.</li>
-      <li><strong>Spieler-Tag:</strong> Eine kurze, zufällig generierte Spieler-ID (z.B. #ABC234), nicht mit dem echten Namen verknüpft.</li>
-      <li><strong>Technische Daten:</strong> IP-Adresse (vorübergehend für Sicherheit und Anti-Missbrauch, keine Langzeitspeicherung), Gerätetyp, App-Version.</li>
-      <li><strong>Fehlerberichte:</strong> Bei technischen Fehlern speichert die App automatisch einen kurzen Bericht (Fehlermeldung, betroffene Code-Stelle, Browser-/Gerätetyp, App-Version, Zeitpunkt) unter deiner Nutzer-ID — maximal 10 Einträge pro Konto, nur zur Fehlerbehebung. Zusätzlich kannst du nach einer Online-Runde freiwillig einen Problembericht senden (deine Beschreibung, Spielverlauf und technische Daten der Runde) — maximal 3 pro Tag. Fehlerberichte werden mit der Kontolöschung gelöscht.</li>
-      <li><strong>Chat-Nachrichten:</strong> In-Game-Textnachrichten. Werden nach Match-Ende nicht dauerhaft gespeichert. Bei einer Meldung werden die gemeldete Nachricht und der Chat-Verlauf der Runde als Kontext zur Prüfung aufbewahrt (siehe Abschnitt 5).</li>
+      <li>Wir verarbeiten nur, was das Spiel braucht. Wir verkaufen keine Daten und geben sie nicht zu Werbezwecken weiter.</li>
+      <li>Kein Standort, keine Kontakte, keine Fotos, keine besonderen Datenkategorien (z. B. Gesundheit).</li>
+      <li>Dein Spielername, dein Profil und deine Platzierungen sind für andere Spieler sichtbar.</li>
+      <li>Du kannst dein Konto jederzeit selbst löschen (Abschnitt 7).</li>
     </ul>
-    <p>Wir erheben keine Standortdaten, Kontakte, Fotos oder sonstige sensible Daten.</p>
 
-    <h2>3. Wie wir Deine Daten nutzen</h2>
+    <h2>3. Welche Daten wir wofür verarbeiten</h2>
+    <p>Die Daten erheben wir automatisiert über das Spiel: aus deinen Eingaben, aus dem Spielverlauf und aus der technischen Verbindung.</p>
     <ul>
-      <li>Um das Spiel zu betreiben und deinen Fortschritt geräteübergreifend zu synchronisieren.</li>
-      <li>Zur Anzeige von Ranglisten und Match-Ergebnissen.</li>
-      <li>Zur Verhinderung von Cheating, Missbrauch und unberechtigtem Zugriff.</li>
-      <li>Für wichtige Service-Benachrichtigungen (z.B. Kontosicherheit).</li>
+      <li><strong>Konto:</strong> E-Mail-Adresse, Passwort (nur als verschlüsselter Hash bei Google Firebase – wir sehen es nie), bei „Mit Google/Apple anmelden" die Kennung und E-Mail-Adresse dieses Kontos, eine zufällige Konto-ID. Zweck: Anmeldung und Schutz deines Kontos. Rechtsgrundlage: Vertrag (KVKK Art. 5 Abs. 2 lit. c; DSGVO Art. 6 Abs. 1 lit. b).</li>
+      <li><strong>Bestätigungscode:</strong> Bei der Registrierung schicken wir einen 6-stelligen Code an deine E-Mail-Adresse. Gespeichert werden nur ein Hash des Codes, die Ablaufzeit und die Zahl der Versuche – höchstens einen Tag. Solange der Code-Versand nicht eingerichtet ist, schickt Google Firebase stattdessen einen Bestätigungslink. Zweck: echte Adressen, Schutz vor Massen-Konten. Rechtsgrundlage: Vertrag und berechtigtes Interesse (KVKK Art. 5 Abs. 2 lit. f; DSGVO Art. 6 Abs. 1 lit. f).</li>
+      <li><strong>Profil (für andere sichtbar):</strong> Spielername, Farbe, Erstelldatum, Spielstatistik (Spiele, Siege), Level, ausgerüstete Gegenstände, Spieler-Kennung (z. B. #ABC234). Profil und Name sind für andere Spieler abrufbar; der Name steht in Ranglisten und Weltliga-Listen. Mit „Profil privat" siehst du beim Gegner im Spiel nur noch dein Level statt Statistik und Wertung. Rechtsgrundlage: Vertrag.</li>
+      <li><strong>Spieldaten:</strong> Züge, Spielstand, Ergebnis, Spieldauer, Wertung (ELO), XP, Level, Coins mit Buchungsverlauf, virtuelle Gegenstände, Login-Kalender und Level-Belohnungen. Zweck: Spielbetrieb, Fortschritt, faire Wertung. Um das Schieben von Punkten zu verhindern, zählen wir, wie oft dieselben zwei Konten gegeneinander Punkte bekommen; diese Zähler verfallen nach spätestens zwei Tagen. Rechtsgrundlage: Vertrag; Betrugsschutz berechtigtes Interesse.</li>
+      <li><strong>Weltliga:</strong> gewähltes Land und deine Punkte je Woche und insgesamt, mit Spielername öffentlich sichtbar. Dein Land steht außerdem als kleine Flagge neben deinem Namen in jedem Online-Spiel (auch für deinen Gegner) und in deinem Profil. Für die Betrugserkennung führen wir ein Spielprotokoll (Konto-IDs beider Spieler, Name des Gegners, Länder, Zeitpunkt, Dauer, Zugzahlen, Art des Spielendes); es wird nach höchstens 9 Wochen gelöscht. Rechtsgrundlage: Vertrag; Protokoll berechtigtes Interesse.</li>
+      <li><strong>Freunde und Online-Status:</strong> Freundesliste, Freundschaftsanfragen, Einladungen, Blockliste; dein Online-Status (online, zuletzt online, im Spiel) ist für angemeldete Spieler sichtbar. Zuschauer sehen Spielstand und Namen, nicht den Chat. Rechtsgrundlage: Vertrag.</li>
+      <li><strong>Chat und Emotes:</strong> Nachrichten laufen über unseren Spielserver, werden automatisch gefiltert und nur zur Zustellung verarbeitet. Damit du Nachrichten melden kannst, hält der Server die letzten Zeilen der laufenden Runde (höchstens 20) im Arbeitsspeicher; bei einem Server-Update liegen sie für wenige Sekunden in der Datenbank. Nach der Runde werden sie verworfen. Rechtsgrundlage: Vertrag.</li>
+      <li><strong>Melden, Moderation, Sperren:</strong> Bei einer Meldung speichern wir meldendes und gemeldetes Konto, die gemeldete Nachricht, den Chat der Runde und den Zeitpunkt. Bei Verwarnungen und Sperren: Konto-ID, Grund und Dauer. Zweck: ein sicheres Spiel, Schutz anderer Spieler, Verhindern von Sperrumgehung. Rechtsgrundlage: berechtigtes Interesse sowie Geltendmachung und Schutz von Rechten (KVKK Art. 5 Abs. 2 lit. e und f; DSGVO Art. 6 Abs. 1 lit. f).</li>
+      <li><strong>Fehler- und Problemberichte:</strong> Tritt ein technischer Fehler auf, speichert das Spiel einen kurzen Bericht (Fehlermeldung, Code-Stelle, Browser-/Gerätetyp, App-Version, Zeitpunkt) unter deiner Konto-ID – höchstens 10, ältere werden überschrieben. Freiwillig kannst du nach einer Online-Runde einen Problembericht senden (deine Beschreibung, Gerätedaten, Spielverlauf und Serverdaten der Runde) – höchstens 3 pro Tag. Zweck: Fehler finden und beheben. Rechtsgrundlage: berechtigtes Interesse; beim Problembericht zusätzlich deine Anfrage.</li>
+      <li><strong>Technische Daten:</strong> Deine IP-Adresse nutzt der Spielserver nur im Arbeitsspeicher für Missbrauchs- und Überlastschutz (z. B. Grenzen für Code-Mails); sie wird nicht in unserer Datenbank gespeichert. Außerdem sieht der Server, ob du die App oder den Browser nutzt. Der Hosting-Anbieter des Spielservers führt Server-Protokolle (u. a. Konto-IDs in Fehlermeldungen), die er nach höchstens 30 Tagen löscht. Rechtsgrundlage: berechtigtes Interesse.</li>
+      <li><strong>Anonyme Statistik:</strong> Wir zählen nur Summen je Tag – Verbindungen, Spielzeit, Runden je Modus, App oder Browser und ein Land, das aus deiner Spracheinstellung abgeleitet wird. Ohne Konto-ID und ohne IP-Adresse; ein Rückschluss auf dich ist nicht möglich.</li>
+      <li><strong>Support und Geschenke:</strong> Ändern wir etwas an deinem Konto (z. B. Coins korrigieren, Gegenstände oder eine Nachricht schenken, sperren), protokollieren wir was, wann, an welchem Konto und warum. Zweck: Nachvollziehbarkeit. Rechtsgrundlage: berechtigtes Interesse.</li>
+      <li><strong>Zustimmung zu den Nutzungsbedingungen:</strong> Bei der Registrierung (oder wenn du neue Bedingungen bestätigst) speichern wir Zeitpunkt, Fassung der Bedingungen und ob du die App oder den Browser genutzt hast – als Nachweis des Vertrags. Rechtsgrundlage: Vertrag und berechtigtes Interesse am Nachweis (KVKK Art. 5 Abs. 2 lit. c und f; DSGVO Art. 6 Abs. 1 lit. b und f). Wird mit deinem Konto gelöscht.</li>
+      <li><strong>Gäste:</strong> Spielst du ohne Konto, legt Google Firebase eine zufällige, anonyme Kennung ohne Name und E-Mail an. Gäste sammeln keine Coins und keine XP.</li>
+      <li><strong>Speicher auf deinem Gerät:</strong> Einstellungen (Sprache, Ton, Darstellung), Anmeldestatus, deine Zustimmungsauswahl, ein lokaler Verlauf deiner Replays und die Gast-Kennung liegen im Speicher deines Browsers bzw. der App. Das ist für das Spiel technisch nötig; ohne deine Zustimmung setzen wir keine Tracking- oder Werbe-Cookies.</li>
     </ul>
-    <p>Wir verkaufen Deine Daten nicht an Dritte. Wir nutzen Deine Daten nicht fur Werbe-Profiling.</p>
 
-    <h2>4. Drittanbieter</h2>
+    <h2>4. Empfänger</h2>
+    <p>Damit das Spiel läuft, nutzen wir diese Dienstleister:</p>
     <ul>
-      <li><strong>Google Firebase</strong> (Google LLC) — Authentifizierung, Realtime Database. <a href="https://firebase.google.com/support/privacy" target="_blank">Firebase Datenschutz</a></li>
-      <li><strong>Railway</strong> — Spielserver-Hosting. <a href="https://railway.app/legal/privacy" target="_blank">Railway Datenschutz</a></li>
-      <li><strong>GitHub Pages</strong> (GitHub, Inc.) — Web-Hosting für die Browser-Version und diese Seite.</li>
-      <li><strong>Google AdMob</strong> (geplant) — freiwillige Bonus-Videos (Rewarded Ads). Vor der ersten Werbung fragt ein Einwilligungs-Banner (Google UMP) um Erlaubnis; ohne Zustimmung keine personalisierte Werbung.</li>
+      <li><strong>Google</strong> (Google LLC, USA; Google Ireland Ltd.): Firebase Authentication (Anmeldung, weltweit betrieben, auch in den USA), Firebase Realtime Database (Speicherung, Rechenzentrum in Belgien/EU), tägliche Sicherungskopien, Auslieferung von Firebase-Programmteilen (gstatic.com) und „Mit Google anmelden", wenn du das wählst.</li>
+      <li><strong>Railway Corporation</strong> (USA): Betrieb des Spielservers (Server in den USA).</li>
+      <li><strong>GitHub, Inc.</strong> (USA): Webhosting der Browser-Version und dieser Seiten. GitHub speichert dabei deine IP-Adresse in Server-Protokollen.</li>
+      <li><strong>Brevo</strong> (Sendinblue SAS, Frankreich; Server in der EU): Versand der Bestätigungscodes, sobald der Code-Versand eingerichtet ist.</li>
+      <li><strong>Apple Inc.</strong>: „Mit Apple anmelden" in der iOS-App, wenn du das wählst.</li>
+      <li><strong>App-Stores</strong> (Apple App Store, Google Play): Vertrieb der App nach deren eigenen Datenschutzbestimmungen.</li>
+      <li><strong>Behörden und Gerichte:</strong> nur, wenn wir gesetzlich dazu verpflichtet sind.</li>
     </ul>
-    <p><strong>Datenübertragung ins Ausland (DSGVO Kap. V / KVKK Art. 9):</strong> Daten werden auf Servern in der EU und den USA verarbeitet (Google, GitHub, Railway). US-Transfers basieren auf EU-Standardvertragsklauseln. Mit der Nutzung der App willigst du in diese Übertragung ausdrücklich ein (KVKK Art. 9).</p>
 
-    <h2>5. Speicherdauer</h2>
-    <p>Account-Daten werden gespeichert, solange dein Konto besteht. Du kannst jederzeit Löschung beantragen (siehe Abschnitt 7). Temporäre Daten (IP-Adressen, Match-Logs) werden automatisch innerhalb von 30 Tagen gelöscht. Fehlerberichte werden mit dem Konto gelöscht. Meldungen anderer Spieler und Sperr-Einträge bleiben auch nach der Kontolöschung gespeichert, damit Sperren nicht durch Löschen und Neuanlegen des Kontos umgangen werden können (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO). Chat-Auszüge in Meldungen und Moderations-Protokollen werden spätestens nach 12 Monaten entfernt.</p>
+    <h2>5. Übermittlung ins Ausland</h2>
+    <p>Die genannten Dienstleister verarbeiten Daten in der EU und in den USA, weil wir das Spiel ohne sie nicht anbieten können. Für diese Länder gibt es keinen Angemessenheitsbeschluss der türkischen Datenschutzbehörde (Art. 9 KVKK). Soweit die Anbieter es ermöglichen, schließen wir mit ihnen die Standardverträge nach Art. 9 KVKK ab und melden sie der Behörde. Für Übermittlungen nach der DSGVO stützen wir uns auf die EU-Standardvertragsklauseln in den Datenverarbeitungsbedingungen der Anbieter.</p>
 
-    <h2>6. Kinder</h2>
-    <p>Die App richtet sich nicht an Kinder unter 13 Jahren. Wir erheben wissentlich keine Daten von Kindern unter 13. Falls du glaubst, ein Kind hat uns persönliche Daten mitgeteilt, kontaktiere uns.</p>
+    <h2>6. Wie lange wir Daten speichern</h2>
+    <ul>
+      <li>Konto, Profil, Spieldaten, Freunde, Fehler- und Problemberichte: bis du dein Konto löschst.</li>
+      <li>Bestätigungscode-Daten: höchstens 1 Tag.</li>
+      <li>Weltliga-Wochenlisten und Spielprotokoll: höchstens 9 Wochen.</li>
+      <li>Zähler gegen Punkte-Missbrauch zwischen zwei Konten: höchstens 2 Tage.</li>
+      <li>Unbearbeitete Meldungen: höchstens 12 Monate.</li>
+      <li>Sperr- und Moderationsverlauf: so lange, wie er gebraucht wird, um Sperrumgehung zu verhindern; Chat-Auszüge darin werden nach 12 Monaten gelöscht.</li>
+      <li>Support-Protokoll (Änderungen an Konten): dauerhaft, zur Nachvollziehbarkeit.</li>
+      <li>Server-Protokolle des Spielservers: höchstens 30 Tage.</li>
+      <li>Versandprotokolle des Mail-Dienstes Brevo (Empfängeradresse, Zeitpunkt, Zustellstatus): 1 Monat.</li>
+      <li>Sicherungskopien der Datenbank: 30 Tage – gelöschte Daten verschwinden spätestens dann auch dort.</li>
+    </ul>
 
-    <h2>7. Deine Rechte — Konto löschen</h2>
-    <p>Du hast jederzeit das Recht auf Auskunft, Berichtigung oder Löschung deiner persönlichen Daten.</p>
-    <p><strong>Konto und alle Daten löschen:</strong> App öffnen &rarr; Profil &rarr; Einstellungen &rarr; Konto löschen. Löscht alle deine Daten dauerhaft von unseren Servern (Ausnahme: Missbrauchsschutz-Daten, siehe Abschnitt 5). Vollständige Details dazu, was gelöscht und was aufbewahrt wird, auf unserer <a href="delete-account.html">Konto-Löschseite</a>.</p>
-    <p>Alternativ per E-Mail: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
-    <p>Gemäß DSGVO (EU) und KVKK (Turkei) hast du zudem das Recht auf Datenübertragbarkeit, Einschränkung der Verarbeitung und Beschwerde bei deiner Datenschutzbehörde.</p>
+    <h2>7. Konto löschen</h2>
+    <p>Browser: Profil öffnen → „Konto löschen". App: Profil → „Gefahrenzone" → „Konto löschen". Zur Sicherheit bestätigst du mit deinem Passwort bzw. meldest dich kurz erneut bei Google oder Apple an. Kannst du dich nicht mehr anmelden, schreib uns von der E-Mail-Adresse deines Kontos. Was gelöscht wird und was aus welchem Grund bleibt, steht auf <a href="https://wrongway.app/delete-account.html">wrongway.app/delete-account.html</a>.</p>
 
-    <h2>8. Sicherheit</h2>
-    <p>Alle Daten werden per TLS-Verschlüsselung übertragen. Spielkritische Daten (Coins, Items, Achievements) werden ausschließlich serverseitig gespeichert und sind vom Client nicht direkt änderbar.</p>
+    <h2>8. Deine Rechte</h2>
+    <p>Nach Art. 11 KVKK hast du das Recht zu erfahren, ob Daten über dich verarbeitet werden, und Auskunft darüber zu verlangen; den Zweck zu erfahren und ob sie zweckgemäß verwendet werden; die Empfänger im In- und Ausland zu kennen; unrichtige oder unvollständige Daten berichtigen und Daten löschen zu lassen und zu verlangen, dass Empfänger darüber informiert werden; einem Ergebnis zu widersprechen, das ausschließlich durch automatisierte Auswertung zu deinem Nachteil entsteht; und Ersatz eines Schadens aus rechtswidriger Verarbeitung zu verlangen.</p>
+    <p>Nach der DSGVO hast du die Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch gegen Verarbeitungen aus berechtigtem Interesse (Art. 15–21 DSGVO) sowie das Recht, eine Einwilligung jederzeit für die Zukunft zu widerrufen.</p>
+    <p>So stellst du einen Antrag: per E-Mail von der Adresse, die in deinem Konto hinterlegt ist, an <a href="mailto:info@hupsy.app">info@hupsy.app</a>, oder schriftlich an die Adresse in Abschnitt 1. Wir antworten kostenlos und spätestens innerhalb von 30 Tagen.</p>
+    <p>Beschwerde: in der Türkei bei der Datenschutzbehörde (Kişisel Verileri Koruma Kurumu, <a href="https://www.kvkk.gov.tr">kvkk.gov.tr</a>), nachdem du dich zuerst an uns gewandt hast; in der EU bei der Datenschutz-Aufsichtsbehörde deines Wohnorts.</p>
 
-    <h2>9. Änderungen dieser Erklärung</h2>
-    <p>Wir können diese Erklärung aktualisieren. Das Datum "Zuletzt aktualisiert" oben zeigt die aktuelle Version. Die weitere Nutzung der App nach Änderungen gilt als Zustimmung.</p>
+    <h2>9. Kinder</h2>
+    <p>Das Spiel ist für Personen ab 13 Jahren. Bist du jünger, lege bitte kein Konto an. Erfahren wir, dass ein Konto einem Kind unter 13 Jahren gehört, löschen wir es.</p>
+
+    <h2>10. Sicherheit</h2>
+    <p>Alle Verbindungen sind verschlüsselt (TLS). Passwörter kennt nur Google Firebase als Hash. Spielentscheidende Daten wie Wertung, Coins und Gegenstände verändert nur unser Server; Zugriffsregeln der Datenbank sperren alles, was nicht ausdrücklich freigegeben ist.</p>
+
+    <h2>11. Änderungen</h2>
+    <p>Ändert sich die Verarbeitung, passen wir diese Erklärung an; das Datum oben zeigt die aktuelle Fassung. Wesentliche Änderungen kündigen wir im Spiel an.</p>
+
 
     <div class="contact-box">
-      <p><strong>Kontakt:</strong> Wrong Way Studios &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+      <p><strong>Kontakt:</strong> Hüseyin Tunay &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
     </div>
   </div>
 
   <!-- TÜRKÇE -->
   <div id="sec-tr" class="section">
-    <h1>Gizlilik Politikası</h1>
-    <p class="updated">Son güncelleme: Temmuz 2026</p>
+    <h1>Gizlilik Politikası ve Aydınlatma Metni</h1>
+    <p class="updated">Son güncelleme: 30 Eylül 2026</p>
 
-    <h2>1. Biz Kimiz</h2>
-    <p>Wrong Way Studios, "Wrong Way: Don't be mad" mobil oyununu (Uygulama) işletmektedir. İletişim: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <h2>1. Veri sorumlusu</h2>
+    <p>"Wrong Way: Don't be mad" oyununda (wrongway.app üzerindeki tarayıcı sürümü ve iOS/Android uygulaması) kişisel verilerinizin işlenmesinden sorumlu veri sorumlusu:</p>
+    <p>Hüseyin Tunay<br>Ömerağa Mah., Tahsin Marmara Sok. No: 8, İzmit / Kocaeli<br>E-posta: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <p>Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun (KVKK) 10. maddesi ve Aydınlatma Yükümlülüğünün Yerine Getirilmesinde Uyulacak Usul ve Esaslar Hakkında Tebliğ kapsamındaki aydınlatma metnimizdir; AB Genel Veri Koruma Tüzüğü (GDPR) m. 13 kapsamındaki bilgilendirmeyi de içerir.</p>
 
-    <h2>2. Topladığımız Veriler</h2>
-    <p>Yalnızca oyunun işletilmesi için gerekli olan verileri topluyoruz:</p>
+    <h2>2. Kısaca</h2>
     <ul>
-      <li><strong>Hesap verileri:</strong> E-posta adresi ve/veya Google hesap kimliği (Firebase Authentication aracılığıyla), seçilen görüntü adı.</li>
-      <li><strong>Oyun verileri:</strong> ELO puanı, XP, seviye, coinler, sahip olunan içerikler (skin, banner), başarımlar, maç geçmişi, arkadaş listesi.</li>
-      <li><strong>Oyuncu etiketi:</strong> Rastgele oluşturulan kısa bir oyuncu kimliği (örn. #ABC234), gerçek adınızla ilişkilendirilmez.</li>
-      <li><strong>Teknik veriler:</strong> IP adresi (yalnızca güvenlik ve kötüye kullanımı önlemek için geçici olarak, uzun süreli saklanmaz), cihaz türü, uygulama sürümü.</li>
-      <li><strong>Hata raporları:</strong> Teknik bir hata oluştuğunda uygulama, kullanıcı kimliğinize bağlı kısa bir rapor (hata mesajı, ilgili kod konumu, tarayıcı/cihaz türü, uygulama sürümü, zaman) otomatik olarak kaydeder — hesap başına en fazla 10 kayıt, yalnızca hataları düzeltmek için. Ayrıca bir çevrimiçi maçtan sonra gönüllü olarak sorun bildirimi gönderebilirsin (açıklaman, maç geçmişi ve teknik maç verileri) — günde en fazla 3. Hata raporları hesap silindiğinde birlikte silinir.</li>
-      <li><strong>Sohbet mesajları:</strong> Oyun içi metin sohbeti. Maç bitiminden sonra kalıcı olarak saklanmaz. Bir bildirim yapıldığında, bildirilen mesaj ve maçın sohbet geçmişi bağlam olarak inceleme için saklanır (Bölüm 5).</li>
+      <li>Yalnızca oyunun gerektirdiği verileri işleriz. Verileri satmayız, reklam amacıyla paylaşmayız.</li>
+      <li>Konum, rehber, fotoğraf veya özel nitelikli kişisel veri (ör. sağlık) işlemeyiz.</li>
+      <li>Oyuncu adınız, profiliniz ve sıralamalarınız diğer oyuncular tarafından görülebilir.</li>
+      <li>Hesabınızı istediğiniz zaman kendiniz silebilirsiniz (Bölüm 7).</li>
     </ul>
-    <p>Konum verisi, rehber, fotoğraf veya hassas kişisel veri toplamıyoruz.</p>
 
-    <h2>3. Verilerinizi Nasıl Kullanıyoruz</h2>
+    <h2>3. Hangi verileri hangi amaçla ve hangi hukuki sebeple işliyoruz</h2>
+    <p>Verileriniz oyun üzerinden otomatik yollarla toplanır: sizin girdiğiniz bilgilerden, oyunun akışından ve teknik bağlantıdan.</p>
     <ul>
-      <li>Oyunu işletmek ve ilerlemenizi cihazlar arasında senkronize etmek.</li>
-      <li>Liderlik tablolarını ve maç sonuçlarını göstermek.</li>
-      <li>Hile, istismar ve yetkisiz erişimi önlemek.</li>
-      <li>Önemli hizmet bildirimlerini göndermek.</li>
+      <li><strong>Hesap:</strong> e-posta adresi, şifre (yalnızca Google Firebase'de şifrelenmiş özet (hash) olarak – biz hiçbir zaman göremeyiz), "Google/Apple ile giriş" seçildiğinde bu hesabın kimliği ve e-posta adresi, rastgele bir hesap kimliği. Amaç: giriş yapmanız ve hesabınızın korunması. Hukuki sebep: sözleşmenin kurulması ve ifası (KVKK m. 5/2-c; GDPR m. 6/1-b).</li>
+      <li><strong>Doğrulama kodu:</strong> Kayıt sırasında e-posta adresinize 6 haneli bir kod göndeririz. Yalnızca kodun özeti, geçerlilik süresi ve deneme sayısı saklanır – en fazla bir gün. Kod gönderimi kurulana kadar bunun yerine Google Firebase bir doğrulama bağlantısı gönderir. Amaç: gerçek adresler ve toplu sahte hesaplara karşı koruma. Hukuki sebep: sözleşmenin ifası ve veri sorumlusunun meşru menfaati (KVKK m. 5/2-f; GDPR m. 6/1-f).</li>
+      <li><strong>Profil (başkalarına açık):</strong> oyuncu adı, renk, oluşturma tarihi, oyun istatistiği (maç, galibiyet), seviye, kuşanılan eşyalar, oyuncu etiketi (ör. #ABC234). Profil ve ad diğer oyuncular tarafından görüntülenebilir; ad, sıralama ve Dünya Ligi listelerinde yer alır. "Profil gizli" ayarıyla rakibiniz oyunda istatistik ve puan yerine yalnızca seviyenizi görür. Hukuki sebep: sözleşmenin ifası.</li>
+      <li><strong>Oyun verileri:</strong> hamleler, oyun durumu, sonuç, maç süresi, puan (ELO), XP, seviye, işlem geçmişiyle birlikte coinler, sanal eşyalar, giriş takvimi ve seviye ödülleri. Amaç: oyunun işletilmesi, ilerleme, adil puanlama. Puan aktarımını önlemek için aynı iki hesabın birbirine karşı kaç kez puan aldığını sayarız; bu sayaçlar en geç iki gün içinde silinir. Hukuki sebep: sözleşmenin ifası; hile önleme için meşru menfaat.</li>
+      <li><strong>Dünya Ligi:</strong> seçtiğiniz ülke ile haftalık ve toplam puanlarınız, oyuncu adınızla birlikte herkese açık. Ülkeniz ayrıca her çevrimiçi maçta (rakibiniz için de) ve profilinizde adınızın yanında küçük bir bayrak olarak görünür. Hile tespiti için bir maç kaydı tutarız (iki oyuncunun hesap kimlikleri, rakibin adı, ülkeler, zaman, süre, hamle sayıları, maçın bitiş şekli); en geç 9 hafta sonra silinir. Hukuki sebep: sözleşmenin ifası; maç kaydı için meşru menfaat.</li>
+      <li><strong>Arkadaşlar ve çevrimiçi durum:</strong> arkadaş listesi, arkadaşlık istekleri, davetler, engel listesi; çevrimiçi durumunuz (çevrimiçi, son görülme, oyunda) giriş yapmış oyunculara görünür. İzleyiciler oyun durumunu ve adları görür, sohbeti görmez. Hukuki sebep: sözleşmenin ifası.</li>
+      <li><strong>Sohbet ve emojiler:</strong> Mesajlar oyun sunucumuz üzerinden iletilir, otomatik olarak filtrelenir ve yalnızca iletim için işlenir. Mesajları bildirebilmeniz için sunucu, devam eden maçın son satırlarını (en fazla 20) bellekte tutar; bir sunucu güncellemesinde bunlar birkaç saniyeliğine veri tabanında bulunur. Maçtan sonra silinir. Hukuki sebep: sözleşmenin ifası.</li>
+      <li><strong>Bildirme, moderasyon, yasaklama:</strong> Bir bildirimde bildiren ve bildirilen hesabı, bildirilen mesajı, maçın sohbetini ve zamanı saklarız. Uyarı ve yasaklarda: hesap kimliği, sebep ve süre. Amaç: güvenli bir oyun, diğer oyuncuların korunması, yasağın atlatılmasının önlenmesi. Hukuki sebep: meşru menfaat ile bir hakkın tesisi, kullanılması veya korunması (KVKK m. 5/2-e ve f; GDPR m. 6/1-f).</li>
+      <li><strong>Hata ve sorun raporları:</strong> Teknik bir hata olduğunda oyun, hesap kimliğinizle kısa bir rapor saklar (hata mesajı, kod konumu, tarayıcı/cihaz türü, uygulama sürümü, zaman) – en fazla 10 adet, eskileri üzerine yazılır. Çevrimiçi bir maçtan sonra isteğe bağlı olarak sorun raporu gönderebilirsiniz (açıklamanız, cihaz bilgileri, maçın akışı ve sunucu verileri) – günde en fazla 3. Amaç: hataları bulmak ve gidermek. Hukuki sebep: meşru menfaat; sorun raporunda ayrıca sizin talebiniz.</li>
+      <li><strong>Teknik veriler:</strong> IP adresinizi oyun sunucusu yalnızca bellekte, kötüye kullanım ve aşırı yüke karşı koruma için kullanır (ör. kod e-postaları için sınırlar); veri tabanımızda saklanmaz. Sunucu ayrıca uygulamayı mı tarayıcıyı mı kullandığınızı görür. Oyun sunucusunun barındırma sağlayıcısı sunucu kayıtları tutar (hata mesajlarında hesap kimlikleri dahil) ve bunları en geç 30 gün içinde siler. Hukuki sebep: meşru menfaat.</li>
+      <li><strong>Anonim istatistik:</strong> Yalnızca günlük toplamları sayarız – bağlantılar, oyun süresi, moda göre maçlar, uygulama veya tarayıcı ve dil ayarınızdan çıkarılan bir ülke. Hesap kimliği ve IP adresi olmadan; sizinle ilişkilendirilemez.</li>
+      <li><strong>Destek ve hediyeler:</strong> Hesabınızda bir değişiklik yaptığımızda (ör. coin düzeltme, eşya veya mesaj hediye etme, yasaklama) neyin, ne zaman, hangi hesapta ve neden yapıldığını kayda alırız. Amaç: izlenebilirlik. Hukuki sebep: meşru menfaat.</li>
+      <li><strong>Kullanım Koşullarının kabulü:</strong> Kayıt olurken (veya yeni koşulları onaylarken) sözleşmenin kanıtı olarak zamanı, koşulların sürümünü ve uygulamayı mı yoksa tarayıcıyı mı kullandığınızı saklarız. Hukuki sebep: sözleşme ve bunu ispat etmeye yönelik meşru menfaat (KVKK m. 5/2-c ve f; GDPR m. 6/1-b ve f). Hesabınızla birlikte silinir.</li>
+      <li><strong>Misafirler:</strong> Hesapsız oynarsanız Google Firebase, ad ve e-posta içermeyen rastgele, anonim bir kimlik oluşturur. Misafirler coin ve XP kazanmaz.</li>
+      <li><strong>Cihazınızdaki depolama:</strong> Ayarlar (dil, ses, görünüm), oturum durumu, onay seçiminiz, tekrar oynatmalarınızın yerel geçmişi ve misafir kimliği tarayıcınızın veya uygulamanın depolamasında bulunur. Bu, oyun için teknik olarak gereklidir; onayınız olmadan izleme veya reklam çerezi kullanmayız.</li>
     </ul>
-    <p>Verilerinizi üçüncü taraflara satmıyoruz. Verilerinizi reklam profili oluşturmak için kullanmıyoruz.</p>
 
-    <h2>4. Üçüncü Taraf Hizmetler</h2>
+    <h2>4. Aktarılan alıcılar</h2>
+    <p>Oyunun çalışması için şu hizmet sağlayıcıları kullanırız:</p>
     <ul>
-      <li><strong>Google Firebase</strong> (Google LLC) — Kimlik doğrulama, Gerçek Zamanlı Veritabanı.</li>
-      <li><strong>Railway</strong> — Oyun sunucusu barındırma.</li>
-      <li><strong>GitHub Pages</strong> (GitHub, Inc.) — tarayıcı sürümü ve bu sayfa için web barındırma.</li>
-      <li><strong>Google AdMob</strong> (planlanan) — isteğe bağlı ödüllü videolar (rewarded ads). Reklam gosterilmeden once onay banneri (Google UMP) izin ister; rıza olmadan kişiselleştirilmiş reklam gösterilmez.</li>
+      <li><strong>Google</strong> (Google LLC, ABD; Google Ireland Ltd.): Firebase Authentication (giriş; dünya genelinde, ABD dahil işletilir), Firebase Realtime Database (depolama, Belçika/AB'deki veri merkezi), günlük yedek kopyalar, Firebase program dosyalarının sunulması (gstatic.com) ve seçmeniz halinde "Google ile giriş".</li>
+      <li><strong>Railway Corporation</strong> (ABD): oyun sunucusunun işletilmesi (sunucular ABD'de).</li>
+      <li><strong>GitHub, Inc.</strong> (ABD): tarayıcı sürümünün ve bu sayfaların barındırılması. GitHub bu sırada IP adresinizi sunucu kayıtlarında saklar.</li>
+      <li><strong>Brevo</strong> (Sendinblue SAS, Fransa; sunucular AB'de): kod gönderimi kurulduğunda doğrulama kodlarının gönderilmesi.</li>
+      <li><strong>Apple Inc.</strong>: seçmeniz halinde iOS uygulamasında "Apple ile giriş".</li>
+      <li><strong>Uygulama mağazaları</strong> (Apple App Store, Google Play): uygulamanın kendi gizlilik kuralları çerçevesinde dağıtımı.</li>
+      <li><strong>Resmi makamlar ve mahkemeler:</strong> yalnızca kanunen yükümlü olduğumuz hallerde.</li>
     </ul>
-    <p><strong>Yurt dışına veri aktarımı (KVKK m. 9 / GDPR Bolum V):</strong> veriler AB ve ABD sunucularında işlenir (Google, GitHub, Railway). ABD aktarımları AB Standart Sözleşme Maddelerine dayanır. Uygulamayı kullanarak KVKK m. 9 uyarınca bu aktarıma açık rıza vermiş olursunuz.</p>
 
-    <h2>5. Veri Saklama Süresi</h2>
-    <p>Hesap verileri, hesabınız var olduğu sürece saklanır. İstediğiniz zaman silme talebinde bulunabilirsiniz (Bölüm 7). Geçici veriler (IP adresleri, maç kayıtları) 30 gün içinde otomatik olarak silinir. Hata raporları hesapla birlikte silinir. Diğer oyuncuların bildirimleri ve yasaklama kayıtları, yasakların hesabı silip yeniden açarak aşılmaması için hesap silindikten sonra da saklanır (meşru menfaat; KVKK m. 5/2-f, GDPR m. 6/1-f). Bildirimlerdeki ve moderasyon kayıtlarındaki sohbet alıntıları en geç 12 ay sonra silinir.</p>
+    <h2>5. Yurt dışına aktarım</h2>
+    <p>Belirtilen hizmet sağlayıcılar verileri AB'de ve ABD'de işler; oyunu onlarsız sunamayız. Bu ülkeler için Kişisel Verileri Koruma Kurulu'nun bir yeterlilik kararı bulunmamaktadır (KVKK m. 9). Sağlayıcıların imkân tanıdığı ölçüde onlarla KVKK m. 9 kapsamındaki standart sözleşmeleri imzalar ve Kuruma bildiririz. GDPR kapsamındaki aktarımlarda sağlayıcıların veri işleme koşullarındaki AB standart sözleşme maddelerine dayanırız.</p>
 
-    <h2>6. Çocuk Gizliliği</h2>
-    <p>Uygulama 13 yaş altındaki çocuklara yönelik değildir. 13 yaş altındaki çocuklardan bilerek veri toplamıyoruz.</p>
+    <h2>6. Saklama süreleri</h2>
+    <ul>
+      <li>Hesap, profil, oyun verileri, arkadaşlar, hata ve sorun raporları: hesabınızı silene kadar.</li>
+      <li>Doğrulama kodu verileri: en fazla 1 gün.</li>
+      <li>Dünya Ligi haftalık listeleri ve maç kaydı: en fazla 9 hafta.</li>
+      <li>İki hesap arasındaki puan kötüye kullanımına karşı sayaçlar: en fazla 2 gün.</li>
+      <li>İşleme alınmamış bildirimler: en fazla 12 ay.</li>
+      <li>Yasak ve moderasyon geçmişi: yasağın atlatılmasını önlemek için gerektiği sürece; içindeki sohbet alıntıları 12 ay sonra silinir.</li>
+      <li>Destek kaydı (hesaplarda yapılan değişiklikler): izlenebilirlik için süresiz.</li>
+      <li>Oyun sunucusunun sunucu kayıtları: en fazla 30 gün.</li>
+      <li>E-posta hizmeti Brevo'nun gönderim kayıtları (alıcı adresi, zaman, teslim durumu): 1 ay.</li>
+      <li>Veri tabanı yedekleri: 30 gün – silinen veriler en geç o zaman yedeklerden de kalkar.</li>
+    </ul>
 
-    <h2>7. Haklarınız — Hesap Silme</h2>
-    <p>Kişisel verilerinize her zaman erişim, düzeltme veya silme hakkınız vardır.</p>
-    <p><strong>Hesabınızı ve tüm verilerinizi silmek için:</strong> Uygulama &rarr; Profil &rarr; Ayarlar &rarr; Hesabı Sil. Tüm verileriniz sunucularımızdan kalıcı olarak silinir (istisna: kötüye kullanım koruması verileri, Bölüm 5). Neyin silindiği ve neyin saklandığına dair tüm ayrıntılar için <a href="delete-account.html">hesap silme sayfamıza</a> bakın.</p>
-    <p>Silme talebi için: <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
-    <p>KVKK (Türkiye) ve GDPR (AB kullanıcıları) kapsamında; veri taşınırlığı, işlemenin kısıtlanması ve ilgili veri koruma kurumuna şikayet hakkınız mevcuttur.</p>
+    <h2>7. Hesabı silme</h2>
+    <p>Tarayıcı: Profili açın → "Hesabı sil". Uygulama: Profil → "Tehlike Bölgesi" → "Hesabı sil". Güvenlik için şifrenizle onaylarsınız ya da Google veya Apple ile kısaca yeniden giriş yaparsınız. Artık giriş yapamıyorsanız, hesabınızdaki e-posta adresinden bize yazın. Neyin silindiği ve neyin hangi sebeple kaldığı <a href="https://wrongway.app/delete-account.html">wrongway.app/delete-account.html</a> sayfasındadır.</p>
 
-    <h2>8. Güvenlik</h2>
-    <p>Tüm veriler TLS şifreleme ile iletilir. Oyun kritik veriler (coinler, içerikler, başarımlar) yalnızca sunucu tarafında saklanır; istemciler bu değerleri doğrudan değiştiremez.</p>
+    <h2>8. Haklarınız</h2>
+    <p>KVKK m. 11 uyarınca kişisel verilerinizin işlenip işlenmediğini öğrenme, işlenmişse buna ilişkin bilgi talep etme; işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme; yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme; eksik veya yanlış işlenmişse düzeltilmesini, silinmesini veya yok edilmesini ve bu işlemlerin aktarılan üçüncü kişilere bildirilmesini isteme; münhasıran otomatik sistemlerle analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme ve kanuna aykırı işleme sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme haklarına sahipsiniz.</p>
+    <p>GDPR kapsamında erişim, düzeltme, silme, kısıtlama, veri taşınabilirliği ve meşru menfaate dayalı işlemeye itiraz haklarına (GDPR m. 15–21) ve verdiğiniz bir rızayı gelecek için her zaman geri alma hakkına sahipsiniz.</p>
+    <p>Başvuru yöntemi: hesabınızda kayıtlı e-posta adresinden <a href="mailto:info@hupsy.app">info@hupsy.app</a> adresine e-posta ile veya Bölüm 1'deki adrese yazılı olarak. Başvurunuzu ücretsiz ve en geç 30 gün içinde sonuçlandırırız.</p>
+    <p>Şikâyet: Türkiye'de, önce bize başvurduktan sonra Kişisel Verileri Koruma Kurulu'na (<a href="https://www.kvkk.gov.tr">kvkk.gov.tr</a>); AB'de ikamet ettiğiniz yerdeki veri koruma denetim makamına.</p>
 
-    <h2>9. Politika Değişiklikleri</h2>
-    <p>Bu politikayı güncelleyebiliriz. Değişikliklerden sonra uygulamaya devam etmeniz kabul sayılır.</p>
+    <h2>9. Çocuklar</h2>
+    <p>Oyun 13 yaş ve üzeri kişiler içindir. Daha küçükseniz lütfen hesap oluşturmayın. Bir hesabın 13 yaşından küçük bir çocuğa ait olduğunu öğrenirsek hesabı sileriz.</p>
+
+    <h2>10. Güvenlik</h2>
+    <p>Tüm bağlantılar şifrelidir (TLS). Şifreleri yalnızca Google Firebase özet (hash) olarak bilir. Puan, coin ve eşyalar gibi oyunu belirleyen verileri yalnızca sunucumuz değiştirir; veri tabanı erişim kuralları açıkça izin verilmeyen her şeyi engeller.</p>
+
+    <h2>11. Değişiklikler</h2>
+    <p>İşleme değişirse bu metni güncelleriz; üstteki tarih güncel sürümü gösterir. Önemli değişiklikleri oyun içinde duyururuz.</p>
 
     <div class="contact-box">
-      <p><strong>İletişim:</strong> Wrong Way Studios &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+      <p><strong>İletişim:</strong> Hüseyin Tunay &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
     </div>
   </div>
 
   <!-- FRANÇAIS -->
   <div id="sec-fr" class="section">
-    <h1>Politique de Confidentialité</h1>
-    <p class="updated">Dernière mise à jour : Juillet 2026</p>
+    <h1>Politique de confidentialité</h1>
+    <p class="updated">Dernière mise à jour : 30 septembre 2026</p>
 
-    <h2>1. Qui sommes-nous</h2>
-    <p>Wrong Way Studios exploite le jeu mobile "Wrong Way: Don't be mad" (l'"Application"). Contact : <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <h2>1. Responsable du traitement</h2>
+    <p>Le responsable du traitement de tes données dans le jeu « Wrong Way: Don't be mad » (version navigateur sur wrongway.app et application iOS/Android) est :</p>
+    <p>Hüseyin Tunay<br>Ömerağa Mah., Tahsin Marmara Sok. No: 8, İzmit / Kocaeli<br>E-mail : <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+    <p>Cette politique fournit les informations exigées par l'art. 10 de la loi turque n° 6698 sur la protection des données personnelles (KVKK) et par l'art. 13 du Règlement général sur la protection des données de l'UE (RGPD). La version turque constitue notre notice d'information (Aydınlatma Metni).</p>
 
-    <h2>2. Données collectées</h2>
-    <p>Nous collectons uniquement ce qui est nécessaire au fonctionnement du jeu :</p>
+    <h2>2. En bref</h2>
     <ul>
-      <li><strong>Données de compte :</strong> Adresse e-mail et/ou identifiant de compte Google (via Firebase Authentication), pseudo choisi.</li>
-      <li><strong>Données de jeu :</strong> Classement ELO, XP, niveau, pièces, objets possédés (skins, bannières), succès, historique des parties, liste d'amis.</li>
-      <li><strong>Identifiant joueur :</strong> Un identifiant court généré aléatoirement (ex. #ABC234), non lié à votre vrai nom.</li>
-      <li><strong>Données techniques :</strong> Adresse IP (conservée temporairement pour la sécurité et la prévention des abus), type d'appareil, version de l'application.</li>
-      <li><strong>Rapports d'erreur :</strong> En cas d'erreur technique, l'application enregistre automatiquement un court rapport (message d'erreur, emplacement du code concerné, type de navigateur/appareil, version de l'app, horodatage) lié à votre identifiant — au maximum 10 entrées par compte, uniquement pour corriger les bugs. Vous pouvez aussi envoyer volontairement un rapport de problème après une partie en ligne (votre description, l'historique de la partie et des données techniques) — au maximum 3 par jour. Supprimés avec le compte.</li>
-      <li><strong>Messages de chat :</strong> Chat en jeu. Non conservés après la fin de la partie. En cas de signalement, le message signalé et l'historique du chat de la partie sont conservés pour examen comme contexte (voir section 5).</li>
+      <li>Nous ne traitons que ce dont le jeu a besoin. Nous ne vendons pas de données et ne les partageons pas à des fins publicitaires.</li>
+      <li>Pas de localisation, pas de contacts, pas de photos, pas de catégories particulières de données (p. ex. santé).</li>
+      <li>Ton nom de joueur, ton profil et tes classements sont visibles par les autres joueurs.</li>
+      <li>Tu peux supprimer ton compte toi-même à tout moment (section 7).</li>
     </ul>
-    <p>Nous ne collectons pas de données de localisation, contacts, photos ou données sensibles.</p>
 
-    <h2>3. Utilisation des données</h2>
+    <h2>3. Quelles données nous traitons et pourquoi</h2>
+    <p>Nous collectons les données automatiquement via le jeu : à partir de ce que tu saisis, du déroulement des parties et de la connexion technique.</p>
     <ul>
-      <li>Faire fonctionner le jeu et synchroniser votre progression.</li>
-      <li>Afficher les classements et résultats de parties.</li>
-      <li>Prévenir la triche, les abus et les accès non autorisés.</li>
-      <li>Envoyer des notifications de service importantes.</li>
+      <li><strong>Compte :</strong> adresse e-mail, mot de passe (uniquement sous forme de hachage chiffré chez Google Firebase – nous ne le voyons jamais), avec « Se connecter avec Google/Apple » l'identifiant et l'adresse e-mail de ce compte, un identifiant de compte aléatoire. Finalité : connexion et protection de ton compte. Base juridique : contrat (KVKK art. 5, al. 2, c ; RGPD art. 6, par. 1, b).</li>
+      <li><strong>Code de vérification :</strong> lors de l'inscription, nous envoyons un code à 6 chiffres à ton adresse e-mail. Seuls un hachage du code, sa date d'expiration et le nombre d'essais sont conservés – au maximum un jour. Tant que l'envoi de codes n'est pas en place, Google Firebase envoie à la place un lien de vérification. Finalité : des adresses réelles, protection contre les comptes en masse. Base juridique : contrat et intérêt légitime (KVKK art. 5, al. 2, f ; RGPD art. 6, par. 1, f).</li>
+      <li><strong>Profil (visible par les autres) :</strong> nom de joueur, couleur, date de création, statistiques de jeu (parties, victoires), niveau, objets équipés, tag de joueur (p. ex. #ABC234). Les autres joueurs peuvent consulter ton profil et ton nom ; ton nom apparaît dans les classements et les listes de la Ligue mondiale. Avec « Profil privé », ton adversaire en partie ne voit plus que ton niveau au lieu de tes statistiques et de ton classement. Base juridique : contrat.</li>
+      <li><strong>Données de jeu :</strong> coups, état de la partie, résultat, durée, classement (ELO), XP, niveau, pièces avec historique des transactions, objets virtuels, calendrier de connexion et récompenses de niveau. Finalité : fonctionnement du jeu, progression, classement équitable. Pour empêcher le transfert de points, nous comptons combien de fois les deux mêmes comptes marquent l'un contre l'autre ; ces compteurs expirent au plus tard après deux jours. Base juridique : contrat ; prévention de la fraude intérêt légitime.</li>
+      <li><strong>Ligue mondiale :</strong> le pays choisi et tes points par semaine et au total, visibles publiquement avec ton nom de joueur. Ton pays apparaît aussi sous forme de petit drapeau à côté de ton nom dans chaque partie en ligne (y compris pour ton adversaire) et dans ton profil. Pour détecter la triche, nous tenons un journal des parties (identifiants de compte des deux joueurs, nom de l'adversaire, pays, heure, durée, nombre de coups, manière dont la partie s'est terminée) ; il est supprimé au plus tard après 9 semaines. Base juridique : contrat ; journal intérêt légitime.</li>
+      <li><strong>Amis et statut en ligne :</strong> liste d'amis, demandes d'amitié, invitations, liste de blocage ; ton statut en ligne (en ligne, vu pour la dernière fois, en partie) est visible par les joueurs connectés. Les spectateurs voient l'état de la partie et les noms, pas le chat. Base juridique : contrat.</li>
+      <li><strong>Chat et émotes :</strong> les messages passent par notre serveur de jeu, sont filtrés automatiquement et traités uniquement pour leur transmission. Pour que tu puisses signaler des messages, le serveur garde en mémoire les dernières lignes de la partie en cours (au maximum 20) ; lors d'une mise à jour du serveur, elles se trouvent quelques secondes dans la base de données. Elles sont supprimées après la partie. Base juridique : contrat.</li>
+      <li><strong>Signalements, modération, bannissements :</strong> lors d'un signalement, nous enregistrons le compte qui signale et le compte signalé, le message signalé, le chat de la partie et l'heure. Pour les avertissements et bannissements : identifiant de compte, motif et durée. Finalité : un jeu sûr, la protection des autres joueurs, empêcher le contournement des bannissements. Base juridique : intérêt légitime et constatation, exercice ou défense de droits (KVKK art. 5, al. 2, e et f ; RGPD art. 6, par. 1, f).</li>
+      <li><strong>Rapports d'erreur et de problème :</strong> en cas d'erreur technique, le jeu enregistre un court rapport (message d'erreur, emplacement dans le code, type de navigateur/d'appareil, version de l'application, heure) sous ton identifiant de compte – au maximum 10, les plus anciens sont écrasés. Après une partie en ligne, tu peux envoyer volontairement un rapport de problème (ta description, données de l'appareil, déroulement et données serveur de la partie) – au maximum 3 par jour. Finalité : trouver et corriger les bugs. Base juridique : intérêt légitime ; pour le rapport de problème également ta demande.</li>
+      <li><strong>Données techniques :</strong> le serveur de jeu utilise ton adresse IP uniquement en mémoire pour la protection contre les abus et la surcharge (p. ex. limites pour les e-mails de code) ; elle n'est pas enregistrée dans notre base de données. Le serveur voit aussi si tu utilises l'application ou le navigateur. L'hébergeur du serveur de jeu conserve des journaux serveur (y compris des identifiants de compte dans les messages d'erreur), qu'il supprime au plus tard après 30 jours. Base juridique : intérêt légitime.</li>
+      <li><strong>Statistiques anonymes :</strong> nous ne comptons que des totaux par jour – connexions, temps de jeu, parties par mode, application ou navigateur et un pays déduit de ton réglage de langue. Sans identifiant de compte et sans adresse IP ; impossible de remonter jusqu'à toi.</li>
+      <li><strong>Support et cadeaux :</strong> si nous modifions quelque chose sur ton compte (p. ex. corriger des pièces, offrir des objets ou un message, bannir), nous enregistrons quoi, quand, sur quel compte et pourquoi. Finalité : traçabilité. Base juridique : intérêt légitime.</li>
+      <li><strong>Acceptation des conditions d'utilisation :</strong> lors de l'inscription (ou quand tu confirmes de nouvelles conditions), nous enregistrons l'heure, la version des conditions et si tu as utilisé l'application ou le navigateur, comme preuve du contrat. Base juridique : contrat et intérêt légitime à pouvoir le prouver (KVKK art. 5, al. 2, c et f ; RGPD art. 6, par. 1, b et f). Supprimé avec ton compte.</li>
+      <li><strong>Invités :</strong> si tu joues sans compte, Google Firebase crée un identifiant anonyme aléatoire, sans nom ni e-mail. Les invités ne gagnent ni pièces ni XP.</li>
+      <li><strong>Stockage sur ton appareil :</strong> réglages (langue, son, affichage), état de connexion, ton choix de consentement, un historique local de tes replays et l'identifiant invité se trouvent dans le stockage de ton navigateur ou de l'application. C'est techniquement nécessaire au jeu ; sans ton consentement, nous ne déposons aucun cookie de suivi ou publicitaire.</li>
     </ul>
-    <p>Nous ne vendons pas vos données à des tiers. Nous n'utilisons pas vos données pour le ciblage publicitaire.</p>
 
-    <h2>4. Services tiers</h2>
+    <h2>4. Destinataires</h2>
+    <p>Pour faire fonctionner le jeu, nous utilisons ces prestataires :</p>
     <ul>
-      <li><strong>Google Firebase</strong> (Google LLC) — Authentification, base de données en temps réel.</li>
-      <li><strong>Railway</strong> — Hébergement du serveur de jeu.</li>
-      <li><strong>GitHub Pages</strong> (GitHub, Inc.) — hébergement web de la version navigateur et de cette page.</li>
-      <li><strong>Google AdMob</strong> (prévu) — vidéos bonus volontaires (rewarded ads). Un bandeau de consentement (Google UMP) demandera la permission avant toute publicité ; pas de publicité personnalisée sans accord.</li>
+      <li><strong>Google</strong> (Google LLC, États-Unis ; Google Ireland Ltd.) : Firebase Authentication (connexion, exploitée dans le monde entier, y compris aux États-Unis), Firebase Realtime Database (stockage, centre de données en Belgique/UE), sauvegardes quotidiennes, fourniture des fichiers Firebase (gstatic.com) et « Se connecter avec Google » si tu le choisis.</li>
+      <li><strong>Railway Corporation</strong> (États-Unis) : exploitation du serveur de jeu (serveurs aux États-Unis).</li>
+      <li><strong>GitHub, Inc.</strong> (États-Unis) : hébergement de la version navigateur et de ces pages. GitHub enregistre ton adresse IP dans ses journaux serveur.</li>
+      <li><strong>Brevo</strong> (Sendinblue SAS, France ; serveurs dans l'UE) : envoi des codes de vérification, dès que l'envoi de codes est en place.</li>
+      <li><strong>Apple Inc.</strong> : « Se connecter avec Apple » dans l'application iOS si tu le choisis.</li>
+      <li><strong>Boutiques d'applications</strong> (Apple App Store, Google Play) : distribution de l'application selon leurs propres règles de confidentialité.</li>
+      <li><strong>Autorités et tribunaux :</strong> uniquement si la loi nous y oblige.</li>
     </ul>
-    <p><strong>Transferts internationaux (RGPD Ch. V / KVKK art. 9) :</strong> les données sont traitées sur des serveurs dans l'UE et aux USA (Google, GitHub, Railway). Les transferts USA reposent sur les clauses contractuelles types de l'UE. En utilisant l'App, vous consentez expressément à ce transfert (KVKK art. 9).</p>
 
-    <h2>5. Conservation des données</h2>
-    <p>Les données de compte sont conservées tant que votre compte existe. Vous pouvez demander la suppression à tout moment (voir section 7). Les données temporaires sont supprimées automatiquement sous 30 jours. Les rapports d'erreur sont supprimés avec le compte. Les signalements d'autres joueurs et les inscriptions de bannissement sont conservés même après la suppression du compte, afin d'empêcher le contournement des bannissements (intérêt légitime, art. 6(1)(f) RGPD). Les extraits de chat dans les signalements et les journaux de modération sont supprimés au plus tard après 12 mois.</p>
+    <h2>5. Transferts à l'étranger</h2>
+    <p>Ces prestataires traitent des données dans l'UE et aux États-Unis, car nous ne pouvons pas proposer le jeu sans eux. Il n'existe pas de décision d'adéquation de l'autorité turque de protection des données pour ces pays (art. 9 KVKK). Dans la mesure où les prestataires le permettent, nous concluons avec eux les contrats types prévus à l'art. 9 KVKK et les notifions à l'autorité. Pour les transferts relevant du RGPD, nous nous appuyons sur les clauses contractuelles types de l'UE figurant dans les conditions de traitement des données des prestataires.</p>
 
-    <h2>6. Protection des mineurs</h2>
-    <p>L'application n'est pas destinée aux enfants de moins de 13 ans. Nous ne collectons pas sciemment de données auprès d'enfants de moins de 13 ans.</p>
+    <h2>6. Durée de conservation</h2>
+    <ul>
+      <li>Compte, profil, données de jeu, amis, rapports d'erreur et de problème : jusqu'à la suppression de ton compte.</li>
+      <li>Données du code de vérification : au maximum 1 jour.</li>
+      <li>Listes hebdomadaires et journal des parties de la Ligue mondiale : au maximum 9 semaines.</li>
+      <li>Compteurs contre l'abus de points entre deux comptes : au maximum 2 jours.</li>
+      <li>Signalements non traités : au maximum 12 mois.</li>
+      <li>Historique des bannissements et de la modération : aussi longtemps que nécessaire pour empêcher le contournement des bannissements ; les extraits de chat qu'il contient sont supprimés après 12 mois.</li>
+      <li>Journal du support (modifications de comptes) : durablement, pour la traçabilité.</li>
+      <li>Journaux du serveur de jeu : au maximum 30 jours.</li>
+      <li>Journaux d'envoi du service d'e-mail Brevo (adresse du destinataire, heure, statut de remise) : 1 mois.</li>
+      <li>Sauvegardes de la base de données : 30 jours – les données supprimées en disparaissent au plus tard à ce moment-là.</li>
+    </ul>
 
-    <h2>7. Vos droits — Suppression du compte</h2>
-    <p>Vous avez le droit d'accéder, de corriger ou de supprimer vos données personnelles à tout moment.</p>
-    <p><strong>Pour supprimer votre compte et toutes vos données :</strong> Application &rarr; Profil &rarr; Paramètres &rarr; Supprimer le compte. Suppression définitive (exception : données de protection contre les abus, voir section 5). Pour tous les détails sur ce qui est supprimé et conservé, voir notre <a href="delete-account.html">page de suppression de compte</a>.</p>
-    <p>Ou par e-mail : <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
-    <p>En vertu du RGPD (utilisateurs UE) et du KVKK (utilisateurs turcs), vous disposez également du droit à la portabilité des données et du droit de déposer une plainte auprès de votre autorité de protection des données.</p>
+    <h2>7. Supprimer ton compte</h2>
+    <p>Navigateur : ouvre ton profil → « Supprimer le compte ». Application : Profil → « Zone de danger » → « Supprimer le compte ». Par sécurité, tu confirmes avec ton mot de passe ou tu te reconnectes brièvement avec Google ou Apple. Si tu ne peux plus te connecter, écris-nous depuis l'adresse e-mail de ton compte. Ce qui est supprimé et ce qui est conservé, et pour quelle raison, est décrit sur <a href="https://wrongway.app/delete-account.html">wrongway.app/delete-account.html</a>.</p>
 
-    <h2>8. Sécurité</h2>
-    <p>Toutes les données sont transmises via chiffrement TLS. Les données critiques du jeu (pièces, objets, succès) sont stockées exclusivement côté serveur et ne peuvent pas être modifiées directement par le client.</p>
+    <h2>8. Tes droits</h2>
+    <p>En vertu de l'art. 11 KVKK, tu as le droit de savoir si tes données personnelles sont traitées et d'en demander des informations ; de connaître la finalité et de savoir si elles sont utilisées conformément à celle-ci ; de connaître les tiers en Turquie ou à l'étranger auxquels elles sont transférées ; de faire corriger des données incomplètes ou inexactes et de faire supprimer ou détruire des données, et de demander que les destinataires en soient informés ; de t'opposer à un résultat défavorable issu exclusivement d'une analyse automatisée ; et de demander réparation d'un dommage causé par un traitement illicite.</p>
+    <p>En vertu du RGPD, tu disposes des droits d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition aux traitements fondés sur l'intérêt légitime (RGPD art. 15 à 21), ainsi que du droit de retirer à tout moment un consentement pour l'avenir.</p>
+    <p>Comment faire une demande : par e-mail depuis l'adresse enregistrée dans ton compte à <a href="mailto:info@hupsy.app">info@hupsy.app</a>, ou par écrit à l'adresse de la section 1. Nous répondons gratuitement et au plus tard dans un délai de 30 jours.</p>
+    <p>Réclamation : en Turquie auprès de l'autorité de protection des données (Kişisel Verileri Koruma Kurumu, <a href="https://www.kvkk.gov.tr">kvkk.gov.tr</a>) après t'être d'abord adressé à nous ; dans l'UE auprès de l'autorité de contrôle de ton lieu de résidence (en France : la CNIL).</p>
 
-    <h2>9. Modifications</h2>
-    <p>Nous pouvons mettre à jour cette politique. La date en haut indique la version actuelle. L'utilisation continue de l'application après modifications vaut acceptation.</p>
+    <h2>9. Enfants</h2>
+    <p>Le jeu s'adresse aux personnes âgées de 13 ans et plus. Si tu es plus jeune, ne crée pas de compte. Si nous apprenons qu'un compte appartient à un enfant de moins de 13 ans, nous le supprimons.</p>
+
+    <h2>10. Sécurité</h2>
+    <p>Toutes les connexions sont chiffrées (TLS). Seul Google Firebase connaît les mots de passe, sous forme de hachage. Seul notre serveur modifie les données décisives du jeu comme le classement, les pièces et les objets ; les règles d'accès de la base de données bloquent tout ce qui n'est pas expressément autorisé.</p>
+
+    <h2>11. Modifications</h2>
+    <p>Si le traitement change, nous mettons à jour cette politique ; la date en haut indique la version actuelle. Nous annonçons les changements importants dans le jeu.</p>
 
     <div class="contact-box">
-      <p><strong>Contact :</strong> Wrong Way Studios &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
+      <p><strong>Contact :</strong> Hüseyin Tunay &mdash; <a href="mailto:info@hupsy.app">info@hupsy.app</a></p>
     </div>
   </div>
 
