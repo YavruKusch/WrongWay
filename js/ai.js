@@ -269,10 +269,16 @@ function zielRegel(d,me,op,W,gMe,gOp,recentAi,chaosItem){
   if(d.noetig){if(d.type==='move'&&zielDist(d.pos,W,gMe)===d0)zm.seit=zm.n;return d;}
   if(d.type==='move'){
     const p=d.pos,d1=zielDist(p,W,gMe),fw=zielVor(me,op,W,gMe,d0);
-    if(!fw)return d;                                              // es geht gerade nicht vorwaerts (Gegner im Weg): KI entscheidet
-    if(chaosItem&&d1>=d0){const a=bfsTo(me,chaosItem,W),b=bfsTo(p,chaosItem,W);if(a&&b&&b.length<a.length&&(a.length-1)+zielDist(chaosItem,W,gMe)<=d0+3)return d;}
     const vorher=(recentAi||[]).find(x=>x.r!==me.r||x.c!==me.c)||null;
-    const zurueck=!!vorher&&p.r===vorher.r&&p.c===vorher.c,warSeit=!!vorher&&zielDist(vorher,W,gMe)<=d0;
+    const zurueck=!!vorher&&p.r===vorher.r&&p.c===vorher.c;
+    if(!fw){
+      // Es geht gerade nicht vorwaerts (Gegner im Weg): die KI entscheidet - nur nicht zurueck aufs gerade verlassene Feld, wenn ein anderer Zug nicht
+      // laenger ist, sonst pendelt sie (2026-10-28: einfach sprang zurueck statt seitlich am Gegner vorbei). Ein Umweg zur Chaos-Kiste bleibt erlaubt.
+      if(zurueck&&!chaosItem){let alt=null,ad=999;getMovesFrom(me,op,W).forEach(m=>{if(m.r===vorher.r&&m.c===vorher.c)return;const x=zielDist(m,W,gMe);if(x<ad){ad=x;alt=m;}});if(alt&&ad<=d1)return{type:'move',pos:alt};}
+      return d;
+    }
+    if(chaosItem&&d1>=d0){const a=bfsTo(me,chaosItem,W),b=bfsTo(p,chaosItem,W);if(a&&b&&b.length<a.length&&(a.length-1)+zielDist(chaosItem,W,gMe)<=d0+3)return d;}
+    const warSeit=!!vorher&&zielDist(vorher,W,gMe)<=d0;
     if(d1>d0||(zurueck&&d1>=d0)||(d1===d0&&(warSeit||zm.n-zm.seit<=4)))return{type:'move',pos:fw};
     if(d1===d0)zm.seit=zm.n;
     return d;
