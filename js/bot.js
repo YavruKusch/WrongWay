@@ -271,13 +271,16 @@ function botExtra(S, s, F0, F1) {
   };
   // Schutz zuerst (eigene Quote, sonst verdraengten eigene Fallen-Ideen die Abwehr): Plaetze, die eine Wand eines gegnerischen Paars unmoeglich
   // machen. Wichtig ist, was dadurch wegfaellt: die erste Wand traegt das ganze Paar, die zweite nur ihren Teil (g - g1).
+  // Stil tw (Weitblick, nur Lobby-Bots): zusaetzlich Paare ueber den ganzen Weg - die nahen bleiben vorn, sonst verdraengten ferne grosse Fallen
+  // die dringende Abwehr direkt neben der Figur
   p = botPaare(S, 1 - s, F0, F1, ts, 4);
+  if (S.stil.tw) p = p.concat(botPaare(S, 1 - s, F0, F1, S.stil.tw, 4));
   for (i = 0; i < p.length; i++) {
     botKonflikte(S, p[i].a, k); for (j = 0; j < k.length; j++) nimm(ab, k[j], p[i].g);
     botKonflikte(S, p[i].b, k); for (j = 0; j < k.length; j++) nimm(ab, k[j], p[i].g - p[i].g1);
   }
   beste(ab, S.stil.xd || 4);
-  p = botPaare(S, s, F0, F1, ts, 3);
+  p = botPaare(S, s, F0, F1, S.stil.tw || ts, 3);
   for (i = 0; i < p.length; i++) { nimm(an, p[i].a, p[i].g); nimm(an, p[i].b, p[i].g); }
   beste(an, S.stil.xo || 2);
   S.cache.set(key, liste);

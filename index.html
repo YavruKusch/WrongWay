@@ -880,7 +880,7 @@
 
 <script src="js/i18n.js?v=129"></script>
 <script src="js/game-logic.js"></script>
-<script src="js/bot.js?v=3"></script>
+<script src="js/bot.js?v=4"></script>
 <script src="js/ai.js?v=8"></script>
 <script src="js/sound.js"></script>
 <script src="js/werbung.js?v=5"></script>
@@ -5846,6 +5846,8 @@ function App(){
         const m=moves[i];
         if(m.type==='move'&&m.p==='B')recentAi.push({r:m.r,c:m.c});
       }
+      // Startfeld ans Ende (2026-10-28): die Zuege kennen nur Ziele - ohne Startfeld liess die Ziel-Regel den Bot im 2. Zug aufs Startfeld zurueck
+      if(recentAi.length<6){const s0=startPos(mp).B;recentAi.push({r:s0.r,c:s0.c});}
       // Hammer gratis nutzen, falls die AI sich selbst befreien kann
       let heldB=!!hh.B;
       if(st.hammerMode&&heldB){
