@@ -285,7 +285,9 @@ function zielRegel(d,me,op,W,gMe,gOp,recentAi,chaosItem){
   }
   if(d.type==='barricade'&&d.walls){
     const eig=zielDist(me,d.walls,gMe)-d0,geg=zielDist(op,d.walls,gOp)-zielDist(op,W,gOp);
-    if(geg<=eig){const fw=zielVor(me,op,W,gMe,d0)||getMovesFrom(me,op,W)[0];if(fw)return{type:'move',pos:fw};}
+    // Ohne Schritt nach vorn der kuerzeste Zug, das gerade verlassene Feld nur, wenn jeder andere laenger ist (2026-10-29: hier stand der erste
+    // erlaubte Zug - einfach ging so zurueck aufs verlassene Feld, statt ueber den Gegner zu springen)
+    if(geg<=eig){const v=(recentAi||[]).find(x=>x.r!==me.r||x.c!==me.c);let fw=zielVor(me,op,W,gMe,d0),fd=999;if(!fw)getMovesFrom(me,op,W).forEach(m=>{const x=zielDist(m,W,gMe)+(v&&m.r===v.r&&m.c===v.c?0.5:0);if(x<fd){fd=x;fw=m;}});if(fw)return{type:'move',pos:fw};}
   }
   return d;
 }
