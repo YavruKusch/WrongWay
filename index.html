@@ -7681,6 +7681,7 @@ function App(){
                       background:'var(--bg)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:14,lineHeight:1.4,
                       fontFamily:'system-ui,-apple-system,sans-serif'}}/>
                   <div style={{fontSize:11,color:'var(--subtle)',textAlign:'right',marginTop:4}}>{ideaText.length+' / 1000'}</div>
+                  <div style={{fontSize:11,color:'var(--subtle)',lineHeight:1.45,marginTop:2}}><AgbSatz t={t} k="agbDsInfo"/></div>
                   <button disabled={ideaStatus==='sending'} onClick={()=>{
                     var tx=ideaText.trim();
                     if(tx.length<5){setIdeaStatus('short');return;}
