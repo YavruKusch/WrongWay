@@ -263,10 +263,14 @@ function zielVor(me,op,W,g,d0){
 function zielRegel(d,me,op,W,gMe,gOp,recentAi,chaosItem){
   const zm=_botSpiel.zm||(_botSpiel.zm={n:0,seit:-99});
   zm.n++;
+  const neuW=zm.w!==W.size;zm.w=W.size;
   if(!d)return d;
   const d0=zielDist(me,W,gMe);
-  // Bewusster Zug der Fallen-Suche (bot.js 'noetig': deutlich besser als jeder Schritt nach vorn, z.B. Schutz-Wand oder Ausweichen vor einer Falle)
-  if(d.noetig){if(d.type==='move'&&zielDist(d.pos,W,gMe)===d0)zm.seit=zm.n;return d;}
+  // Bewusster Zug der Fallen-Suche (bot.js 'noetig': deutlich besser als jeder Schritt nach vorn, z.B. Schutz-Wand oder Ausweichen vor einer Falle).
+  // Zurueck aufs gerade verlassene Feld nur, wenn seitdem eine Wand dazukam (2026-10-30: Race schwer wich auf 9.4 aus, ging auf 10.4 wieder vor -
+  // ohne neue Wand ging das ewig, bei abwesendem Menschen 200-mal hin und her)
+  if(d.noetig){const v=d.type==='move'&&!neuW&&(recentAi||[]).find(x=>x.r!==me.r||x.c!==me.c);
+    if(!(v&&d.pos.r===v.r&&d.pos.c===v.c&&zielDist(d.pos,W,gMe)>=d0)){if(d.type==='move'&&zielDist(d.pos,W,gMe)===d0)zm.seit=zm.n;return d;}}
   if(d.type==='move'){
     const p=d.pos,d1=zielDist(p,W,gMe),fw=zielVor(me,op,W,gMe,d0);
     const vorher=(recentAi||[]).find(x=>x.r!==me.r||x.c!==me.c)||null;
