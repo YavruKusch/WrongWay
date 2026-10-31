@@ -878,12 +878,12 @@
   },20000);
 </script>
 
-<script src="js/i18n.js?v=129"></script>
+<script src="js/i18n.js?v=130"></script>
 <script src="js/game-logic.js"></script>
 <script src="js/bot.js?v=4"></script>
 <script src="js/ai.js?v=11"></script>
 <script src="js/sound.js"></script>
-<script src="js/werbung.js?v=6"></script>
+<script src="js/werbung.js?v=7"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -9797,6 +9797,20 @@ function App(){
             </div>
           )}
 
+          {/* Hinweis auf die App, nur wo Werbung laeuft (js/werbung.js, Tunay-Wahl B); Ziel bis zum Store-Start die Webseite */}
+          {window.WWWerbung&&WWWerbung.appKarte(adminCfg)&&(
+            <a href="https://hupsy.app" target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:12,padding:'11px 12px',marginBottom:12,
+              borderRadius:18,background:'var(--card)',border:'1.5px solid var(--border)',textDecoration:'none',fontFamily:'system-ui,-apple-system,sans-serif',
+              boxShadow:'0 2px 6px rgba(15,23,42,0.12),0 14px 32px rgba(15,23,42,0.2),inset 0 1px 0 rgba(255,255,255,0.4)'}}>
+              <img src="hupsy-app.jpg" alt="" width={48} height={48} style={{borderRadius:12,flexShrink:0,boxShadow:'0 2px 6px rgba(0,0,0,0.18)'}}/>
+              <div style={{flex:1,minWidth:0,textAlign:'left'}}>
+                <div style={{fontSize:14,fontWeight:900,lineHeight:1.2,color:'var(--text)',letterSpacing:-0.1}}>{t('appKarteTitel')}</div>
+                <div style={{fontSize:11,fontWeight:600,marginTop:3,color:'var(--subtle)'}}>{t('appKarteText')}</div>
+              </div>
+              <span style={{flexShrink:0,padding:'8px 13px',borderRadius:999,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',color:'#1f1300',
+                fontSize:12,fontWeight:900,whiteSpace:'nowrap',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.45),0 2px 6px rgba(180,110,0,0.3)'}}>{t('appKarteKnopf')}</span>
+            </a>
+          )}
           {/* Action buttons */}
           <div style={{display:'flex',flexDirection:'column',gap:9}}>
             {gameMode!=='online'&&!isRanked&&(

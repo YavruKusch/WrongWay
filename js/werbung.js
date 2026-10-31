@@ -127,6 +127,11 @@
     },
     // Handy-Menue: statt Logo + Schriftzug ein 320x100-Platz (Tunay-Wahl B). kopfAktiv entscheidet beim Rendern,
     // kopf(el) fuellt den leeren Platz genau einmal (React ruft den ref bei jedem Rendern erneut auf)
+    // Endbildschirm: Karte "Hol dir die App" (Tunay-Wahl B 2026-10-31), nur wo Werbung laeuft; eigener Hinweis, kein Google
+    appKarte: function(cfg){
+      var f = (cfg && cfg.features) || {};
+      return vorschau || (!!f.werbung && !!PUB);
+    },
     kopfAktiv: function(cfg, zustimmung){
       var f = (cfg && cfg.features) || {};
       return (vorschau || (!!f.werbung && !!PUB)) && zustimmung === true && window.innerWidth < BREIT;
