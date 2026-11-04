@@ -2505,7 +2505,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
       if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){ setPreMatch(null); setPreMatchTimer(15); return; }
       // Zu lange verdeckt: der Server hat die Suche beendet, der Spieler startet sie selbst neu (Tunay-Wahl, WSNET._sichtbarkeit)
       if(d&&d.type==='ranked_cancelled'&&d.grund==='verdeckt'){ leaveQueue(); return; }
-      if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
+      if(d&&d.type==='ranked_denied'){ var _rg=d.grund; setFoundMsg(_rg==='limit'?t('rankedLimit').replace('{n}',String(d.n||0)):_rg==='login'?t('rankedLoginHint'):_rg==='busy'?t('rankedBusy'):t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },_rg==='limit'?6000:2500); return; }
       // Gegner gefunden, aber der Server kennt den Raum nicht mehr (Absturz ohne Uebergabe): sonst lief die Suche ewig weiter,
       // und der zentrale Handler legte unter dem Ranked-Code eine normale Lobby an. Socket zu, Hinweis, zurueck wie bei ranked_denied.
       if(d&&d.type==='reconnect_failed'){ try{WSNET.close();}catch(e){} setFoundMsg(t('rankedRetry')); clearPendingTimer(); pendingTimerRef.current=setTimeout(function(){ pendingTimerRef.current=null; leaveQueue(); },2500); return; }
@@ -2742,7 +2742,7 @@ function RankedScreen({account,t,darkMode,goBack,onStart,features,wsRouter}){
 // (wrongway-server/scripts/online-e2e/weltliga.mjs).
 function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}){
   const[wl,setWl]=React.useState(null);            // {land,neu,ab,mein} vom Server (wl_land)
-  const[wlFehler,setWlFehler]=React.useState('');
+  const[wlFehler,setWlFehler]=React.useState('');const[wlLimit,setWlLimit]=React.useState(''); // wlLimit: Tageslimit erreicht (Server spiellimit.js) - eigener Zustand, die Landwahl-Antwort wl_land raeumt wlFehler
   const[suche,setSuche]=React.useState(null);      // {LAND: Zahl} — live
   const[waehlen,setWaehlen]=React.useState(false); // Landwahl offen (true) bzw. Clip-Land 'A'/'B'
   const[clip,setClip]=React.useState(['DE','TR']); // Clip-Modus (nur Admin, Server-Kennzeichen clip): Laender A/B, lokal
@@ -2780,13 +2780,14 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
       // Gegner hat abgelehnt oder ist nach dem Fund still verschwunden: der Server setzt uns zurueck in die Suche (ranked_waiting folgt)
       if(d&&d.type==='ranked_cancelled'&&(d.grund==='gegner_weg'||d.grund==='declined')){setGefunden(null);return;}
       if(d&&d.type==='ranked_cancelled'&&d.grund==='verdeckt'){leaveQueue();return;} // zu lange verdeckt: Suche beendet (wie RankedScreen)
+      if(d&&d.type==='ranked_denied'&&d.grund==='limit'){clearPendingTimer();leaveQueue();setWlLimit(t('wl_limit').replace('{n}',String(d.n||0)));return;}
       if(d&&d.type==='ranked_denied'){var g=d.grund;setMsg(g==='login'?t('rankedLoginHint'):g==='busy'?t('rankedBusy'):g==='land'?t('wl_fehlerLand'):t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();if(g==='land')setWaehlen(true);},2500);return;}
       if(d&&d.type==='reconnect_failed'){try{WSNET.close();}catch(e){}setMsg(t('rankedRetry'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();},2500);return;}
       if(d&&d.type==='session_replaced'){setMsg(t('sessionReplaced'));clearPendingTimer();pendingTimerRef.current=setTimeout(function(){pendingTimerRef.current=null;leaveQueue();goBack();},1800);return;}
       wsRouter(d);
     };
     WSNET.startRanked('weltliga',1000,{name:account.name,akey:account.key},localRouter);
-    setQueue({ts:Date.now()});setElapsed(0);setMsg('');setGefunden(null);
+    setQueue({ts:Date.now()});setElapsed(0);setMsg('');setGefunden(null);setWlLimit('');
   };
   const landSetzen=function(c){
     setFrage(null);setWaehlen(false);setFilter('');
@@ -2900,6 +2901,7 @@ function WeltligaScreen({account,t,lang,darkMode,goBack,wsRouter,onLogin,onClip}
               </div>
             ):null}
             {wlFehler?<div style={{fontSize:12,color:'#ef4444',textAlign:'center',fontWeight:700}}>{wlFehler}</div>:null}
+            {wlLimit&&!queue?<div data-wl="limit" style={{fontSize:12,color:'#ef4444',textAlign:'center',fontWeight:700}}>{wlLimit}</div>:null}
             <div style={{padding:'12px 14px',borderRadius:12,background:dk?'rgba(30,41,59,0.8)':'rgba(241,245,249,0.9)',border:'1.5px solid '+border,fontSize:11,color:muted,lineHeight:1.6}}>{t('wl_regeln')}</div>
             {wl.clip&&!queue?(
               <div data-wl="clip" style={karte}>
