@@ -3751,7 +3751,8 @@ function SpectatorScreen({lobbyId,t,darkMode,goBack,account}){
   const[otherEmotes,setOtherEmotes]=React.useState([]); // von anderen Zuschauern
   const SC=Math.min(Math.floor((Math.min(window.innerWidth,440)-48)/COLS),Math.floor((window.innerHeight*0.55)/ROWS));
   const SW=Math.max(4,Math.round(SC*0.2));
-  const myKey=account?account.key:SESSION;
+  // Zuschauer-Eintrag unter der eigenen Anmelde-ID (Gast = anonyme Anmeldung): die Datenbank-Regel nimmt nur sie an
+  const myKey=account?account.key:((window.firebase&&firebase.auth&&firebase.auth().currentUser&&firebase.auth().currentUser.uid)||SESSION);
   const myName=account?account.name:GUEST_ID;
   React.useEffect(()=>{
     if(!lobbyId||!window.db)return;
