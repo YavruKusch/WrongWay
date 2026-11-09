@@ -12027,8 +12027,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
   const team=TEAM_2V2(turn);
   const cur=tokens[turn];
   const others=ORDER_2V2.filter(id=>id!==turn&&tokens[id]&&!removed[id]).map(id=>tokens[id]);
+  // fertiger Partner in der Zielreihe: auf sein Feld darf die zweite Kugel (sonst blockiert er ihr ein enges Ziel)
+  const mateId=turn.charAt(0)+(turn.charAt(1)==='1'?'2':'1');
+  const mateZiel=reached[mateId]&&tokens[mateId]&&!removed[mateId]?tokens[mateId]:null;
   const myTurnNow=!winner&&sub==='game'&&!removedMeReason&&(!isOnline||turn===myToken);
-  const noMovesNow=myTurnNow&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2).length===0;
+  const noMovesNow=myTurnNow&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2,mateZiel).length===0;
   const canPlace=myTurnNow&&barr[isOnline?(myTeam||team):team]>0;
   const teamName=tm=>tm==='A'?t('red'):t('blue');
   const sz=Math.round(CELL2*0.66),off=(CELL2-sz)/2;
@@ -12341,7 +12344,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
   // ── Bewegen ──
   const moveTo=(r,c)=>{
     if(!myTurnNow||dragging||reached[turn]||!cur)return;
-    if(!validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c))return;
+    if(!validMoves2(cur,others,walls,ROWS2,COLS2,mateZiel).some(m=>m.r===r&&m.c===c))return;
     if(isOnline&&useWS){
       // optimistisch: Position + Zugwechsel sofort, reached/Sieg entscheidet der Server (kommt in ms)
       playSound('move');
@@ -12390,7 +12393,7 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
     if(isOnline)doSync2v2({tokens,walls,barr,turn:nextTurn,winner:null,reached});
   };
 
-  const validDot=(r,c)=>myTurnNow&&!dragging&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2).some(m=>m.r===r&&m.c===c);
+  const validDot=(r,c)=>myTurnNow&&!dragging&&!reached[turn]&&!!cur&&validMoves2(cur,others,walls,ROWS2,COLS2,mateZiel).some(m=>m.r===r&&m.c===c);
 
   const startDrag=(e,orient)=>{
     if(!canPlace)return;e.preventDefault();
@@ -13126,8 +13129,11 @@ function TwoVTwo({t,darkMode,onExit,account,onRecordResult,joinCode,onJoinCodeUs
         {ORDER_2V2.map(function(id){
           const pos=tokens[id];const active=turn===id&&!winner;
           if(!pos||removed[id])return null;
+          // zwei Kugeln des Teams auf demselben Zielfeld: nebeneinander statt uebereinander
+          const teilt=ORDER_2V2.some(o=>o!==id&&tokens[o]&&!removed[o]&&tokens[o].r===pos.r&&tokens[o].c===pos.c);
+          const dx=teilt?(id.charAt(1)==='1'?-1:1)*Math.round(sz*0.28):0;
           return(
-            <div key={id} style={{position:'absolute',left:pos.c*CELL2+off,top:pos.r*CELL2+off,
+            <div key={id} style={{position:'absolute',left:pos.c*CELL2+off+dx,top:pos.r*CELL2+off,
               width:sz,height:sz,
               transition:'left 0.25s cubic-bezier(0.34,1.3,0.5,1),top 0.25s cubic-bezier(0.34,1.3,0.5,1)',
               zIndex:20,pointerEvents:'none',transform:boardFlip?'scaleY(-1)':'none'}}>

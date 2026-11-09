@@ -75,7 +75,8 @@ function disjointPaths2(start,goalRow,walls,R,C,cap){
   return flow;
 }
 // Gueltige Zuege fuer ein Token; occupied = Liste der anderen Token-Positionen (mit Sprung-Regel)
-function validMoves2(pos,occupied,walls,R,C){
+// mate: Feld des Partners, wenn er schon fertig im Ziel steht - darauf darf die zweite Kugel des Teams (wie Server tv2MateZiel)
+function validMoves2(pos,occupied,walls,R,C,mate){
   const occ=k=>occupied.some(o=>o.r===k.r&&o.c===k.c);
   const moves=[];
   for(const d of[[-1,0],[1,0],[0,-1],[0,1]]){
@@ -83,6 +84,7 @@ function validMoves2(pos,occupied,walls,R,C){
     if(nr<0||nr>=R||nc<0||nc>=C)continue;
     if(edgeBlocked(pos.r,pos.c,nr,nc,walls))continue;
     if(occ({r:nr,c:nc})){
+      if(mate&&mate.r===nr&&mate.c===nc)moves.push({r:nr,c:nc});
       const jr=nr+d[0],jc=nc+d[1];
       const straight=jr>=0&&jr<R&&jc>=0&&jc<C&&!edgeBlocked(nr,nc,jr,jc,walls)&&!occ({r:jr,c:jc});
       if(straight){moves.push({r:jr,c:jc});}
