@@ -7301,6 +7301,22 @@ function App(){
           </div>
         </div>
       ):null}
+      {androidHinweis&&(
+        <div style={{position:'relative',zIndex:1,width:280,maxWidth:'100%',marginTop:40,marginBottom:14,borderRadius:14,flexShrink:0,
+          background:'var(--card)',border:'1.5px solid #8b5cf644',boxShadow:'0 4px 14px rgba(99,102,241,0.18)',overflow:'hidden'}}>
+          <div style={{background:'linear-gradient(90deg,#8b5cf6,#3b82f6)',height:3}}/>
+          <div style={{display:'flex',alignItems:'center'}}>
+            <a href="https://www.instagram.com/hupsy.app/" target="_blank" rel="noopener noreferrer" style={{flex:1,display:'flex',alignItems:'center',gap:10,
+              padding:'10px 4px 10px 14px',textDecoration:'none',color:'var(--text)'}}>
+              <span style={{flexShrink:0,display:'flex'}}><MegaphoneIcon size={18}/></span>
+              <span style={{fontSize:12.5,fontWeight:700,lineHeight:1.35}}>{t('androidTestHinweis')} <span style={{color:'#8b5cf6',fontWeight:800,whiteSpace:'nowrap'}}>@hupsy.app {'\u203A'}</span></span>
+            </a>
+            <button aria-label={t('close')} onClick={function(){setAndroidHinweis(false);try{localStorage.setItem('ww_androidHinweisZu','1');}catch(e){}}} style={{
+              width:36,height:36,marginRight:6,borderRadius:18,border:'none',background:'transparent',color:'var(--subtle)',
+              cursor:'pointer',fontSize:15,lineHeight:1,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{'\u2715'}</button>
+          </div>
+        </div>
+      )}
       {pendingInvite&&(
         <div style={{position:'relative',zIndex:1,width:280,marginBottom:14,borderRadius:14,flexShrink:0,
           background:'var(--card)',border:'1.5px solid #8b5cf644',boxShadow:'0 4px 14px rgba(99,102,241,0.18)',overflow:'hidden'}}>
@@ -7468,22 +7484,6 @@ function App(){
           onClick={()=>initGame('pvp',undefined,null,false,undefined,false,selectedMap)}/>}
         </div>
 
-        {androidHinweis&&(
-          <div style={{position:'relative',zIndex:1,width:280,maxWidth:'100%',margin:'2px auto 14px',borderRadius:14,flexShrink:0,
-            background:'var(--card)',border:'1.5px solid #8b5cf644',boxShadow:'0 4px 14px rgba(99,102,241,0.18)',overflow:'hidden'}}>
-            <div style={{background:'linear-gradient(90deg,#8b5cf6,#3b82f6)',height:3}}/>
-            <div style={{display:'flex',alignItems:'center'}}>
-              <a href="https://www.instagram.com/hupsy.app/" target="_blank" rel="noopener noreferrer" style={{flex:1,display:'flex',alignItems:'center',gap:10,
-                padding:'10px 4px 10px 14px',textDecoration:'none',color:'var(--text)'}}>
-                <span style={{flexShrink:0,display:'flex'}}><MegaphoneIcon size={18}/></span>
-                <span style={{fontSize:12.5,fontWeight:700,lineHeight:1.35}}>{t('androidTestHinweis')} <span style={{color:'#8b5cf6',fontWeight:800,whiteSpace:'nowrap'}}>@hupsy.app {'\u203A'}</span></span>
-              </a>
-              <button aria-label={t('close')} onClick={function(){setAndroidHinweis(false);try{localStorage.setItem('ww_androidHinweisZu','1');}catch(e){}}} style={{
-                width:36,height:36,marginRight:6,borderRadius:18,border:'none',background:'transparent',color:'var(--subtle)',
-                cursor:'pointer',fontSize:15,lineHeight:1,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{'\u2715'}</button>
-            </div>
-          </div>
-        )}
         {/* COMMUNITY */}
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:6,paddingBottom:4}}>
           <button onClick={()=>window.open('https://discord.gg/XtFzzjpmf','_blank')} style={{
