@@ -4539,8 +4539,8 @@ function App(){
   const[xpGainAnim,setXpGainAnim]=useState(null);
   const[xpSystemOn,setXpSystemOn]=useState(false);
   const[announceVisible,setAnnounceVisible]=useState(true);
-  // Android-Test-Hinweis (Tunay 2026-11-10): nur Browser, auf iPhone/iPad aus (dort gibt es den Test nicht), X merkt sich das Schliessen
-  const[androidHinweis,setAndroidHinweis]=useState(function(){try{var ua=navigator.userAgent||'';if(/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return false;return localStorage.getItem('ww_androidHinweisZu')!=='1';}catch(e){return false;}});
+  // Android-Test-Hinweis (Tunay 2026-11-10): nur Browser, auf allen Geraeten (auch iPhone, Tunay-Wunsch), X merkt sich das Schliessen
+  const[androidHinweis,setAndroidHinweis]=useState(function(){try{return localStorage.getItem('ww_androidHinweisZu')!=='1';}catch(e){return true;}});
   const[aiDifficulty,setAiDifficulty]=useState('normal');
   const[darkMode,setDarkMode]=useState(getInitialDark());
   const[celebrating,setCelebrating]=useState(false);
